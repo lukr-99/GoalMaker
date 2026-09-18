@@ -20,6 +20,69 @@
     <string name="sign_in_error_other">Sign-in failed: %1$s</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 
+    <!-- Plan tomorrow (docs/plan-tomorrow.md) -->
+    <string name="plan_title">Plan tomorrow</string>
+    <string name="plan_close">Close</string>
+    <string name="plan_next">Next</string>
+    <string name="plan_finish">Finish</string>
+    <plurals name="plan_step_today">
+        <item quantity="one">Step 1 of 2 · %1$d left to decide</item>
+        <item quantity="other">Step 1 of 2 · %1$d left to decide</item>
+    </plurals>
+    <string name="plan_step_today_done">Step 1 of 2 · all decided</string>
+    <plurals name="plan_step_tomorrow">
+        <item quantity="one">Step 2 of 2 · %1$d of %2$d top priorities</item>
+        <item quantity="other">Step 2 of 2 · %1$d of %2$d top priorities</item>
+    </plurals>
+    <string name="plan_step_done">Tomorrow is planned</string>
+    <string name="plan_today_intro">Decide what happens to everything left over from today. Nothing rolls over by itself.</string>
+    <string name="plan_today_clear">Nothing left over from today. On to tomorrow.</string>
+    <string name="plan_decide_tomorrow">Tomorrow</string>
+    <string name="plan_decide_date">Date</string>
+    <string name="plan_decide_done">Done</string>
+    <string name="plan_decide_drop">Drop</string>
+    <string name="plan_unplanned">No day now (changed elsewhere)</string>
+    <string name="plan_pick_date">Plan it</string>
+    <string name="plan_cancel">Cancel</string>
+    <plurals name="plan_tomorrow_intro">
+        <item quantity="one">Flag up to %1$d top priority. Anything you add below lands on tomorrow.</item>
+        <item quantity="other">Flag up to %1$d top priorities. Anything you add below lands on tomorrow.</item>
+    </plurals>
+    <string name="plan_tomorrow_empty">Nothing planned for tomorrow yet. Add something below or bring it in from the Inbox.</string>
+    <plurals name="plan_from_inbox">
+        <item quantity="one">From the Inbox · %1$d</item>
+        <item quantity="other">From the Inbox · %1$d</item>
+    </plurals>
+    <string name="plan_to_tomorrow">Plan %1$s for tomorrow</string>
+    <plurals name="plan_done_tasks">
+        <item quantity="one">task for tomorrow</item>
+        <item quantity="other">tasks for tomorrow</item>
+    </plurals>
+    <plurals name="plan_done_priorities">
+        <item quantity="one">%1$d top priority</item>
+        <item quantity="other">%1$d top priorities</item>
+    </plurals>
+    <string name="plan_done_no_priorities">No top priorities picked</string>
+    <string name="plan_outcome">From today: %1$s</string>
+    <plurals name="plan_outcome_tomorrow">
+        <item quantity="one">%1$d to tomorrow</item>
+        <item quantity="other">%1$d to tomorrow</item>
+    </plurals>
+    <plurals name="plan_outcome_later">
+        <item quantity="one">%1$d later</item>
+        <item quantity="other">%1$d later</item>
+    </plurals>
+    <plurals name="plan_outcome_done">
+        <item quantity="one">%1$d done</item>
+        <item quantity="other">%1$d done</item>
+    </plurals>
+    <plurals name="plan_outcome_dropped">
+        <item quantity="one">%1$d dropped</item>
+        <item quantity="other">%1$d dropped</item>
+    </plurals>
+    <string name="plan_outcome_none">Nothing was left over from today.</string>
+    <string name="plan_back_today">Back to Today</string>
+
     <!-- Lists (docs/lists.md) -->
     <string name="today_settings">Settings</string>
     <string name="today_composer_placeholder">Add a task…</string>
@@ -34,7 +97,10 @@
         <item quantity="one">Overdue · %1$d</item>
         <item quantity="other">Overdue · %1$d</item>
     </plurals>
-    <string name="lists_today_summary">%1$s · %2$d of %3$d done</string>
+    <plurals name="lists_today_summary">
+        <item quantity="one">%1$s · %2$d of %3$d done</item>
+        <item quantity="other">%1$s · %2$d of %3$d done</item>
+    </plurals>
     <plurals name="lists_inbox_count">
         <item quantity="one">%1$d to sort</item>
         <item quantity="other">%1$d to sort</item>
@@ -56,6 +122,7 @@
     <string name="composer_new">new</string>
     <string name="composer_later">later</string>
     <string name="composer_soon">coming soon</string>
+    <string name="composer_opens_plan">opens Plan tomorrow</string>
     <string name="composer_unknown_command">unknown command</string>
     <string name="composer_remove">Remove %1$s</string>
     <string name="repeat_daily">Every day</string>

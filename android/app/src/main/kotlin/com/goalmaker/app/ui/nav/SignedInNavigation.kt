@@ -13,6 +13,8 @@ import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
+import com.goalmaker.app.ui.plan.PlanScreen
+import com.goalmaker.app.ui.plan.PlanViewModel
 
 /** The signed-in part of the app: a Navigation 3 back stack starting at Today. */
 @Composable
@@ -38,7 +40,24 @@ fun SignedInNavigation(graph: AppGraph) {
                         clock = LocalDateTime::now,
                     )
                 }
-                ListsScreen(viewModel = listsViewModel, onOpenSettings = { backStack.add(SettingsKey) })
+                ListsScreen(
+                    viewModel = listsViewModel,
+                    onOpenPlan = { backStack.add(PlanKey) },
+                    onOpenSettings = { backStack.add(SettingsKey) },
+                )
+            }
+            entry<PlanKey> {
+                val planViewModel = viewModel {
+                    PlanViewModel(
+                        tasks = graph.tasks,
+                        areas = graph.areas,
+                        tags = graph.tags,
+                        settings = graph.settings,
+                        io = graph.io,
+                        clock = LocalDateTime::now,
+                    )
+                }
+                PlanScreen(viewModel = planViewModel, onClose = { backStack.removeLastOrNull() })
             }
             entry<SettingsKey> {
                 val settingsViewModel = viewModel {

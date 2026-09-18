@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inbox
@@ -62,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.rememberTickSound
@@ -77,7 +79,7 @@ import java.time.format.DateTimeFormatter
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ListsScreen(viewModel: ListsViewModel, onOpenSettings: () -> Unit) {
+fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSettings: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -106,6 +108,9 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenSettings: () -> Unit) {
                 subtitle = { state.lists?.let { Text(subtitle(tab, it)) } },
                 actions = {
                     SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
+                    IconButton(onClick = onOpenPlan) {
+                        Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.today_settings))
                     }
@@ -120,8 +125,15 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenSettings: () -> Unit) {
                 ComposerBar(
                     state = composer,
                     chips = composerChips(line, draft, viewModel.today(), state.areas, state.tagNames),
-                    canSend = draft.title.isNotBlank() && draft.command == null,
-                    onSubmit = { if (viewModel.submit(draft, tab)) composer.clearText() },
+                    canSend = (draft.title.isNotBlank() && draft.command == null) || draft.command?.name == PlanRules.COMMAND,
+                    onSubmit = {
+                        if (draft.command?.name == PlanRules.COMMAND) {
+                            composer.clearText()
+                            onOpenPlan()
+                        } else if (viewModel.submit(draft, tab)) {
+                            composer.clearText()
+                        }
+                    },
                     onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
                 )
                 if (!WindowInsets.isImeVisible) {
@@ -223,8 +235,9 @@ private fun ListContent(tab: ListTab, lists: PlanningLists, areas: List<AreaItem
     }
 }
 
+/** A list's section label; with [onToggle] it folds and shows whether it's open. */
 @Composable
-private fun SectionHeader(text: String, expanded: Boolean? = null, onToggle: (() -> Unit)? = null) {
+internal fun SectionHeader(text: String, expanded: Boolean? = null, onToggle: (() -> Unit)? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -262,7 +275,7 @@ private fun subtitle(tab: ListTab, lists: PlanningLists): String {
     return when (tab) {
         ListTab.TODAY -> {
             val date = longDate.format(lists.today)
-            if (lists.summary.total == 0) date else stringResource(R.string.lists_today_summary, date, lists.summary.done, lists.summary.total)
+            if (lists.summary.total == 0) date else pluralStringResource(R.plurals.lists_today_summary, lists.summary.total, date, lists.summary.done, lists.summary.total)
         }
         ListTab.TOMORROW -> longDate.format(lists.today.plusDays(1))
         ListTab.INBOX -> pluralStringResource(R.plurals.lists_inbox_count, lists.inbox.size, lists.inbox.size)

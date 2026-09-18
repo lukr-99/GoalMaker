@@ -44,6 +44,7 @@ import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.theme.AppTheme
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlinx.coroutines.delay
@@ -110,24 +111,32 @@ fun TaskRow(
                 )
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(task.title, style = MaterialTheme.typography.bodyLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    Details(task, area, showDay)
+                    TaskDetails(task, area, showDay)
                 }
-                task.plannedTime?.let { time ->
-                    Text(
-                        text = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(LocalConfiguration.current.locales[0]).format(time),
-                        style = AppTheme.type.number.merge(MaterialTheme.typography.titleMedium),
-                        color = AppTheme.colors.textMuted,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
+                task.plannedTime?.let { TaskTime(it) }
             }
         }
     }
 }
 
+/** A task's time, in the theme's number style. */
 @Composable
-private fun Details(task: TaskItem, area: AreaItem?, showDay: Boolean) {
-    val parts = task.recurrence != null || area != null || task.topPriority || (showDay && task.plannedDate != null)
+internal fun TaskTime(time: LocalTime, modifier: Modifier = Modifier) {
+    Text(
+        text = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(LocalConfiguration.current.locales[0]).format(time),
+        style = AppTheme.type.number.merge(MaterialTheme.typography.titleMedium),
+        color = AppTheme.colors.textMuted,
+        modifier = modifier.padding(start = 8.dp),
+    )
+}
+
+/**
+ * The line under a task's title: its day when [showDay] (overdue), top priority unless the row
+ * shows it elsewhere ([showPriority] false), area and repeat.
+ */
+@Composable
+internal fun TaskDetails(task: TaskItem, area: AreaItem?, showDay: Boolean, showPriority: Boolean = true) {
+    val parts = task.recurrence != null || area != null || (showPriority && task.topPriority) || (showDay && task.plannedDate != null)
     if (!parts) return
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
         if (showDay) {
@@ -139,7 +148,7 @@ private fun Details(task: TaskItem, area: AreaItem?, showDay: Boolean) {
                 )
             }
         }
-        if (task.topPriority) {
+        if (showPriority && task.topPriority) {
             Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.composer_priority), tint = AppTheme.colors.accent, modifier = Modifier.size(14.dp))
         }
         area?.let {

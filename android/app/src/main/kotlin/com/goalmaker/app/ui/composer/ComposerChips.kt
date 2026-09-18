@@ -6,6 +6,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.composer.ComposerSpan
 import com.goalmaker.app.domain.composer.SpanKind
@@ -27,8 +28,15 @@ fun composerChips(line: String, draft: ComposerDraft, today: LocalDate, areas: L
     val chips = mutableListOf<ComposerChip>()
 
     draft.command?.let { command ->
-        val note = stringResource(if (command.known) R.string.composer_soon else R.string.composer_unknown_command)
-        chips += ComposerChip(SpanKind.COMMAND, "/${command.name}", note, muted = true, areaColorId = null, spans = of(SpanKind.COMMAND))
+        val runs = command.name == PlanRules.COMMAND
+        val note = stringResource(
+            when {
+                runs -> R.string.composer_opens_plan
+                command.known -> R.string.composer_soon
+                else -> R.string.composer_unknown_command
+            },
+        )
+        chips += ComposerChip(SpanKind.COMMAND, "/${command.name}", note, muted = !runs, areaColorId = null, spans = of(SpanKind.COMMAND))
         return chips
     }
     draft.plannedDate?.let { date ->
