@@ -10,6 +10,8 @@ import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
+import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,7 @@ class SettingsViewModel(
     private val auth: AuthGateway,
     private val sync: SyncCoordinator,
     private val settings: SettingsStore,
+    private val design: DesignTokens,
     private val updates: UpdateService,
     private val appInfo: AppInfo,
     private val restartApp: () -> Unit,
@@ -30,7 +33,9 @@ class SettingsViewModel(
 
     private val state = MutableStateFlow(
         SettingsUiState(
-            themeMode = settings.themeMode.value,
+            appearance = settings.appearance.value,
+            themeId = design.theme(settings.appearance.value.themeId).id,
+            themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
             signingOut = false,
             unsyncedAtSignOut = null,
@@ -44,13 +49,28 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
-            combine(settings.themeMode, auth.session) { mode, session -> mode to session }.collect { (mode, session) ->
-                state.update { it.copy(themeMode = mode, email = (session as? AuthSession.SignedIn)?.email.orEmpty()) }
-            }
+            combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
+                .collect { (appearance, session) ->
+                    state.update {
+                        it.copy(
+                            appearance = appearance,
+                            themeId = design.theme(appearance.themeId).id,
+                            email = (session as? AuthSession.SignedIn)?.email.orEmpty(),
+                        )
+                    }
+                }
         }
     }
 
-    fun setThemeMode(mode: ThemeMode) = settings.setThemeMode(mode)
+    fun setTheme(id: String) = settings.updateAppearance { it.copy(themeId = id) }
+
+    fun setThemeMode(mode: ThemeMode) = settings.updateAppearance { it.copy(mode = mode) }
+
+    fun setPureBlack(enabled: Boolean) = settings.updateAppearance { it.copy(pureBlack = enabled) }
+
+    fun setReduceMotion(choice: ReduceMotion) = settings.updateAppearance { it.copy(reduceMotion = choice) }
+
+    fun setCompletionSound(enabled: Boolean) = settings.updateAppearance { it.copy(completionSound = enabled) }
 
     /**
      * Pushes what is still local, empties this device's copy, then signs out (docs/sync.md). When

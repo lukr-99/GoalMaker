@@ -26,10 +26,13 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.pluralStringResource
@@ -42,7 +45,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
+import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import com.goalmaker.app.ui.theme.AppTheme
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
@@ -52,7 +57,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
+                title = { Text(AppTheme.headline(stringResource(R.string.settings_title))) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
@@ -71,7 +76,45 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Section(stringResource(R.string.settings_appearance)) {
-                ThemeModeSelector(selected = state.themeMode, onSelect = viewModel::setThemeMode)
+                Label(stringResource(R.string.settings_theme))
+                ThemePicker(
+                    themes = state.themes,
+                    selectedId = state.themeId,
+                    dark = AppTheme.colors.isDark,
+                    onSelect = viewModel::setTheme,
+                )
+                Label(stringResource(R.string.settings_mode))
+                ConnectedChoice(
+                    options = listOf(
+                        ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+                        ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+                        ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+                    ),
+                    selected = state.appearance.mode,
+                    onSelect = viewModel::setThemeMode,
+                )
+                SwitchRow(
+                    title = stringResource(R.string.settings_pure_black),
+                    hint = stringResource(R.string.settings_pure_black_hint),
+                    checked = state.appearance.pureBlack,
+                    onCheckedChange = viewModel::setPureBlack,
+                )
+                Label(stringResource(R.string.settings_reduce_motion))
+                ConnectedChoice(
+                    options = listOf(
+                        ReduceMotion.SYSTEM to stringResource(R.string.settings_theme_system),
+                        ReduceMotion.ON to stringResource(R.string.settings_reduce_motion_on),
+                        ReduceMotion.OFF to stringResource(R.string.settings_reduce_motion_off),
+                    ),
+                    selected = state.appearance.reduceMotion,
+                    onSelect = viewModel::setReduceMotion,
+                )
+                SwitchRow(
+                    title = stringResource(R.string.settings_completion_sound),
+                    hint = stringResource(R.string.settings_completion_sound_hint),
+                    checked = state.appearance.completionSound,
+                    onCheckedChange = viewModel::setCompletionSound,
+                )
             }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)
@@ -149,20 +192,37 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun ThemeModeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
-    val options = listOf(
-        ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-        ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
-        ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-    )
+private fun Label(text: String) {
+    Text(text, style = MaterialTheme.typography.titleSmall)
+}
+
+@Composable
+private fun SwitchRow(title: String, hint: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+    ) {
+        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+/** A row of connected toggle buttons where exactly one option is on. */
+@Composable
+private fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
     ) {
-        options.forEachIndexed { index, (mode, label) ->
+        options.forEachIndexed { index, (value, label) ->
             ToggleButton(
-                checked = selected == mode,
-                onCheckedChange = { onSelect(mode) },
+                checked = selected == value,
+                onCheckedChange = { onSelect(value) },
                 shapes = when (index) {
                     0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
                     options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()

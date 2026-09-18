@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.theme.AppTheme
 
 /** Today (M1): the open tasks, synced; the composer adds more. M2 brings days, sections and shortcuts. */
 @Composable
@@ -60,7 +62,7 @@ fun TodayScreen(viewModel: TodayViewModel, onOpenSettings: () -> Unit) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.today_title)) },
+                title = { Text(AppTheme.headline(stringResource(R.string.today_title))) },
                 subtitle = { Text(syncStatusLabel(state.sync)) },
                 actions = {
                     IconButton(onClick = onOpenSettings) {
@@ -118,12 +120,20 @@ fun TodayScreen(viewModel: TodayViewModel, onOpenSettings: () -> Unit) {
 @Composable
 private fun TaskRow(task: TaskItem, onDone: (Boolean) -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(20.dp),
+        color = AppTheme.colors.surface,
+        shape = AppTheme.shapes.row,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, end = 4.dp)) {
-            Checkbox(checked = false, onCheckedChange = onDone)
+            Checkbox(
+                checked = false,
+                onCheckedChange = onDone,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = AppTheme.colors.accent,
+                    checkmarkColor = AppTheme.colors.onAccent,
+                    uncheckedColor = AppTheme.colors.outline,
+                ),
+            )
             Text(
                 text = task.title,
                 style = MaterialTheme.typography.bodyLarge,

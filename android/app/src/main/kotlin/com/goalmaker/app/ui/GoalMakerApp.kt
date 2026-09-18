@@ -24,9 +24,9 @@ import com.goalmaker.app.ui.theme.GoalMakerTheme
 /** Root composable: the theme, then sign-in or the signed-in app depending on the session. */
 @Composable
 fun GoalMakerApp(graph: AppGraph) {
-    val themeMode by graph.settings.themeMode.collectAsStateWithLifecycle()
+    val appearance by graph.settings.appearance.collectAsStateWithLifecycle()
     val session by graph.auth.session.collectAsStateWithLifecycle()
-    GoalMakerTheme(themeMode) {
+    GoalMakerTheme(graph.design, appearance) {
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
             Crossfade(targetState = session, label = "session") { current ->
                 when (current) {

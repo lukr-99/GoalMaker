@@ -31,6 +31,7 @@ import com.goalmaker.app.data.sync.WorkManagerSyncScheduler
 import com.goalmaker.app.data.update.ApkInstallerLauncher
 import com.goalmaker.app.data.update.EcdsaSignatureVerifier
 import com.goalmaker.app.data.update.SupabaseReleaseChannel
+import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.domain.sync.SyncedTable
 import com.goalmaker.app.domain.sync.SyncedTableCatalog
 import com.goalmaker.app.domain.update.ReleasePlatform
@@ -65,6 +66,11 @@ class AppGraph(context: Context) {
 
     val settings: SettingsStore = SharedPreferencesSettingsStore(
         appContext.getSharedPreferences("goalmaker_settings", Context.MODE_PRIVATE),
+    )
+
+    /** The themes, area colors, spacing and motion (ADR 0008), read once from the packaged tokens. */
+    val design: DesignTokens = DesignTokens.parse(
+        appContext.assets.open("themes.json").use { it.readBytes().toString(Charsets.UTF_8) },
     )
 
     private val defaultBackend = BackendEnvironment(BuildConfig.DEFAULT_SUPABASE_URL, BuildConfig.DEFAULT_SUPABASE_KEY)

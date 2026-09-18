@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="window_background">#FFFBF7FF</color>
+    <!-- Before the first frame: the default theme's (Track) light background. -->
+    <color name="window_background">#FFFFFFFF</color>
     <!-- The launcher icon uses the Track theme's colors (tools/generate_app_icon.py). -->
     <color name="launcher_background">#FF0A0A0A</color>
     <color name="launcher_foreground">#FFFFFFFF</color>

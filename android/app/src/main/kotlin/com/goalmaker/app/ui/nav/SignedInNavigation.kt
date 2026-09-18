@@ -35,6 +35,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         auth = graph.auth,
                         sync = graph.sync,
                         settings = graph.settings,
+                        design = graph.design,
                         updates = graph.updates,
                         appInfo = graph.appInfo,
                         restartApp = graph.restartApp,
