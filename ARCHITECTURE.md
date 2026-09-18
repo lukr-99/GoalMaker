@@ -39,7 +39,7 @@ composition root creates everything
 - `application/`: ports and use cases: `auth/AuthGateway`, `update/UpdateService` with the
   `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
   `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
-  `planning/TaskList`.
+  `planning/` (`TaskList`, the list and ritual rules, `ReminderRules`).
 - `data/`: `SupabaseAuthGateway`, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`,
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
@@ -66,9 +66,10 @@ composition root creates everything
 
 ### Shared behavior (`contracts/`)
 
-Rules that must match across Kotlin and C# live as vector files: semantic versions and the update
-offer policy, release manifest verification, and the sync rules (merge, full resync, pull start,
-timestamp form). Both test suites read the same files. `contracts/schemas/synced-tables.json`
+Rules that must match across Kotlin and C# live as vector files, one per rule, listed in
+[contracts/README.md](contracts/README.md): versions and the update offer policy, release manifest
+verification, the sync rules, the composer grammar, the lists, Plan tomorrow, repeating tasks, and
+reminder times. Both test suites read the same files. `contracts/schemas/synced-tables.json`
 describes every synced column once; both apps build their replica SQL and JSON mapping from it, and
 `tools/check_synced_tables.py` keeps it equal to the replica and server schemas.
 
