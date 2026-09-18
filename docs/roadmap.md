@@ -1,0 +1,67 @@
+# GoalMaker: roadmap
+
+The spec is [docs/spec.md](spec.md). Each milestone lands in the order backend → Android → Windows,
+and each has markdown issues under `.scratch/<milestone>/`.
+
+## Process
+
+1. Spec grilling (done: `docs/grilling/`)
+2. Spec, roadmap, glossary and ADRs (done)
+3. **M0: delivery spine** (in progress)
+4. Design questionnaire (type, color, motion) before M2
+5. M1 to M6, then v1.0
+6. M7 and the post-v1 list
+
+## Milestones
+
+### M0: delivery spine
+
+Repository layout, CI for every part, local Supabase with migration and row-security tests, email
+code sign-in on both apps, debug/release identity and version, Android release signing, Windows
+installer, and the update channel (signed manifest in a private Storage bucket, verified by both
+apps). Issues: `.scratch/m0-delivery-spine/`.
+
+### M1: data and sync
+
+Core schema (areas, tags, tasks, steps, reminders, activity log), the replicas (Room, SQLite), the
+outbox and pull sync, Realtime refresh, tombstone purge, the sync-merge contract vectors.
+
+### M2: tasks everywhere
+
+Today, Tomorrow, Inbox, the composer with shortcuts (contract vectors), Plan tomorrow, repeating
+tasks, reminders and notifications on both apps, the tray, the global hotkey, single instance and
+launch switches. The design questionnaire comes first.
+
+### M3: connector
+
+The MCP server on Edge Functions with the secret link, the shared tool module, ritual prompts,
+rotate and revoke in settings, the activity log with undo, the routine prompt for weekly summaries.
+
+### M4: goals, habits, reviews, stats
+
+The goal cascade and progress modes, habits with check-ins and streaks (contract vectors), weekly and
+monthly reviews with the prompt library and data-reactive prompts, mood and energy, stats.
+
+### M5: projects, calendar, widgets, mini windows, share target
+
+Projects with the board, milestones and priorities, the calendar view, Today and Habits widgets,
+pinnable mini windows, share to GoalMaker, Add to Startup Profiles.
+
+### M6: v1.0
+
+Backup and restore (versioned JSON export, checked restore, weekly automatic export), live updates
+through the channel, hardening, accessibility pass, first release.
+
+### M7: quick chat
+
+The `assistant` Edge Function over the shared tool module with the Gemini free tier behind a
+provider interface; the composer switches between quick-add and chat.
+
+## After v1
+
+- Connector OAuth 2.1 with a sign-in page on Cloudflare Pages (`web/`)
+- Read-only calendar feeds
+- Windows 11 Widgets board
+- Quick Settings tile, voice capture
+- Czech translation
+- Other quick-chat providers (for example a local Ollama model)
