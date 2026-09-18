@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "description": "Semantic Versioning 2.0.0 parsing, precedence, and the update offer policy. Build metadata is ignored for precedence. A development build (pre-release identifier 'dev') never auto-updates, and pre-release versions are never offered.",
+  "parse": [
+    { "input": "1.2.3", "valid": true, "major": 1, "minor": 2, "patch": 3, "prerelease": [] },
+    { "input": "0.1.0-dev", "valid": true, "major": 0, "minor": 1, "patch": 0, "prerelease": ["dev"] },
+    { "input": "1.0.0-rc.1", "valid": true, "major": 1, "minor": 0, "patch": 0, "prerelease": ["rc", "1"] },
+    { "input": "1.0.0+build.7", "valid": true, "major": 1, "minor": 0, "patch": 0, "prerelease": [] },
+    { "input": "10.20.30-alpha.beta+exp.sha.5114f85", "valid": true, "major": 10, "minor": 20, "patch": 30, "prerelease": ["alpha", "beta"] },
+    { "input": "1.2", "valid": false },
+    { "input": "v1.2.3", "valid": false },
+    { "input": "01.2.3", "valid": false },
+    { "input": "1.2.3-", "valid": false },
+    { "input": "1.2.3-01", "valid": false },
+    { "input": "1.2.3-a..b", "valid": false },
+    { "input": "", "valid": false },
+    { "input": " 1.2.3", "valid": false }
+  ],
+  "compare": [
+    { "a": "1.0.0", "b": "1.0.0", "result": 0 },
+    { "a": "1.0.0", "b": "1.0.1", "result": -1 },
+    { "a": "1.1.0", "b": "1.0.9", "result": 1 },
+    { "a": "2.0.0", "b": "1.99.99", "result": 1 },
+    { "a": "1.0.0-alpha", "b": "1.0.0", "result": -1 },
+    { "a": "1.0.0-alpha", "b": "1.0.0-alpha.1", "result": -1 },
+    { "a": "1.0.0-alpha.1", "b": "1.0.0-alpha.beta", "result": -1 },
+    { "a": "1.0.0-alpha.beta", "b": "1.0.0-beta", "result": -1 },
+    { "a": "1.0.0-beta", "b": "1.0.0-beta.2", "result": -1 },
+    { "a": "1.0.0-beta.2", "b": "1.0.0-beta.11", "result": -1 },
+    { "a": "1.0.0-beta.11", "b": "1.0.0-rc.1", "result": -1 },
+    { "a": "1.0.0-rc.1", "b": "1.0.0", "result": -1 },
+    { "a": "1.0.0+build.1", "b": "1.0.0+build.2", "result": 0 },
+    { "a": "0.9.0-dev", "b": "0.9.0", "result": -1 }
+  ],
+  "offerUpdate": [
+    { "installed": "0.1.0", "available": "0.2.0", "offer": true },
+    { "installed": "0.1.0", "available": "0.1.1", "offer": true },
+    { "installed": "0.2.0", "available": "0.2.0", "offer": false },
+    { "installed": "0.3.0", "available": "0.2.0", "offer": false },
+    { "installed": "0.2.0-dev", "available": "0.3.0", "offer": false },
+    { "installed": "0.2.0-dev", "available": "0.2.0", "offer": false },
+    { "installed": "0.2.0", "available": "0.3.0-rc.1", "offer": false },
+    { "installed": "0.2.0", "available": "not-a-version", "offer": false }
+  ]
+}

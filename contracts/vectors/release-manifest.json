@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "description": "Release manifest verification. Verify the ECDSA P-256 SHA-256 signature (DER, base64) over the exact manifest bytes with trustedPublicKey (SubjectPublicKeyInfo DER, base64) first; only then parse and validate the JSON. Outcomes: valid, bad-signature, bad-manifest. Regenerate with tools/generate_manifest_vectors.py.",
+  "trustedPublicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwC1fD2TKBA6Tj2flmHg+KSgrpLgvKQoKNgibQpSq64vTkur5ot945cLDpNIm/b3TCKthOdOpD8ka1T1oOvv5aw==",
+  "cases": [
+    {
+      "name": "valid manifest with both platforms",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEYCIQCODcjw9dt+tRoKYam/F3RDxd40dH943RwkijgbMyNwCAIhAKKsAQd/go07Drl1CiEMxO90wjfkx0G/ZASrsmQZgU5R",
+      "outcome": "valid",
+      "version": "0.2.0",
+      "androidVersionCode": 2,
+      "artifacts": [
+        {
+          "platform": "android",
+          "path": "0.2.0/GoalMaker-0.2.0.apk",
+          "size": 18234567,
+          "sha256": "3f1c0e0b7a7d4e5c9a0b1c2d3e4f50617283940a1b2c3d4e5f60718293a4b5c6"
+        },
+        {
+          "platform": "windows",
+          "path": "0.2.0/GoalMaker-0.2.0-setup.exe",
+          "size": 52345678,
+          "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00"
+        }
+      ]
+    },
+    {
+      "name": "one byte changed after signing",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi45LmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEYCIQDogyqnqlUDjc3p3jARcmj1UtDfP6mGmA2i8FW34s/yjAIhAIwno4Uv753h2LkpLcuEQ9jezBCUCPFd5kU16zSSDuDE",
+      "outcome": "bad-signature"
+    },
+    {
+      "name": "signed by another key",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEUCIQDhdpH7b3g0VouhVTzBw8xi6fYMAlwtMVTG/Xc+jxz1awIgGRqz8JJYBIKRDLyw9k4X1ZyqpoRZQfbxje/5Lgf4nO0=",
+      "outcome": "bad-signature"
+    },
+    {
+      "name": "signature is not base64",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "not base64!",
+      "outcome": "bad-signature"
+    },
+    {
+      "name": "empty signature",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "",
+      "outcome": "bad-signature"
+    },
+    {
+      "name": "unknown fields are ignored",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdLAogICJjaGFubmVsIjogInN0YWJsZSIsCiAgImV4dHJhIjogewogICAgImEiOiAxCiAgfQp9Cg==",
+      "signatureBase64": "MEQCIE7anwGE/WfI4bbkLcwPODtXskeCPQqFeICDMhzFqmc8AiB+wmczZqM1oHG6t/FCFbqr1ePPcNADP53MmZd1xipw+g==",
+      "outcome": "valid",
+      "version": "0.2.0",
+      "androidVersionCode": 2,
+      "artifacts": [
+        {
+          "platform": "android",
+          "path": "0.2.0/GoalMaker-0.2.0.apk",
+          "size": 18234567,
+          "sha256": "3f1c0e0b7a7d4e5c9a0b1c2d3e4f50617283940a1b2c3d4e5f60718293a4b5c6"
+        },
+        {
+          "platform": "windows",
+          "path": "0.2.0/GoalMaker-0.2.0-setup.exe",
+          "size": 52345678,
+          "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00"
+        }
+      ]
+    },
+    {
+      "name": "windows-only manifest needs no android version code",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4xIiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOVQwODozMDowMFoiLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjEvR29hbE1ha2VyLTAuMi4xLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogMSwKICAgICAgInNoYTI1NiI6ICJhMWIyYzNkNGU1ZjYwNzE4MjkzYTRiNWM2ZDdlOGY5MDExMjIzMzQ0NTU2Njc3ODg5OWFhYmJjY2RkZWVmZjAwIgogICAgfQogIF0KfQo=",
+      "signatureBase64": "MEUCIQCRN8Wxacq3ANrrea5Vkz0veiSG9huQmWbk5q5oEo58XQIgO0FD4RmwR4rlpnJ4Jbv9nVqV1yskDSdA1kxCMprhTHc=",
+      "outcome": "valid",
+      "version": "0.2.1",
+      "androidVersionCode": null,
+      "artifacts": [
+        {
+          "platform": "windows",
+          "path": "0.2.1/GoalMaker-0.2.1-setup.exe",
+          "size": 1,
+          "sha256": "a1b2c3d4e5f60718293a4b5c6d7e8f90112233445566778899aabbccddeeff00"
+        }
+      ]
+    },
+    {
+      "name": "unsupported schema",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAyLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEUCIFb2wg5wusGXx6gHjlLHVGyLfJQ0qBkN1S2jMCPBMW8RAiEAlwXnbDFmdUWvQ3a3rv++0HHt58U1jlnUDF4vl1vlYb4=",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "version is not semantic",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogInYwLjIiLAogICJhbmRyb2lkVmVyc2lvbkNvZGUiOiAyLAogICJwdWJsaXNoZWRBdCI6ICIyMDI2LTA5LTE4VDEyOjAwOjAwWiIsCiAgIm5vdGVzIjogIlNlY29uZCByZWxlYXNlLiIsCiAgImFydGlmYWN0cyI6IFsKICAgIHsKICAgICAgInBsYXRmb3JtIjogImFuZHJvaWQiLAogICAgICAicGF0aCI6ICIwLjIuMC9Hb2FsTWFrZXItMC4yLjAuYXBrIiwKICAgICAgInNpemUiOiAxODIzNDU2NywKICAgICAgInNoYTI1NiI6ICIzZjFjMGUwYjdhN2Q0ZTVjOWEwYjFjMmQzZTRmNTA2MTcyODM5NDBhMWIyYzNkNGU1ZjYwNzE4MjkzYTRiNWM2IgogICAgfSwKICAgIHsKICAgICAgInBsYXRmb3JtIjogIndpbmRvd3MiLAogICAgICAicGF0aCI6ICIwLjIuMC9Hb2FsTWFrZXItMC4yLjAtc2V0dXAuZXhlIiwKICAgICAgInNpemUiOiA1MjM0NTY3OCwKICAgICAgInNoYTI1NiI6ICJhMWIyYzNkNGU1ZjYwNzE4MjkzYTRiNWM2ZDdlOGY5MDExMjIzMzQ0NTU2Njc3ODg5OWFhYmJjY2RkZWVmZjAwIgogICAgfQogIF0KfQo=",
+      "signatureBase64": "MEQCIFbLinjd6kM6dPO4K0QbId5lIlwWBrr8ACdrds5Ir7dVAiBNzpzhonFxNQdASHTAE8gc3tpqyqyUWWT00FNB/zlrNQ==",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "no artifacts",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbXQp9Cg==",
+      "signatureBase64": "MEUCIQDI1jk3YmKeD3Pk1gTzvYDliPmp81pQniyDjJ1bowd3sQIgSUJ1iZu4jRXFh0TQZfIVDMYKc6FgRPFsDV0MyuQ/O2U=",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "path escapes the folder",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiLi4vc2VjcmV0LmFwayIsCiAgICAgICJzaXplIjogMTAsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEQCIDePPjMoumtxTo2QV2qgcLariR1uhqpOj1BipPFpDX54AiB3ikPvlw9rzf/kOkL6esOh0oENJmX1yTyGlSzhFZWXXg==",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "path starts with a slash",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiLzAuMi4wL2EuYXBrIiwKICAgICAgInNpemUiOiAxMCwKICAgICAgInNoYTI1NiI6ICIzZjFjMGUwYjdhN2Q0ZTVjOWEwYjFjMmQzZTRmNTA2MTcyODM5NDBhMWIyYzNkNGU1ZjYwNzE4MjkzYTRiNWM2IgogICAgfQogIF0KfQo=",
+      "signatureBase64": "MEYCIQCpAXWbQrvMaUeaYYySt/ahy49bEqOQVnw1Pja/vMo8dQIhAIV5Kq5fKPjsMLd5TKq1Qbd7ECqVoR07xacLQCELtSqf",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "sha256 is uppercase",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvYS5hcGsiLAogICAgICAic2l6ZSI6IDEwLAogICAgICAic2hhMjU2IjogIjNGMUMwRTBCN0E3RDRFNUM5QTBCMUMyRDNFNEY1MDYxNzI4Mzk0MEExQjJDM0Q0RTVGNjA3MTgyOTNBNEI1QzYiCiAgICB9CiAgXQp9Cg==",
+      "signatureBase64": "MEUCIQDUZ1DS5IEjnnNsTeQaTEIUi9n9gToyFhKbLtTOd68xQgIgRZrJ5lJA1siYlxUUkuSHwC4J8uIfv0rEUQ/ST0nldik=",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "size is zero",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvYS5hcGsiLAogICAgICAic2l6ZSI6IDAsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEQCIAF5NJlBBzBz3ohPdkq/Vl4VdHOqFLZCIAmFj9mKMtNQAiAV9ZUcg7UQG7Rfk4zDp9qXmXgsRBnqCi+0YzsuKDUZag==",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "unknown platform",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAiYW5kcm9pZFZlcnNpb25Db2RlIjogMiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJsaW51eCIsCiAgICAgICJwYXRoIjogIjAuMi4wL2EudGFyIiwKICAgICAgInNpemUiOiAxMCwKICAgICAgInNoYTI1NiI6ICIzZjFjMGUwYjdhN2Q0ZTVjOWEwYjFjMmQzZTRmNTA2MTcyODM5NDBhMWIyYzNkNGU1ZjYwNzE4MjkzYTRiNWM2IgogICAgfQogIF0KfQo=",
+      "signatureBase64": "MEYCIQCOqR0Pi+3aumy/E00XDGUb4gZpJbjJrAfQKRpedgP/pwIhANmutpmrb7UxggsnJppGAdCNckuIWsTWpotm3yTDULbz",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "android artifact without a version code",
+      "manifestBase64": "ewogICJzY2hlbWEiOiAxLAogICJ2ZXJzaW9uIjogIjAuMi4wIiwKICAicHVibGlzaGVkQXQiOiAiMjAyNi0wOS0xOFQxMjowMDowMFoiLAogICJub3RlcyI6ICJTZWNvbmQgcmVsZWFzZS4iLAogICJhcnRpZmFjdHMiOiBbCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJhbmRyb2lkIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLmFwayIsCiAgICAgICJzaXplIjogMTgyMzQ1NjcsCiAgICAgICJzaGEyNTYiOiAiM2YxYzBlMGI3YTdkNGU1YzlhMGIxYzJkM2U0ZjUwNjE3MjgzOTQwYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNiIKICAgIH0sCiAgICB7CiAgICAgICJwbGF0Zm9ybSI6ICJ3aW5kb3dzIiwKICAgICAgInBhdGgiOiAiMC4yLjAvR29hbE1ha2VyLTAuMi4wLXNldHVwLmV4ZSIsCiAgICAgICJzaXplIjogNTIzNDU2NzgsCiAgICAgICJzaGEyNTYiOiAiYTFiMmMzZDRlNWY2MDcxODI5M2E0YjVjNmQ3ZThmOTAxMTIyMzM0NDU1NjY3Nzg4OTlhYWJiY2NkZGVlZmYwMCIKICAgIH0KICBdCn0K",
+      "signatureBase64": "MEUCIByIqD+Z1K7DqrS/rPtw6NwMZ43ouXgwvqZ7GtCEYfqNAiEAwM33s+h+4dWUVJl6cOGbvoNf2ZkQ24NW5wT8H28mvCU=",
+      "outcome": "bad-manifest"
+    },
+    {
+      "name": "not json",
+      "manifestBase64": "PGh0bWw+bm90IGEgbWFuaWZlc3Q8L2h0bWw+Cg==",
+      "signatureBase64": "MEYCIQCgTuH4jKWGa1fDDN2Vhh9BG341nXgJhs+h2sao4sMozgIhAK/QnyXiuDjYa+wibkKLKiAcZD3W2weB/FCHJlqoUYQq",
+      "outcome": "bad-manifest"
+    }
+  ]
+}
