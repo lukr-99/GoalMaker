@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "description": "Repeating tasks (docs/repeating.md). 'next': the day the next occurrence gets, from the rule, the current occurrence's day ('planned', null for none) and today (the planning day); 'next' null means the rule can't be followed. 'successors': the next occurrence's id, a UUID version 5 of the current id (lowercase text) in 'successorNamespace'. 'tagLinks': the id of the next occurrence's link to a tag, a UUID version 5 of '<task id>/<tag id>' (lowercase) in the same namespace. 'repair': a series' occurrences after a sync; 'drop' lists the open ones to drop so one stays open. 2026-09-18 is a Friday.",
+  "successorNamespace": "77797aa7-9e11-42d8-a667-24b0596d2a4f",
+  "next": [
+    { "name": "daily: the next day", "rule": "FREQ=DAILY", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-09-19" },
+    { "name": "finished early: moves on from the planned day", "rule": "FREQ=DAILY", "planned": "2026-09-19", "today": "2026-09-18", "next": "2026-09-20" },
+    { "name": "finished late: never in the past", "rule": "FREQ=DAILY", "planned": "2026-09-15", "today": "2026-09-18", "next": "2026-09-19" },
+    { "name": "across the new year", "rule": "FREQ=DAILY", "planned": "2026-12-31", "today": "2026-12-31", "next": "2027-01-01" },
+    { "name": "no day: today is the anchor", "rule": "FREQ=DAILY", "planned": null, "today": "2026-09-18", "next": "2026-09-19" },
+    { "name": "every 3 days", "rule": "FREQ=DAILY;INTERVAL=3", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-09-21" },
+    { "name": "every 3 days, late: keeps the rhythm", "rule": "FREQ=DAILY;INTERVAL=3", "planned": "2026-09-10", "today": "2026-09-18", "next": "2026-09-19" },
+    { "name": "weekdays: Friday to Monday", "rule": "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-09-21" },
+    { "name": "weekend: Saturday done early", "rule": "FREQ=WEEKLY;BYDAY=SA,SU", "planned": "2026-09-19", "today": "2026-09-18", "next": "2026-09-20" },
+    { "name": "several weekdays, late", "rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR", "planned": "2026-09-16", "today": "2026-09-18", "next": "2026-09-21" },
+    { "name": "weekly on Friday", "rule": "FREQ=WEEKLY;BYDAY=FR", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-09-25" },
+    { "name": "every 2 weeks", "rule": "FREQ=WEEKLY;INTERVAL=2;BYDAY=FR", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-10-02" },
+    { "name": "every 2 weeks, late: stays on the anchor's weeks", "rule": "FREQ=WEEKLY;INTERVAL=2;BYDAY=FR", "planned": "2026-09-04", "today": "2026-09-18", "next": "2026-10-02" },
+    { "name": "every 2 weeks on two days: the same week first", "rule": "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,TH", "planned": "2026-09-14", "today": "2026-09-14", "next": "2026-09-17" },
+    { "name": "every 2 weeks on two days: then two weeks on", "rule": "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,TH", "planned": "2026-09-17", "today": "2026-09-17", "next": "2026-09-28" },
+    { "name": "weekly without a day: the anchor's weekday", "rule": "FREQ=WEEKLY", "planned": "2026-09-16", "today": "2026-09-18", "next": "2026-09-23" },
+    { "name": "parts in another order", "rule": "BYDAY=FR;INTERVAL=2;FREQ=WEEKLY", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-10-02" },
+    { "name": "monthly on the 15th, late", "rule": "FREQ=MONTHLY;BYMONTHDAY=15", "planned": "2026-09-15", "today": "2026-09-18", "next": "2026-10-15" },
+    { "name": "the 31st skips short months", "rule": "FREQ=MONTHLY;BYMONTHDAY=31", "planned": "2026-08-31", "today": "2026-09-18", "next": "2026-10-31" },
+    { "name": "the 29th skips a short February", "rule": "FREQ=MONTHLY;BYMONTHDAY=29", "planned": "2027-01-29", "today": "2027-01-29", "next": "2027-03-29" },
+    { "name": "every 2 months", "rule": "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=18", "planned": "2026-09-18", "today": "2026-09-18", "next": "2026-11-18" },
+    { "name": "every 2 months, late: stays on the anchor's months", "rule": "FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=5", "planned": "2026-07-05", "today": "2026-09-18", "next": "2026-11-05" },
+    { "name": "monthly without a day: the anchor's day", "rule": "FREQ=MONTHLY", "planned": "2026-09-07", "today": "2026-09-18", "next": "2026-10-07" },
+    { "name": "lowercase is fine", "rule": "freq=weekly;byday=mo", "planned": "2026-09-14", "today": "2026-09-18", "next": "2026-09-21" },
+    { "name": "yearly isn't a rule the apps follow", "rule": "FREQ=YEARLY", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "an interval below 1", "rule": "FREQ=DAILY;INTERVAL=0", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "an interval that isn't a number", "rule": "FREQ=DAILY;INTERVAL=two", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "an unknown weekday", "rule": "FREQ=WEEKLY;BYDAY=XX", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "a day of the month past 31", "rule": "FREQ=MONTHLY;BYMONTHDAY=32", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "an unknown part", "rule": "FREQ=DAILY;COUNT=3", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "no frequency", "rule": "BYDAY=MO", "planned": "2026-09-18", "today": "2026-09-18", "next": null },
+    { "name": "empty", "rule": "", "planned": "2026-09-18", "today": "2026-09-18", "next": null }
+  ],
+  "successors": [
+    { "id": "6f1d3c2a-8b4e-4c1f-9a2d-3e5f7a9b1c0d", "successor": "de6dc99b-969a-534e-97c7-25428e943347" },
+    { "id": "de6dc99b-969a-534e-97c7-25428e943347", "successor": "360ba35f-f6be-51cb-861e-33db271844a6" },
+    { "id": "0B7E9F4C-2D6A-4E8B-A1C3-5F7D9E1B3A2C", "successor": "bdf4b21f-71c9-5ea4-a8a7-2e43defee358" },
+    { "id": "11111111-2222-4333-8444-555555555555", "successor": "ac5b2d0d-8a9a-5c3c-82b9-75909cd3d1c1" }
+  ],
+  "tagLinks": [
+    { "task": "de6dc99b-969a-534e-97c7-25428e943347", "tag": "5a8f2c1e-7d3b-4e9a-b6c4-1f2e3d4c5b6a", "id": "90202576-fb0a-5988-8595-e5182b987de7" },
+    { "task": "ac5b2d0d-8a9a-5c3c-82b9-75909cd3d1c1", "tag": "9C8B7A6D-5E4F-4A3B-8C2D-1E0F9A8B7C6D", "id": "736e084d-d26d-5758-9250-df7de27b0ead" }
+  ],
+  "repair": [
+    {
+      "name": "one open occurrence: nothing to do",
+      "occurrences": [
+        { "id": "a", "series": "s", "planned": "2026-09-17", "status": "done" },
+        { "id": "b", "series": "s", "planned": "2026-09-18", "status": "open" }
+      ],
+      "drop": []
+    },
+    {
+      "name": "two open: the one planned latest stays",
+      "occurrences": [
+        { "id": "b", "series": "s", "planned": "2026-09-19", "status": "open" },
+        { "id": "c", "series": "s", "planned": "2026-09-20", "status": "open" }
+      ],
+      "drop": ["b"]
+    },
+    {
+      "name": "same day: the larger id stays",
+      "occurrences": [
+        { "id": "x2", "series": "s", "planned": "2026-09-19", "status": "open" },
+        { "id": "x1", "series": "s", "planned": "2026-09-19", "status": "open" }
+      ],
+      "drop": ["x1"]
+    },
+    {
+      "name": "one without a day counts as earliest",
+      "occurrences": [
+        { "id": "a", "series": "s", "planned": null, "status": "open" },
+        { "id": "b", "series": "s", "planned": "2026-09-01", "status": "open" }
+      ],
+      "drop": ["a"]
+    },
+    {
+      "name": "three open",
+      "occurrences": [
+        { "id": "a", "series": "s", "planned": "2026-09-18", "status": "open" },
+        { "id": "b", "series": "s", "planned": "2026-09-25", "status": "open" },
+        { "id": "c", "series": "s", "planned": "2026-09-21", "status": "open" }
+      ],
+      "drop": ["a", "c"]
+    },
+    {
+      "name": "deleted, done and dropped occurrences don't count",
+      "occurrences": [
+        { "id": "a", "series": "s", "planned": "2026-09-18", "status": "open" },
+        { "id": "b", "series": "s", "planned": "2026-09-19", "status": "open", "deleted": true },
+        { "id": "c", "series": "s", "planned": "2026-09-20", "status": "done" },
+        { "id": "d", "series": "s", "planned": "2026-09-21", "status": "dropped" }
+      ],
+      "drop": []
+    },
+    {
+      "name": "series are separate; without series_id a task names its series by its own id",
+      "occurrences": [
+        { "id": "a", "series": "s", "planned": "2026-09-18", "status": "open" },
+        { "id": "b", "series": "t", "planned": "2026-09-19", "status": "open" },
+        { "id": "s", "series": null, "planned": "2026-09-20", "status": "open" }
+      ],
+      "drop": ["a"]
+    }
+  ]
+}

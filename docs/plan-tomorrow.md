@@ -61,9 +61,9 @@ they stay until cleared.
 A summary card: tomorrow's task count as the big number, how many top priorities it has, and how
 today's tasks were decided. Back to Today from there.
 
-## Later
+## Notes
 
-- **Repeating tasks** are decided like the others for now; M2-08 makes Done and Drop move the
-  series on to its next occurrence.
+- **Repeating tasks** are decided like the others; Done and Drop move the series on to its next
+  occurrence, and changing the decision back takes that occurrence back ([repeating](repeating.md)).
 - The evening reminder (M2-09) needs to know whether today's ritual already happened on either
   device, which takes a synced record of it; that arrives with the reminder.

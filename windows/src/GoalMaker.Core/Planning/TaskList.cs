@@ -7,21 +7,25 @@ namespace GoalMaker.Core.Planning;
 
 /// <summary>
 /// Tasks as the lists need them: read from the replica, written through its outbox. Every write
-/// asks for a sync.
+/// asks for a sync. Finishing a repeating task makes its next occurrence (docs/repeating.md);
+/// <paramref name="today"/> is the planning day that counts from.
 /// </summary>
 public sealed class TaskList
 {
     private const string Table = "tasks";
     private const string TagLinks = "task_tags";
+    private const string SeriesId = "series_id";
     private const int MaxTitle = 500;
     private readonly IReplica replica;
     private readonly NewRows rows;
     private readonly AreaList areas;
     private readonly TagList tags;
     private readonly Action requestSync;
+    private readonly Func<DateOnly> today;
 
-    public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, Action requestSync)
+    public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, Action requestSync, Func<DateOnly> today)
     {
+        this.today = today;
         this.replica = replica;
         this.rows = rows;
         this.areas = areas;
@@ -89,6 +93,11 @@ public sealed class TaskList
                 return;
             }
 
+            if (draft.Repeat is not null)
+            {
+                task[SeriesId] = (string?)task[SyncedTable.Id];
+            }
+
             replica.Queue(Table, task);
             foreach (var tagId in tagIds)
             {
@@ -108,30 +117,166 @@ public sealed class TaskList
         return item;
     }
 
-    public void SetDone(string id, bool done) => Change(id, row =>
+    public void SetDone(string id, bool done)
     {
-        row["status"] = done ? "done" : "open";
-        row["completed_at"] = done ? rows.Timestamp() : null;
-    });
+        if (done)
+        {
+            Finish(id, "done");
+        }
+        else
+        {
+            Reopen(id, _ => { });
+        }
+    }
 
     public void Delete(string id) => Change(id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
     /// <summary>Plans the task for <paramref name="day"/>, keeping its time; reopens it if it was done or dropped (Plan tomorrow).</summary>
-    public void Plan(string id, DateOnly day) => Change(id, row =>
-    {
-        row["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-        row["status"] = "open";
-        row["completed_at"] = null;
-    });
+    public void Plan(string id, DateOnly day) =>
+        Reopen(id, row => row["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
-    /// <summary>Drops the task: it stays in the history but leaves every list.</summary>
-    public void Drop(string id) => Change(id, row =>
+    /// <summary>Drops the task: it stays in the history but leaves every list. A repeating task moves on.</summary>
+    public void Drop(string id) => Finish(id, "dropped");
+
+    /// <summary>
+    /// After a sync that pulled rows: drops all but one open occurrence of each series, the same way
+    /// on every device (docs/repeating.md). True when it changed something.
+    /// </summary>
+    public bool RepairSeries()
     {
-        row["status"] = "dropped";
-        row["completed_at"] = null;
-    });
+        var drop = Occurrences.ToDrop(All());
+        if (drop.Count == 0)
+        {
+            return false;
+        }
+
+        replica.InTransaction(() =>
+        {
+            foreach (var id in drop)
+            {
+                if (replica.Get(Table, id) is { } row)
+                {
+                    row["status"] = "dropped";
+                    row["completed_at"] = null;
+                    replica.Queue(Table, row);
+                }
+            }
+        });
+        requestSync();
+        return true;
+    }
 
     public void SetTopPriority(string id, bool top) => Change(id, row => row["top_priority"] = top);
+
+    // Done or dropped; an open repeating task makes its next occurrence in the same transaction.
+    private void Finish(string id, string status)
+    {
+        var changed = false;
+        replica.InTransaction(() =>
+        {
+            if (replica.Get(Table, id) is not { } row)
+            {
+                return;
+            }
+
+            var wasOpen = (string?)row["status"] == "open";
+            row["status"] = status;
+            row["completed_at"] = status == "done" ? rows.Timestamp() : null;
+            replica.Queue(Table, row);
+            if (wasOpen)
+            {
+                MoveOn(row);
+            }
+
+            changed = true;
+        });
+        if (changed)
+        {
+            requestSync();
+        }
+    }
+
+    // Open again; a finished occurrence takes back its next one if that is still open (docs/repeating.md).
+    private void Reopen(string id, Action<JsonObject> edit)
+    {
+        var changed = false;
+        replica.InTransaction(() =>
+        {
+            if (replica.Get(Table, id) is not { } row)
+            {
+                return;
+            }
+
+            var wasFinished = (string?)row["status"] != "open";
+            row["status"] = "open";
+            row["completed_at"] = null;
+            edit(row);
+            replica.Queue(Table, row);
+            if (wasFinished && replica.Get(Table, Occurrences.SuccessorId(id)) is { } next
+                && next[SyncedTable.DeletedAt] is null && (string?)next["status"] == "open")
+            {
+                next[SyncedTable.DeletedAt] = rows.Timestamp();
+                replica.Queue(Table, next);
+            }
+
+            changed = true;
+        });
+        if (changed)
+        {
+            requestSync();
+        }
+    }
+
+    // The next occurrence copies this one's plan onto the rule's next day, with its tags; nothing when
+    // the task doesn't repeat, the rule can't be followed, or the next occurrence is already there.
+    private void MoveOn(JsonObject row)
+    {
+        var current = ToItem(row);
+        if (Recurrence.Parse(current.Recurrence)?.Next(current.PlannedDate, today()) is not { } day)
+        {
+            return;
+        }
+
+        var nextId = Occurrences.SuccessorId(current.Id);
+        if (replica.Get(Table, nextId) is { } existing && existing[SyncedTable.DeletedAt] is null)
+        {
+            return;
+        }
+
+        var next = rows.Create(Table, new Dictionary<string, JsonNode?>
+        {
+            [SyncedTable.Id] = nextId,
+            ["title"] = row["title"]?.DeepClone(),
+            ["notes"] = row["notes"]?.DeepClone() ?? string.Empty,
+            ["top_priority"] = current.TopPriority,
+            ["status"] = "open",
+            ["position"] = 0.0,
+            ["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["planned_time"] = row["planned_time"]?.DeepClone(),
+            ["area_id"] = current.AreaId,
+            ["recurrence"] = current.Recurrence,
+            [SeriesId] = Occurrences.SeriesOf(current),
+        });
+        if (next is null)
+        {
+            return;
+        }
+
+        replica.Queue(Table, next);
+        foreach (var link in replica.All(TagLinks))
+        {
+            if ((string?)link["task_id"] == current.Id && link[SyncedTable.DeletedAt] is null && (string?)link["tag_id"] is { } tagId
+                && rows.Create(TagLinks, new Dictionary<string, JsonNode?>
+                {
+                    [SyncedTable.Id] = Occurrences.TagLinkId(nextId, tagId),
+                    ["task_id"] = nextId,
+                    ["tag_id"] = tagId,
+                }) is { } copy)
+            {
+                replica.Queue(TagLinks, copy);
+            }
+        }
+    }
 
     private void Change(string id, Action<JsonObject> edit)
     {
@@ -160,5 +305,6 @@ public sealed class TaskList
         (string?)row["planned_date"] is { } date ? DateOnly.ParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null,
         (string?)row["planned_time"] is { } time ? TimeOnly.Parse(time, CultureInfo.InvariantCulture) : null,
         (string?)row["area_id"],
-        (string?)row["recurrence"]);
+        (string?)row["recurrence"],
+        SeriesId: (string?)row[SeriesId]);
 }

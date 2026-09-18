@@ -82,7 +82,17 @@ public sealed class AppGraph : IDisposable
         var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
         Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
         Tags = new TagList(replica, newRows, Sync.Request);
-        Tasks = new TaskList(replica, newRows, Areas, Tags, Sync.Request);
+        Tasks = new TaskList(
+            replica, newRows, Areas, Tags, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
+
+        // A sync can leave a series with two open occurrences; every device settles it the same way.
+        Sync.RunCompleted += (_, report) =>
+        {
+            if (report.Pulled > 0)
+            {
+                Tasks.RepairSeries();
+            }
+        };
         changeFeed = new SupabaseChangeFeed(supabase, catalog, Sync.Request);
         Auth.SessionChanged += (_, session) => OnSessionChanged(session);
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;

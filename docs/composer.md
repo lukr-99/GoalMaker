@@ -51,7 +51,7 @@ moves an explicit date: `today 9:00` is today even at noon.
 
 ## Repeats
 
-A repeat is saved as an RRULE subset: `FREQ=DAILY`, `FREQ=DAILY;INTERVAL=3`,
+A repeat is saved as an RRULE subset (how a series moves on is in [repeating](repeating.md)): `FREQ=DAILY`, `FREQ=DAILY;INTERVAL=3`,
 `FREQ=WEEKLY;BYDAY=MO,WE,FR`, `FREQ=WEEKLY;INTERVAL=2;BYDAY=FR`, `FREQ=MONTHLY;BYMONTHDAY=15`,
 `FREQ=MONTHLY;INTERVAL=2;BYMONTHDAY=18`, parts always in that order and weekdays Monday first.
 

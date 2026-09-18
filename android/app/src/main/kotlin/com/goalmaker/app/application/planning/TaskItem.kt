@@ -3,7 +3,7 @@ package com.goalmaker.app.application.planning
 import java.time.LocalDate
 import java.time.LocalTime
 
-/** A task as the lists show it. M2-06 adds deadlines, steps and tags to what lists show. */
+/** A task as the lists show it. [seriesId] groups a repeating task's occurrences (docs/repeating.md). */
 data class TaskItem(
     val id: String,
     val title: String,
@@ -15,4 +15,5 @@ data class TaskItem(
     val areaId: String? = null,
     val recurrence: String? = null,
     val deleted: Boolean = false,
+    val seriesId: String? = null,
 )

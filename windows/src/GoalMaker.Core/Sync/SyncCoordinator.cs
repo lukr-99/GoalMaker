@@ -33,6 +33,9 @@ public sealed class SyncCoordinator : IDisposable
 
     public event EventHandler<SyncStatus>? StatusChanged;
 
+    /// <summary>After each run, on the sync's thread, before the status is published (repeating tasks' repair).</summary>
+    public event EventHandler<SyncReport>? RunCompleted;
+
     public SyncStatus Status { get; private set; }
 
     /// <summary>Asks for a sync soon; several requests within the debounce window make one run.</summary>
@@ -77,6 +80,7 @@ public sealed class SyncCoordinator : IDisposable
                 try
                 {
                     report = await engine.RunAsync(cancellationToken).ConfigureAwait(false);
+                    RunCompleted?.Invoke(this, report);
                 }
                 catch (Exception error) when (error is not OperationCanceledException)
                 {

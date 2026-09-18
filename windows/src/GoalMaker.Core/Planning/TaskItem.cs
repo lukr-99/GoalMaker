@@ -1,6 +1,6 @@
 namespace GoalMaker.Core.Planning;
 
-/// <summary>A task as the lists show it. M2-06 adds deadlines, steps and tags to what lists show.</summary>
+/// <summary>A task as the lists show it. <see cref="SeriesId"/> groups a repeating task's occurrences (docs/repeating.md).</summary>
 public sealed record TaskItem(
     string Id,
     string Title,
@@ -11,4 +11,5 @@ public sealed record TaskItem(
     TimeOnly? PlannedTime = null,
     string? AreaId = null,
     string? Recurrence = null,
-    bool Deleted = false);
+    bool Deleted = false,
+    string? SeriesId = null);

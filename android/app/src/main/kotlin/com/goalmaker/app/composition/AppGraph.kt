@@ -35,6 +35,7 @@ import com.goalmaker.app.data.update.ApkInstallerLauncher
 import com.goalmaker.app.data.update.EcdsaSignatureVerifier
 import com.goalmaker.app.data.update.SupabaseReleaseChannel
 import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.sync.SyncedTable
 import com.goalmaker.app.domain.sync.SyncedTableCatalog
 import com.goalmaker.app.domain.update.ReleasePlatform
@@ -44,6 +45,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import java.io.File
 import java.time.Instant
+import java.time.LocalDateTime
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineDispatcher
@@ -138,7 +140,9 @@ class AppGraph(context: Context) {
     )
     val areas = AreaList(replica, newRows, design.areaColors.map { it.id }, sync::request)
     val tags = TagList(replica, newRows, sync::request)
-    val tasks = TaskList(replica, newRows, areas, tags, sync::request)
+    val tasks = TaskList(replica, newRows, areas, tags, sync::request) {
+        PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)
+    }
 
     private val changeFeed = SupabaseChangeFeed(supabase, catalog, scope, sync::request)
     private val backgroundSync = WorkManagerSyncScheduler(appContext)
@@ -148,6 +152,8 @@ class AppGraph(context: Context) {
     @Volatile private var visible = false
 
     init {
+        // A sync can leave a series with two open occurrences; every device settles it the same way.
+        sync.afterRun = { report -> if (report.pulled > 0) tasks.repairSeries() }
         scope.launch {
             auth.session.collect { session ->
                 when (session) {

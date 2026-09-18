@@ -39,6 +39,13 @@ class SyncCoordinator(
 
     val status: StateFlow<SyncStatus> = mutableStatus.asStateFlow()
 
+    /**
+     * Runs after each sync run, on [io], before the status is published: the composition root sets it
+     * once to repair repeating tasks' series (docs/repeating.md).
+     */
+    @Volatile
+    var afterRun: (SyncReport) -> Unit = {}
+
     /** Asks for a sync soon; several requests within the debounce window make one run. */
     fun request() = schedule(debounce)
 
@@ -66,7 +73,10 @@ class SyncCoordinator(
                 var pending = mutableStatus.value.pendingChanges
                 report = try {
                     withContext(io) {
-                        engine.run().also { pending = replica.pendingCount() }
+                        engine.run().also { report ->
+                            afterRun(report)
+                            pending = replica.pendingCount()
+                        }
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled

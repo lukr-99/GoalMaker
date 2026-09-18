@@ -15,7 +15,8 @@ public sealed class TaskListTests : IDisposable
     {
         var rows = new NewRows(test.Catalog, () => owner, time);
         var areas = new AreaList(test.Replica, rows, ["violet", "blue", "cyan"], () => syncRequests++);
-        return new TaskList(test.Replica, rows, areas, new TagList(test.Replica, rows, () => syncRequests++), () => syncRequests++);
+        return new TaskList(
+            test.Replica, rows, areas, new TagList(test.Replica, rows, () => syncRequests++), () => syncRequests++, () => PlanningDay.Of(time.GetLocalNow().DateTime));
     }
 
     private static ComposerDraft Draft(string line) => ComposerParser.Parse(line, new DateTime(2026, 9, 18, 14, 5, 0));
