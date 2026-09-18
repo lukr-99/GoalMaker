@@ -3,6 +3,7 @@ package com.goalmaker.app.application.settings
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
+import java.time.Instant
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -23,6 +24,11 @@ interface SettingsStore {
     val quietHours: StateFlow<QuietHours>
 
     fun setQuietHours(window: QuietHours)
+
+    /** When this device last looked at its reminders, so each one is shown once (docs/reminders.md). */
+    fun remindedUntil(): Instant?
+
+    fun setRemindedUntil(instant: Instant)
 
     /** Dev builds only: another Supabase project to use from the next app start. */
     fun backendOverride(): BackendEnvironment?

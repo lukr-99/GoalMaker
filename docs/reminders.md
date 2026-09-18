@@ -1,6 +1,7 @@
 # Reminders
 
-When a reminder fires, and what quiet hours and snooze do to that time (spec: stories 51 to 58).
+When a reminder fires, what quiet hours and snooze do to that time, and what a device shows, arms
+and takes down (spec: stories 51 to 58).
 The rules are pinned by [`contracts/vectors/reminders.json`](../contracts/vectors/reminders.json)
 and run by both apps.
 
@@ -54,10 +55,25 @@ six hours later, which is the next planning day.
 Quiet hours are applied again when the reminder comes back, so a snooze cannot push an ordinary
 reminder into the night.
 
+## Looking at the reminders
+
+A device keeps one alarm armed, for the soonest reminder still ahead (ties: the smaller id). When it
+goes off, or the device wakes, reboots or has its clock changed, the device **looks**: it shows every
+reminder that arrived after its previous look, up to now, and arms the next one. The time of the
+last look stays on the device, so:
+
+- a reminder is shown once, even if the owner opens the notification without handling it,
+- a device that was off or asleep shows everything it missed when it comes back,
+- a device that never looked starts from now, so installing the app doesn't replay old reminders.
+
 ## Two devices
 
 Handling a reminder writes its state (`dismissed`, `done`, or `snoozed` with a time), which syncs
-like every other row, and the other device drops its copy on the next sync. Completing the task
-anywhere settles its reminders too, because a reminder whose task is no longer open has no time.
+like every other row. Opening the app from a notification counts as dismissing it. Completing the
+task anywhere settles its reminders too, because a reminder whose task is no longer open has no time.
+
+After every sync, a device takes down each notification on screen that has gone **stale**: its
+reminder was handled or deleted, it was snoozed or its task moved so it is due later, or its task
+finished. A notification whose reminder is still due stays.
 
 Each device schedules from its own replica, so reminders keep working offline and after a reboot.

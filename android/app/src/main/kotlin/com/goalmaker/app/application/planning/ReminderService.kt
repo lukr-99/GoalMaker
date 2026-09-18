@@ -7,8 +7,9 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * Keeps the device's reminders in step with the replica (docs/reminders.md): says what to show now,
- * arms the alarm for the next one, and settles a reminder the owner handled. Every method blocks on
- * disk, so callers run them off the main thread.
+ * arms the alarm for the next one, says which notifications on screen went stale, and settles a
+ * reminder the owner handled. [remindedUntil] is the device's last look, kept on the device so each
+ * reminder is shown once. Every method blocks on disk, so callers run them off the main thread.
  */
 class ReminderService(
     private val reminders: ReminderList,
@@ -17,17 +18,27 @@ class ReminderService(
     private val quietHours: () -> QuietHours,
     private val dayStartHour: () -> Int,
     private val now: () -> LocalDateTime,
+    private val remindedUntil: () -> LocalDateTime?,
+    private val setRemindedUntil: (LocalDateTime) -> Unit,
 ) {
     /**
-     * What should be on screen at this moment, including anything missed while the device was off,
-     * with the alarm armed for whatever comes next.
+     * What arrived since the last look, including anything missed while the device was off, with the
+     * alarm armed for whatever comes next. A device that never looked starts from now.
      */
     fun catchUp(): List<ScheduledReminder> {
         val at = now()
         val (all, byId) = read()
-        val due = ReminderSchedule.due(all, byId, quietHours(), at)
+        val due = ReminderSchedule.due(all, byId, quietHours(), remindedUntil() ?: at, at)
+        setRemindedUntil(at)
         arm(ReminderSchedule.next(all, byId, quietHours(), at))
         return due
+    }
+
+    /** Which of the notifications on screen ([shown], by reminder id) have to go (docs/reminders.md). */
+    fun stale(shown: Collection<String>): List<String> {
+        if (shown.isEmpty()) return emptyList()
+        val (all, byId) = read()
+        return ReminderSchedule.stale(shown, all, byId, now())
     }
 
     /** Done from a notification: the task is finished and the reminder never comes back. */

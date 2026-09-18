@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.time.Instant
 import java.time.LocalTime
 
 /** [SettingsStore] in private SharedPreferences. None of this is synced or backed up. */
@@ -55,6 +56,13 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         quiet.value = window
     }
 
+    override fun remindedUntil(): Instant? =
+        preferences.getLong(REMINDED_UNTIL, -1L).takeIf { it >= 0 }?.let(Instant::ofEpochMilli)
+
+    override fun setRemindedUntil(instant: Instant) {
+        preferences.edit { putLong(REMINDED_UNTIL, instant.toEpochMilli()) }
+    }
+
     override fun backendOverride(): BackendEnvironment? {
         val url = preferences.getString(BACKEND_URL, null) ?: return null
         val key = preferences.getString(BACKEND_KEY, null) ?: return null
@@ -96,6 +104,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val DAY_START_HOUR = "day_start_hour"
         const val QUIET_START = "quiet_hours_start"
         const val QUIET_END = "quiet_hours_end"
+        const val REMINDED_UNTIL = "reminded_until"
         const val BACKEND_URL = "dev_backend_url"
         const val BACKEND_KEY = "dev_backend_key"
 

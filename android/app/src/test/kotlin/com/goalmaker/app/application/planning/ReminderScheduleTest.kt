@@ -35,9 +35,9 @@ class ReminderScheduleTest {
     }
 
     @Test
-    fun `due covers the moment itself and everything missed`() {
+    fun `due covers the moment itself and everything missed since the last look`() {
         val all = listOf(at("a", "2026-09-18T08:00"), at("b", "2026-09-18T09:00"), at("c", "2026-09-18T10:00"))
-        val due = ReminderSchedule.due(all, tasks(), QuietHours.OFF, LocalDateTime.parse("2026-09-18T09:00"))
+        val due = ReminderSchedule.due(all, tasks(), QuietHours.OFF, LocalDateTime.parse("2026-09-18T07:00"), LocalDateTime.parse("2026-09-18T09:00"))
         assertEquals(listOf("a", "b"), due.map(ScheduledReminder::id))
     }
 

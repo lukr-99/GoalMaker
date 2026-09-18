@@ -64,6 +64,41 @@ class ReminderRulesContractTest {
     }
 
     @Test
+    fun `every schedule`() {
+        val cases = vectors.getValue("schedule").jsonArray.map { it.jsonObject }
+        val failures = cases.mapNotNull { case ->
+            val reminders = case.getValue("reminders").jsonArray.map { listed(it.jsonObject) }
+            val tasks = case.getValue("tasks").jsonArray.map { listedTask(it.jsonObject) }.associateBy(TaskItem::id)
+            val window = case.getValue("quietHours").let { value ->
+                if (value == JsonNull) QuietHours.OFF else QuietHours(time(value.jsonObject.getValue("start"))!!, time(value.jsonObject.getValue("end"))!!)
+            }
+            val now = dateTime(case.getValue("now"))!!
+            val due = ReminderSchedule.due(reminders, tasks, window, dateTime(case.getValue("since"))!!, now).map(ScheduledReminder::id)
+            val next = ReminderSchedule.next(reminders, tasks, window, now)?.let { it.id to it.at }
+            val expectedDue = case.getValue("due").jsonArray.map { it.jsonPrimitive.content }
+            val expectedNext = case.getValue("next").let { value ->
+                if (value == JsonNull) null else value.jsonObject.getValue("id").jsonPrimitive.content to dateTime(value.jsonObject.getValue("at"))
+            }
+            if (due == expectedDue && next == expectedNext) null else "${name(case)}: expected $expectedDue then $expectedNext, got $due then $next"
+        }
+        assertTrue(failures.joinToString("\n", prefix = "${failures.size} of ${cases.size} failed:\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun `every stale notification`() {
+        val cases = vectors.getValue("stale").jsonArray.map { it.jsonObject }
+        val failures = cases.mapNotNull { case ->
+            val reminders = case.getValue("reminders").jsonArray.map { listed(it.jsonObject) }
+            val tasks = case.getValue("tasks").jsonArray.map { listedTask(it.jsonObject) }.associateBy(TaskItem::id)
+            val shown = case.getValue("shown").jsonArray.map { it.jsonPrimitive.content }
+            val actual = ReminderSchedule.stale(shown, reminders, tasks, dateTime(case.getValue("now"))!!)
+            val expected = case.getValue("clear").jsonArray.map { it.jsonPrimitive.content }
+            if (actual == expected) null else "${name(case)}: expected $expected, got $actual"
+        }
+        assertTrue(failures.joinToString("\n", prefix = "${failures.size} of ${cases.size} failed:\n"), failures.isEmpty())
+    }
+
+    @Test
     fun `the morning hour matches the vectors`() {
         assertEquals(vectors.getValue("morningHour").jsonPrimitive.int, Snooze.MORNING_HOUR)
     }
@@ -98,6 +133,36 @@ class ReminderRulesContractTest {
         plannedDate = date(case.getValue("planned")),
         plannedTime = time(case.getValue("time")),
         deleted = case.getValue("deleted").jsonPrimitive.boolean,
+    )
+
+    // A reminder in 'schedule' and 'stale', where fields that keep their defaults are left out.
+    private fun listed(reminder: JsonObject) = ReminderItem(
+        id = reminder.getValue("id").jsonPrimitive.content,
+        taskId = reminder.getValue("task").jsonPrimitive.content,
+        state = when (reminder["state"]?.jsonPrimitive?.content) {
+            "snoozed" -> ReminderState.SNOOZED
+            "dismissed" -> ReminderState.DISMISSED
+            "done" -> ReminderState.DONE
+            else -> ReminderState.PENDING
+        },
+        important = reminder["important"]?.jsonPrimitive?.boolean ?: false,
+        fireAt = reminder["fireAt"]?.let(::dateTime),
+        offsetMinutes = reminder["offsetMinutes"]?.jsonPrimitive?.int,
+        snoozedUntil = reminder["snoozedUntil"]?.let(::dateTime),
+    )
+
+    private fun listedTask(task: JsonObject) = TaskItem(
+        id = task.getValue("id").jsonPrimitive.content,
+        title = "Take the bread out",
+        state = when (task["status"]?.jsonPrimitive?.content) {
+            "done" -> TaskState.DONE
+            "dropped" -> TaskState.DROPPED
+            else -> TaskState.OPEN
+        },
+        topPriority = false,
+        createdAt = "2026-09-10T08:00:00.000000Z",
+        plannedDate = task["planned"]?.let(::date),
+        plannedTime = task["time"]?.let(::time),
     )
 
     private fun name(case: JsonObject) = case.getValue("name").jsonPrimitive.content

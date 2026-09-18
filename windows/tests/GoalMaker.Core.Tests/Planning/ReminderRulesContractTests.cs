@@ -72,6 +72,56 @@ public sealed class ReminderRulesContractTests
     }
 
     [Fact]
+    public void EverySchedule()
+    {
+        var failures = new List<string>();
+        var cases = vectors.GetProperty("schedule").EnumerateArray().ToList();
+        foreach (var testCase in cases)
+        {
+            var reminders = testCase.GetProperty("reminders").EnumerateArray().Select(Listed).ToList();
+            var tasks = testCase.GetProperty("tasks").EnumerateArray().Select(ListedTask).ToDictionary(task => task.Id);
+            var window = testCase.GetProperty("quietHours") is { ValueKind: JsonValueKind.Object } quiet
+                ? new QuietHours(Time(quiet.GetProperty("start"))!.Value, Time(quiet.GetProperty("end"))!.Value)
+                : QuietHours.Off;
+            var now = DateTimeOrNull(testCase.GetProperty("now"))!.Value;
+            var due = ReminderSchedule.Due(reminders, tasks, window, DateTimeOrNull(testCase.GetProperty("since"))!.Value, now).Select(item => item.Id).ToList();
+            var next = ReminderSchedule.Next(reminders, tasks, window, now);
+            var expectedDue = testCase.GetProperty("due").EnumerateArray().Select(id => id.GetString()!).ToList();
+            var expectedNext = testCase.GetProperty("next") is { ValueKind: JsonValueKind.Object } upcoming
+                ? (upcoming.GetProperty("id").GetString(), DateTimeOrNull(upcoming.GetProperty("at")))
+                : default((string?, DateTime?)?);
+            var actualNext = next is null ? default((string?, DateTime?)?) : (next.Id, next.At);
+            if (!due.SequenceEqual(expectedDue) || actualNext != expectedNext)
+            {
+                failures.Add($"{Name(testCase)}: expected [{string.Join(", ", expectedDue)}] then {expectedNext}, got [{string.Join(", ", due)}] then {actualNext}");
+            }
+        }
+
+        Assert.True(failures.Count == 0, $"{failures.Count} of {cases.Count} failed:\n{string.Join('\n', failures)}");
+    }
+
+    [Fact]
+    public void EveryStaleNotification()
+    {
+        var failures = new List<string>();
+        var cases = vectors.GetProperty("stale").EnumerateArray().ToList();
+        foreach (var testCase in cases)
+        {
+            var reminders = testCase.GetProperty("reminders").EnumerateArray().Select(Listed).ToList();
+            var tasks = testCase.GetProperty("tasks").EnumerateArray().Select(ListedTask).ToDictionary(task => task.Id);
+            var shown = testCase.GetProperty("shown").EnumerateArray().Select(id => id.GetString()!).ToList();
+            var actual = ReminderSchedule.Stale(shown, reminders, tasks, DateTimeOrNull(testCase.GetProperty("now"))!.Value);
+            var expected = testCase.GetProperty("clear").EnumerateArray().Select(id => id.GetString()!).ToList();
+            if (!actual.SequenceEqual(expected))
+            {
+                failures.Add($"{Name(testCase)}: expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}]");
+            }
+        }
+
+        Assert.True(failures.Count == 0, $"{failures.Count} of {cases.Count} failed:\n{string.Join('\n', failures)}");
+    }
+
+    [Fact]
     public void TheMorningHourMatchesTheVectors()
     {
         Assert.Equal(SnoozeTimes.MorningHour, vectors.GetProperty("morningHour").GetInt32());
@@ -107,6 +157,36 @@ public sealed class ReminderRulesContractTests
         Date(task.GetProperty("planned")),
         Time(task.GetProperty("time")),
         Deleted: task.GetProperty("deleted").GetBoolean());
+
+    // A reminder in 'schedule' and 'stale', where fields that keep their defaults are left out.
+    private static ReminderItem Listed(JsonElement reminder) => new(
+        reminder.GetProperty("id").GetString()!,
+        reminder.GetProperty("task").GetString()!,
+        (reminder.TryGetProperty("state", out var state) ? state.GetString() : null) switch
+        {
+            "snoozed" => ReminderState.Snoozed,
+            "dismissed" => ReminderState.Dismissed,
+            "done" => ReminderState.Done,
+            _ => ReminderState.Pending,
+        },
+        Important: reminder.TryGetProperty("important", out var important) && important.GetBoolean(),
+        FireAt: reminder.TryGetProperty("fireAt", out var fireAt) ? DateTimeOrNull(fireAt) : null,
+        OffsetMinutes: reminder.TryGetProperty("offsetMinutes", out var offset) ? offset.GetInt32() : null,
+        SnoozedUntil: reminder.TryGetProperty("snoozedUntil", out var snoozed) ? DateTimeOrNull(snoozed) : null);
+
+    private static TaskItem ListedTask(JsonElement task) => new(
+        task.GetProperty("id").GetString()!,
+        "Take the bread out",
+        (task.TryGetProperty("status", out var status) ? status.GetString() : null) switch
+        {
+            "done" => TaskState.Done,
+            "dropped" => TaskState.Dropped,
+            _ => TaskState.Open,
+        },
+        false,
+        "2026-09-10T08:00:00.000000Z",
+        task.TryGetProperty("planned", out var planned) ? Date(planned) : null,
+        task.TryGetProperty("time", out var time) ? Time(time) : null);
 
     private static string? Name(JsonElement testCase) => testCase.GetProperty("name").GetString();
 

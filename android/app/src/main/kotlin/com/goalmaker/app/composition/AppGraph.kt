@@ -50,6 +50,7 @@ import io.ktor.client.plugins.HttpTimeout
 import java.io.File
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CoroutineDispatcher
@@ -158,6 +159,8 @@ class AppGraph(context: Context) {
         quietHours = { settings.quietHours.value },
         dayStartHour = { settings.dayStartHour.value },
         now = LocalDateTime::now,
+        remindedUntil = { settings.remindedUntil()?.atZone(ZoneId.systemDefault())?.toLocalDateTime() },
+        setRemindedUntil = { settings.setRemindedUntil(it.atZone(ZoneId.systemDefault()).toInstant()) },
     )
 
     private val changeFeed = SupabaseChangeFeed(supabase, catalog, scope, sync::request)
