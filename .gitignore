@@ -22,3 +22,10 @@ local.properties
 keystore.properties
 *.jks
 *.keystore
+
+# Environment and service secrets (Supabase keys, local config)
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/

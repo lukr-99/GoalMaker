@@ -1,10 +1,12 @@
 # GoalMaker
 
-One sentence describing the product and the outcome it creates.
+A multi-part product: an Android app, a Windows companion app, and a Supabase backend that
+connects them. The full scope is being defined in the product spec.
 
 ## Status
 
-State what works now, what is experimental, and the latest supported release.
+Specification stage. There is no application code yet. The spec will fix the product scope, the
+parts of the system, and how the repository is laid out for them.
 
 ## Requirements
 
