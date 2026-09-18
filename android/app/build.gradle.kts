@@ -124,6 +124,8 @@ android {
         unitTests.all { test ->
             // Contract vectors shared with the Windows app (contracts/README.md).
             test.systemProperty("goalmaker.contracts", repositoryRoot.resolve("contracts").absolutePath)
+            // Declared as an input so a changed vector file reruns the tests instead of hitting the cache.
+            test.inputs.dir(repositoryRoot.resolve("contracts")).withPathSensitivity(PathSensitivity.RELATIVE)
         }
     }
 
