@@ -98,7 +98,7 @@ public static partial class ReplicaMigrator
         return new ReplicaMigration(
             int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture),
             fileName,
-            new UTF8Encoding(false).GetString(bytes).TrimStart('﻿'),
+            new UTF8Encoding(false).GetString(bytes).TrimStart('\uFEFF'),
             Convert.ToHexStringLower(SHA256.HashData(bytes)));
     }
 
