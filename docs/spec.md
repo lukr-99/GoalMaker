@@ -274,8 +274,9 @@ through the Gemini free tier follows as M7.
   `web/` later (the OAuth sign-in page). Domain code in each app is pure and independent of UI,
   storage and network. One composition root per app, constructor injection, one top-level type per
   file.
-- **Source of truth:** Supabase Postgres. Each device keeps a replica (Room on Android, SQLite on
-  Windows) and an outbox of pending changes. See ADR 0002.
+- **Source of truth:** Supabase Postgres. Each device keeps a SQLite replica with one shared schema
+  (`replica/migrations/`) and an outbox of pending changes. See ADR 0002, ADR 0007 and
+  [docs/sync.md](sync.md).
 - **Row security:** every user table has `owner_id` and row-level security that allows only
   `auth.uid() = owner_id`. The connector acts as the owner under the same policies.
 
@@ -371,7 +372,7 @@ statistics.
 ### Android
 
 Kotlin, Jetpack Compose with **Material 3 Expressive** (pinned alpha, ADR 0005), Navigation 3,
-Room, WorkManager, Glance widgets, supabase-kt, Vico charts, Haze blur, Kizitonwose Calendar,
+the shared SQLite replica on `androidx.sqlite` (ADR 0007), WorkManager, Glance widgets, supabase-kt, Vico charts, Haze blur, Kizitonwose Calendar,
 Reorderable, Konfetti, a Markdown renderer. Min SDK 26, compile SDK 37 (the Expressive alpha needs
 it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build:
 `com.goalmaker.app.debug`, version suffix `-dev`, local stack by default.
@@ -380,7 +381,8 @@ it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build
 
 .NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), LiveCharts2, Windows App SDK app
 notifications (unpackaged; to be confirmed in M2 against the framework-dependent installer),
-NHotkey (global hotkey), Markdig, the Supabase C# client, SQLite through Microsoft.Data.Sqlite.
+NHotkey (global hotkey), Markdig, the Supabase C# client, the shared SQLite replica through
+Microsoft.Data.Sqlite (ADR 0007).
 Published framework-dependent to stay under the update channel's 50 MB file limit (ADR 0004).
 `dotnetlib` was checked; see ADR 0006. Single instance, launch
 switches, `goalmaker://` links, Startup Profiles registration through its public contract.
