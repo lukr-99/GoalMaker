@@ -30,9 +30,15 @@
 
     <sys:String x:Key="Today.Title">Today</sys:String>
     <sys:String x:Key="Today.Greeting">Signed in as {0}</sys:String>
-    <sys:String x:Key="Today.SpineTitle">The delivery spine is in place</sys:String>
-    <sys:String x:Key="Today.SpineBody">Sign-in, updates and the backend work. Tasks, goals and habits arrive in the next milestones.</sys:String>
-    <sys:String x:Key="Today.ComposerPlaceholder">Add a task… (arrives in M2)</sys:String>
+    <sys:String x:Key="Today.ComposerPlaceholder">Add a task…</sys:String>
+    <sys:String x:Key="Today.Add">Add task</sys:String>
+    <sys:String x:Key="Today.Delete">Delete task</sys:String>
+    <sys:String x:Key="Today.Empty">Nothing open. Add a task below.</sys:String>
+
+    <sys:String x:Key="Sync.Syncing">Syncing…</sys:String>
+    <sys:String x:Key="Sync.SyncedAt">Synced at {0}</sys:String>
+    <sys:String x:Key="Sync.Offline">Offline · {0} change(s) waiting</sys:String>
+    <sys:String x:Key="Sync.NeedsAttention">Some changes didn't sync: {0}</sys:String>
 
     <sys:String x:Key="Settings.Title">Settings</sys:String>
     <sys:String x:Key="Settings.Appearance">Appearance</sys:String>
@@ -41,6 +47,8 @@
     <sys:String x:Key="Settings.ThemeDark">Dark</sys:String>
     <sys:String x:Key="Settings.Account">Account</sys:String>
     <sys:String x:Key="Settings.SignOut">Sign out</sys:String>
+    <sys:String x:Key="Settings.SignOutUnsynced">{0} change(s) haven't reached the server yet. Signing out now deletes them from this PC.</sys:String>
+    <sys:String x:Key="Settings.SignOutAnyway">Sign out anyway</sys:String>
     <sys:String x:Key="Settings.Updates">Updates</sys:String>
     <sys:String x:Key="Settings.CheckUpdates">Check for updates</sys:String>
     <sys:String x:Key="Settings.InstallUpdate">Install {0}</sys:String>

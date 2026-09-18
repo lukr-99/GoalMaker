@@ -69,7 +69,7 @@ public sealed class SupabaseAuthGateway : IAuthGateway
 
     private AuthSession FromCurrentUser() =>
         client.Auth.CurrentUser is { } user
-            ? new AuthSession.SignedIn(user.Email ?? string.Empty)
+            ? new AuthSession.SignedIn(user.Id ?? string.Empty, user.Email ?? string.Empty)
             : new AuthSession.SignedOut();
 
     private void Publish(AuthSession session)

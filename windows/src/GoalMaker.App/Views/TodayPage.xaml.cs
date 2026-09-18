@@ -2,12 +2,12 @@ using GoalMaker.App.ViewModels;
 
 namespace GoalMaker.App.Views;
 
-/// <summary>Today, as far as M0 goes: who is signed in, and where the composer will live.</summary>
+/// <summary>Today (M1): the synced task list and the composer. All behavior is in <see cref="TodayViewModel"/>.</summary>
 public partial class TodayPage
 {
-    public TodayPage(ShellViewModel shell)
+    public TodayPage(TodayViewModel viewModel)
     {
         InitializeComponent();
-        DataContext = shell;
+        DataContext = viewModel;
     }
 }

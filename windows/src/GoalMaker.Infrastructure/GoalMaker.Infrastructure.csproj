@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Adapters: Supabase, the file system, DPAPI, process launching. Windows only. -->
+  <!-- Adapters: Supabase, the replica, the file system, DPAPI, process launching. Windows only. -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>GoalMaker.Infrastructure</RootNamespace>
@@ -10,7 +10,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="Supabase" Version="8.1.1" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+
+  <!-- The shared replica schema and synced-table contract, built in (ADR 0007). -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(RepositoryRoot)\replica\migrations\*.sql"
+                      LogicalName="GoalMaker.Replica.Migrations.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="$(RepositoryRoot)\contracts\schemas\synced-tables.json"
+                      LogicalName="GoalMaker.Contracts.synced-tables.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GoalMaker.Core.Tests" />
   </ItemGroup>
 </Project>

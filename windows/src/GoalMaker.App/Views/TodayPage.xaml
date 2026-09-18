@@ -11,44 +11,82 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Row="0">
-            <TextBlock Text="{DynamicResource Today.Title}" FontSize="40" FontWeight="SemiBold" />
-            <TextBlock Margin="0,4,0,24"
-                       Text="{Binding Greeting}"
-                       FontSize="15"
-                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-        </StackPanel>
-
-        <Border Grid.Row="1"
-                VerticalAlignment="Top"
-                Padding="24"
-                CornerRadius="{StaticResource Shape.Card}"
-                Background="{DynamicResource Brand.PrimaryBrush}">
+        <DockPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock DockPanel.Dock="Right"
+                       VerticalAlignment="Bottom"
+                       Text="{Binding SyncText}"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
             <StackPanel>
-                <TextBlock Text="{DynamicResource Today.SpineTitle}"
-                           FontSize="22"
-                           FontWeight="SemiBold"
-                           Foreground="{DynamicResource Brand.OnPrimaryBrush}" />
-                <TextBlock Margin="0,8,0,0"
-                           Text="{DynamicResource Today.SpineBody}"
+                <TextBlock Text="{DynamicResource Today.Title}" FontSize="40" FontWeight="SemiBold" />
+                <TextBlock Margin="0,4,0,0"
+                           Text="{Binding Greeting}"
                            FontSize="15"
-                           TextWrapping="Wrap"
-                           Foreground="{DynamicResource Brand.OnPrimaryBrush}" />
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
             </StackPanel>
-        </Border>
+        </DockPanel>
 
-        <!-- The composer (spec: chat-app layout). It becomes the quick-add box in M2. -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Margin="4,8,0,0"
+                           Text="{DynamicResource Today.Empty}"
+                           FontSize="15"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                <ItemsControl ItemsSource="{Binding Tasks}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,6"
+                                    Padding="14,8"
+                                    CornerRadius="{StaticResource Shape.Card}"
+                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
+                                <DockPanel>
+                                    <ui:Button DockPanel.Dock="Right"
+                                               Appearance="Transparent"
+                                               Command="{Binding DeleteCommand}"
+                                               ToolTip="{DynamicResource Today.Delete}"
+                                               AutomationProperties.Name="{DynamicResource Today.Delete}">
+                                        <ui:SymbolIcon Symbol="Delete24" />
+                                    </ui:Button>
+                                    <CheckBox VerticalAlignment="Center"
+                                              IsChecked="{Binding IsDone}"
+                                              AutomationProperties.Name="{Binding Title}">
+                                        <TextBlock Text="{Binding Title}" FontSize="15" TextWrapping="Wrap" />
+                                    </CheckBox>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- The composer (spec: chat-app layout). Shortcut parsing arrives in M2. -->
         <Border Grid.Row="2"
-                Padding="20,14"
+                Margin="0,16,0,0"
+                Padding="8,4"
                 CornerRadius="{StaticResource Shape.Composer}"
                 Background="{DynamicResource ControlFillColorDefaultBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                 BorderThickness="1">
             <DockPanel>
-                <ui:SymbolIcon DockPanel.Dock="Right" Symbol="Send24" Foreground="{DynamicResource TextFillColorDisabledBrush}" />
-                <TextBlock Text="{DynamicResource Today.ComposerPlaceholder}"
-                           FontSize="15"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                <ui:Button DockPanel.Dock="Right"
+                           Appearance="Primary"
+                           Command="{Binding AddTaskCommand}"
+                           ToolTip="{DynamicResource Today.Add}"
+                           AutomationProperties.Name="{DynamicResource Today.Add}">
+                    <ui:SymbolIcon Symbol="Send24" />
+                </ui:Button>
+                <ui:TextBox x:Name="Composer"
+                            Margin="0,0,8,0"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            PlaceholderText="{DynamicResource Today.ComposerPlaceholder}"
+                            Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                            AutomationProperties.Name="{DynamicResource Today.ComposerPlaceholder}">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
             </DockPanel>
         </Border>
     </Grid>

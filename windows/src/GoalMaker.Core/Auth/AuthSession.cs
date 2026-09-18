@@ -11,5 +11,5 @@ public abstract record AuthSession
 
     public sealed record SignedOut : AuthSession;
 
-    public sealed record SignedIn(string Email) : AuthSession;
+    public sealed record SignedIn(string UserId, string Email) : AuthSession;
 }

@@ -25,7 +25,7 @@ public partial class MainWindow
         DataContext = graph.Shell;
         Navigation.SetPageProviderService(new PageProvider(new Dictionary<Type, Func<object>>
         {
-            [typeof(TodayPage)] = () => new TodayPage(graph.Shell),
+            [typeof(TodayPage)] = () => new TodayPage(graph.Today),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage),
         }));
         Navigation.Loaded += (_, _) => NavigateWhenReady();

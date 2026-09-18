@@ -23,6 +23,16 @@ public sealed class AppDataPaths
 
     public string Updates => Path.Combine(Root, "updates");
 
+    /// <summary>
+    /// The device replica (ADR 0007), one file per backend, so a dev build switched to another
+    /// Supabase project never mixes its rows with the first one's.
+    /// </summary>
+    public string ReplicaFor(string backendUrl)
+    {
+        var digest = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(backendUrl.Trim().TrimEnd('/')));
+        return Path.Combine(Root, $"replica-{Convert.ToHexStringLower(digest)[..12]}.db");
+    }
+
     public string EnsureRoot()
     {
         Directory.CreateDirectory(Root);

@@ -68,7 +68,11 @@ resync first pushes the outbox, then replaces the local rows of that table with 
 - When Supabase Realtime reports a change to a synced table (the event only triggers a pull; its
   payload is not applied directly).
 - Android: every 15 minutes in the background (WorkManager). Windows: every 5 minutes while running.
+- When the Realtime channel (re)joins, because events sent while disconnected are lost.
 - One sync at a time per device; a request during a sync schedules one more run after it.
+- While the server can't be reached, the device retries on its own: after 15 seconds, then doubling
+  up to every 5 minutes. A local write or the OS reporting the network back retries sooner. Windows
+  listens for network changes; Android relies on WorkManager's network constraint.
 
 ## Sign-out
 

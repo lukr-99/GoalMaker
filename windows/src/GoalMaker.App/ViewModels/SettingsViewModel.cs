@@ -5,6 +5,7 @@ using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
 using GoalMaker.Core.Settings;
+using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 
 namespace GoalMaker.App.ViewModels;
@@ -13,6 +14,7 @@ namespace GoalMaker.App.ViewModels;
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly IAuthGateway auth;
+    private readonly SyncCoordinator sync;
     private readonly ISettingsStore settings;
     private readonly UpdateService updates;
     private readonly AppInfo appInfo;
@@ -26,6 +28,10 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string email = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSignOutWarning))]
+    private string signOutWarning = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdateStatus))]
@@ -52,6 +58,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(
         IAuthGateway auth,
+        SyncCoordinator sync,
         ISettingsStore settings,
         UpdateService updates,
         AppInfo appInfo,
@@ -61,6 +68,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action<Action> runOnUi)
     {
         this.auth = auth;
+        this.sync = sync;
         this.settings = settings;
         this.updates = updates;
         this.appInfo = appInfo;
@@ -94,6 +102,8 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool HasUpdateStatus => UpdateStatus.Length > 0;
 
+    public bool HasSignOutWarning => SignOutWarning.Length > 0;
+
     public bool IsUpdateIdle => !IsUpdating;
 
     public bool CanInstall => AvailableUpdate is not null;
@@ -113,8 +123,27 @@ public sealed partial class SettingsViewModel : ObservableObject
         applyTheme(value);
     }
 
+    /// <summary>Pushes what's waiting, empties the replica, then signs out (docs/sync.md: Sign-out).</summary>
     [RelayCommand]
-    private Task SignOutAsync() => auth.SignOutAsync();
+    private async Task SignOutAsync()
+    {
+        if (!await sync.FlushAndClearAsync(discardUnsynced: false, CancellationToken.None))
+        {
+            SignOutWarning = strings.Get("Settings.SignOutUnsynced", sync.Status.PendingChanges);
+            return;
+        }
+
+        SignOutWarning = string.Empty;
+        await auth.SignOutAsync();
+    }
+
+    [RelayCommand]
+    private async Task SignOutAnywayAsync()
+    {
+        await sync.FlushAndClearAsync(discardUnsynced: true, CancellationToken.None);
+        SignOutWarning = string.Empty;
+        await auth.SignOutAsync();
+    }
 
     [RelayCommand(CanExecute = nameof(IsUpdateIdle))]
     private async Task CheckForUpdatesAsync()
