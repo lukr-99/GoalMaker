@@ -186,7 +186,17 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSetting
                     LoadingIndicator(Modifier.size(64.dp))
                 }
             } else {
-                ListContent(tab, lists, state, viewModel, tick) { remindFor = it }
+                Column {
+                    ListFilterRow(
+                        filter = state.filter,
+                        areas = state.areas,
+                        tags = state.tags,
+                        onArea = viewModel::filterByArea,
+                        onTag = viewModel::filterByTag,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    ListContent(tab, lists, state, viewModel, tick) { remindFor = it }
+                }
             }
         }
     }

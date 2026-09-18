@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.lists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.ReminderService
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -43,7 +45,7 @@ import kotlinx.coroutines.withContext
 class ListsViewModel(
     private val tasks: TaskList,
     areas: AreaList,
-    tags: TagList,
+    private val tags: TagList,
     private val settings: SettingsStore,
     private val reminders: ReminderService,
     private val sync: SyncCoordinator,
@@ -62,8 +64,19 @@ class ListsViewModel(
         }
     }
 
-    private val lists = combine(tasks.watchAll().flowOn(io), settings.dayStartHour, minutes) { all, startHour, _ ->
-        ListRules.lists(all, PlanningDay.of(clock(), startHour))
+    // The filter the owner chose, kept while they switch lists (docs/lists.md); one whose area or tag
+    // was deleted meanwhile falls away instead of hiding everything.
+    private val chosenFilter = MutableStateFlow(ListFilter.NONE)
+    private val filter = combine(chosenFilter, areas.watch().flowOn(io), tags.watch().flowOn(io)) { chosen, areaList, tagList ->
+        ListFilter(
+            areaId = chosen.areaId?.takeIf { id -> areaList.any { it.id == id } },
+            tagId = chosen.tagId?.takeIf { id -> tagList.any { it.id == id } },
+        )
+    }
+
+    private val lists = combine(tasks.watchAll().flowOn(io), tags.watchLinks().flowOn(io), filter, settings.dayStartHour, minutes) {
+            all, links, narrowed, startHour, _ ->
+        ListRules.lists(narrowed.apply(all, links), PlanningDay.of(clock(), startHour)) to narrowed
     }
 
     // The tasks with a reminder still to come, so a row can show it without reading the table again.
@@ -73,21 +86,23 @@ class ListsViewModel(
             .toSet()
     }
 
-    private val rows = combine(areas.watch().flowOn(io), tags.watchNames().flowOn(io), reminded, ::RowContext)
+    private val rows = combine(areas.watch().flowOn(io), tags.watch().flowOn(io), reminded, ::RowContext)
 
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
         rows,
         sync.status,
         refreshing,
-    ) { planning, context, status, pulled ->
+    ) { (planning, narrowed), context, status, pulled ->
         ListsUiState(
             lists = planning,
             sync = status,
             refreshing = pulled,
             areas = context.areas,
-            tagNames = context.tagNames,
+            tagNames = context.tags.map { it.name },
             reminded = context.reminded,
+            filter = narrowed,
+            tags = context.tags,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -129,6 +144,12 @@ class ListsViewModel(
         viewModelScope.launch(io) { tasks.delete(task.id) }
         undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DELETED, task.title) { viewModelScope.launch(io) { tasks.restore(task.id) } })
     }
+
+    /** Narrows every list to an area, or stops narrowing by area when [areaId] is null. */
+    fun filterByArea(areaId: String?) = chosenFilter.update { it.copy(areaId = areaId) }
+
+    /** Narrows every list to a tag, or stops narrowing by tag when [tagId] is null. */
+    fun filterByTag(tagId: String?) = chosenFilter.update { it.copy(tagId = tagId) }
 
     /** The reminders already on a task, for the sheet that edits them. */
     suspend fun remindersOf(taskId: String): List<ReminderItem> = withContext(io) { reminders.on(taskId) }

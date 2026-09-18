@@ -1,10 +1,11 @@
 package com.goalmaker.app.ui.lists
 
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.TagItem
 
-/** What a task row needs besides the task itself, read once per change instead of per row. */
+/** What a task row and the filter need besides the task itself, read once per change instead of per row. */
 data class RowContext(
     val areas: List<AreaItem>,
-    val tagNames: List<String>,
+    val tags: List<TagItem>,
     val reminded: Set<String>,
 )

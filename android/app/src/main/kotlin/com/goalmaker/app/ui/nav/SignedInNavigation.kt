@@ -11,6 +11,9 @@ import java.time.LocalDateTime
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
+import com.goalmaker.app.ui.areas.AreasKey
+import com.goalmaker.app.ui.areas.AreasScreen
+import com.goalmaker.app.ui.areas.AreasViewModel
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
@@ -74,7 +77,15 @@ fun SignedInNavigation(graph: AppGraph) {
                         restartApp = graph.restartApp,
                     )
                 }
-                SettingsScreen(viewModel = settingsViewModel, onBack = { backStack.removeLastOrNull() })
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenAreas = { backStack.add(AreasKey) },
+                )
+            }
+            entry<AreasKey> {
+                val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.io) }
+                AreasScreen(viewModel = areasViewModel, onBack = { backStack.removeLastOrNull() })
             }
         },
     )

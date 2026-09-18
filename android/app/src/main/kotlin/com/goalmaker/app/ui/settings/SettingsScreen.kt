@@ -56,7 +56,7 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
+fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onOpenAreas: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
@@ -136,6 +136,12 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 QuietHoursRow(state.quietHours, viewModel::setQuietHours)
+                OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
+                Text(
+                    stringResource(R.string.areas_open_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)

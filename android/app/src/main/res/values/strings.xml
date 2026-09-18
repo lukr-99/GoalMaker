@@ -207,13 +207,36 @@
 
     <string name="loading">Loading</string>
 
+    <string name="filter_all_areas">All areas</string>
+    <string name="filter_all_tags">All tags</string>
+    <string name="filter_clear">Clear the filter</string>
+    <string name="areas_title">Areas and tags</string>
+    <string name="areas_open">Areas and tags</string>
+    <string name="areas_open_hint">Rename, recolor and reorder areas, and tidy up tags.</string>
+    <string name="areas_areas">Areas</string>
+    <string name="areas_tags">Tags</string>
+    <string name="areas_no_tags">No tags yet. Type #name in the composer or add one here.</string>
+    <string name="areas_add_area">Add an area</string>
+    <string name="areas_add_tag">Add a tag</string>
+    <string name="areas_new_area">New area</string>
+    <string name="areas_edit_area">Edit the area</string>
+    <string name="areas_new_tag">New tag</string>
+    <string name="areas_edit_tag">Edit the tag</string>
+    <string name="areas_name">Name</string>
+    <string name="areas_emoji">Emoji (optional)</string>
+    <string name="areas_name_taken">Give it a name that isn\'t taken yet.</string>
+    <string name="areas_save">Save</string>
+    <string name="areas_cancel">Cancel</string>
+    <string name="areas_delete">Delete</string>
+    <string name="areas_move_up">Move %1$s up</string>
+    <string name="areas_move_down">Move %1$s down</string>
+
     <string name="reminder_channel">Reminders</string>
     <string name="reminder_channel_description">Tasks you asked to be reminded about.</string>
     <string name="reminder_channel_important">Important reminders</string>
     <string name="reminder_channel_important_description">Reminders that pass quiet hours and keep ringing until you act.</string>
     <string name="reminder_done">Done</string>
     <string name="reminder_snooze_ten_minutes">10 min</string>
-    <string name="reminder_snooze_one_hour">1 hour</string>
     <string name="reminder_snooze_tomorrow">Tomorrow</string>
     <string name="reminder_add">Remind me</string>
     <string name="reminder_when_due">When it starts</string>
@@ -223,7 +246,6 @@
     <string name="reminder_tomorrow_morning">Tomorrow morning</string>
     <string name="reminder_existing">Already set</string>
     <string name="reminder_remove">Remove the reminder</string>
-    <string name="reminder_set">Reminder set for %1$s</string>
     <string name="settings_quiet_hours">Quiet hours</string>
     <string name="settings_quiet_hours_off">Off. Every reminder arrives at its time.</string>
     <string name="settings_quiet_hours_window">%1$s to %2$s. Ordinary reminders wait for the end.</string>
