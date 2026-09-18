@@ -69,10 +69,14 @@ public sealed class AppGraph : IDisposable
             new InstallerLauncher(shutdownApp));
 
         catalog = ContractResources.SyncedTables();
+        var design = ContractResources.Themes();
         replica = new SqliteReplica(Paths.ReplicaFor(backend.Url), catalog, ReplicaMigrator.BuiltIn());
         var remote = new PostgrestRemoteTables(http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken);
         Sync = new SyncCoordinator(new SyncEngine(catalog, replica, remote, TimeProvider.System), replica, TimeProvider.System, SyncDebounce);
-        Tasks = new TaskList(catalog, replica, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System, Sync.Request);
+        var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
+        Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
+        Tags = new TagList(replica, newRows, Sync.Request);
+        Tasks = new TaskList(replica, newRows, Areas, Tags, Sync.Request);
         changeFeed = new SupabaseChangeFeed(supabase, catalog, Sync.Request);
         Auth.SessionChanged += (_, session) => OnSessionChanged(session);
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
@@ -84,10 +88,10 @@ public sealed class AppGraph : IDisposable
             }
         });
 
-        Theme = new ThemeApplier(ContractResources.Themes(), appResources);
+        Theme = new ThemeApplier(design, appResources);
         SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null);
         Shell = new ShellViewModel(Auth, SignIn, strings, runOnUi);
-        Today = new TodayViewModel(Tasks, Sync, Auth, strings, runOnUi);
+        Today = new TodayViewModel(Tasks, Areas, Tags, Sync, Auth, strings, TimeProvider.System, id => Theme.AreaBrush(id), runOnUi);
         SettingsPage = new SettingsViewModel(
             Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, restartApp, runOnUi);
     }
@@ -103,6 +107,10 @@ public sealed class AppGraph : IDisposable
     public UpdateService Updates { get; }
 
     public SyncCoordinator Sync { get; }
+
+    public AreaList Areas { get; }
+
+    public TagList Tags { get; }
 
     public TaskList Tasks { get; }
 

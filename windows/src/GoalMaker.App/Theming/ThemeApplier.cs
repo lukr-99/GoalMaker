@@ -78,6 +78,10 @@ public sealed class ThemeApplier : IDisposable
 
     public static SolidColorBrush ToBrush(uint argb) => Frozen(ToColor(argb));
 
+    /// <summary>An area color's chip text color in the current mode, or null for an unknown color id.</summary>
+    public Brush? AreaBrush(string colorId) =>
+        Tokens.AreaColor(colorId) is { } area ? ToBrush(IsDark ? area.Dark.Content : area.Light.Content) : null;
+
     /// <summary>A static face cut by tools/build_windows_fonts.py, by the name FontFaces gives it.</summary>
     public static FontFamily Face(string name) => new(new Uri("pack://application:,,,/"), "./Assets/Fonts/#" + name);
 

@@ -35,6 +35,24 @@
     <sys:String x:Key="Today.Delete">Delete task</sys:String>
     <sys:String x:Key="Today.Empty">Nothing open. Add a task below.</sys:String>
 
+    <sys:String x:Key="Composer.Today">Today</sys:String>
+    <sys:String x:Key="Composer.Tomorrow">Tomorrow</sys:String>
+    <sys:String x:Key="Composer.Priority">Top priority</sys:String>
+    <sys:String x:Key="Composer.Idea">Idea</sys:String>
+    <sys:String x:Key="Composer.New">new</sys:String>
+    <sys:String x:Key="Composer.Later">later</sys:String>
+    <sys:String x:Key="Composer.Soon">coming soon</sys:String>
+    <sys:String x:Key="Composer.UnknownCommand">unknown command</sys:String>
+    <sys:String x:Key="Composer.Remove">Remove {0}</sys:String>
+    <sys:String x:Key="Repeat.Daily">Every day</sys:String>
+    <sys:String x:Key="Repeat.EveryNDays">Every {0} days</sys:String>
+    <sys:String x:Key="Repeat.Weekdays">Every weekday</sys:String>
+    <sys:String x:Key="Repeat.Weekend">Every weekend</sys:String>
+    <sys:String x:Key="Repeat.EveryDayName">Every {0}</sys:String>
+    <sys:String x:Key="Repeat.EveryNWeeksOn">Every {0} weeks on {1}</sys:String>
+    <sys:String x:Key="Repeat.MonthlyOn">Every month on day {0}</sys:String>
+    <sys:String x:Key="Repeat.EveryNMonthsOn">Every {0} months on day {1}</sys:String>
+
     <sys:String x:Key="Sync.Syncing">Syncing…</sys:String>
     <sys:String x:Key="Sync.SyncedAt">Synced at {0}</sys:String>
     <sys:String x:Key="Sync.Offline">Offline · {0} change(s) waiting</sys:String>

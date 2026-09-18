@@ -66,13 +66,58 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- The composer (spec: chat-app layout). Shortcut parsing and the live preview arrive in M2-04 and M2-05. -->
+        <!-- The composer (spec: chat-app layout): shortcuts per docs/composer.md, previewed as chips. -->
         <Border Grid.Row="2"
                 Margin="0,16,0,0"
                 Padding="12,4,6,4"
                 CornerRadius="{StaticResource GM.ComposerCorner}"
                 Background="{DynamicResource GM.SurfaceVariantBrush}">
             <DockPanel>
+                <!-- The live preview: what the line will save (docs/composer.md). -->
+                <ItemsControl DockPanel.Dock="Top"
+                              Margin="0,6,0,2"
+                              Focusable="False"
+                              ItemsSource="{Binding Chips}"
+                              Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,6,6"
+                                    Padding="10,2,2,2"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    Opacity="{Binding Opacity}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="10"
+                                             Height="10"
+                                             Margin="0,0,6,0"
+                                             VerticalAlignment="Center"
+                                             Fill="{Binding AreaBrush}"
+                                             Stroke="{DynamicResource GM.OutlineBrush}"
+                                             Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
+                                    <ui:SymbolIcon Margin="0,0,6,0"
+                                                   FontSize="14"
+                                                   Symbol="{Binding Symbol}"
+                                                   Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
+                                    <ui:Button Margin="2,0,0,0"
+                                               Padding="4"
+                                               Appearance="Transparent"
+                                               Command="{Binding RemoveCommand}"
+                                               ToolTip="{Binding RemoveName}"
+                                               AutomationProperties.Name="{Binding RemoveName}">
+                                        <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
+                                    </ui:Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <ui:Button DockPanel.Dock="Right"
                            Appearance="Primary"
                            CornerRadius="{StaticResource GM.ComposerCorner}"

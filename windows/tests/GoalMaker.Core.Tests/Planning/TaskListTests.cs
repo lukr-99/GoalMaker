@@ -1,3 +1,4 @@
+using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Tests.Sync;
 using Microsoft.Extensions.Time.Testing;
@@ -10,8 +11,14 @@ public sealed class TaskListTests : IDisposable
     private readonly FakeTimeProvider time = new(new DateTimeOffset(2026, 9, 18, 12, 0, 0, TimeSpan.Zero));
     private int syncRequests;
 
-    private TaskList Tasks(string? owner = TestReplica.Owner) =>
-        new(test.Catalog, test.Replica, () => owner, time, () => syncRequests++);
+    private TaskList Tasks(string? owner = TestReplica.Owner)
+    {
+        var rows = new NewRows(test.Catalog, () => owner, time);
+        var areas = new AreaList(test.Replica, rows, ["violet", "blue", "cyan"], () => syncRequests++);
+        return new TaskList(test.Replica, rows, areas, new TagList(test.Replica, rows, () => syncRequests++), () => syncRequests++);
+    }
+
+    private static ComposerDraft Draft(string line) => ComposerParser.Parse(line, new DateTime(2026, 9, 18, 14, 5, 0));
 
     public void Dispose() => test.Dispose();
 
@@ -34,8 +41,58 @@ public sealed class TaskListTests : IDisposable
     public void BlankTitlesAndSignedOutAddsAreIgnored()
     {
         Assert.Null(Tasks().Add("   "));
+        Assert.Null(Tasks().Add(Draft("tomorrow #run")));
         Assert.Null(Tasks(owner: null).Add("Run"));
         Assert.Empty(test.Replica.Outbox());
+    }
+
+    [Fact]
+    public void AComposerLineSavesItsDayTimePriorityAndRepeat()
+    {
+        var added = Tasks().Add(Draft("Standup weekdays 9:30 !"))!;
+
+        var row = test.Replica.Get("tasks", added.Id)!;
+        Assert.Equal("Standup", (string?)row["title"]);
+        Assert.Equal("2026-09-21", (string?)row["planned_date"]);
+        Assert.Equal("09:30:00", (string?)row["planned_time"]);
+        Assert.True((bool)row["top_priority"]!);
+        Assert.Equal("FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", (string?)row["recurrence"]);
+    }
+
+    [Fact]
+    public void ANewAreaGetsTheFirstUnusedPaletteColorAndIsSavedBeforeTheTask()
+    {
+        var tasks = Tasks();
+        tasks.Add(Draft("Stretch @Health"));
+        var second = tasks.Add(Draft("Read @School"))!;
+
+        var areas = test.Replica.All("areas").ToDictionary(row => (string)row["name"]!, row => (string)row["color"]!);
+        Assert.Equal(new Dictionary<string, string> { ["Health"] = "violet", ["School"] = "blue" }, areas);
+        Assert.Equal(["areas", "tasks", "areas", "tasks"], test.Replica.Outbox().Select(entry => entry.Entity));
+        Assert.Equal((string?)test.Replica.All("areas").Single(row => (string?)row["name"] == "School")["id"], second.AreaId);
+    }
+
+    [Fact]
+    public void AnExistingAreaIsReusedWhateverItsCase()
+    {
+        var tasks = Tasks();
+        var first = tasks.Add(Draft("Stretch @Health"))!;
+        var second = tasks.Add(Draft("Run @health"))!;
+
+        Assert.Single(test.Replica.All("areas"));
+        Assert.Equal(first.AreaId, second.AreaId);
+    }
+
+    [Fact]
+    public void TagsAreCreatedOnceAndLinkedToTheTask()
+    {
+        var tasks = Tasks();
+        var first = tasks.Add(Draft("Run #health #run"))!;
+        tasks.Add(Draft("Swim #Health"));
+
+        Assert.Equal(["health", "run"], test.Replica.All("tags").Select(row => (string)row["name"]!).Order(StringComparer.Ordinal));
+        Assert.Equal(2, test.Replica.All("task_tags").Count(row => (string?)row["task_id"] == first.Id));
+        Assert.Equal(3, test.Replica.All("task_tags").Count);
     }
 
     [Fact]
