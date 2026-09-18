@@ -5,11 +5,13 @@ import androidx.core.content.edit
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.time.LocalTime
 
 /** [SettingsStore] in private SharedPreferences. None of this is synced or backed up. */
 class SharedPreferencesSettingsStore(private val preferences: SharedPreferences) : SettingsStore {
@@ -42,6 +44,17 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         startHour.value = valid
     }
 
+    private val quiet = MutableStateFlow(readQuietHours())
+    override val quietHours: StateFlow<QuietHours> = quiet.asStateFlow()
+
+    override fun setQuietHours(window: QuietHours) {
+        preferences.edit {
+            putInt(QUIET_START, window.start.toSecondOfDay())
+            putInt(QUIET_END, window.end.toSecondOfDay())
+        }
+        quiet.value = window
+    }
+
     override fun backendOverride(): BackendEnvironment? {
         val url = preferences.getString(BACKEND_URL, null) ?: return null
         val key = preferences.getString(BACKEND_KEY, null) ?: return null
@@ -60,6 +73,12 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         }
     }
 
+    private fun readQuietHours(): QuietHours {
+        val start = preferences.getInt(QUIET_START, 0)
+        val end = preferences.getInt(QUIET_END, 0)
+        return QuietHours(LocalTime.ofSecondOfDay(start.toLong()), LocalTime.ofSecondOfDay(end.toLong()))
+    }
+
     private fun readAppearance() = Appearance(
         themeId = preferences.getString(THEME, null),
         mode = enumOrDefault(preferences.getString(THEME_MODE, null), Appearance.DEFAULT.mode),
@@ -75,6 +94,8 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val REDUCE_MOTION = "reduce_motion"
         const val COMPLETION_SOUND = "completion_sound"
         const val DAY_START_HOUR = "day_start_hour"
+        const val QUIET_START = "quiet_hours_start"
+        const val QUIET_END = "quiet_hours_end"
         const val BACKEND_URL = "dev_backend_url"
         const val BACKEND_KEY = "dev_backend_key"
 

@@ -13,6 +13,8 @@ import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ReminderList
+import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
@@ -23,6 +25,8 @@ import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
+import com.goalmaker.app.data.planning.AlarmReminderScheduler
+import com.goalmaker.app.data.planning.ReminderNotifications
 import com.goalmaker.app.data.replica.ReplicaFileName
 import com.goalmaker.app.data.replica.ReplicaMigrator
 import com.goalmaker.app.data.replica.SqliteReplica
@@ -144,6 +148,18 @@ class AppGraph(context: Context) {
         PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)
     }
 
+    // Reminders (docs/reminders.md): the replica decides, AlarmManager carries the one armed alarm.
+    val reminderNotifications = ReminderNotifications(appContext)
+    private val reminderList = ReminderList(replica, newRows, sync::request)
+    val reminders = ReminderService(
+        reminders = reminderList,
+        tasks = tasks,
+        scheduler = AlarmReminderScheduler(appContext),
+        quietHours = { settings.quietHours.value },
+        dayStartHour = { settings.dayStartHour.value },
+        now = LocalDateTime::now,
+    )
+
     private val changeFeed = SupabaseChangeFeed(supabase, catalog, scope, sync::request)
     private val backgroundSync = WorkManagerSyncScheduler(appContext)
 
@@ -152,8 +168,13 @@ class AppGraph(context: Context) {
     @Volatile private var visible = false
 
     init {
+        reminderNotifications.createChannels()
         // A sync can leave a series with two open occurrences; every device settles it the same way.
-        sync.afterRun = { report -> if (report.pulled > 0) tasks.repairSeries() }
+        // A pull can also change when the next reminder is due, so the armed alarm is redone.
+        sync.afterRun = { report ->
+            if (report.pulled > 0) tasks.repairSeries()
+            if (report.pulled > 0 || report.pushed > 0) reminders.rearm()
+        }
         scope.launch {
             auth.session.collect { session ->
                 when (session) {
@@ -209,6 +230,8 @@ class AppGraph(context: Context) {
         withContext(io) { forgetOtherAccounts(session.userId) }
         sync.request()
         backgroundSync.keepSyncing()
+        // Anything that was due while the app was away, and the alarm for what comes next.
+        withContext(io) { reminders.catchUp().forEach(reminderNotifications::show) }
         if (visible) changeFeed.start()
     }
 
@@ -217,6 +240,7 @@ class AppGraph(context: Context) {
         sync.cancelScheduled()
         backgroundSync.stop()
         changeFeed.stop()
+        reminders.rearm()
     }
 
     // A replica only ever holds one account's rows; signing in as someone else starts clean.

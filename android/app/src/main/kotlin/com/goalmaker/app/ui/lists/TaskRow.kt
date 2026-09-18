@@ -1,6 +1,8 @@
 package com.goalmaker.app.ui.lists
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -52,9 +55,11 @@ import kotlinx.coroutines.launch
 
 /**
  * A task in a list: the theme's checkbox, the title, and what else it says (time, area, repeat,
- * top priority). Checking it plays the check, a haptic and the optional tick, then the row leaves.
- * Swiping it away deletes it; both offer undo. TalkBack gets "Delete" as an action.
+ * top priority, a waiting reminder). Checking it plays the check, a haptic and the optional tick,
+ * then the row leaves. Swiping it away deletes it; both offer undo. A long press opens its
+ * reminders (docs/reminders.md). TalkBack gets both as actions.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TaskRow(
     task: TaskItem,
@@ -62,6 +67,8 @@ fun TaskRow(
     showDay: Boolean,
     onComplete: () -> Unit,
     onDelete: () -> Unit,
+    onRemind: () -> Unit,
+    reminded: Boolean,
     tick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -79,6 +86,7 @@ fun TaskRow(
     val dismiss = rememberSwipeToDismissBoxState()
     val scope = rememberCoroutineScope()
     val deleteLabel = stringResource(R.string.lists_delete, task.title)
+    val remindLabel = stringResource(R.string.reminder_add)
     SwipeToDismissBox(
         state = dismiss,
         enableDismissFromStartToEnd = false,
@@ -89,10 +97,17 @@ fun TaskRow(
         },
         backgroundContent = { DeleteBackground() },
         modifier = modifier.semantics {
-            customActions = listOf(CustomAccessibilityAction(deleteLabel) { onDelete(); true })
+            customActions = listOf(
+                CustomAccessibilityAction(deleteLabel) { onDelete(); true },
+                CustomAccessibilityAction(remindLabel) { onRemind(); true },
+            )
         },
     ) {
-        Surface(color = AppTheme.colors.surface, shape = AppTheme.shapes.row, modifier = Modifier.fillMaxWidth()) {
+        Surface(
+            color = AppTheme.colors.surface,
+            shape = AppTheme.shapes.row,
+            modifier = Modifier.fillMaxWidth().combinedClickable(onLongClick = onRemind, onClick = {}),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -112,6 +127,14 @@ fun TaskRow(
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(task.title, style = MaterialTheme.typography.bodyLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     TaskDetails(task, area, showDay)
+                }
+                if (reminded) {
+                    Icon(
+                        Icons.Outlined.Notifications,
+                        contentDescription = remindLabel,
+                        tint = AppTheme.colors.textMuted,
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
                 task.plannedTime?.let { TaskTime(it) }
             }

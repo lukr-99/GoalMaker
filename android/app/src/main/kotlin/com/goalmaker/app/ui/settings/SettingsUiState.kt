@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.settings
 
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.domain.design.ThemeDefinition
+import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
 
 /**
@@ -11,6 +12,7 @@ import com.goalmaker.app.domain.settings.Appearance
 data class SettingsUiState(
     val appearance: Appearance,
     val dayStartHour: Int,
+    val quietHours: QuietHours,
     /** The theme in use: the chosen one, or the default when none is chosen or it's unknown. */
     val themeId: String,
     val themes: List<ThemeDefinition>,

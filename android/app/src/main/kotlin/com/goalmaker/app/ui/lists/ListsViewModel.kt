@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.ListRules
+import com.goalmaker.app.application.planning.ReminderItem
+import com.goalmaker.app.application.planning.ReminderService
+import com.goalmaker.app.application.planning.ReminderState
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
@@ -12,6 +15,7 @@ import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.domain.planning.Snooze
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -25,19 +29,23 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Today, Tomorrow and the Inbox (docs/lists.md), the composer with its live preview
- * (docs/composer.md), completing and deleting with undo, and the sync indicator. Disk work runs on
- * [io]; [clock] is the local time the planning day and the composer read.
+ * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), and the
+ * sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
+ * composer read.
  */
 class ListsViewModel(
     private val tasks: TaskList,
     areas: AreaList,
     tags: TagList,
     private val settings: SettingsStore,
+    private val reminders: ReminderService,
     private val sync: SyncCoordinator,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -58,14 +66,29 @@ class ListsViewModel(
         ListRules.lists(all, PlanningDay.of(clock(), startHour))
     }
 
+    // The tasks with a reminder still to come, so a row can show it without reading the table again.
+    private val reminded = reminders.watch().flowOn(io).map { all ->
+        all.filter { it.state == ReminderState.PENDING || it.state == ReminderState.SNOOZED }
+            .map(ReminderItem::taskId)
+            .toSet()
+    }
+
+    private val rows = combine(areas.watch().flowOn(io), tags.watchNames().flowOn(io), reminded, ::RowContext)
+
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
-        areas.watch().flowOn(io),
-        tags.watchNames().flowOn(io),
+        rows,
         sync.status,
         refreshing,
-    ) { planning, areaList, tagNames, status, pulled ->
-        ListsUiState(lists = planning, sync = status, refreshing = pulled, areas = areaList, tagNames = tagNames)
+    ) { planning, context, status, pulled ->
+        ListsUiState(
+            lists = planning,
+            sync = status,
+            refreshing = pulled,
+            areas = context.areas,
+            tagNames = context.tagNames,
+            reminded = context.reminded,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -106,6 +129,26 @@ class ListsViewModel(
         viewModelScope.launch(io) { tasks.delete(task.id) }
         undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DELETED, task.title) { viewModelScope.launch(io) { tasks.restore(task.id) } })
     }
+
+    /** The reminders already on a task, for the sheet that edits them. */
+    suspend fun remindersOf(taskId: String): List<ReminderItem> = withContext(io) { reminders.on(taskId) }
+
+    /** A reminder [minutes] before the task's planned time; 0 means when it starts. */
+    fun remindBefore(taskId: String, minutes: Int) {
+        viewModelScope.launch(io) { reminders.addBefore(taskId, minutes) }
+    }
+
+    /** A reminder at a time of its own, counted from now. */
+    fun remindAt(taskId: String, at: LocalDateTime) {
+        viewModelScope.launch(io) { reminders.addAt(taskId, at) }
+    }
+
+    fun removeReminder(reminderId: String) {
+        viewModelScope.launch(io) { reminders.remove(reminderId) }
+    }
+
+    /** Where "tomorrow morning" lands from here (docs/reminders.md). */
+    fun tomorrowMorning(): LocalDateTime = Snooze.TOMORROW_MORNING.target(clock(), settings.dayStartHour.value)
 
     /** Pull to refresh or a tap on the sync indicator: syncs right away instead of after the debounce. */
     fun refresh() {

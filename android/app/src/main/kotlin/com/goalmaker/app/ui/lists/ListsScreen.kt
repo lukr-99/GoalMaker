@@ -65,12 +65,14 @@ import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.PlanningLists
+import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
 import com.goalmaker.app.ui.theme.AppTheme
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -87,6 +89,26 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSetting
     val snackbars = remember { SnackbarHostState() }
     val resources = LocalResources.current
     val tick = rememberTickSound()
+    var remindFor by remember { mutableStateOf<TaskItem?>(null) }
+    var taskReminders by remember { mutableStateOf(emptyList<ReminderItem>()) }
+
+    // The sheet reads the task's reminders when it opens, and again after every change to them.
+    LaunchedEffect(remindFor, state.reminded) {
+        taskReminders = remindFor?.let { viewModel.remindersOf(it.id) }.orEmpty()
+    }
+
+    remindFor?.let { task ->
+        ReminderSheet(
+            task = task,
+            reminders = taskReminders,
+            onRemindWhenDue = { viewModel.remindBefore(task.id, 0) },
+            onRemindBefore = { minutes -> viewModel.remindBefore(task.id, minutes) },
+            onRemindInAnHour = { viewModel.remindAt(task.id, LocalDateTime.now().plusHours(1)) },
+            onRemindTomorrowMorning = { viewModel.remindAt(task.id, viewModel.tomorrowMorning()) },
+            onRemove = viewModel::removeReminder,
+            onDismiss = { remindFor = null },
+        )
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.undo.collect { event ->
@@ -164,16 +186,23 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSetting
                     LoadingIndicator(Modifier.size(64.dp))
                 }
             } else {
-                ListContent(tab, lists, state.areas, viewModel, tick)
+                ListContent(tab, lists, state, viewModel, tick) { remindFor = it }
             }
         }
     }
 }
 
 @Composable
-private fun ListContent(tab: ListTab, lists: PlanningLists, areas: List<AreaItem>, viewModel: ListsViewModel, tick: () -> Unit) {
+private fun ListContent(
+    tab: ListTab,
+    lists: PlanningLists,
+    state: ListsUiState,
+    viewModel: ListsViewModel,
+    tick: () -> Unit,
+    onRemind: (TaskItem) -> Unit,
+) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
-    val areaById = areas.associateBy(AreaItem::id)
+    val areaById = state.areas.associateBy(AreaItem::id)
     LazyColumn(
         contentPadding = PaddingValues(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
@@ -187,6 +216,8 @@ private fun ListContent(tab: ListTab, lists: PlanningLists, areas: List<AreaItem
                     showDay = showDay,
                     onComplete = { viewModel.complete(task) },
                     onDelete = { viewModel.delete(task) },
+                    onRemind = { onRemind(task) },
+                    reminded = task.id in state.reminded,
                     tick = tick,
                     modifier = Modifier.animateItem(),
                 )

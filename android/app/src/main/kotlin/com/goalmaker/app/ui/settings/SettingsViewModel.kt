@@ -6,13 +6,16 @@ import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +28,8 @@ class SettingsViewModel(
     private val auth: AuthGateway,
     private val sync: SyncCoordinator,
     private val settings: SettingsStore,
+    private val reminders: ReminderService,
+    private val io: CoroutineDispatcher,
     private val design: DesignTokens,
     private val updates: UpdateService,
     private val appInfo: AppInfo,
@@ -35,6 +40,7 @@ class SettingsViewModel(
         SettingsUiState(
             appearance = settings.appearance.value,
             dayStartHour = settings.dayStartHour.value,
+            quietHours = settings.quietHours.value,
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
@@ -53,6 +59,9 @@ class SettingsViewModel(
             settings.dayStartHour.collect { hour -> state.update { it.copy(dayStartHour = hour) } }
         }
         viewModelScope.launch {
+            settings.quietHours.collect { window -> state.update { it.copy(quietHours = window) } }
+        }
+        viewModelScope.launch {
             combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
                 .collect { (appearance, session) ->
                     state.update {
@@ -69,6 +78,12 @@ class SettingsViewModel(
     fun setTheme(id: String) = settings.updateAppearance { it.copy(themeId = id) }
 
     fun setDayStartHour(hour: Int) = settings.setDayStartHour(hour)
+
+    /** Quiet hours hold ordinary reminders back (docs/reminders.md); the alarm is armed again. */
+    fun setQuietHours(window: QuietHours) {
+        settings.setQuietHours(window)
+        viewModelScope.launch(io) { reminders.rearm() }
+    }
 
     fun setThemeMode(mode: ThemeMode) = settings.updateAppearance { it.copy(mode = mode) }
 

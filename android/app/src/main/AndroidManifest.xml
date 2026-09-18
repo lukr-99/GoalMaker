@@ -5,6 +5,16 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Reminders (docs/reminders.md): notifications, alarms that survive doze, and rearming
+         after a reboot. SCHEDULE_EXACT_ALARM is granted by default up to API 32; from API 33
+         USE_EXACT_ALARM covers a reminder app, so neither asks the owner for anything. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:name=".GoalMakerApplication"
         android:allowBackup="false"
@@ -37,6 +47,18 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- Reminder alarms, notification buttons, and the moments a device forgets its alarms. -->
+        <receiver
+            android:name=".data.planning.ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Hands downloaded update APKs to the system installer (M0-06). -->
         <provider

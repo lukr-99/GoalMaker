@@ -41,6 +41,9 @@ object SyncRules {
 
     fun format(instant: Instant): String = output.format(instant)
 
+    /** A stored timestamp read back as an instant, or null when the text isn't one. */
+    fun instantOf(text: String): Instant? = parse(text)
+
     private fun parse(text: String): Instant? {
         if (!shape.matches(text)) return null
         var iso = text.replace(' ', 'T')

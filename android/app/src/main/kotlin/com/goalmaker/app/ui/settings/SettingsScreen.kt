@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -25,14 +26,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -47,10 +47,13 @@ import com.goalmaker.app.R
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.ReduceMotion
-import kotlin.math.roundToInt
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.ui.theme.AppTheme
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
@@ -132,6 +135,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                QuietHoursRow(state.quietHours, viewModel::setQuietHours)
             }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)
@@ -299,6 +303,44 @@ private fun CheckResult(result: UpdateCheckResult, viewModel: SettingsViewModel)
     if (result is UpdateCheckResult.Available) {
         Button(onClick = { viewModel.installUpdate(result) }) {
             Text(stringResource(R.string.settings_install_update, result.manifest.version.toString()))
+        }
+    }
+}
+
+/**
+ * Quiet hours (docs/reminders.md): an hour to start and an hour to end, and a way to switch them
+ * off. Equal hours mean off, which is what the sliders say when they meet.
+ */
+@Composable
+private fun QuietHoursRow(window: QuietHours, onChange: (QuietHours) -> Unit) {
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    Label(stringResource(R.string.settings_quiet_hours))
+    Text(
+        text = if (window.off) {
+            stringResource(R.string.settings_quiet_hours_off)
+        } else {
+            stringResource(R.string.settings_quiet_hours_window, formatter.format(window.start), formatter.format(window.end))
+        },
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Label(stringResource(R.string.settings_quiet_hours_start))
+    Slider(
+        value = window.start.hour.toFloat(),
+        onValueChange = { onChange(window.copy(start = LocalTime.of(it.roundToInt(), 0))) },
+        valueRange = 0f..23f,
+        steps = 22,
+    )
+    Label(stringResource(R.string.settings_quiet_hours_end))
+    Slider(
+        value = window.end.hour.toFloat(),
+        onValueChange = { onChange(window.copy(end = LocalTime.of(it.roundToInt(), 0))) },
+        valueRange = 0f..23f,
+        steps = 22,
+    )
+    if (!window.off) {
+        OutlinedButton(onClick = { onChange(QuietHours.OFF) }) {
+            Text(stringResource(R.string.settings_quiet_hours_clear))
         }
     }
 }
