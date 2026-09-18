@@ -11,6 +11,9 @@ import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
@@ -128,13 +131,14 @@ class AppGraph(context: Context) {
         debounce = 2.seconds,
     )
 
-    val tasks = TaskList(
+    private val newRows = NewRows(
         catalog = catalog,
-        replica = replica,
         ownerId = { (auth.session.value as? AuthSession.SignedIn)?.userId?.takeIf(String::isNotBlank) },
         now = Instant::now,
-        requestSync = sync::request,
     )
+    val areas = AreaList(replica, newRows, design.areaColors.map { it.id }, sync::request)
+    val tags = TagList(replica, newRows, sync::request)
+    val tasks = TaskList(replica, newRows, areas, tags, sync::request)
 
     private val changeFeed = SupabaseChangeFeed(supabase, catalog, scope, sync::request)
     private val backgroundSync = WorkManagerSyncScheduler(appContext)

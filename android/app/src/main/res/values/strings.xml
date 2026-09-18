@@ -28,6 +28,25 @@
     <string name="today_delete">Delete %1$s</string>
     <string name="today_empty">Nothing open. Add a task below.</string>
 
+    <!-- Composer preview (docs/composer.md) -->
+    <string name="composer_date_today">Today</string>
+    <string name="composer_date_tomorrow">Tomorrow</string>
+    <string name="composer_priority">Top priority</string>
+    <string name="composer_idea">Idea</string>
+    <string name="composer_new">new</string>
+    <string name="composer_later">later</string>
+    <string name="composer_soon">coming soon</string>
+    <string name="composer_unknown_command">unknown command</string>
+    <string name="composer_remove">Remove %1$s</string>
+    <string name="repeat_daily">Every day</string>
+    <string name="repeat_every_n_days">Every %1$d days</string>
+    <string name="repeat_weekdays">Every weekday</string>
+    <string name="repeat_weekend">Every weekend</string>
+    <string name="repeat_every_day_name">Every %1$s</string>
+    <string name="repeat_every_n_weeks_on">Every %1$d weeks on %2$s</string>
+    <string name="repeat_monthly_on">Every month on day %1$d</string>
+    <string name="repeat_every_n_months_on">Every %1$d months on day %2$d</string>
+
     <!-- Sync -->
     <string name="sync_syncing">Syncing…</string>
     <string name="sync_synced_at">Synced at %1$s</string>

@@ -7,6 +7,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import java.time.LocalDateTime
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
@@ -26,7 +27,16 @@ fun SignedInNavigation(graph: AppGraph) {
         ),
         entryProvider = entryProvider {
             entry<TodayKey> {
-                val todayViewModel = viewModel { TodayViewModel(tasks = graph.tasks, sync = graph.sync, io = graph.io) }
+                val todayViewModel = viewModel {
+                    TodayViewModel(
+                        tasks = graph.tasks,
+                        areas = graph.areas,
+                        tags = graph.tags,
+                        sync = graph.sync,
+                        io = graph.io,
+                        clock = LocalDateTime::now,
+                    )
+                }
                 TodayScreen(viewModel = todayViewModel, onOpenSettings = { backStack.add(SettingsKey) })
             }
             entry<SettingsKey> {

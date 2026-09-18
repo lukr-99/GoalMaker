@@ -3,7 +3,9 @@ package com.goalmaker.app.application.planning
 import android.app.Application
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.replica.text
+import com.goalmaker.app.domain.composer.ComposerParser
 import java.time.Instant
+import java.time.LocalDateTime
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -24,8 +26,13 @@ class TaskListTest {
     private var now = Instant.parse("2026-09-18T12:00:00Z")
     private var syncRequests = 0
 
-    private fun tasks(owner: String? = TestReplica.OWNER) =
-        TaskList(test.catalog, test.replica, { owner }, { now }, { syncRequests++ })
+    private fun tasks(owner: String? = TestReplica.OWNER): TaskList {
+        val rows = NewRows(test.catalog, { owner }, { now })
+        val areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), { syncRequests++ })
+        return TaskList(test.replica, rows, areas, TagList(test.replica, rows, { syncRequests++ }), { syncRequests++ })
+    }
+
+    private fun draft(line: String) = ComposerParser.parse(line, LocalDateTime.parse("2026-09-18T14:05"))
 
     @Before
     fun setUp() {
@@ -52,8 +59,55 @@ class TaskListTest {
     @Test
     fun `blank titles and signed-out adds are ignored`() {
         assertNull(tasks().add("   "))
+        assertNull(tasks().add(draft("tomorrow #run")))
         assertNull(tasks(owner = null).add("Run"))
         assertTrue(test.replica.outbox().isEmpty())
+    }
+
+    @Test
+    fun `a composer line saves its day, time, priority and repeat`() {
+        val added = tasks().add(draft("Standup weekdays 9:30 !"))!!
+
+        val row = test.replica.get("tasks", added.id)!!
+        assertEquals("Standup", row.text("title"))
+        assertEquals("2026-09-21", row.text("planned_date"))
+        assertEquals("09:30:00", row.text("planned_time"))
+        assertEquals("true", row["top_priority"].toString())
+        assertEquals("FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR", row.text("recurrence"))
+    }
+
+    @Test
+    fun `a new area gets the first unused palette color and is saved before the task`() {
+        val tasks = tasks()
+        tasks.add(draft("Stretch @Health"))
+        val second = tasks.add(draft("Read @School"))!!
+
+        val areas = test.replica.all("areas").associate { it.text("name") to it.text("color") }
+        assertEquals(mapOf("Health" to "violet", "School" to "blue"), areas)
+        assertEquals(listOf("areas", "tasks", "areas", "tasks"), test.replica.outbox().map { it.entity })
+        assertEquals(test.replica.all("areas").first { it.text("name") == "School" }.text("id"), second.areaId)
+    }
+
+    @Test
+    fun `an existing area is reused whatever its case`() {
+        val tasks = tasks()
+        val first = tasks.add(draft("Stretch @Health"))!!
+        val second = tasks.add(draft("Run @health"))!!
+
+        assertEquals(1, test.replica.all("areas").size)
+        assertEquals(first.areaId, second.areaId)
+    }
+
+    @Test
+    fun `tags are created once and linked to the task`() {
+        val tasks = tasks()
+        val first = tasks.add(draft("Run #health #run"))!!
+        tasks.add(draft("Swim #Health"))
+
+        assertEquals(listOf("health", "run"), test.replica.all("tags").map { it.text("name") }.sortedBy { it })
+        val links = test.replica.all("task_tags").filter { it.text("task_id") == first.id }
+        assertEquals(2, links.size)
+        assertEquals(3, test.replica.all("task_tags").size)
     }
 
     @Test
