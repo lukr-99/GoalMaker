@@ -8,7 +8,8 @@
     "LICENSE.md"
   ],
   "migration_directories": [
-    "supabase/migrations"
+    "supabase/migrations",
+    "replica/migrations"
   ],
   "type_scan_roots": [
     "android/app/src/main/kotlin",

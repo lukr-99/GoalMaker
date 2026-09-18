@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "description": "Sync decisions both apps must make the same way (docs/sync.md). Timestamps are server updated_at values; device clocks never decide. merge: what to do with one pulled row given the local copy (null when absent) and whether the outbox holds a change for it. fullResync: whether a table starts over (never synced, or watermark older than 80 days). pullFrom: the pull starts 60 seconds before the watermark. normalizeTimestamp: server timestamps become UTC text with 6 fractional digits so text order is time order.",
+  "merge": [
+    {
+      "name": "a row this device has never seen",
+      "local": null,
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "result": "take-remote",
+      "dropPending": false
+    },
+    {
+      "name": "the remote row is newer",
+      "local": { "updatedAt": "2026-09-18T09:00:00.000000Z", "deleted": false },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "result": "take-remote",
+      "dropPending": false
+    },
+    {
+      "name": "an older copy fetched again by the overlap",
+      "local": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T09:59:30.000000Z", "deleted": false },
+      "result": "keep-local",
+      "dropPending": false
+    },
+    {
+      "name": "the same version again",
+      "local": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "result": "keep-local",
+      "dropPending": false
+    },
+    {
+      "name": "a newer microsecond still counts",
+      "local": { "updatedAt": "2026-09-18T10:00:00.000001Z", "deleted": false },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000002Z", "deleted": false },
+      "result": "take-remote",
+      "dropPending": false
+    },
+    {
+      "name": "a local change is waiting to be pushed",
+      "local": { "updatedAt": "2026-09-18T09:00:00.000000Z", "deleted": false },
+      "pending": true,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "result": "keep-local",
+      "dropPending": false
+    },
+    {
+      "name": "a pending local row the server has never had",
+      "local": { "updatedAt": "", "deleted": false },
+      "pending": true,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": false },
+      "result": "keep-local",
+      "dropPending": false
+    },
+    {
+      "name": "deleted elsewhere, nothing pending here",
+      "local": { "updatedAt": "2026-09-18T09:00:00.000000Z", "deleted": false },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": true },
+      "result": "take-remote",
+      "dropPending": false
+    },
+    {
+      "name": "deleted elsewhere while edited here: delete wins",
+      "local": { "updatedAt": "2026-09-18T09:00:00.000000Z", "deleted": false },
+      "pending": true,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": true },
+      "result": "take-remote",
+      "dropPending": true
+    },
+    {
+      "name": "a tombstone for a row never seen is kept, so a stale copy can't bring it back",
+      "local": null,
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": true },
+      "result": "take-remote",
+      "dropPending": false
+    },
+    {
+      "name": "an older tombstone fetched again after a restore",
+      "local": { "updatedAt": "2026-09-18T11:00:00.000000Z", "deleted": false },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": true },
+      "result": "keep-local",
+      "dropPending": false
+    },
+    {
+      "name": "restored elsewhere",
+      "local": { "updatedAt": "2026-09-18T10:00:00.000000Z", "deleted": true },
+      "pending": false,
+      "remote": { "updatedAt": "2026-09-18T11:00:00.000000Z", "deleted": false },
+      "result": "take-remote",
+      "dropPending": false
+    }
+  ],
+  "fullResync": [
+    { "name": "never synced", "watermark": null, "now": "2026-09-18T10:00:00.000000Z", "full": true },
+    { "name": "synced a minute ago", "watermark": "2026-09-18T09:59:00.000000Z", "now": "2026-09-18T10:00:00.000000Z", "full": false },
+    { "name": "79 days ago", "watermark": "2026-07-01T10:00:00.000000Z", "now": "2026-09-18T10:00:00.000000Z", "full": false },
+    { "name": "exactly 80 days ago", "watermark": "2026-06-30T10:00:00.000000Z", "now": "2026-09-18T10:00:00.000000Z", "full": false },
+    { "name": "80 days and a second ago", "watermark": "2026-06-30T09:59:59.000000Z", "now": "2026-09-18T10:00:00.000000Z", "full": true },
+    { "name": "months ago", "watermark": "2026-01-01T00:00:00.000000Z", "now": "2026-09-18T10:00:00.000000Z", "full": true }
+  ],
+  "pullFrom": [
+    { "watermark": null, "from": null },
+    { "watermark": "2026-09-18T10:00:00.000000Z", "from": "2026-09-18T09:59:00.000000Z" },
+    { "watermark": "2026-09-18T00:00:30.250000Z", "from": "2026-09-17T23:59:30.250000Z" }
+  ],
+  "normalizeTimestamp": [
+    { "input": "2026-09-18T10:00:00.123456+00:00", "output": "2026-09-18T10:00:00.123456Z" },
+    { "input": "2026-09-18T10:00:00+00:00", "output": "2026-09-18T10:00:00.000000Z" },
+    { "input": "2026-09-18T10:00:00.1+00:00", "output": "2026-09-18T10:00:00.100000Z" },
+    { "input": "2026-09-18T12:00:00.5+02:00", "output": "2026-09-18T10:00:00.500000Z" },
+    { "input": "2026-09-18T10:00:00.123456Z", "output": "2026-09-18T10:00:00.123456Z" },
+    { "input": "2026-09-18 10:00:00.123456+00", "output": "2026-09-18T10:00:00.123456Z" },
+    { "input": "2026-12-31T23:30:00-01:00", "output": "2027-01-01T00:30:00.000000Z" },
+    { "input": "not a time", "output": null }
+  ]
+}
