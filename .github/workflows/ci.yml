@@ -1,0 +1,113 @@
+name: CI
+
+# Every part of GoalMaker, on every push to main and every pull request. Make the four jobs
+# required checks on main (docs/setup/signing-and-releases.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  supabase:
+    name: Supabase migrations and row security
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned Supabase CLI
+        run: npm ci
+
+      - name: Start the local stack
+        # Only the database, auth, storage and the gateway are needed for the tests.
+        run: npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,supavisor
+
+      - name: Full chain, isolated steps and pgTAP
+        run: python tools/supabase_migrations.py test
+
+      - name: Stop the local stack
+        if: always()
+        run: npx supabase stop --no-backup
+
+  android:
+    name: Android build, unit tests and lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - uses: android-actions/setup-android@v4
+        with:
+          # The action's default also asks for the retired "tools" package (Tarot2Go, 2026-09-14).
+          packages: platform-tools
+
+      - name: Build, unit test and lint
+        # AGP downloads the compile SDK and build tools it needs; setup-android accepted the licenses.
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug lintDebug --stacktrace
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+          if-no-files-found: warn
+
+  windows:
+    name: Windows format, build and tests
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: windows
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: windows/global.json
+          cache: true
+          cache-dependency-path: windows/**/*.csproj
+
+      - name: Restore
+        run: dotnet restore GoalMaker.slnx
+
+      - name: Check formatting
+        run: dotnet format GoalMaker.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build GoalMaker.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution GoalMaker.slnx -c Release --no-build

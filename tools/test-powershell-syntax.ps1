@@ -8,7 +8,8 @@ $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $scripts = [System.Collections.Generic.List[System.IO.FileInfo]]::new()
 
 if (-not $Roots) {
-    $Roots = @('templates', 'examples', 'tools', 'installer') | Where-Object {
+    # GoalMaker keeps scripts in tools/, android/tools/ and windows/installer/.
+    $Roots = @('tools', 'android/tools', 'windows/installer') | Where-Object {
         Test-Path -LiteralPath (Join-Path $repositoryRoot $_) -PathType Container
     }
 }

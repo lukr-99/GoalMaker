@@ -1,0 +1,208 @@
+name: Release
+
+# Push a tag vX.Y.Z that matches version.properties. The workflow builds the signed APK and the
+# Windows installer, publishes both with a signed manifest to the update channel (ADR 0004) and
+# drafts a GitHub Release as the record. Setup: docs/setup/signing-and-releases.md.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check the tag and the setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version-code: ${{ steps.version.outputs.code }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Tag matches version.properties
+        id: version
+        run: |
+          name=$(sed -n 's/^versionName=//p' version.properties | tr -d '\r')
+          code=$(sed -n 's/^versionCode=//p' version.properties | tr -d '\r')
+          if [ "v$name" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match versionName $name in version.properties"
+            exit 1
+          fi
+          echo "version=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: The update channel key is committed
+        run: |
+          if [ ! -s contracts/keys/release-manifest-public.b64 ]; then
+            echo "::error::contracts/keys/release-manifest-public.b64 is missing; run tools/setup-update-signing.ps1"
+            exit 1
+          fi
+
+      - name: Every release secret is set
+        env:
+          GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
+          GOALMAKER_SUPABASE_KEY: ${{ secrets.GOALMAKER_SUPABASE_KEY }}
+          GOALMAKER_SUPABASE_SECRET_KEY: ${{ secrets.GOALMAKER_SUPABASE_SECRET_KEY }}
+          GOALMAKER_MANIFEST_SIGNING_KEY: ${{ secrets.GOALMAKER_MANIFEST_SIGNING_KEY }}
+          GOALMAKER_KEYSTORE_BASE64: ${{ secrets.GOALMAKER_KEYSTORE_BASE64 }}
+          GOALMAKER_KEYSTORE_PASSWORD: ${{ secrets.GOALMAKER_KEYSTORE_PASSWORD }}
+          GOALMAKER_KEY_ALIAS: ${{ secrets.GOALMAKER_KEY_ALIAS }}
+          GOALMAKER_KEY_PASSWORD: ${{ secrets.GOALMAKER_KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in GOALMAKER_SUPABASE_URL GOALMAKER_SUPABASE_KEY GOALMAKER_SUPABASE_SECRET_KEY \
+                      GOALMAKER_MANIFEST_SIGNING_KEY GOALMAKER_KEYSTORE_BASE64 GOALMAKER_KEYSTORE_PASSWORD \
+                      GOALMAKER_KEY_ALIAS GOALMAKER_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing"
+            exit 1
+          fi
+
+  android:
+    name: Signed APK
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: android
+    env:
+      GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
+      GOALMAKER_SUPABASE_KEY: ${{ secrets.GOALMAKER_SUPABASE_KEY }}
+      GOALMAKER_KEYSTORE_PASSWORD: ${{ secrets.GOALMAKER_KEYSTORE_PASSWORD }}
+      GOALMAKER_KEY_ALIAS: ${{ secrets.GOALMAKER_KEY_ALIAS }}
+      GOALMAKER_KEY_PASSWORD: ${{ secrets.GOALMAKER_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Restore the release key
+        env:
+          GOALMAKER_KEYSTORE_BASE64: ${{ secrets.GOALMAKER_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$GOALMAKER_KEYSTORE_BASE64" | base64 -d > release.jks
+          echo "GOALMAKER_KEYSTORE_FILE=release.jks" >> "$GITHUB_ENV"
+
+      - name: Test and build the release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew testReleaseUnitTest assembleRelease --stacktrace
+
+      - name: Verify the signature and name the file
+        run: |
+          apk=app/build/outputs/apk/release/app-release.apk
+          "$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner" verify --print-certs "$apk"
+          cp "$apk" "GoalMaker-${{ needs.check.outputs.version }}.apk"
+
+      - name: Remove the release key
+        if: always()
+        run: rm -f release.jks
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: android
+          path: android/GoalMaker-${{ needs.check.outputs.version }}.apk
+          if-no-files-found: error
+
+  windows:
+    name: Windows installer
+    needs: check
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
+      GOALMAKER_SUPABASE_KEY: ${{ secrets.GOALMAKER_SUPABASE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: windows/global.json
+
+      - name: Make sure Inno Setup 6 is available
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Test, publish and compile the installer
+        shell: pwsh
+        run: |
+          dotnet test --solution windows/GoalMaker.slnx -c Release
+          ./windows/installer/build-installer.ps1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: windows
+          path: windows/installer/dist/GoalMaker-${{ needs.check.outputs.version }}-setup.exe
+          if-no-files-found: error
+
+  publish:
+    name: Publish to the update channel and draft the GitHub Release
+    needs: [check, android, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Sign the manifest and upload everything to the releases bucket
+        env:
+          GOALMAKER_MANIFEST_SIGNING_KEY: ${{ secrets.GOALMAKER_MANIFEST_SIGNING_KEY }}
+          GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
+          GOALMAKER_SUPABASE_SECRET_KEY: ${{ secrets.GOALMAKER_SUPABASE_SECRET_KEY }}
+        run: |
+          umask 077
+          printf '%s\n' "$GOALMAKER_MANIFEST_SIGNING_KEY" > "$RUNNER_TEMP/manifest-key.pem"
+          python tools/publish_release.py \
+            --version "$VERSION" \
+            --android-version-code "${{ needs.check.outputs.version-code }}" \
+            --apk "artifacts/GoalMaker-$VERSION.apk" \
+            --windows-installer "artifacts/GoalMaker-$VERSION-setup.exe" \
+            --notes "GoalMaker $VERSION" \
+            --signing-key "$RUNNER_TEMP/manifest-key.pem" \
+            --supabase-url "$GOALMAKER_SUPABASE_URL" \
+            --secret-key "$GOALMAKER_SUPABASE_SECRET_KEY" \
+            --output release-out
+          rm -f "$RUNNER_TEMP/manifest-key.pem"
+
+      - name: Draft the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp release-out/manifest.json release-out/manifest.sig artifacts/
+          (cd artifacts && sha256sum GoalMaker-* manifest.json manifest.sig > SHA256SUMS)
+          gh release create "$GITHUB_REF_NAME" --draft --title "GoalMaker $VERSION" --generate-notes \
+            artifacts/GoalMaker-* artifacts/manifest.json artifacts/manifest.sig artifacts/SHA256SUMS
