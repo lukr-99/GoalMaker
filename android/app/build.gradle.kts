@@ -1,6 +1,35 @@
 import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+/**
+ * Copies the files both apps share into generated assets (ADR 0007): the replica migrations as
+ * assets/replica/NNNN_name.sql, byte for byte, and the synced-table contract as
+ * assets/synced-tables.json. The repository copies stay the only ones anyone edits.
+ */
+abstract class SharedReplicaAssets : DefaultTask() {
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val migrations: DirectoryProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val syncedTables: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDirectory: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val output = outputDirectory.get().asFile
+        output.deleteRecursively()
+        val replica = output.resolve("replica").apply { mkdirs() }
+        migrations.get().asFile.listFiles { file -> file.extension == "sql" }.orEmpty().forEach { file ->
+            file.copyTo(replica.resolve(file.name))
+        }
+        syncedTables.get().asFile.copyTo(output.resolve("synced-tables.json"))
+    }
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -57,6 +86,12 @@ val cloudSupabaseKey = setting("goalmaker.supabaseKey", "GOALMAKER_SUPABASE_KEY"
 val manifestPublicKeyFile = repositoryRoot.resolve("contracts/keys/release-manifest-public.b64")
 val manifestPublicKey: String = setting("goalmaker.manifestPublicKey", "GOALMAKER_MANIFEST_PUBLIC_KEY")
     .ifEmpty { if (manifestPublicKeyFile.isFile) manifestPublicKeyFile.readText().trim() else "" }
+
+val sharedReplicaAssets = tasks.register<SharedReplicaAssets>("sharedReplicaAssets") {
+    migrations.set(repositoryRoot.resolve("replica/migrations"))
+    syncedTables.set(repositoryRoot.resolve("contracts/schemas/synced-tables.json"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/shared-replica-assets"))
+}
 
 fun quoted(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
@@ -126,6 +161,12 @@ android {
             test.systemProperty("goalmaker.contracts", repositoryRoot.resolve("contracts").absolutePath)
             // Declared as an input so a changed vector file reruns the tests instead of hitting the cache.
             test.inputs.dir(repositoryRoot.resolve("contracts")).withPathSensitivity(PathSensitivity.RELATIVE)
+            test.inputs.dir(repositoryRoot.resolve("replica/migrations")).withPathSensitivity(PathSensitivity.RELATIVE)
+            // Robolectric's Android 16 runtime reaches into JDK internals (ApplicationSharedMemory).
+            test.jvmArgs(
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+            )
         }
     }
 
@@ -135,6 +176,12 @@ android {
         // The Expressive alpha is pinned on purpose (ADR 0005); newer-version nags are noise.
         // targetSdk stays 36 until Android 17's behavior changes are reviewed (M0-04).
         disable += setOf("GradleDependency", "NewerVersionAvailable", "AndroidGradlePluginVersion", "OldTargetApi")
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(sharedReplicaAssets, SharedReplicaAssets::outputDirectory)
     }
 }
 
@@ -170,15 +217,21 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.navigation3.runtime)
     implementation(libs.androidx.navigation3.ui)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 
+    // The replica (ADR 0007): the bundled SQLite, so every Android version runs the same SQLite as Windows.
+    implementation(libs.androidx.sqlite.bundled)
+    implementation(libs.androidx.work.runtime)
+
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.storage)
+    implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.okhttp)
 
     debugImplementation(libs.compose.ui.tooling)
@@ -187,6 +240,8 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
+    // Unit tests drive the replica through the framework driver under Robolectric; the app ships the bundled one.
+    testImplementation(libs.androidx.sqlite.framework)
     testImplementation(platform(libs.compose.bom))
     testImplementation(libs.compose.ui.test.junit4)
 }

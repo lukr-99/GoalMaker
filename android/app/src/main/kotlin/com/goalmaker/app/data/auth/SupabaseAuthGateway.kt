@@ -11,6 +11,7 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.exception.AuthRestException
 import io.github.jan.supabase.auth.providers.builtin.OTP
 import io.github.jan.supabase.auth.status.SessionStatus
+import io.github.jan.supabase.auth.user.UserInfo
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.exceptions.RestException
 import kotlinx.coroutines.CancellationException
@@ -54,12 +55,13 @@ class SupabaseAuthGateway(
 
     private fun toSession(status: SessionStatus): AuthSession = when (status) {
         is SessionStatus.Initializing -> AuthSession.Loading
-        is SessionStatus.Authenticated -> AuthSession.SignedIn(status.session.user?.email.orEmpty())
+        is SessionStatus.Authenticated -> signedIn(status.session.user)
         // A failed refresh (usually offline) keeps the stored session; the user is still signed in.
-        is SessionStatus.RefreshFailure ->
-            AuthSession.SignedIn(client.auth.currentSessionOrNull()?.user?.email.orEmpty())
+        is SessionStatus.RefreshFailure -> signedIn(client.auth.currentSessionOrNull()?.user)
         is SessionStatus.NotAuthenticated -> AuthSession.SignedOut
     }
+
+    private fun signedIn(user: UserInfo?) = AuthSession.SignedIn(user?.id.orEmpty(), user?.email.orEmpty())
 
     private suspend fun attempt(block: suspend () -> Unit): AuthResult = try {
         block()

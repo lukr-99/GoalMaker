@@ -20,13 +20,23 @@
     <string name="sign_in_error_other">Sign-in failed: %1$s</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 
-    <!-- Home -->
-    <string name="home_title">Today</string>
-    <string name="home_settings">Settings</string>
-    <string name="home_greeting">Signed in as %1$s</string>
-    <string name="home_spine_title">The delivery spine is in place</string>
-    <string name="home_spine_body">Sign-in, updates and the backend work. Tasks, goals and habits arrive in the next milestones.</string>
-    <string name="home_composer_placeholder">Add a task… (arrives in M2)</string>
+    <!-- Today -->
+    <string name="today_title">Today</string>
+    <string name="today_settings">Settings</string>
+    <string name="today_composer_placeholder">Add a task…</string>
+    <string name="today_add">Add task</string>
+    <string name="today_delete">Delete %1$s</string>
+    <string name="today_empty">Nothing open. Add a task below.</string>
+
+    <!-- Sync -->
+    <string name="sync_syncing">Syncing…</string>
+    <string name="sync_synced_at">Synced at %1$s</string>
+    <string name="sync_offline">Offline</string>
+    <plurals name="sync_offline_waiting">
+        <item quantity="one">Offline · %1$d change waiting</item>
+        <item quantity="other">Offline · %1$d changes waiting</item>
+    </plurals>
+    <string name="sync_needs_attention">Some changes didn\'t sync: %1$s</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
@@ -37,6 +47,11 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_account">Account</string>
     <string name="settings_sign_out">Sign out</string>
+    <plurals name="settings_sign_out_unsynced">
+        <item quantity="one">%1$d change hasn\'t reached the server yet. Signing out now deletes it from this phone.</item>
+        <item quantity="other">%1$d changes haven\'t reached the server yet. Signing out now deletes them from this phone.</item>
+    </plurals>
+    <string name="settings_sign_out_anyway">Sign out anyway</string>
     <string name="settings_updates">Updates</string>
     <string name="settings_check_updates">Check for updates</string>
     <string name="settings_install_update">Install %1$s</string>

@@ -8,14 +8,15 @@ import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.goalmaker.app.composition.AppGraph
-import com.goalmaker.app.ui.home.HomeScreen
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
+import com.goalmaker.app.ui.today.TodayScreen
+import com.goalmaker.app.ui.today.TodayViewModel
 
 /** The signed-in part of the app: a Navigation 3 back stack starting at Today. */
 @Composable
-fun SignedInNavigation(graph: AppGraph, email: String) {
-    val backStack = rememberNavBackStack(HomeKey)
+fun SignedInNavigation(graph: AppGraph) {
+    val backStack = rememberNavBackStack(TodayKey)
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
@@ -24,13 +25,15 @@ fun SignedInNavigation(graph: AppGraph, email: String) {
             rememberViewModelStoreNavEntryDecorator(),
         ),
         entryProvider = entryProvider {
-            entry<HomeKey> {
-                HomeScreen(email = email, onOpenSettings = { backStack.add(SettingsKey) })
+            entry<TodayKey> {
+                val todayViewModel = viewModel { TodayViewModel(tasks = graph.tasks, sync = graph.sync, io = graph.io) }
+                TodayScreen(viewModel = todayViewModel, onOpenSettings = { backStack.add(SettingsKey) })
             }
             entry<SettingsKey> {
                 val settingsViewModel = viewModel {
                     SettingsViewModel(
                         auth = graph.auth,
+                        sync = graph.sync,
                         settings = graph.settings,
                         updates = graph.updates,
                         appInfo = graph.appInfo,

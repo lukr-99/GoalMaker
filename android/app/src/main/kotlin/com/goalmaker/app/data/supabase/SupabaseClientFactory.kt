@@ -4,6 +4,7 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.createSupabaseClient
+import io.github.jan.supabase.realtime.Realtime
 import io.github.jan.supabase.storage.Storage
 
 /** Builds the one Supabase client for the chosen backend. Called only by the composition root. */
@@ -14,5 +15,6 @@ object SupabaseClientFactory {
         createSupabaseClient(supabaseUrl = environment.url, supabaseKey = environment.publishableKey) {
             install(Auth)
             install(Storage)
+            install(Realtime)
         }
 }

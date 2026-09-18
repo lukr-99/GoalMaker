@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -74,7 +75,26 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
             }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)
-                OutlinedButton(onClick = viewModel::signOut) { Text(stringResource(R.string.settings_sign_out)) }
+                val unsynced = state.unsyncedAtSignOut
+                if (unsynced == null) {
+                    OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
+                        Text(stringResource(R.string.settings_sign_out))
+                    }
+                } else {
+                    Text(
+                        pluralStringResource(R.plurals.settings_sign_out_unsynced, unsynced, unsynced),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
+                            Text(stringResource(R.string.settings_sign_out))
+                        }
+                        TextButton(onClick = { viewModel.signOut(discardUnsynced = true) }, enabled = !state.signingOut) {
+                            Text(stringResource(R.string.settings_sign_out_anyway))
+                        }
+                    }
+                }
             }
             Section(stringResource(R.string.settings_updates)) {
                 UpdatesContent(state.update, viewModel)

@@ -7,6 +7,7 @@ import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.settings.SettingsStore
+import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.domain.settings.ThemeMode
@@ -20,6 +21,7 @@ import kotlinx.coroutines.launch
 /** Appearance, account, updates, about and (dev builds) the backend switch. */
 class SettingsViewModel(
     private val auth: AuthGateway,
+    private val sync: SyncCoordinator,
     private val settings: SettingsStore,
     private val updates: UpdateService,
     private val appInfo: AppInfo,
@@ -30,6 +32,8 @@ class SettingsViewModel(
         SettingsUiState(
             themeMode = settings.themeMode.value,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
+            signingOut = false,
+            unsyncedAtSignOut = null,
             update = UpdateUiState.Idle,
             appInfo = appInfo,
             backendUrlDraft = appInfo.backend.url,
@@ -48,8 +52,25 @@ class SettingsViewModel(
 
     fun setThemeMode(mode: ThemeMode) = settings.setThemeMode(mode)
 
-    fun signOut() {
-        viewModelScope.launch { auth.signOut() }
+    /**
+     * Pushes what is still local, empties this device's copy, then signs out (docs/sync.md). When
+     * changes can't be pushed, stops and asks, unless [discardUnsynced].
+     */
+    fun signOut(discardUnsynced: Boolean = false) {
+        if (state.value.signingOut) return
+        state.update { it.copy(signingOut = true) }
+        viewModelScope.launch {
+            try {
+                if (sync.flushAndClear(discardUnsynced)) {
+                    auth.signOut()
+                    state.update { it.copy(unsyncedAtSignOut = null) }
+                } else {
+                    state.update { it.copy(unsyncedAtSignOut = sync.status.value.pendingChanges) }
+                }
+            } finally {
+                state.update { it.copy(signingOut = false) }
+            }
+        }
     }
 
     fun checkForUpdates() {

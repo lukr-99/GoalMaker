@@ -37,7 +37,7 @@ fun GoalMakerApp(graph: AppGraph) {
                         viewModel = viewModel { SignInViewModel(graph.auth) },
                         backendLabel = graph.appInfo.backend.url.takeIf { graph.appInfo.isDevBuild },
                     )
-                    is AuthSession.SignedIn -> SignedInNavigation(graph = graph, email = current.email)
+                    is AuthSession.SignedIn -> SignedInNavigation(graph = graph)
                 }
             }
         }
