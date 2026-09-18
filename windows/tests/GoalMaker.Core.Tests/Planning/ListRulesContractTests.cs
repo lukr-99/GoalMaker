@@ -10,6 +10,29 @@ public sealed class ListRulesContractTests
     private readonly JsonElement vectors = ContractFiles.Load("vectors/lists.json").RootElement;
 
     [Fact]
+    public void EveryFilter()
+    {
+        foreach (var testCase in vectors.GetProperty("filter").EnumerateArray())
+        {
+            var listed = testCase.GetProperty("tasks").EnumerateArray().ToList();
+            var tasks = listed.Select(task => new TaskItem(
+                task.GetProperty("id").GetString()!,
+                "Task",
+                TaskState.Open,
+                false,
+                "2026-09-10T08:00:00.000000Z",
+                AreaId: task.TryGetProperty("area", out var area) ? area.GetString() : null)).ToList();
+            var links = listed.ToDictionary(
+                task => task.GetProperty("id").GetString()!,
+                task => (IReadOnlySet<string>)(task.TryGetProperty("tags", out var tags) ? tags.EnumerateArray().Select(tag => tag.GetString()!).ToHashSet() : []));
+            var filter = new ListFilter(testCase.GetProperty("area").GetString(), testCase.GetProperty("tag").GetString());
+            var expected = testCase.GetProperty("keep").EnumerateArray().Select(id => id.GetString()!);
+
+            Assert.True(expected.SequenceEqual(filter.Apply(tasks, links).Select(task => task.Id)), testCase.GetProperty("name").GetString());
+        }
+    }
+
+    [Fact]
     public void EveryListVector()
     {
         var defaults = vectors.GetProperty("taskDefaults");

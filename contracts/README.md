@@ -10,7 +10,7 @@ wrong.
 | `vectors/release-manifest.json` | Release manifest signature check and validation | `ReleaseManifestContractTest` | `ReleaseManifestContractTests` |
 | `vectors/sync-merge.json` | Sync merge, full resync, pull start, timestamp form ([sync](../docs/sync.md)) | `SyncRulesContractTest` | `SyncRulesContractTests` |
 | `vectors/composer.json` | The composer's shortcut grammar ([composer](../docs/composer.md)) | `ComposerParserContractTest` | `ComposerParserContractTests` |
-| `vectors/lists.json` | What Today, Tomorrow and Inbox hold ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |
+| `vectors/lists.json` | What Today, Tomorrow and Inbox hold, and filtering by area and tag ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |
 | `vectors/plan.json` | The Plan tomorrow ritual ([plan tomorrow](../docs/plan-tomorrow.md)) | `PlanRulesContractTest` | `PlanRulesContractTests` |
 | `vectors/recurrence.json` | Repeating tasks and their occurrences ([repeating](../docs/repeating.md)) | `RecurrenceContractTest` | `RecurrenceContractTests` |
 | `vectors/reminders.json` | Reminder times, quiet hours and snooze ([reminders](../docs/reminders.md)) | `ReminderRulesContractTest` | `ReminderRulesContractTests` |

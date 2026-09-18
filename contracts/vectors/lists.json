@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Which open tasks each list shows, in order (docs/lists.md). Tasks list only fields that differ from 'taskDefaults'; their creation order is their order in the case (the first was created first). 'expect' lists task ids per list; lists it omits are empty, and an omitted summary is 0 of 0. 'now' is local time; the day starts at 'rolloverHour'. 2026-09-18 is a Friday.",
+  "description": "Which open tasks each list shows, in order (docs/lists.md). Tasks list only fields that differ from 'taskDefaults'; their creation order is their order in the case (the first was created first). 'expect' lists task ids per list; lists it omits are empty, and an omitted summary is 0 of 0. 'now' is local time; the day starts at 'rolloverHour'. 2026-09-18 is a Friday. 'filter': which tasks a list keeps when it is filtered by an area and/or a tag (spec, story 9), before the list rules run; a task's 'tags' are the tags linked to it; 'keep' is in the tasks' order.",
   "now": "2026-09-18T14:05",
   "rolloverHour": 4,
   "taskDefaults": { "planned": null, "time": null, "top": false, "status": "open", "area": null, "deleted": false },
@@ -123,5 +123,15 @@
       ],
       "expect": { "more": ["b"], "overdue": ["a"], "summary": { "done": 0, "total": 1 } }
     }
+  ],
+  "filter": [
+    {"name": "no filter keeps every task", "area": null, "tag": null, "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": ["home1", "home2", "work1", "loose", "plain"]},
+    {"name": "an area keeps its own tasks", "area": "home", "tag": null, "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": ["home1", "home2"]},
+    {"name": "a tag keeps the tasks linked to it, whatever their area", "area": null, "tag": "errand", "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": ["home1", "work1"]},
+    {"name": "a tag on a task without an area", "area": null, "tag": "call", "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": ["work1", "loose"]},
+    {"name": "an area and a tag must both match", "area": "work", "tag": "errand", "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": ["work1"]},
+    {"name": "an area and a tag with nothing in common keep nothing", "area": "home", "tag": "call", "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": []},
+    {"name": "an area no task has keeps nothing", "area": "garden", "tag": null, "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": []},
+    {"name": "a tag no task has keeps nothing", "area": null, "tag": "someday", "tasks": [{"id": "home1", "area": "home", "tags": ["errand"]}, {"id": "home2", "area": "home"}, {"id": "work1", "area": "work", "tags": ["errand", "call"]}, {"id": "loose", "tags": ["call"]}, {"id": "plain"}], "keep": []}
   ]
 }
