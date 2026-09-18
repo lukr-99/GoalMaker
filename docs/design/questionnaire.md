@@ -4,6 +4,9 @@ The spec settled the direction: **bold and energetic**, a **chat-app layout** (s
 navigation, a main pane, a composer bar), Material 3 Expressive on Android and WPF UI (Fluent) on
 Windows. This questionnaire pins down the look before M2, the first UI-heavy milestone.
 
+Answered 2026-09-18 through a design board (four directions drawn as the same Today screen) and a
+short form. `ok` means the recommendation stands.
+
 Same format as the grilling rounds: write under **Answer:**, and `ok` accepts the recommendation.
 "You decide" is fine for anything you don't care about. Screenshots or app names as references help
 most.
@@ -23,6 +26,7 @@ playful, focused, warm, sporty, premium, calm-but-confident.
 **Recommended:** punchy, focused, rewarding.
 
 **Answer:**
+ok: punchy, focused, rewarding. The board's style is the one to keep.
 
 ## D2. References
 
@@ -34,6 +38,7 @@ Nike Run Club (bold type), Claude or ChatGPT (the composer).
 Duolingo for celebration, the Claude app for the composer.
 
 **Answer:**
+ok, as recommended; the four directions on the design board are the working references.
 
 ---
 
@@ -48,6 +53,9 @@ tangerine, magenta, or name your own.
 ambitious and isn't taken by most productivity apps.
 
 **Answer:**
+The four board directions become **themes the user can switch** in Settings: **Track**
+(black, white, volt #D6FF3A) is the **default**; Electric (violet #5B2EE6 and coral), Night (indigo
+and cyan) and Sunrise (tangerine and magenta) are the alternatives.
 
 ## D4. Area colors
 
@@ -59,6 +67,8 @@ Areas (Health, School, Work, Personal, ...) each get a color. Should area colors
 **Recommended:** (a), with a custom picker only as an advanced option later.
 
 **Answer:**
+(a) plus a custom picker: a fixed palette of 12 that works in every theme, light and dark, and a
+custom color as the escape hatch.
 
 ## D5. Dark mode
 
@@ -68,6 +78,7 @@ Pure black (OLED, highest contrast) or a deep neutral gray with a hint of the ma
 setting on the phone later.
 
 **Answer:**
+Tinted deep gray by default, pure black as an option (both apps).
 
 ---
 
@@ -84,6 +95,8 @@ setting on the phone later.
 stats and times. It's free, bold-capable and readable small.
 
 **Answer:**
+Per theme, as on the board: Track uses Archivo (wide, black italic headings), Electric Plus
+Jakarta Sans, Night Space Grotesk, Sunrise Outfit. Tabular numbers for stats and times everywhere.
 
 ## D7. Big numbers
 
@@ -93,6 +106,7 @@ or stay modest?
 **Recommended:** huge numbers on goal, habit and stats cards; modest everywhere else.
 
 **Answer:**
+ok: huge numbers on goal, habit and stats cards; modest elsewhere.
 
 ## D8. Roundness and density
 
@@ -103,6 +117,8 @@ or stay modest?
 airy, Windows compact with an option.
 
 **Answer:**
+Corners come with the theme (Track sharp, Night medium, Electric and Sunrise very round).
+Density: phone airy, Windows compact.
 
 ---
 
@@ -121,6 +137,8 @@ Too much, too little, or right?
 **Recommended:** as listed, with a "reduce motion" setting that respects the system setting.
 
 **Answer:**
+ok, at 3 of 5: check morph and slide away for tasks, a ring fill with a small burst for habits,
+confetti only for goals and streak milestones. "Reduce motion" follows the system setting.
 
 ## D10. Sound
 
@@ -129,6 +147,7 @@ Any sounds (a soft tick on completion, a chime for rituals), or silent apart fro
 **Recommended:** silent by default; an optional completion tick later.
 
 **Answer:**
+Silent by default, with an optional completion tick.
 
 ---
 
@@ -146,6 +165,7 @@ The chat-style bar at the bottom. Should it look like:
 **Recommended:** (c) on both apps.
 
 **Answer:**
+(c): a floating pill that grows a parsed preview (date, time, area and tag chips) as you type.
 
 ## D12. What Today shows first
 
@@ -157,6 +177,7 @@ overdue items.
 rings), other tasks, overdue (collapsed), this week's goals (collapsed).
 
 **Answer:**
+ok, as recommended.
 
 ## D13. The Windows sidebar
 
@@ -167,6 +188,7 @@ to icons?
 **Recommended:** as proposed, collapsible to icons, remembering its state.
 
 **Answer:**
+ok, as recommended: collapsible to icons, remembering its state.
 
 ---
 
@@ -181,6 +203,8 @@ streaks, a monogram "G")? Should "GoalMaker" appear as a wordmark in the apps?
 breaking out of the ring), a small wordmark on the sign-in screen only.
 
 **Answer:**
+A **monogram G**: a stylish G whose middle bar turns into an uptrend arrow. The wordmark appears
+on the sign-in screen only.
 
 ## D15. Emoji
 
@@ -189,6 +213,7 @@ Can areas, goals and habits carry an emoji (🏃 Run, 📚 Study)?
 **Recommended:** yes, optional, shown next to the name and on widgets.
 
 **Answer:**
+Yes, optional.
 
 ---
 
@@ -202,6 +227,8 @@ better, including on colored cards?
 **Recommended:** yes to both, and test with the largest system font on both apps.
 
 **Answer:**
+ok: follow the system text size, WCAG AA contrast including colored cards, test at the largest
+system font.
 
 ---
 
@@ -210,3 +237,4 @@ better, including on colored cards?
 Colors, moods, pet peeves, things you never want to see.
 
 **Answer:**
+Themes are a user setting. Nothing ruled out yet.

@@ -8,7 +8,8 @@ and each has markdown issues under `.scratch/<milestone>/`.
 1. Spec grilling (done: `docs/grilling/`)
 2. Spec, roadmap, glossary and ADRs (done)
 3. **M0: delivery spine** (built 2026-09-18; the first push and the owner's one-time setup remain)
-4. Design questionnaire (type, color, motion) before M2
+4. **Design questionnaire** (answered 2026-09-18: four switchable themes, Track by default;
+   [docs/design/spec.md](design/spec.md), ADR 0008)
 5. **M1: data and sync** (built 2026-09-18)
 6. M2 to M6, then v1.0
 7. M7 and the post-v1 list
@@ -36,7 +37,8 @@ task list on Today proves the round trip on both apps. Issues: `.scratch/m1-data
 
 Today, Tomorrow, Inbox, the composer with shortcuts (contract vectors), Plan tomorrow, repeating
 tasks, reminders and notifications on both apps, the tray, the global hotkey, single instance and
-launch switches. The design questionnaire comes first.
+launch switches, areas and tags, and the four themes from the design spec. Issues:
+`.scratch/m2-tasks-everywhere/`.
 
 ### M3: connector
 
