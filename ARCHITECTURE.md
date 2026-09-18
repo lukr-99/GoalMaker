@@ -3,15 +3,15 @@
 ## Context
 
 One owner uses GoalMaker on an Android phone and a Windows PC. Supabase (Postgres, Auth, Storage,
-later Realtime and Edge Functions) is the source of truth; each app will keep a replica for offline
-use (ADR 0002). Claude reaches the data through a connector in M3 (ADR 0003). Releases reach both
+Realtime, later Edge Functions) is the source of truth; each app keeps a SQLite replica with an
+outbox, so it works offline and syncs when it can (ADR 0002, ADR 0007, [docs/sync.md](docs/sync.md)). Claude reaches the data through a connector in M3 (ADR 0003). Releases reach both
 apps through a signed update channel in Supabase Storage (ADR 0004).
 
 ```text
   Android app  ──┐                           ┌── Claude apps (M3, connector)
   (Kotlin)       │  HTTPS, user session      │
                  ├──────────► Supabase ◄─────┘
-  Windows app  ──┘   Auth · Postgres (RLS) · Storage (releases) · Edge Functions (M3)
+  Windows app  ──┘   Auth · Postgres (RLS) · Realtime · Storage (releases) · Edge Functions (M3)
   (.NET/WPF)                    ▲
                                 │ migrations, deploys (CLI)      release workflow (CI)
                          supabase/ folder  ◄─────────────────────  uploads + signed manifest
@@ -34,22 +34,30 @@ composition root creates everything
 ### Android (`android/app`, package `com.goalmaker.app`)
 
 - `domain/`: `version/SemanticVersion`, `update/` (manifest, parser, update policy),
-  `account/` (email, sign-in code), `settings/ThemeMode`. Pure Kotlin.
+  `account/` (email, sign-in code), `settings/ThemeMode`, `sync/` (`SyncRules`, the synced-table
+  catalog, outbox entries, cursors). Pure Kotlin.
 - `application/`: ports and use cases: `auth/AuthGateway`, `update/UpdateService` with the
-  `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`.
+  `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
+  `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
+  `planning/TaskList`.
 - `data/`: `SupabaseAuthGateway`, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`,
-  `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`.
+  `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
+  (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
+  (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
+  `WorkManagerSyncScheduler`).
 - `ui/`: `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `signin/`,
-  `home/`, `settings/`, `nav/` (Navigation 3 back stack).
-- `composition/AppGraph` is the composition root, owned by `GoalMakerApplication`.
+  `today/`, `settings/`, `nav/` (Navigation 3 back stack).
+- `composition/AppGraph` is the composition root, owned by `GoalMakerApplication`, which also hands
+  WorkManager a worker factory wired to it.
 
 ### Windows (`windows/`)
 
 - `GoalMaker.Core` (net10.0): the same domain and application code as Android's, in C#
-  (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`).
+  (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`).
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
-  `JsonSettingsStore`, `AppDataPaths`.
+  `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
+  `Sync/PostgrestRemoteTables` and `Sync/SupabaseChangeFeed`.
 - `GoalMaker.App` (WPF): `Composition/AppGraph` (composition root), `Shell/` (Fluent main window,
   tray icon, page provider), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
   (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
@@ -59,7 +67,16 @@ composition root creates everything
 ### Shared behavior (`contracts/`)
 
 Rules that must match across Kotlin and C# live as vector files: semantic versions and the update
-offer policy, and release manifest verification. Both test suites read the same files.
+offer policy, release manifest verification, and the sync rules (merge, full resync, pull start,
+timestamp form). Both test suites read the same files. `contracts/schemas/synced-tables.json`
+describes every synced column once; both apps build their replica SQL and JSON mapping from it, and
+`tools/check_synced_tables.py` keeps it equal to the replica and server schemas.
+
+### Replica schema (`replica/`)
+
+One set of immutable SQLite migrations that both apps apply unchanged (ADR 0007): Android packages
+them as assets at build time, Windows embeds them. Both record each file's SHA-256 exactly like
+`tools/migrations.py`, which tests the chain in CI.
 
 ### Backend (`supabase/`)
 
@@ -76,6 +93,14 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   with the key built into the app → manifest validation → version policy (dev builds never update,
   pre-releases are never offered) → download → size and SHA-256 check → platform installer. The
   updater never touches user data.
+- **Sync (docs/sync.md):** a local write stores the row and queues it in the outbox in one
+  transaction, then asks for a sync (debounced 2 s). A run pushes the outbox in order (the server
+  stamps `updated_at`), then pulls each table from its watermark minus 60 s in (updated_at, id)
+  pages of 500 and merges: a pending local change wins, except against a tombstone. Runs also
+  happen at sign-in, when the app comes to the front, on Realtime events and (re)joins, every
+  5 minutes on Windows and every 15 minutes through WorkManager on Android. Offline, both retry on
+  their own (15 s doubling to 5 min), and Android also queues a network-constrained worker.
+- **Sign-out:** push once more, then empty the replica; if changes can't be pushed, ask first.
 - **Settings:** theme, dev backend override and (Windows) window placement stay on the device.
 
 ## Capability modules
@@ -83,12 +108,18 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 - **updating:** `ReleaseChannel` / `IReleaseChannel`, `SignatureVerifier` / `ISignatureVerifier`,
   `UpdateInstaller` / `IUpdateInstaller`, coordinated by `UpdateService`. Health shows in Settings →
   Updates (not configured, dev build, up to date, available, untrusted, failed).
+- **syncing:** `Replica` / `IReplica` and `RemoteTables` / `IRemoteTables`, run by `SyncEngine` and
+  scheduled by `SyncCoordinator`. Health shows under Today's title (synced at, syncing, offline
+  with the number of waiting changes, or changes the server refused).
 
 ## Connections
 
 - Supabase over HTTPS with the publishable key plus the user's session. Dev builds use the local
   stack over plain HTTP (Android: debug-only network security config), with a dev-only override in
-  Settings → Developer.
+  Settings → Developer. Each backend gets its own replica file, so switching never mixes rows.
+- Sync talks to PostgREST directly with generic JSON rows: 401, 408, 429 and 5xx mean "offline, try
+  later"; any other error marks that one row as refused and the run goes on. Realtime is a nudge
+  only (Android keeps it open only while the app is on screen); its payloads are never applied.
 - Sign-in failures map to plain states (wrong or expired code, too many requests, offline, other);
   the Supabase clients refresh sessions and retry with their own backoff.
 - The Windows single-instance pipe accepts connections from the current user only.

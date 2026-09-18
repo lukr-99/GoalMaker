@@ -17,8 +17,13 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 - The database migration chain with full-chain, isolated and row-security tests on a local stack.
 - CI for every part and a tag-driven release workflow.
 
-Tasks, goals and habits start in M1 and M2. No release has been published yet; the cloud project and
-the signing keys still need the one-time setup in [docs/setup/](docs/setup/).
+- Sync (M1): both apps keep a SQLite replica with an outbox, work offline, and sync through
+  Supabase with Realtime refresh ([docs/sync.md](docs/sync.md)). Today shows a plain task list
+  (add, complete, delete) that stays the same on the phone and the PC.
+
+Planning (Tomorrow, Inbox, shortcuts, reminders), goals and habits come in M2 to M4. No release has
+been published yet; the cloud project and the signing keys still need the one-time setup in
+[docs/setup/](docs/setup/).
 
 ## Parts
 
@@ -61,15 +66,19 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
 
 ## Data safety
 
-- **Source of truth:** the Supabase project (ADR 0002). Today it holds only each user's profile;
-  M1 adds tasks and the device replicas.
+- **Source of truth:** the Supabase project (ADR 0002): profiles, areas, tags, tasks, steps,
+  reminders and the activity log, each row visible only to its owner. Deleted rows stay as
+  tombstones for 90 days so every device learns about them, then a nightly job purges them.
+- **Device replicas:** each app keeps a SQLite copy with an outbox of unsent changes (one file per
+  backend). Signing out pushes first and asks before discarding anything unsent.
 - **Migrations:** immutable `supabase/migrations/0001_description.sql` files, locked by checksum in
   `supabase/migrations.lock.json`, each tested from `0001` and in isolation with fixtures.
 - **Local data:** the Windows app keeps its session (DPAPI-encrypted), settings and crash log in
   `%LOCALAPPDATA%\GoalMaker` (`GoalMaker-dev` for dev builds); the Android app keeps its session and
   settings in private app storage, excluded from Android backups.
 - **Backup:** a versioned full export and a checked restore arrive in M6, before any destructive
-  change is allowed. Until then there is no user content to lose.
+  change is allowed. Until then, tasks live in the Supabase project (with its own backups on paid
+  plans) and in each device's replica; there is no export yet.
 
 ## Delivery
 

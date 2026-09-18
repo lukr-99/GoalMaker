@@ -9,8 +9,9 @@ and each has markdown issues under `.scratch/<milestone>/`.
 2. Spec, roadmap, glossary and ADRs (done)
 3. **M0: delivery spine** (built 2026-09-18; the first push and the owner's one-time setup remain)
 4. Design questionnaire (type, color, motion) before M2
-5. M1 to M6, then v1.0
-6. M7 and the post-v1 list
+5. **M1: data and sync** (built 2026-09-18)
+6. M2 to M6, then v1.0
+7. M7 and the post-v1 list
 
 ## Milestones
 
@@ -28,7 +29,8 @@ manifest signing key, commit the manifest public key, protect `main`.
 ### M1: data and sync
 
 Core schema (areas, tags, tasks, steps, reminders, activity log), the shared SQLite replica (ADR 0007) on both apps, the
-outbox and pull sync, Realtime refresh, tombstone purge, the sync-merge contract vectors.
+outbox and pull sync, Realtime refresh, tombstone purge, the sync-merge contract vectors. A plain
+task list on Today proves the round trip on both apps. Issues: `.scratch/m1-data-and-sync/`.
 
 ### M2: tasks everywhere
 
