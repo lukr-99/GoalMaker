@@ -26,6 +26,9 @@ jobs:
       - name: Test the device replica's migration chain
         run: python tools/migrations.py test replica/migrations
 
+      - name: The synced-tables contract matches the replica
+        run: python tools/check_synced_tables.py
+
       - name: Check PowerShell syntax
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1

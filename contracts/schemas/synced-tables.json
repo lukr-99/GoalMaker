@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "description": "The tables both apps replicate, in push and pull order (parents first), with each column's kind. Both apps load this file to build their replica SQL and their JSON mapping, so a column is added in one place. tools/check_synced_tables.py keeps it equal to replica/migrations and to the server schema. Kinds: text, integer, real, boolean (INTEGER 0/1 locally, JSON true/false on the wire), timestamp (UTC text with 6 fractional digits locally, see sync-merge.json normalizeTimestamp), date (YYYY-MM-DD), time (HH:MM:SS).",
+  "tables": [
+    {
+      "name": "areas",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "name", "kind": "text" },
+        { "name": "color", "kind": "text" },
+        { "name": "emoji", "kind": "text" },
+        { "name": "position", "kind": "real" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "tags",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "name", "kind": "text" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "tasks",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "title", "kind": "text" },
+        { "name": "notes", "kind": "text" },
+        { "name": "planned_date", "kind": "date" },
+        { "name": "planned_time", "kind": "time" },
+        { "name": "deadline", "kind": "date" },
+        { "name": "top_priority", "kind": "boolean" },
+        { "name": "status", "kind": "text" },
+        { "name": "completed_at", "kind": "timestamp" },
+        { "name": "area_id", "kind": "text" },
+        { "name": "recurrence", "kind": "text" },
+        { "name": "series_id", "kind": "text" },
+        { "name": "position", "kind": "real" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "task_steps",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "task_id", "kind": "text" },
+        { "name": "title", "kind": "text" },
+        { "name": "done", "kind": "boolean" },
+        { "name": "position", "kind": "real" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "task_tags",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "task_id", "kind": "text" },
+        { "name": "tag_id", "kind": "text" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "reminders",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "task_id", "kind": "text" },
+        { "name": "fire_at", "kind": "timestamp" },
+        { "name": "offset_minutes", "kind": "integer" },
+        { "name": "important", "kind": "boolean" },
+        { "name": "state", "kind": "text" },
+        { "name": "snoozed_until", "kind": "timestamp" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    }
+  ]
+}

@@ -42,6 +42,9 @@ jobs:
       - name: Full chain, isolated steps and pgTAP
         run: python tools/supabase_migrations.py test
 
+      - name: The synced-tables contract matches the replica and the server
+        run: python tools/check_synced_tables.py --server
+
       - name: Stop the local stack
         if: always()
         run: npx supabase stop --no-backup
