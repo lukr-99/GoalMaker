@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.settings.SettingsStore
+import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.settings.Appearance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,17 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
                 }
             }
         }
+    }
+
+    private val startHour = MutableStateFlow(
+        preferences.getInt(DAY_START_HOUR, PlanningDay.DEFAULT_START_HOUR).coerceIn(PlanningDay.START_HOURS),
+    )
+    override val dayStartHour: StateFlow<Int> = startHour.asStateFlow()
+
+    override fun setDayStartHour(hour: Int) {
+        val valid = hour.coerceIn(PlanningDay.START_HOURS)
+        preferences.edit { putInt(DAY_START_HOUR, valid) }
+        startHour.value = valid
     }
 
     override fun backendOverride(): BackendEnvironment? {
@@ -62,6 +74,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val PURE_BLACK = "pure_black"
         const val REDUCE_MOTION = "reduce_motion"
         const val COMPLETION_SOUND = "completion_sound"
+        const val DAY_START_HOUR = "day_start_hour"
         const val BACKEND_URL = "dev_backend_url"
         const val BACKEND_KEY = "dev_backend_key"
 

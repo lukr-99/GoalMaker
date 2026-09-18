@@ -82,6 +82,7 @@ fun GoalMakerTheme(tokens: DesignTokens, appearance: Appearance, content: @Compo
         LocalMotionTokens provides tokens.motion,
         LocalAreaColors provides tokens.areaColors,
         LocalReduceMotion provides reduceMotion,
+        LocalCompletionSound provides appearance.completionSound,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme(colors),

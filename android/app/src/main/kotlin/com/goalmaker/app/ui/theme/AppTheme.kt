@@ -15,6 +15,7 @@ internal val LocalDensityTokens = staticCompositionLocalOf<Density> { error("No 
 internal val LocalMotionTokens = staticCompositionLocalOf<MotionTokens> { error("No GoalMakerTheme") }
 internal val LocalAreaColors = staticCompositionLocalOf<List<AreaColor>> { emptyList() }
 internal val LocalReduceMotion = staticCompositionLocalOf { false }
+internal val LocalCompletionSound = staticCompositionLocalOf { false }
 
 /**
  * GoalMaker's theme values beside MaterialTheme's, the way screens read them:
@@ -49,6 +50,11 @@ object AppTheme {
     @Composable
     @ReadOnlyComposable
     fun headline(text: String): String = type.headline(text, LocalConfiguration.current.locales[0])
+
+    /** Whether completing something plays the soft tick (Settings > Appearance). */
+    val completionSound: Boolean
+        @Composable @ReadOnlyComposable
+        get() = LocalCompletionSound.current
 
     /** True when animations should become short fades (the system setting or the in-app switch). */
     val reduceMotion: Boolean

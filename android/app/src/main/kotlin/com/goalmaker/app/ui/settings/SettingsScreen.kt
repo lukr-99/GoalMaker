@@ -24,6 +24,7 @@ import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
@@ -45,7 +46,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
+import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.settings.ReduceMotion
+import kotlin.math.roundToInt
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.ui.theme.AppTheme
 
@@ -114,6 +117,20 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {
                     hint = stringResource(R.string.settings_completion_sound_hint),
                     checked = state.appearance.completionSound,
                     onCheckedChange = viewModel::setCompletionSound,
+                )
+            }
+            Section(stringResource(R.string.settings_planning)) {
+                Label(stringResource(R.string.settings_day_start, "%02d:00".format(state.dayStartHour)))
+                Slider(
+                    value = state.dayStartHour.toFloat(),
+                    onValueChange = { viewModel.setDayStartHour(it.roundToInt()) },
+                    valueRange = PlanningDay.START_HOURS.first.toFloat()..PlanningDay.START_HOURS.last.toFloat(),
+                    steps = PlanningDay.START_HOURS.last - PlanningDay.START_HOURS.first - 1,
+                )
+                Text(
+                    stringResource(R.string.settings_day_start_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Section(stringResource(R.string.settings_account)) {

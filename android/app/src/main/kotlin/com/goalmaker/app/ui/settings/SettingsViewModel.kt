@@ -34,6 +34,7 @@ class SettingsViewModel(
     private val state = MutableStateFlow(
         SettingsUiState(
             appearance = settings.appearance.value,
+            dayStartHour = settings.dayStartHour.value,
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
@@ -49,6 +50,9 @@ class SettingsViewModel(
 
     init {
         viewModelScope.launch {
+            settings.dayStartHour.collect { hour -> state.update { it.copy(dayStartHour = hour) } }
+        }
+        viewModelScope.launch {
             combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
                 .collect { (appearance, session) ->
                     state.update {
@@ -63,6 +67,8 @@ class SettingsViewModel(
     }
 
     fun setTheme(id: String) = settings.updateAppearance { it.copy(themeId = id) }
+
+    fun setDayStartHour(hour: Int) = settings.setDayStartHour(hour)
 
     fun setThemeMode(mode: ThemeMode) = settings.updateAppearance { it.copy(mode = mode) }
 

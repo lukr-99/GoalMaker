@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.composer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
@@ -81,13 +82,13 @@ private fun describeRepeat(rule: String, locale: Locale): String {
     val parts = rule.split(';').associate { it.substringBefore('=') to it.substringAfter('=') }
     val interval = parts["INTERVAL"]?.toIntOrNull() ?: 1
     return when (parts["FREQ"]) {
-        "DAILY" -> if (interval > 1) stringResource(R.string.repeat_every_n_days, interval) else stringResource(R.string.repeat_daily)
+        "DAILY" -> if (interval > 1) pluralStringResource(R.plurals.repeat_every_n_days, interval, interval) else stringResource(R.string.repeat_daily)
         "WEEKLY" -> {
             val codes = parts["BYDAY"].orEmpty().split(',')
             val days = codes.mapNotNull { code -> DayOfWeek.entries.firstOrNull { it.name.startsWith(code) } }
             val names = days.joinToString(", ") { it.getDisplayName(TextStyle.SHORT, locale) }
             when {
-                interval > 1 -> stringResource(R.string.repeat_every_n_weeks_on, interval, names)
+                interval > 1 -> pluralStringResource(R.plurals.repeat_every_n_weeks_on, interval, interval, names)
                 days.toSet() == WORK_WEEK -> stringResource(R.string.repeat_weekdays)
                 days.toSet() == WEEKEND -> stringResource(R.string.repeat_weekend)
                 days.size == 1 -> stringResource(R.string.repeat_every_day_name, days.single().getDisplayName(TextStyle.FULL, locale))
@@ -96,7 +97,7 @@ private fun describeRepeat(rule: String, locale: Locale): String {
         }
         "MONTHLY" -> {
             val day = parts["BYMONTHDAY"]?.toIntOrNull() ?: 1
-            if (interval > 1) stringResource(R.string.repeat_every_n_months_on, interval, day) else stringResource(R.string.repeat_monthly_on, day)
+            if (interval > 1) pluralStringResource(R.plurals.repeat_every_n_months_on, interval, interval, day) else stringResource(R.string.repeat_monthly_on, day)
         }
         else -> rule
     }

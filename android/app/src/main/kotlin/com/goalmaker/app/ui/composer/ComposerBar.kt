@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -54,6 +52,7 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * The chat-style composer (docs/design/spec.md): a floating pill that grows a preview of what the
  * line will save as you type. Enter or Send saves; tapping a chip removes its part of the line.
+ * The caller places it above the keyboard or the navigation bar.
  */
 @Composable
 fun ComposerBar(
@@ -69,8 +68,6 @@ fun ComposerBar(
         shape = RoundedCornerShape(if (chips.isEmpty()) 28.dp else 24.dp),
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
-            .imePadding()
             .padding(12.dp)
             .animateContentSize(),
     ) {

@@ -11,8 +11,8 @@ import java.time.LocalDateTime
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
-import com.goalmaker.app.ui.today.TodayScreen
-import com.goalmaker.app.ui.today.TodayViewModel
+import com.goalmaker.app.ui.lists.ListsScreen
+import com.goalmaker.app.ui.lists.ListsViewModel
 
 /** The signed-in part of the app: a Navigation 3 back stack starting at Today. */
 @Composable
@@ -27,17 +27,18 @@ fun SignedInNavigation(graph: AppGraph) {
         ),
         entryProvider = entryProvider {
             entry<TodayKey> {
-                val todayViewModel = viewModel {
-                    TodayViewModel(
+                val listsViewModel = viewModel {
+                    ListsViewModel(
                         tasks = graph.tasks,
                         areas = graph.areas,
                         tags = graph.tags,
+                        settings = graph.settings,
                         sync = graph.sync,
                         io = graph.io,
                         clock = LocalDateTime::now,
                     )
                 }
-                TodayScreen(viewModel = todayViewModel, onOpenSettings = { backStack.add(SettingsKey) })
+                ListsScreen(viewModel = listsViewModel, onOpenSettings = { backStack.add(SettingsKey) })
             }
             entry<SettingsKey> {
                 val settingsViewModel = viewModel {

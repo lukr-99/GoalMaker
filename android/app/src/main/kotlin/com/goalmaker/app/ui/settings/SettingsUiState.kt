@@ -10,6 +10,7 @@ import com.goalmaker.app.domain.settings.Appearance
  */
 data class SettingsUiState(
     val appearance: Appearance,
+    val dayStartHour: Int,
     /** The theme in use: the chosen one, or the default when none is chosen or it's unknown. */
     val themeId: String,
     val themes: List<ThemeDefinition>,

@@ -4,11 +4,19 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.domain.settings.Appearance
 import kotlinx.coroutines.flow.StateFlow
 
-/** Device-local settings that are not synced: the appearance and, in dev builds, a backend override. */
+/**
+ * Device-local settings that are not synced: the appearance, when the planning day starts and, in
+ * dev builds, a backend override.
+ */
 interface SettingsStore {
     val appearance: StateFlow<Appearance>
 
     fun updateAppearance(change: (Appearance) -> Appearance)
+
+    /** The hour the planning day starts (docs/lists.md), 0 to 6; 4 unless changed. */
+    val dayStartHour: StateFlow<Int>
+
+    fun setDayStartHour(hour: Int)
 
     /** Dev builds only: another Supabase project to use from the next app start. */
     fun backendOverride(): BackendEnvironment?

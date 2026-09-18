@@ -20,13 +20,33 @@
     <string name="sign_in_error_other">Sign-in failed: %1$s</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 
-    <!-- Today -->
-    <string name="today_title">Today</string>
+    <!-- Lists (docs/lists.md) -->
     <string name="today_settings">Settings</string>
     <string name="today_composer_placeholder">Add a task…</string>
     <string name="today_add">Add task</string>
-    <string name="today_delete">Delete %1$s</string>
-    <string name="today_empty">Nothing open. Add a task below.</string>
+    <string name="lists_today">Today</string>
+    <string name="lists_tomorrow">Tomorrow</string>
+    <string name="lists_inbox">Inbox</string>
+    <string name="lists_priorities">Top priorities</string>
+    <string name="lists_scheduled">Scheduled</string>
+    <string name="lists_more">More today</string>
+    <plurals name="lists_overdue">
+        <item quantity="one">Overdue · %1$d</item>
+        <item quantity="other">Overdue · %1$d</item>
+    </plurals>
+    <string name="lists_today_summary">%1$s · %2$d of %3$d done</string>
+    <plurals name="lists_inbox_count">
+        <item quantity="one">%1$d to sort</item>
+        <item quantity="other">%1$d to sort</item>
+    </plurals>
+    <string name="lists_today_empty">Nothing planned for today. Add a task below or pick one from the Inbox.</string>
+    <string name="lists_tomorrow_empty">Nothing for tomorrow yet. Anything you add here lands on tomorrow.</string>
+    <string name="lists_inbox_empty">Inbox zero. Anything without a day or an area lands here.</string>
+    <string name="lists_delete">Delete %1$s</string>
+    <string name="lists_repeats">Repeats</string>
+    <string name="lists_done_message">Done: %1$s</string>
+    <string name="lists_deleted_message">Deleted: %1$s</string>
+    <string name="lists_undo">Undo</string>
 
     <!-- Composer preview (docs/composer.md) -->
     <string name="composer_date_today">Today</string>
@@ -39,16 +59,26 @@
     <string name="composer_unknown_command">unknown command</string>
     <string name="composer_remove">Remove %1$s</string>
     <string name="repeat_daily">Every day</string>
-    <string name="repeat_every_n_days">Every %1$d days</string>
+    <plurals name="repeat_every_n_days">
+        <item quantity="one">Every %1$d day</item>
+        <item quantity="other">Every %1$d days</item>
+    </plurals>
     <string name="repeat_weekdays">Every weekday</string>
     <string name="repeat_weekend">Every weekend</string>
     <string name="repeat_every_day_name">Every %1$s</string>
-    <string name="repeat_every_n_weeks_on">Every %1$d weeks on %2$s</string>
+    <plurals name="repeat_every_n_weeks_on">
+        <item quantity="one">Every %1$d week on %2$s</item>
+        <item quantity="other">Every %1$d weeks on %2$s</item>
+    </plurals>
     <string name="repeat_monthly_on">Every month on day %1$d</string>
-    <string name="repeat_every_n_months_on">Every %1$d months on day %2$d</string>
+    <plurals name="repeat_every_n_months_on">
+        <item quantity="one">Every %1$d month on day %2$d</item>
+        <item quantity="other">Every %1$d months on day %2$d</item>
+    </plurals>
 
     <!-- Sync -->
     <string name="sync_syncing">Syncing…</string>
+    <string name="sync_not_yet">Not synced yet</string>
     <string name="sync_synced_at">Synced at %1$s</string>
     <string name="sync_offline">Offline</string>
     <plurals name="sync_offline_waiting">
@@ -74,6 +104,9 @@
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
+    <string name="settings_planning">Planning</string>
+    <string name="settings_day_start">The day starts at %1$s</string>
+    <string name="settings_day_start_hint">Until then it\'s still yesterday, so planning after midnight lands on the right tomorrow.</string>
     <string name="settings_account">Account</string>
     <string name="settings_sign_out">Sign out</string>
     <plurals name="settings_sign_out_unsynced">
