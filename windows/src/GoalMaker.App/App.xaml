@@ -11,6 +11,7 @@
                 <ResourceDictionary Source="Resources/Strings.xaml" />
                 <ResourceDictionary Source="Resources/Tokens.xaml" />
                 <ResourceDictionary Source="Resources/Converters.xaml" />
+                <ResourceDictionary Source="Resources/ComposerTemplate.xaml" />
                 <ResourceDictionary Source="Resources/ListTemplate.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

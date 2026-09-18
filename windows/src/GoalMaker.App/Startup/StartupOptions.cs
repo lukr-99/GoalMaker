@@ -2,7 +2,7 @@ namespace GoalMaker.App.Startup;
 
 /// <summary>
 /// Launch switches (spec: Windows specifics). <c>--tray</c> starts hidden in the tray; <c>--open
-/// today|tomorrow|inbox|settings</c> shows that page; <c>--no-activate</c> shows the window without taking the
+/// today|tomorrow|inbox|plan|settings</c> shows that page; <c>--no-activate</c> shows the window without taking the
 /// keyboard focus (start-up scripts, dev tooling). A <c>goalmaker://open/today</c> link opens a page
 /// too. Unknown values are ignored so older or newer shortcuts never stop the app from starting.
 /// </summary>
@@ -42,6 +42,7 @@ public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool No
         "today" => AppPage.Today,
         "tomorrow" => AppPage.Tomorrow,
         "inbox" => AppPage.Inbox,
+        "plan" => AppPage.Plan,
         "settings" => AppPage.Settings,
         _ => null,
     };

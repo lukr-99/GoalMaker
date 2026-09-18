@@ -6,5 +6,6 @@ public enum AppPage
     Today,
     Tomorrow,
     Inbox,
+    Plan,
     Settings,
 }

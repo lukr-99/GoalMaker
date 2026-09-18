@@ -23,6 +23,7 @@ public sealed partial class ComposerViewModel : ObservableObject
     private readonly TimeProvider time;
     private readonly Func<string, Brush?> areaBrush;
     private readonly Func<DateOnly, DateOnly?> defaultDay;
+    private readonly Action? openPlan;
     private ComposerDraft draft;
 
     [ObservableProperty]
@@ -33,6 +34,7 @@ public sealed partial class ComposerViewModel : ObservableObject
     private bool hasChips;
 
     /// <param name="defaultDay">The day a line without one lands on, from the planning day (null: none).</param>
+    /// <param name="openPlan">What `/plan` does (docs/plan-tomorrow.md); null where it can't run.</param>
     public ComposerViewModel(
         TaskList tasks,
         AreaList areas,
@@ -42,8 +44,10 @@ public sealed partial class ComposerViewModel : ObservableObject
         TimeProvider time,
         Func<string, Brush?> areaBrush,
         Func<DateOnly, DateOnly?> defaultDay,
-        Action<Action> runOnUi)
+        Action<Action> runOnUi,
+        Action? openPlan = null)
     {
+        this.openPlan = openPlan;
         this.tasks = tasks;
         this.areas = areas;
         this.tags = tags;
@@ -62,11 +66,20 @@ public sealed partial class ComposerViewModel : ObservableObject
 
     partial void OnNewTaskTitleChanged(string value) => UpdatePreview();
 
-    private bool CanAddTask() => draft.Title.Trim().Length > 0 && draft.Command is null;
+    private bool IsPlanCommand => draft.Command?.Name == PlanRules.Command && openPlan is not null;
+
+    private bool CanAddTask() => (draft.Title.Trim().Length > 0 && draft.Command is null) || IsPlanCommand;
 
     [RelayCommand(CanExecute = nameof(CanAddTask))]
     private void AddTask()
     {
+        if (IsPlanCommand)
+        {
+            NewTaskTitle = string.Empty;
+            openPlan?.Invoke();
+            return;
+        }
+
         var placed = draft.PlannedDate is null && defaultDay(Today()) is { } day ? draft with { PlannedDate = day } : draft;
         if (tasks.Add(placed) is not null)
         {

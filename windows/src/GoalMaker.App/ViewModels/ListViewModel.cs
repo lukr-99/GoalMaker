@@ -27,6 +27,7 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly Func<bool> reduceMotion;
     private readonly TickSound tick;
     private readonly Action<Action> runOnUi;
+    private readonly Action? openPlan;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -58,8 +59,10 @@ public sealed partial class ListViewModel : ObservableObject
         Func<string, Brush?> areaBrush,
         Func<bool> reduceMotion,
         TickSound tick,
-        Action<Action> runOnUi)
+        Action<Action> runOnUi,
+        Action? openPlan = null)
     {
+        this.openPlan = openPlan;
         Kind = kind;
         this.tasks = tasks;
         this.areas = areas;
@@ -148,6 +151,9 @@ public sealed partial class ListViewModel : ObservableObject
                 break;
         }
     }
+
+    [RelayCommand]
+    private void OpenPlan() => openPlan?.Invoke();
 
     [RelayCommand]
     private void Undo()

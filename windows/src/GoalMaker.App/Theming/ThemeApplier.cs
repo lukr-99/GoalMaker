@@ -90,8 +90,11 @@ public sealed class ThemeApplier : IDisposable
     public Brush? AreaBrush(string colorId) =>
         Tokens.AreaColor(colorId) is { } area ? ToBrush(IsDark ? area.Dark.Content : area.Light.Content) : null;
 
-    /// <summary>A static face cut by tools/build_windows_fonts.py, by the name FontFaces gives it.</summary>
-    public static FontFamily Face(string name) => new(new Uri("pack://application:,,,/"), "./Assets/Fonts/#" + name);
+    /// <summary>
+    /// A static face cut by tools/build_windows_fonts.py, by the name FontFaces gives it. The URI names
+    /// the GoalMaker assembly, so the fonts load wherever the resources are used (tests too).
+    /// </summary>
+    public static FontFamily Face(string name) => new(new Uri("pack://application:,,,/GoalMaker;component/"), "./Assets/Fonts/#" + name);
 
     private void SetColors(Palette p)
     {
@@ -165,6 +168,8 @@ public sealed class ThemeApplier : IDisposable
         resources["GM.RowCorner"] = new CornerRadius(shapes.Row);
         resources["GM.CheckboxCorner"] = new CornerRadius(shapes.Checkbox);
         resources["GM.ButtonCorner"] = new CornerRadius(shapes.Button);
+        // Chips are about 28 px tall: 14 makes a pill, where WPF would draw 999 as an ellipse.
+        resources["GM.ChipCorner"] = new CornerRadius(Math.Min(shapes.Button, 14));
         // WPF UI draws checkboxes, buttons and inputs with one radius; the checkbox's keeps Track square
         // and stops a small box from turning into a circle.
         resources["ControlCornerRadius"] = new CornerRadius(Math.Min(shapes.Checkbox, 6));

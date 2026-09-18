@@ -8,6 +8,9 @@
   notifications. Done and Snooze (10 min, 1 h, tomorrow morning) on every notification.
 - Reminder state syncs and the other device cancels its copy; quiet hours; important reminders
   ring until handled; the evening Plan tomorrow reminder.
+- The evening reminder opens the ritual (Android: a route to it; Windows: `--open plan` or
+  `goalmaker://open/plan`, both exist) and is skipped when today's ritual already ran on either
+  device, which needs a synced record of it (docs/plan-tomorrow.md: Later).
 
 ## Acceptance criteria
 - A reminder fires on both devices; handling it on one clears the other; phone reminders survive a

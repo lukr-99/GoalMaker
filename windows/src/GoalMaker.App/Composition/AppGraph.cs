@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using GoalMaker.App.Localization;
 using GoalMaker.App.Shell;
+using GoalMaker.App.Startup;
 using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.About;
@@ -98,11 +99,14 @@ public sealed class AppGraph : IDisposable
         Shell = new ShellViewModel(Auth, SignIn, runOnUi);
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
+        void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
+        ComposerViewModel Composer(Func<DateOnly, DateOnly?> defaultDay) =>
+            new(Tasks, Areas, Tags, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan);
         ListViewModel List(ListKind kind, Func<DateOnly, DateOnly?> defaultDay) => new(
             kind,
             Tasks,
             Areas,
-            new ComposerViewModel(Tasks, Areas, Tags, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi),
+            Composer(defaultDay),
             Sync,
             Settings,
             strings,
@@ -110,10 +114,22 @@ public sealed class AppGraph : IDisposable
             Theme.AreaBrush,
             () => Theme.MotionReduced,
             tick,
-            runOnUi);
+            runOnUi,
+            OpenPlan);
         Today = List(ListKind.Today, today => today);
         Tomorrow = List(ListKind.Tomorrow, today => today.AddDays(1));
         Inbox = List(ListKind.Inbox, _ => null);
+        Plan = new PlanViewModel(
+            Tasks,
+            Areas,
+            Composer(today => today.AddDays(1)),
+            Settings,
+            strings,
+            TimeProvider.System,
+            Theme.AreaBrush,
+            tick,
+            page => PageRequested?.Invoke(this, page),
+            runOnUi);
         shownDay = PlanningDay.Of(DateTime.Now, Settings.DayStartHour);
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
@@ -141,6 +157,9 @@ public sealed class AppGraph : IDisposable
 
     public ThemeApplier Theme { get; }
 
+    /// <summary>A view model asks for a page (Plan tomorrow from a list, Today when the ritual ends); MainWindow opens it.</summary>
+    public event EventHandler<AppPage>? PageRequested;
+
     public SignInViewModel SignIn { get; }
 
     public ShellViewModel Shell { get; }
@@ -150,6 +169,8 @@ public sealed class AppGraph : IDisposable
     public ListViewModel Tomorrow { get; }
 
     public ListViewModel Inbox { get; }
+
+    public PlanViewModel Plan { get; }
 
     public SettingsViewModel SettingsPage { get; }
 
@@ -207,6 +228,7 @@ public sealed class AppGraph : IDisposable
         Today.Refresh();
         Tomorrow.Refresh();
         Inbox.Refresh();
+        Plan.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

@@ -1,0 +1,77 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
+
+    <!-- The composer (docs/composer.md): a pill that grows a preview of what the line will save. -->
+    <DataTemplate x:Key="ComposerTemplate" DataType="{x:Type vm:ComposerViewModel}">
+        <Border Padding="12,4,6,4"
+                CornerRadius="{StaticResource GM.ComposerCorner}"
+                Background="{DynamicResource GM.SurfaceVariantBrush}">
+            <DockPanel>
+                <ItemsControl DockPanel.Dock="Top"
+                              Margin="0,6,0,2"
+                              Focusable="False"
+                              ItemsSource="{Binding Chips}"
+                              Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
+                            <Border Margin="0,0,6,6"
+                                    Padding="10,2,2,2"
+                                    CornerRadius="12"
+                                    BorderThickness="1"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    Opacity="{Binding Opacity}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="10"
+                                             Height="10"
+                                             Margin="0,0,6,0"
+                                             VerticalAlignment="Center"
+                                             Fill="{Binding AreaBrush}"
+                                             Stroke="{DynamicResource GM.OutlineBrush}"
+                                             Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
+                                    <ui:SymbolIcon Margin="0,0,6,0"
+                                                   FontSize="14"
+                                                   Symbol="{Binding Symbol}"
+                                                   Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
+                                    <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
+                                    <ui:Button Margin="2,0,0,0"
+                                               Padding="4"
+                                               Appearance="Transparent"
+                                               Command="{Binding RemoveCommand}"
+                                               ToolTip="{Binding RemoveName}"
+                                               AutomationProperties.Name="{Binding RemoveName}">
+                                        <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
+                                    </ui:Button>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ui:Button DockPanel.Dock="Right"
+                           Appearance="Primary"
+                           CornerRadius="{StaticResource GM.ComposerCorner}"
+                           Command="{Binding AddTaskCommand}"
+                           ToolTip="{DynamicResource Composer.Add}"
+                           AutomationProperties.Name="{DynamicResource Composer.Add}">
+                    <ui:SymbolIcon Symbol="Send24" />
+                </ui:Button>
+                <ui:TextBox Margin="0,0,8,0"
+                            BorderThickness="0"
+                            Background="Transparent"
+                            PlaceholderText="{DynamicResource Composer.Placeholder}"
+                            Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                            AutomationProperties.Name="{DynamicResource Composer.Placeholder}">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
+            </DockPanel>
+        </Border>
+    </DataTemplate>
+</ResourceDictionary>

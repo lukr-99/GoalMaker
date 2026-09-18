@@ -30,6 +30,40 @@
     <sys:String x:Key="SignIn.Error.Other">Sign-in failed: {0}</sys:String>
     <sys:String x:Key="SignIn.DevBackend">Development build · {0}</sys:String>
 
+    <!-- Plan tomorrow (docs/plan-tomorrow.md) -->
+    <sys:String x:Key="Plan.Title">Plan tomorrow</sys:String>
+    <sys:String x:Key="Plan.Close">Close</sys:String>
+    <sys:String x:Key="Plan.Next">Next</sys:String>
+    <sys:String x:Key="Plan.Finish">Finish</sys:String>
+    <sys:String x:Key="Plan.Back">Back</sys:String>
+    <sys:String x:Key="Plan.StepToday">Step 1 of 2 · {0} left to decide</sys:String>
+    <sys:String x:Key="Plan.StepTodayDone">Step 1 of 2 · all decided</sys:String>
+    <sys:String x:Key="Plan.StepTomorrow">Step 2 of 2 · {0} of {1} top priorities</sys:String>
+    <sys:String x:Key="Plan.StepDone">Tomorrow is planned</sys:String>
+    <sys:String x:Key="Plan.TodayIntro">Decide what happens to everything left over from today. Nothing rolls over by itself.</sys:String>
+    <sys:String x:Key="Plan.TodayClear">Nothing left over from today. On to tomorrow.</sys:String>
+    <sys:String x:Key="Plan.Tomorrow">Tomorrow</sys:String>
+    <sys:String x:Key="Plan.Date">Date</sys:String>
+    <sys:String x:Key="Plan.Done">Done</sys:String>
+    <sys:String x:Key="Plan.Drop">Drop</sys:String>
+    <sys:String x:Key="Plan.Unplanned">No day now (changed elsewhere)</sys:String>
+    <sys:String x:Key="Plan.TomorrowIntro">Flag up to {0} top priorities. Anything you add below lands on tomorrow.</sys:String>
+    <sys:String x:Key="Plan.TomorrowEmpty">Nothing planned for tomorrow yet. Add something below or bring it in from the Inbox.</sys:String>
+    <sys:String x:Key="Plan.FromInbox">From the Inbox · {0}</sys:String>
+    <sys:String x:Key="Plan.ToTomorrow">Plan {0} for tomorrow</sys:String>
+    <sys:String x:Key="Plan.DoneTask">task for tomorrow</sys:String>
+    <sys:String x:Key="Plan.DoneTasks">tasks for tomorrow</sys:String>
+    <sys:String x:Key="Plan.DonePriority">{0} top priority</sys:String>
+    <sys:String x:Key="Plan.DonePriorities">{0} top priorities</sys:String>
+    <sys:String x:Key="Plan.DoneNoPriorities">No top priorities picked</sys:String>
+    <sys:String x:Key="Plan.Outcome">From today: {0}</sys:String>
+    <sys:String x:Key="Plan.OutcomeTomorrow">{0} to tomorrow</sys:String>
+    <sys:String x:Key="Plan.OutcomeLater">{0} later</sys:String>
+    <sys:String x:Key="Plan.OutcomeDone">{0} done</sys:String>
+    <sys:String x:Key="Plan.OutcomeDropped">{0} dropped</sys:String>
+    <sys:String x:Key="Plan.OutcomeNone">Nothing was left over from today.</sys:String>
+    <sys:String x:Key="Plan.BackToToday">Back to Today</sys:String>
+
     <!-- Lists (docs/lists.md) -->
     <sys:String x:Key="Lists.Today">Today</sys:String>
     <sys:String x:Key="Lists.Tomorrow">Tomorrow</sys:String>
@@ -58,6 +92,7 @@
     <sys:String x:Key="Composer.New">new</sys:String>
     <sys:String x:Key="Composer.Later">later</sys:String>
     <sys:String x:Key="Composer.Soon">coming soon</sys:String>
+    <sys:String x:Key="Composer.OpensPlan">opens Plan tomorrow</sys:String>
     <sys:String x:Key="Composer.UnknownCommand">unknown command</sys:String>
     <sys:String x:Key="Composer.Remove">Remove {0}</sys:String>
     <sys:String x:Key="Repeat.Daily">Every day</sys:String>

@@ -1,0 +1,343 @@
+<Page x:Class="GoalMaker.App.Views.PlanPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource Plan.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Page.Resources>
+        <!-- A decision or a flag: outlined, filled with the accent when it's the one in force. -->
+        <Style x:Key="Choice" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Chip"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="{DynamicResource GM.ChipCorner}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource GM.TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Intro" TargetType="TextBlock">
+            <Setter Property="Margin" Value="4,0,0,12" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Margin" Value="{DynamicResource GM.RowGap}" />
+            <Setter Property="MinHeight" Value="{DynamicResource GM.RowMinHeight}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource GM.RowCorner}" />
+            <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+        </Style>
+        <Style x:Key="Meta" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,0,10,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+    </Page.Resources>
+
+    <Grid Margin="{DynamicResource GM.PagePadding}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0" Margin="0,0,0,16">
+            <StackPanel DockPanel.Dock="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
+                <ui:Button Margin="0,0,8,0"
+                           Content="{DynamicResource Plan.Back}"
+                           Command="{Binding BackCommand}"
+                           Visibility="{Binding IsTomorrowStep, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Appearance="Primary"
+                           Content="{DynamicResource Plan.Next}"
+                           Command="{Binding NextCommand}"
+                           Visibility="{Binding IsTodayStep, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Appearance="Primary"
+                           Content="{DynamicResource Plan.Finish}"
+                           Command="{Binding NextCommand}"
+                           Visibility="{Binding IsTomorrowStep, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Margin="8,0,0,0"
+                           Padding="8"
+                           Appearance="Transparent"
+                           BorderThickness="0"
+                           Command="{Binding CloseCommand}"
+                           ToolTip="{DynamicResource Plan.Close}"
+                           AutomationProperties.Name="{DynamicResource Plan.Close}">
+                    <ui:SymbolIcon Symbol="Dismiss24" />
+                </ui:Button>
+            </StackPanel>
+            <StackPanel>
+                <controls:HeadlineText Title="{DynamicResource Plan.Title}" FontSize="40" />
+                <TextBlock Margin="0,4,0,0" Text="{Binding StepText}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
+        </DockPanel>
+
+        <!-- Step 1: a decision for everything left over from today. -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding IsTodayStep, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Style="{StaticResource Intro}" Text="{Binding TodayIntro}" />
+                <ItemsControl ItemsSource="{Binding Review}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ReviewRowViewModel}">
+                            <Border Style="{StaticResource Card}" Padding="14,10,14,4">
+                                <StackPanel>
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right"
+                                                   Margin="8,0,0,0"
+                                                   Text="{Binding TimeText}"
+                                                   FontSize="16"
+                                                   FontFamily="{DynamicResource GM.NumberFont}"
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                   Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource Meta}"
+                                                           Text="{Binding DayText}"
+                                                           Foreground="{DynamicResource GM.DangerBrush}"
+                                                           Visibility="{Binding HasDay, Converter={StaticResource BoolToVisibility}}" />
+                                                <ui:SymbolIcon Margin="0,0,10,0"
+                                                               FontSize="12"
+                                                               Symbol="Flag16"
+                                                               Foreground="{DynamicResource GM.AccentBrush}"
+                                                               Visibility="{Binding TopPriority, Converter={StaticResource BoolToVisibility}}" />
+                                                <StackPanel Margin="0,0,10,0"
+                                                            Orientation="Horizontal"
+                                                            Visibility="{Binding HasArea, Converter={StaticResource BoolToVisibility}}">
+                                                    <Ellipse Width="7" Height="7" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
+                                                    <TextBlock Style="{StaticResource Meta}" Margin="0" Text="{Binding AreaName}" />
+                                                </StackPanel>
+                                                <ui:SymbolIcon FontSize="12"
+                                                               Symbol="ArrowRepeatAll16"
+                                                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                               Visibility="{Binding Repeats, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <WrapPanel Margin="0,8,0,0">
+                                        <ToggleButton Style="{StaticResource Choice}"
+                                                      IsChecked="{Binding IsTomorrow, Mode=OneWay}"
+                                                      Command="{Binding ChooseTomorrowCommand}"
+                                                      AutomationProperties.Name="{DynamicResource Plan.Tomorrow}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="CalendarArrowRight16" />
+                                                <TextBlock Text="{DynamicResource Plan.Tomorrow}" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <ToggleButton x:Name="DateChoice"
+                                                      Style="{StaticResource Choice}"
+                                                      IsChecked="{Binding IsLater, Mode=OneWay}"
+                                                      Command="{Binding PickDateCommand}"
+                                                      AutomationProperties.Name="{Binding DateText}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="CalendarLtr16" />
+                                                <TextBlock Text="{Binding DateText}" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <Popup IsOpen="{Binding IsPicking, Mode=TwoWay}"
+                                               PlacementTarget="{Binding ElementName=DateChoice}"
+                                               Placement="Bottom"
+                                               StaysOpen="False"
+                                               AllowsTransparency="True">
+                                            <Border Padding="4"
+                                                    CornerRadius="8"
+                                                    BorderThickness="1"
+                                                    BorderBrush="{DynamicResource GM.OutlineBrush}"
+                                                    Background="{DynamicResource GM.SurfaceBrush}">
+                                                <Calendar DisplayDateStart="{Binding FirstPickableDate, Mode=OneWay}"
+                                                          SelectedDate="{Binding PickedDate, Mode=TwoWay}" />
+                                            </Border>
+                                        </Popup>
+                                        <ToggleButton Style="{StaticResource Choice}"
+                                                      IsChecked="{Binding IsDone, Mode=OneWay}"
+                                                      Command="{Binding ChooseDoneCommand}"
+                                                      AutomationProperties.Name="{DynamicResource Plan.Done}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="Checkmark16" />
+                                                <TextBlock Text="{DynamicResource Plan.Done}" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                        <ToggleButton Style="{StaticResource Choice}"
+                                                      IsChecked="{Binding IsDropped, Mode=OneWay}"
+                                                      Command="{Binding ChooseDropCommand}"
+                                                      AutomationProperties.Name="{DynamicResource Plan.Drop}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="DismissCircle16" />
+                                                <TextBlock Text="{DynamicResource Plan.Drop}" />
+                                            </StackPanel>
+                                        </ToggleButton>
+                                    </WrapPanel>
+                                    <TextBlock Margin="0,0,0,6"
+                                               Style="{StaticResource Meta}"
+                                               Text="{DynamicResource Plan.Unplanned}"
+                                               Visibility="{Binding IsUnplanned, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Step 2: tomorrow, its top priorities, and the Inbox to draw from. -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      Visibility="{Binding IsTomorrowStep, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Style="{StaticResource Intro}" Text="{Binding TomorrowIntro}" />
+                <ItemsControl ItemsSource="{Binding Tomorrow}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:PlanTaskViewModel}">
+                            <Border Style="{StaticResource Card}" Padding="14,4,8,4">
+                                <DockPanel VerticalAlignment="Center">
+                                    <ToggleButton DockPanel.Dock="Right"
+                                                  Margin="0"
+                                                  Padding="8,6"
+                                                  Style="{StaticResource Choice}"
+                                                  IsChecked="{Binding TopPriority, Mode=OneWay}"
+                                                  IsEnabled="{Binding CanToggle}"
+                                                  Command="{Binding ToggleCommand}"
+                                                  ToolTip="{DynamicResource Composer.Priority}"
+                                                  AutomationProperties.Name="{DynamicResource Composer.Priority}">
+                                        <ui:SymbolIcon FontSize="16" Symbol="Flag20" Filled="{Binding TopPriority}" />
+                                    </ToggleButton>
+                                    <TextBlock DockPanel.Dock="Right"
+                                               Margin="8,0"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding TimeText}"
+                                               FontSize="16"
+                                               FontFamily="{DynamicResource GM.NumberFont}"
+                                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                                               Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                                        <StackPanel Orientation="Horizontal">
+                                            <StackPanel Margin="0,0,10,0"
+                                                        Orientation="Horizontal"
+                                                        Visibility="{Binding HasArea, Converter={StaticResource BoolToVisibility}}">
+                                                <Ellipse Width="7" Height="7" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
+                                                <TextBlock Style="{StaticResource Meta}" Margin="0" Text="{Binding AreaName}" />
+                                            </StackPanel>
+                                            <ui:SymbolIcon FontSize="12"
+                                                           Symbol="ArrowRepeatAll16"
+                                                           Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                           Visibility="{Binding Repeats, Converter={StaticResource BoolToVisibility}}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel Visibility="{Binding HasInbox, Converter={StaticResource BoolToVisibility}}">
+                    <ToggleButton Margin="0,12,0,6"
+                                  HorizontalAlignment="Left"
+                                  Padding="4,2"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Cursor="Hand"
+                                  IsChecked="{Binding IsInboxExpanded}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{Binding InboxHeader}"
+                                       FontSize="11"
+                                       FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            <ui:SymbolIcon Margin="6,0,0,0" FontSize="12" Symbol="ChevronDown16" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ItemsControl ItemsSource="{Binding Inbox}"
+                                  Focusable="False"
+                                  Visibility="{Binding IsInboxExpanded, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:PlanTaskViewModel}">
+                                <Border Style="{StaticResource Card}" Padding="14,4,8,4">
+                                    <DockPanel VerticalAlignment="Center">
+                                        <ui:Button DockPanel.Dock="Right"
+                                                   Appearance="Transparent"
+                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                   Content="{DynamicResource Plan.Tomorrow}"
+                                                   Command="{Binding PlanTomorrowCommand}"
+                                                   AutomationProperties.Name="{Binding PlanTomorrowName}" />
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <ContentControl Grid.Row="2"
+                        Margin="0,12,0,0"
+                        Focusable="False"
+                        Content="{Binding Composer}"
+                        ContentTemplate="{StaticResource ComposerTemplate}"
+                        Visibility="{Binding IsTomorrowStep, Converter={StaticResource BoolToVisibility}}" />
+
+        <!-- Done: tomorrow at a glance. -->
+        <StackPanel Grid.Row="1"
+                    MaxWidth="560"
+                    HorizontalAlignment="Left"
+                    Visibility="{Binding IsDoneStep, Converter={StaticResource BoolToVisibility}}">
+            <Border Padding="28,20,28,24" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}">
+                <StackPanel>
+                    <TextBlock Text="{Binding TomorrowCount}"
+                               FontSize="56"
+                               FontFamily="{DynamicResource GM.NumberFont}"
+                               Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                    <TextBlock Text="{Binding TomorrowCountLabel}"
+                               FontSize="16"
+                               FontFamily="{DynamicResource GM.BodyStrongFont}"
+                               Foreground="{DynamicResource GM.OnHeroBrush}" />
+                    <TextBlock Margin="0,8,0,0" Text="{Binding PrioritiesText}" FontSize="14" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                </StackPanel>
+            </Border>
+            <TextBlock Margin="4,16,0,16"
+                       Text="{Binding OutcomeText}"
+                       FontSize="14"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+            <ui:Button HorizontalAlignment="Left"
+                       Appearance="Primary"
+                       Content="{DynamicResource Plan.BackToToday}"
+                       Command="{Binding CloseCommand}" />
+        </StackPanel>
+    </Grid>
+</Page>

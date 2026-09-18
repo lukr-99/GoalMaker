@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using GoalMaker.App.Composition;
 using GoalMaker.App.Startup;
+using GoalMaker.App.ViewModels;
 using GoalMaker.App.Views;
 using GoalMaker.Core.Settings;
 
@@ -15,6 +16,7 @@ namespace GoalMaker.App.Shell;
 public partial class MainWindow
 {
     private readonly ISettingsStore settings;
+    private readonly PlanViewModel plan;
     private readonly DispatcherTimer placementSaver;
     private Type pendingPage = typeof(TodayPage);
 
@@ -22,12 +24,15 @@ public partial class MainWindow
     {
         InitializeComponent();
         settings = graph.Settings;
+        plan = graph.Plan;
+        graph.PageRequested += (_, page) => Open(page);
         DataContext = graph.Shell;
         Navigation.SetPageProviderService(new PageProvider(new Dictionary<Type, Func<object>>
         {
             [typeof(TodayPage)] = () => new TodayPage(graph.Today),
             [typeof(TomorrowPage)] = () => new TomorrowPage(graph.Tomorrow),
             [typeof(InboxPage)] = () => new InboxPage(graph.Inbox),
+            [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage),
         }));
         Navigation.IsPaneOpen = !settings.NavigationCollapsed;
@@ -52,8 +57,14 @@ public partial class MainWindow
 
     public void Open(AppPage page)
     {
+        if (page == AppPage.Plan)
+        {
+            plan.Start();
+        }
+
         pendingPage = page switch
         {
+            AppPage.Plan => typeof(PlanPage),
             AppPage.Tomorrow => typeof(TomorrowPage),
             AppPage.Inbox => typeof(InboxPage),
             AppPage.Settings => typeof(SettingsPage),

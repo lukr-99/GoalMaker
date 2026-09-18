@@ -1,59 +1,14 @@
-using System.IO;
-using System.Text.Json.Nodes;
-using GoalMaker.App.Localization;
-using GoalMaker.App.Shell;
 using GoalMaker.App.ViewModels;
-using GoalMaker.Core.Backend;
 using GoalMaker.Core.Planning;
-using GoalMaker.Core.Settings;
-using GoalMaker.Core.Sync;
-using GoalMaker.Infrastructure.Replica;
-using GoalMaker.Infrastructure.Sync;
-using Microsoft.Extensions.Time.Testing;
 
 namespace GoalMaker.App.Tests;
 
 /// <summary>The lists as the Windows app shows them (docs/lists.md), over a real replica and without a window.</summary>
 public sealed class ListViewModelTests : IDisposable
 {
-    private const string Owner = "11111111-1111-1111-1111-111111111111";
-    private readonly string folder = Path.Combine(Path.GetTempPath(), "goalmaker-tests", Guid.NewGuid().ToString("N"));
-    private readonly FakeTimeProvider time = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
-    private readonly FakeSettings settings = new();
-    private readonly SqliteReplica replica;
-    private readonly SyncCoordinator sync;
-    private readonly AreaList areas;
-    private readonly TagList tags;
-    private readonly TaskList tasks;
-    private readonly TickSound tick = new();
+    private readonly TestPlanner planner = new();
 
-    public ListViewModelTests()
-    {
-        time.SetLocalTimeZone(TimeZoneInfo.Utc);
-        var catalog = ContractResources.SyncedTables();
-        replica = new SqliteReplica(Path.Combine(folder, "replica.db"), catalog, ReplicaMigrator.BuiltIn());
-        sync = new SyncCoordinator(new SyncEngine(catalog, replica, new NoRemote(), time), replica, time, TimeSpan.FromSeconds(2));
-        var rows = new NewRows(catalog, () => Owner, time);
-        areas = new AreaList(replica, rows, ["violet", "blue"], () => { });
-        tags = new TagList(replica, rows, () => { });
-        tasks = new TaskList(replica, rows, areas, tags, () => { });
-    }
-
-    public void Dispose()
-    {
-        sync.Dispose();
-        replica.Dispose();
-        tick.Dispose();
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        try
-        {
-            Directory.Delete(folder, recursive: true);
-        }
-        catch (IOException)
-        {
-            // Best effort on Windows; the temp folder is cleaned eventually.
-        }
-    }
+    public void Dispose() => planner.Dispose();
 
     [Fact]
     public void TodayGroupsPrioritiesScheduledAndMore()
@@ -111,7 +66,7 @@ public sealed class ListViewModelTests : IDisposable
         Assert.Equal(TaskState.Done, Task("Buy milk").State);
         Assert.True(today.IsEmpty);
         Assert.True(today.HasUndo);
-        Assert.Equal("Lists.Done", today.UndoText);
+        Assert.Equal("Lists.Done(Buy milk)", today.UndoText);
 
         today.UndoCommand.Execute(null);
 
@@ -133,7 +88,7 @@ public sealed class ListViewModelTests : IDisposable
         Assert.Equal(2, inbox.Sections[0].Rows.Count);
 
         inbox.Sections[0].Rows[0].DeleteCommand.Execute(null);
-        time.Advance(TimeSpan.FromSeconds(5));
+        planner.Time.Advance(TimeSpan.FromSeconds(5));
         Assert.False(inbox.HasUndo);
         Assert.Single(inbox.Sections[0].Rows);
     }
@@ -143,7 +98,7 @@ public sealed class ListViewModelTests : IDisposable
     {
         var today = List(ListKind.Today);
         Add(today, "File the receipts");
-        time.Advance(TimeSpan.FromDays(2));
+        planner.Time.Advance(TimeSpan.FromDays(2));
         today.Refresh();
 
         var overdue = today.Sections.Single();
@@ -160,12 +115,12 @@ public sealed class ListViewModelTests : IDisposable
     [Fact]
     public void ThePlanningDayStartsAtTheStartHour()
     {
-        time.SetUtcNow(new DateTimeOffset(2026, 9, 19, 2, 30, 0, TimeSpan.Zero));
+        planner.Time.SetUtcNow(new DateTimeOffset(2026, 9, 19, 2, 30, 0, TimeSpan.Zero));
         var today = List(ListKind.Today);
         Add(today, "Late thought");
         Assert.Equal(new DateOnly(2026, 9, 18), Task("Late thought").PlannedDate);
 
-        settings.DayStartHour = 0;
+        planner.Settings.DayStartHour = 0;
         today.Refresh();
         Assert.True(today.Sections.Single().IsCollapsible);
     }
@@ -178,44 +133,20 @@ public sealed class ListViewModelTests : IDisposable
             ListKind.Tomorrow => day => day.AddDays(1),
             _ => _ => null,
         };
-        var strings = new KeyStrings();
-        var composer = new ComposerViewModel(tasks, areas, tags, settings, strings, time, _ => null, defaultDay, action => action());
-        return new ListViewModel(kind, tasks, areas, composer, sync, settings, strings, time, _ => null, () => true, tick, action => action());
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, planner.Time, _ => null, defaultDay, action => action());
+        return new ListViewModel(
+            kind, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, planner.Strings, planner.Time, _ => null, () => true, planner.Tick, action => action());
     }
 
-    private static void Add(ListViewModel list, string line)
+    // A second apart, so creation order breaks ties the way the test reads.
+    private void Add(ListViewModel list, string line)
     {
         list.Composer.NewTaskTitle = line;
         list.Composer.AddTaskCommand.Execute(null);
         Assert.Equal(string.Empty, list.Composer.NewTaskTitle);
+        planner.Time.Advance(TimeSpan.FromSeconds(1));
     }
 
-    private TaskItem Task(string title) => tasks.All().Single(task => task.Title == title);
-
-    private sealed class KeyStrings : IStrings
-    {
-        public string Get(string key, params object[] arguments) => key;
-    }
-
-    private sealed class FakeSettings : ISettingsStore
-    {
-        public Appearance Appearance { get; set; } = Appearance.Default;
-
-        public int DayStartHour { get; set; } = PlanningDay.DefaultStartHour;
-
-        public bool NavigationCollapsed { get; set; }
-
-        public BackendEnvironment? BackendOverride { get; set; }
-
-        public WindowPlacement? MainWindowPlacement { get; set; }
-    }
-
-    private sealed class NoRemote : IRemoteTables
-    {
-        public Task<JsonObject> UpsertAsync(string table, JsonObject row, CancellationToken cancellationToken) =>
-            throw new RemoteUnavailableException("offline");
-
-        public Task<IReadOnlyList<JsonObject>> PullAsync(string table, string? from, RowCursor? after, int limit, CancellationToken cancellationToken) =>
-            throw new RemoteUnavailableException("offline");
-    }
+    private TaskItem Task(string title) => planner.Task(title);
 }

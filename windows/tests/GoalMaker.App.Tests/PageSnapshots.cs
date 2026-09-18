@@ -1,0 +1,141 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using GoalMaker.App.Localization;
+using GoalMaker.App.Theming;
+using GoalMaker.App.ViewModels;
+using GoalMaker.App.Views;
+using GoalMaker.Core.Composer;
+using GoalMaker.Core.Planning;
+using GoalMaker.Core.Settings;
+using GoalMaker.Infrastructure.Sync;
+using Wpf.Ui.Appearance;
+using Wpf.Ui.Markup;
+
+namespace GoalMaker.App.Tests;
+
+/// <summary>
+/// Renders pages offscreen to PNG files for a look at the layout without opening a window, so nothing
+/// on the desktop moves or takes focus. Explicit: run with
+/// <c>dotnet test --project tests/GoalMaker.App.Tests -- --explicit only</c>; the files land in
+/// GOALMAKER_SNAPSHOTS, or in goalmaker-snapshots under the temp folder.
+/// </summary>
+public sealed class PageSnapshots
+{
+    private static readonly DateOnly Today = new(2026, 9, 18);
+
+    [Fact(Explicit = true)]
+    public void PlanTomorrow() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.Appearance = Appearance.Default with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark };
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "File the receipts", Today.AddDays(-2));
+        Add(planner, "Review budget 18:00 @Home every monday", Today);
+        Add(planner, "Call the bank", Today);
+        Add(planner, "Stretch !", Today);
+        Add(planner, "Pack gym bag 7:00", Today.AddDays(1));
+        Add(planner, "Read about sourdough", null);
+        Add(planner, "Book the dentist", null);
+        using var theme = Theme(planner);
+        PlanViewModel? plan = null;
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day.AddDays(1), action => action(), () => plan?.Start());
+        plan = new PlanViewModel(
+            planner.Tasks, planner.Areas, composer, planner.Settings, strings, planner.Time, theme.AreaBrush, planner.Tick, _ => { }, action => action());
+        var page = new PlanPage(plan);
+
+        plan.Review[1].ChooseTomorrowCommand.Execute(null);
+        plan.Review[2].PickedDate = new DateTime(2026, 9, 25);
+        plan.Review[3].ChooseDoneCommand.Execute(null);
+        Save(page, folder, "plan-1-today-partly-decided");
+
+        plan.Review[0].ChooseDropCommand.Execute(null);
+        plan.NextCommand.Execute(null);
+        plan.Tomorrow.First(row => row.Title == "Review budget").ToggleCommand.Execute(null);
+        plan.IsInboxExpanded = true;
+        composer.NewTaskTitle = "Water plants tomorrow #home";
+        Save(page, folder, "plan-2-tomorrow");
+
+        plan.NextCommand.Execute(null);
+        Save(page, folder, "plan-3-done");
+    });
+
+    private static void Add(TestPlanner planner, string line, DateOnly? day)
+    {
+        var draft = ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime) with { PlannedDate = day };
+        Assert.NotNull(planner.Tasks.Add(draft));
+        planner.Time.Advance(TimeSpan.FromSeconds(1));
+    }
+
+    private static ThemeApplier Theme(TestPlanner planner)
+    {
+        var theme = new ThemeApplier(ContractResources.Themes(), Application.Current.Resources);
+        theme.Apply(planner.Settings.Appearance);
+        return theme;
+    }
+
+    // Lays the page out at the main window's content size and writes it as a PNG.
+    private static void Save(FrameworkElement page, string folder, string name)
+    {
+        var size = new Size(852, 672);
+        page.Measure(size);
+        page.Arrange(new Rect(size));
+        Settle();
+        page.UpdateLayout();
+        Settle();
+        var bitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(page);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var file = File.Create(Path.Combine(folder, name + ".png"));
+        encoder.Save(file);
+    }
+
+    // Lets bindings, templates and layout finish what they queued.
+    private static void Settle()
+    {
+        var frame = new DispatcherFrame();
+        Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => frame.Continue = false);
+        Dispatcher.PushFrame(frame);
+    }
+
+    // WPF needs one STA thread with an Application holding the app's resources; nothing is shown.
+    private static void OnUiThread(Action<string> render)
+    {
+        var folder = Environment.GetEnvironmentVariable("GOALMAKER_SNAPSHOTS") is { Length: > 0 } configured
+            ? configured
+            : Path.Combine(Path.GetTempPath(), "goalmaker-snapshots");
+        Directory.CreateDirectory(folder);
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try
+            {
+                var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+                var resources = app.Resources.MergedDictionaries;
+                resources.Add(new ThemesDictionary { Theme = ApplicationTheme.Dark });
+                resources.Add(new ControlsDictionary());
+                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "ListTemplate" })
+                {
+                    resources.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/GoalMaker;component/Resources/{name}.xaml") });
+                }
+
+                render(folder);
+            }
+            catch (Exception exception)
+            {
+                failure = exception;
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (failure is not null)
+        {
+            throw new InvalidOperationException("Rendering failed", failure);
+        }
+    }
+}
