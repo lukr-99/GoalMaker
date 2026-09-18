@@ -107,6 +107,19 @@
 
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Planning}" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.DayStart}" />
+                    <ComboBox MinWidth="140"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding DayStartHours}"
+                              SelectedIndex="{Binding DayStartHour}"
+                              AutomationProperties.Name="{DynamicResource Settings.DayStart}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.DayStartHint}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />
                     <TextBlock Margin="0,0,0,12" Text="{Binding Email}" FontSize="15" />
                     <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />

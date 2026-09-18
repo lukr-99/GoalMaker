@@ -4,5 +4,7 @@ namespace GoalMaker.App.Startup;
 public enum AppPage
 {
     Today,
+    Tomorrow,
+    Inbox,
     Settings,
 }

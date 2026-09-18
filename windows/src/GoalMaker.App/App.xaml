@@ -10,8 +10,9 @@
                 <ui:ControlsDictionary />
                 <ResourceDictionary Source="Resources/Strings.xaml" />
                 <ResourceDictionary Source="Resources/Tokens.xaml" />
+                <ResourceDictionary Source="Resources/Converters.xaml" />
+                <ResourceDictionary Source="Resources/ListTemplate.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

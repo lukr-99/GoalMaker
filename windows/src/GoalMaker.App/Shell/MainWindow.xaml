@@ -49,6 +49,16 @@
                         <ui:SymbolIcon Symbol="CalendarToday24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Tomorrow}" TargetPageType="{x:Type views:TomorrowPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="CalendarArrowRight24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Inbox}" TargetPageType="{x:Type views:InboxPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="MailInbox24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Settings}" TargetPageType="{x:Type views:SettingsPage}">

@@ -1,0 +1,225 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+                    xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
+
+    <!-- One list (Today, Tomorrow, Inbox) as ListPage shows it (docs/lists.md). -->
+    <DataTemplate x:Key="ListTemplate" DataType="{x:Type vm:ListViewModel}">
+        <Grid Margin="{DynamicResource GM.PagePadding}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock DockPanel.Dock="Right"
+                           VerticalAlignment="Bottom"
+                           Text="{Binding SyncText}"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+                <StackPanel>
+                    <controls:HeadlineText Title="{Binding Title}" FontSize="40" />
+                    <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </StackPanel>
+            </DockPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Margin="4,8,0,8"
+                               Text="{Binding EmptyText}"
+                               FontSize="14"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                               Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding Sections}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ListSectionViewModel}">
+                                <StackPanel Margin="0,0,0,8">
+                                    <TextBlock Margin="4,8,0,6"
+                                               Text="{Binding Header}"
+                                               FontSize="11"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                                               Visibility="{Binding HasPlainHeader, Converter={StaticResource BoolToVisibility}}" />
+                                    <ToggleButton Margin="0,8,0,6"
+                                                  HorizontalAlignment="Left"
+                                                  Padding="4,2"
+                                                  Background="Transparent"
+                                                  BorderThickness="0"
+                                                  Cursor="Hand"
+                                                  IsChecked="{Binding IsExpanded}"
+                                                  Visibility="{Binding IsCollapsible, Converter={StaticResource BoolToVisibility}}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock VerticalAlignment="Center"
+                                                       Text="{Binding Header}"
+                                                       FontSize="11"
+                                                       FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                            <ui:SymbolIcon Margin="6,0,0,0" FontSize="12" Symbol="ChevronDown16" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                    <ItemsControl ItemsSource="{Binding Rows}"
+                                                  Focusable="False"
+                                                  Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:TaskRowViewModel}">
+                                                <Border Margin="{DynamicResource GM.RowGap}"
+                                                        Padding="12,2"
+                                                        MinHeight="{DynamicResource GM.RowMinHeight}"
+                                                        CornerRadius="{DynamicResource GM.RowCorner}"
+                                                        Background="{DynamicResource GM.SurfaceBrush}">
+                                                    <DockPanel VerticalAlignment="Center">
+                                                        <ui:Button DockPanel.Dock="Right"
+                                                                   Appearance="Transparent"
+                                                                   BorderThickness="0"
+                                                                   Padding="6"
+                                                                   Command="{Binding DeleteCommand}"
+                                                                   ToolTip="{DynamicResource Lists.Delete}"
+                                                                   AutomationProperties.Name="{DynamicResource Lists.Delete}">
+                                                            <ui:SymbolIcon Symbol="Delete24" />
+                                                        </ui:Button>
+                                                        <TextBlock DockPanel.Dock="Right"
+                                                                   Margin="8,0"
+                                                                   VerticalAlignment="Center"
+                                                                   Text="{Binding TimeText}"
+                                                                   FontSize="16"
+                                                                   FontFamily="{DynamicResource GM.NumberFont}"
+                                                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                                   Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
+                                                        <CheckBox VerticalAlignment="Center"
+                                                                  Foreground="{DynamicResource GM.TextBrush}"
+                                                                  IsChecked="{Binding IsDone}"
+                                                                  AutomationProperties.Name="{Binding Title}">
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Margin="0,0,10,0"
+                                                                               Text="{Binding DayText}"
+                                                                               FontSize="12"
+                                                                               Foreground="{DynamicResource GM.DangerBrush}"
+                                                                               Visibility="{Binding HasDay, Converter={StaticResource BoolToVisibility}}" />
+                                                                    <ui:SymbolIcon Margin="0,0,10,0"
+                                                                                   FontSize="12"
+                                                                                   Symbol="Flag16"
+                                                                                   Foreground="{DynamicResource GM.AccentBrush}"
+                                                                                   Visibility="{Binding TopPriority, Converter={StaticResource BoolToVisibility}}" />
+                                                                    <StackPanel Margin="0,0,10,0"
+                                                                                Orientation="Horizontal"
+                                                                                Visibility="{Binding HasArea, Converter={StaticResource BoolToVisibility}}">
+                                                                        <Ellipse Width="7" Height="7" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
+                                                                        <TextBlock Text="{Binding AreaName}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                                                    </StackPanel>
+                                                                    <ui:SymbolIcon FontSize="12"
+                                                                                   Symbol="ArrowRepeatAll16"
+                                                                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                                                   ToolTip="{DynamicResource Lists.Repeats}"
+                                                                                   Visibility="{Binding Repeats, Converter={StaticResource BoolToVisibility}}" />
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                        </CheckBox>
+                                                    </DockPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Undo for the last completion or deletion, for five seconds. -->
+            <Border Grid.Row="2"
+                    Margin="0,12,0,0"
+                    Padding="16,6,6,6"
+                    CornerRadius="{DynamicResource GM.RowCorner}"
+                    Background="{DynamicResource GM.HeroBrush}"
+                    Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel>
+                    <ui:Button DockPanel.Dock="Right"
+                               Appearance="Transparent"
+                               Foreground="{DynamicResource GM.HeroAccentBrush}"
+                               Content="{DynamicResource Lists.Undo}"
+                               Command="{Binding UndoCommand}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding UndoText}" Foreground="{DynamicResource GM.OnHeroBrush}" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+            </Border>
+
+            <!-- The composer (docs/composer.md): the list supplies the day when the line names none. -->
+            <Border Grid.Row="3"
+                    Margin="0,12,0,0"
+                    Padding="12,4,6,4"
+                    DataContext="{Binding Composer}"
+                    CornerRadius="{StaticResource GM.ComposerCorner}"
+                    Background="{DynamicResource GM.SurfaceVariantBrush}">
+                <DockPanel>
+                    <ItemsControl DockPanel.Dock="Top"
+                                  Margin="0,6,0,2"
+                                  Focusable="False"
+                                  ItemsSource="{Binding Chips}"
+                                  Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
+                                <Border Margin="0,0,6,6"
+                                        Padding="10,2,2,2"
+                                        CornerRadius="12"
+                                        BorderThickness="1"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        Opacity="{Binding Opacity}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="10"
+                                                 Height="10"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding AreaBrush}"
+                                                 Stroke="{DynamicResource GM.OutlineBrush}"
+                                                 Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
+                                        <ui:SymbolIcon Margin="0,0,6,0"
+                                                       FontSize="14"
+                                                       Symbol="{Binding Symbol}"
+                                                       Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
+                                        <ui:Button Margin="2,0,0,0"
+                                                   Padding="4"
+                                                   Appearance="Transparent"
+                                                   Command="{Binding RemoveCommand}"
+                                                   ToolTip="{Binding RemoveName}"
+                                                   AutomationProperties.Name="{Binding RemoveName}">
+                                            <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
+                                        </ui:Button>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ui:Button DockPanel.Dock="Right"
+                               Appearance="Primary"
+                               CornerRadius="{StaticResource GM.ComposerCorner}"
+                               Command="{Binding AddTaskCommand}"
+                               ToolTip="{DynamicResource Composer.Add}"
+                               AutomationProperties.Name="{DynamicResource Composer.Add}">
+                        <ui:SymbolIcon Symbol="Send24" />
+                    </ui:Button>
+                    <ui:TextBox Margin="0,0,8,0"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                PlaceholderText="{DynamicResource Composer.Placeholder}"
+                                Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                                AutomationProperties.Name="{DynamicResource Composer.Placeholder}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

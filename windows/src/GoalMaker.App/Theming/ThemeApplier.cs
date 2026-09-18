@@ -34,6 +34,12 @@ public sealed class ThemeApplier : IDisposable
     /// <summary>Whether the last applied appearance came out dark (for previews of the other themes).</summary>
     public bool IsDark { get; private set; }
 
+    /// <summary>Whether animations should become short fades (the system setting or the in-app switch).</summary>
+    public bool MotionReduced { get; private set; }
+
+    /// <summary>After every Apply, so views can rebuild what they colored in code (area dots).</summary>
+    public event EventHandler? Applied;
+
     /// <summary>
     /// The body font becomes the window's default. The window's background stays WPF UI's (it sets it
     /// in code); MainWindow's root grid paints GM.BackgroundBrush over it, title bar included.
@@ -62,12 +68,14 @@ public sealed class ThemeApplier : IDisposable
         SetDensity(Tokens.Density);
         resources["GM.HeadlineUppercase"] = theme.Typography.Heading.Uppercase;
         resources["GM.IsDark"] = IsDark;
-        resources["GM.ReduceMotion"] = appearance.ReduceMotion switch
+        MotionReduced = appearance.ReduceMotion switch
         {
             ReduceMotion.On => true,
             ReduceMotion.Off => false,
             _ => !SystemParameters.ClientAreaAnimation,
         };
+        resources["GM.ReduceMotion"] = MotionReduced;
+        Applied?.Invoke(this, EventArgs.Empty);
     }
 
     public void Dispose() => SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;

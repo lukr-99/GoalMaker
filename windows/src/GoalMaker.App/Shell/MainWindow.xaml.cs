@@ -10,7 +10,7 @@ namespace GoalMaker.App.Shell;
 
 /// <summary>
 /// The main window. Closing hides it to the tray unless the app is quitting. It reopens where it was
-/// last, when that spot is still on a connected screen.
+/// last, when that spot is still on a connected screen, with the sidebar as it was left.
 /// </summary>
 public partial class MainWindow
 {
@@ -26,8 +26,13 @@ public partial class MainWindow
         Navigation.SetPageProviderService(new PageProvider(new Dictionary<Type, Func<object>>
         {
             [typeof(TodayPage)] = () => new TodayPage(graph.Today),
+            [typeof(TomorrowPage)] = () => new TomorrowPage(graph.Tomorrow),
+            [typeof(InboxPage)] = () => new InboxPage(graph.Inbox),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage),
         }));
+        Navigation.IsPaneOpen = !settings.NavigationCollapsed;
+        Navigation.PaneOpened += (_, _) => settings.NavigationCollapsed = false;
+        Navigation.PaneClosed += (_, _) => settings.NavigationCollapsed = true;
         Navigation.Loaded += (_, _) => NavigateWhenReady();
         Navigation.IsVisibleChanged += (_, _) => NavigateWhenReady();
 
@@ -47,7 +52,13 @@ public partial class MainWindow
 
     public void Open(AppPage page)
     {
-        pendingPage = page == AppPage.Settings ? typeof(SettingsPage) : typeof(TodayPage);
+        pendingPage = page switch
+        {
+            AppPage.Tomorrow => typeof(TomorrowPage),
+            AppPage.Inbox => typeof(InboxPage),
+            AppPage.Settings => typeof(SettingsPage),
+            _ => typeof(TodayPage),
+        };
         NavigateWhenReady();
     }
 

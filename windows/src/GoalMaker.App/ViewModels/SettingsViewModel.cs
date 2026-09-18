@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
@@ -5,13 +6,14 @@ using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
 using GoalMaker.Core.Design;
+using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 
 namespace GoalMaker.App.ViewModels;
 
-/// <summary>Appearance, account, updates, about and (dev builds) the backend switch.</summary>
+/// <summary>Appearance, planning, account, updates, about and (dev builds) the backend switch.</summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly IAuthGateway auth;
@@ -23,6 +25,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly DesignTokens design;
     private readonly Func<bool> isDark;
     private readonly Action<Appearance> applyAppearance;
+    private readonly Action planningDayChanged;
     private readonly Action restartApp;
 
     [ObservableProperty]
@@ -71,6 +74,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         DesignTokens design,
         Func<bool> isDark,
         Action<Appearance> applyAppearance,
+        Action planningDayChanged,
         Action restartApp,
         Action<Action> runOnUi)
     {
@@ -83,6 +87,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         this.design = design;
         this.isDark = isDark;
         this.applyAppearance = applyAppearance;
+        this.planningDayChanged = planningDayChanged;
         this.restartApp = restartApp;
         appearance = settings.Appearance;
         backendUrlDraft = appInfo.Backend.Url;
@@ -142,6 +147,27 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         get => Appearance.CompletionSound;
         set => Appearance = Appearance with { CompletionSound = value };
+    }
+
+    /// <summary>The start hours to pick from, 00:00 to 06:00; the index is the hour.</summary>
+    public IReadOnlyList<string> DayStartHours { get; } =
+        [.. Enumerable.Range(0, PlanningDay.LatestStartHour + 1).Select(hour => new TimeOnly(hour, 0).ToString("t", CultureInfo.CurrentCulture))];
+
+    /// <summary>When the planning day starts (docs/lists.md); changing it moves the lists at once.</summary>
+    public int DayStartHour
+    {
+        get => settings.DayStartHour;
+        set
+        {
+            if (value < 0 || value == settings.DayStartHour)
+            {
+                return;
+            }
+
+            settings.DayStartHour = value;
+            OnPropertyChanged();
+            planningDayChanged();
+        }
     }
 
     public bool HasUpdateStatus => UpdateStatus.Length > 0;

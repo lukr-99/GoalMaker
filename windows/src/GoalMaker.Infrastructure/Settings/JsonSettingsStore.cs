@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GoalMaker.Core.Backend;
+using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 
 namespace GoalMaker.Infrastructure.Settings;
@@ -33,6 +34,18 @@ public sealed class JsonSettingsStore : ISettingsStore
             ReduceMotion = value.ReduceMotion,
             CompletionSound = value.CompletionSound,
         });
+    }
+
+    public int DayStartHour
+    {
+        get => Math.Clamp(document.DayStartHour, 0, PlanningDay.LatestStartHour);
+        set => Save(document with { DayStartHour = Math.Clamp(value, 0, PlanningDay.LatestStartHour) });
+    }
+
+    public bool NavigationCollapsed
+    {
+        get => document.NavigationCollapsed;
+        set => Save(document with { NavigationCollapsed = value });
     }
 
     public BackendEnvironment? BackendOverride

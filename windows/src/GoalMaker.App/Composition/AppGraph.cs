@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using GoalMaker.App.Localization;
+using GoalMaker.App.Shell;
 using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.About;
@@ -26,6 +27,7 @@ public sealed class AppGraph : IDisposable
 {
     private static readonly TimeSpan SyncDebounce = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(5);
+    private static readonly TimeSpan DayCheckInterval = TimeSpan.FromMinutes(1);
 
     private readonly Supabase.Client supabase;
     private readonly IDisposable? signatureKey;
@@ -34,6 +36,9 @@ public sealed class AppGraph : IDisposable
     private readonly SupabaseChangeFeed changeFeed;
     private readonly SyncedTableCatalog catalog;
     private readonly Action<Action> runOnUi;
+    private readonly TickSound tick = new();
+    private readonly ITimer dayCheck;
+    private DateOnly shownDay;
     private CancellationTokenSource? periodicSync;
 
     public AppGraph(
@@ -90,10 +95,30 @@ public sealed class AppGraph : IDisposable
 
         Theme = new ThemeApplier(design, appResources);
         SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null);
-        Shell = new ShellViewModel(Auth, SignIn, strings, runOnUi);
-        Today = new TodayViewModel(Tasks, Areas, Tags, Sync, Auth, strings, TimeProvider.System, id => Theme.AreaBrush(id), runOnUi);
+        Shell = new ShellViewModel(Auth, SignIn, runOnUi);
+
+        // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
+        ListViewModel List(ListKind kind, Func<DateOnly, DateOnly?> defaultDay) => new(
+            kind,
+            Tasks,
+            Areas,
+            new ComposerViewModel(Tasks, Areas, Tags, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi),
+            Sync,
+            Settings,
+            strings,
+            TimeProvider.System,
+            Theme.AreaBrush,
+            () => Theme.MotionReduced,
+            tick,
+            runOnUi);
+        Today = List(ListKind.Today, today => today);
+        Tomorrow = List(ListKind.Tomorrow, today => today.AddDays(1));
+        Inbox = List(ListKind.Inbox, _ => null);
+        shownDay = PlanningDay.Of(DateTime.Now, Settings.DayStartHour);
+        Theme.Applied += (_, _) => RefreshLists();
+        dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, restartApp, runOnUi);
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, RefreshLists, restartApp, runOnUi);
     }
 
     public AppDataPaths Paths { get; }
@@ -120,7 +145,11 @@ public sealed class AppGraph : IDisposable
 
     public ShellViewModel Shell { get; }
 
-    public TodayViewModel Today { get; }
+    public ListViewModel Today { get; }
+
+    public ListViewModel Tomorrow { get; }
+
+    public ListViewModel Inbox { get; }
 
     public SettingsViewModel SettingsPage { get; }
 
@@ -129,6 +158,8 @@ public sealed class AppGraph : IDisposable
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
         periodicSync?.Cancel();
         periodicSync?.Dispose();
+        dayCheck.Dispose();
+        tick.Dispose();
         _ = changeFeed.DisposeAsync().AsTask();
         Theme.Dispose();
         Sync.Dispose();
@@ -159,6 +190,23 @@ public sealed class AppGraph : IDisposable
 
         periodicSync = new CancellationTokenSource();
         _ = SyncPeriodicallyAsync(periodicSync.Token);
+    }
+
+    // The lists move on when the planning day does (at the start hour, not midnight).
+    private void RefreshOnNewDay()
+    {
+        if (PlanningDay.Of(DateTime.Now, Settings.DayStartHour) != shownDay)
+        {
+            RefreshLists();
+        }
+    }
+
+    private void RefreshLists()
+    {
+        shownDay = PlanningDay.Of(DateTime.Now, Settings.DayStartHour);
+        Today.Refresh();
+        Tomorrow.Refresh();
+        Inbox.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

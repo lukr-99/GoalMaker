@@ -1,3 +1,4 @@
+using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 
 namespace GoalMaker.Infrastructure.Settings;
@@ -16,6 +17,10 @@ public sealed record SettingsDocument
     public ReduceMotion ReduceMotion { get; init; } = ReduceMotion.System;
 
     public bool CompletionSound { get; init; }
+
+    public int DayStartHour { get; init; } = PlanningDay.DefaultStartHour;
+
+    public bool NavigationCollapsed { get; init; }
 
     public string? BackendUrl { get; init; }
 

@@ -9,6 +9,8 @@
     <sys:String x:Key="Tray.Quit">Quit</sys:String>
 
     <sys:String x:Key="Nav.Today">Today</sys:String>
+    <sys:String x:Key="Nav.Tomorrow">Tomorrow</sys:String>
+    <sys:String x:Key="Nav.Inbox">Inbox</sys:String>
     <sys:String x:Key="Nav.Settings">Settings</sys:String>
 
     <sys:String x:Key="SignIn.Title">Plan tomorrow.&#10;Keep your goals alive.</sys:String>
@@ -28,13 +30,27 @@
     <sys:String x:Key="SignIn.Error.Other">Sign-in failed: {0}</sys:String>
     <sys:String x:Key="SignIn.DevBackend">Development build · {0}</sys:String>
 
-    <sys:String x:Key="Today.Title">Today</sys:String>
-    <sys:String x:Key="Today.Greeting">Signed in as {0}</sys:String>
-    <sys:String x:Key="Today.ComposerPlaceholder">Add a task…</sys:String>
-    <sys:String x:Key="Today.Add">Add task</sys:String>
-    <sys:String x:Key="Today.Delete">Delete task</sys:String>
-    <sys:String x:Key="Today.Empty">Nothing open. Add a task below.</sys:String>
+    <!-- Lists (docs/lists.md) -->
+    <sys:String x:Key="Lists.Today">Today</sys:String>
+    <sys:String x:Key="Lists.Tomorrow">Tomorrow</sys:String>
+    <sys:String x:Key="Lists.Inbox">Inbox</sys:String>
+    <sys:String x:Key="Lists.Priorities">Top priorities</sys:String>
+    <sys:String x:Key="Lists.Scheduled">Scheduled</sys:String>
+    <sys:String x:Key="Lists.More">More today</sys:String>
+    <sys:String x:Key="Lists.Overdue">Overdue · {0}</sys:String>
+    <sys:String x:Key="Lists.TodaySummary">{0} · {1} of {2} done</sys:String>
+    <sys:String x:Key="Lists.InboxCount">{0} to sort</sys:String>
+    <sys:String x:Key="Lists.TodayEmpty">Nothing planned for today. Add a task below or pick one from the Inbox.</sys:String>
+    <sys:String x:Key="Lists.TomorrowEmpty">Nothing for tomorrow yet. Anything you add here lands on tomorrow.</sys:String>
+    <sys:String x:Key="Lists.InboxEmpty">Inbox zero. Anything without a day or an area lands here.</sys:String>
+    <sys:String x:Key="Lists.Delete">Delete task</sys:String>
+    <sys:String x:Key="Lists.Repeats">Repeats</sys:String>
+    <sys:String x:Key="Lists.Done">Done: {0}</sys:String>
+    <sys:String x:Key="Lists.Deleted">Deleted: {0}</sys:String>
+    <sys:String x:Key="Lists.Undo">Undo</sys:String>
 
+    <sys:String x:Key="Composer.Placeholder">Add a task…</sys:String>
+    <sys:String x:Key="Composer.Add">Add task</sys:String>
     <sys:String x:Key="Composer.Today">Today</sys:String>
     <sys:String x:Key="Composer.Tomorrow">Tomorrow</sys:String>
     <sys:String x:Key="Composer.Priority">Top priority</sys:String>
@@ -72,6 +88,9 @@
     <sys:String x:Key="Settings.ThemeSystem">System</sys:String>
     <sys:String x:Key="Settings.ThemeLight">Light</sys:String>
     <sys:String x:Key="Settings.ThemeDark">Dark</sys:String>
+    <sys:String x:Key="Settings.Planning">Planning</sys:String>
+    <sys:String x:Key="Settings.DayStart">The day starts at</sys:String>
+    <sys:String x:Key="Settings.DayStartHint">Until then it's still yesterday, so planning after midnight lands on the right tomorrow.</sys:String>
     <sys:String x:Key="Settings.Account">Account</sys:String>
     <sys:String x:Key="Settings.SignOut">Sign out</sys:String>
     <sys:String x:Key="Settings.SignOutUnsynced">{0} change(s) haven't reached the server yet. Signing out now deletes them from this PC.</sys:String>
