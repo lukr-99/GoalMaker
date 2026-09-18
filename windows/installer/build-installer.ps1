@@ -49,7 +49,8 @@ if (Test-Path -LiteralPath $publish) { Remove-Item -LiteralPath $publish -Recurs
 
 $releaseFlag = if ($Dev) { 'false' } else { 'true' }
 Write-Host "Publishing GoalMaker $version..." -ForegroundColor Cyan
-# Framework-dependent: about 4 MB instead of 46 MB, far below the update channel's 50 MB limit (ADR 0004).
+# Framework-dependent: about 9 MB with the Windows SDK projection for toasts (ADR 0009), instead of
+# 50 MB and more self-contained, far below the update channel's 50 MB limit (ADR 0004).
 & dotnet publish $project -c Release -r win-x64 --self-contained false `
     -p:PublishSingleFile=false -p:GoalMakerReleaseBuild=$releaseFlag -p:DebugType=none -o $publish --nologo
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed.' }

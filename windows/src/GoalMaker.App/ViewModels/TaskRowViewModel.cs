@@ -8,7 +8,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// One task in a list: the done box, the title, and what else it says (time, the day when overdue,
-/// area, repeat, top priority). Checking it and deleting it go through the list, which offers undo.
+/// area, repeat, top priority, a waiting reminder). Checking it and deleting it go through the list,
+/// which offers undo; its menu sets and removes reminders (docs/reminders.md).
 /// </summary>
 public sealed partial class TaskRowViewModel : ObservableObject
 {
@@ -17,8 +18,18 @@ public sealed partial class TaskRowViewModel : ObservableObject
     [ObservableProperty]
     private bool isDone;
 
-    public TaskRowViewModel(TaskItem item, AreaItem? area, Brush? areaBrush, bool showDay, Action<TaskRowViewModel> complete, Action<TaskRowViewModel> delete)
+    public TaskRowViewModel(
+        TaskItem item,
+        AreaItem? area,
+        Brush? areaBrush,
+        bool showDay,
+        Action<TaskRowViewModel> complete,
+        Action<TaskRowViewModel> delete,
+        bool hasReminder = false,
+        IReadOnlyList<ReminderChoice>? reminderChoices = null)
     {
+        HasReminder = hasReminder;
+        ReminderChoices = reminderChoices ?? [];
         this.complete = complete;
         Item = item;
         AreaName = area?.Name ?? string.Empty;
@@ -51,6 +62,13 @@ public sealed partial class TaskRowViewModel : ObservableObject
     public bool TopPriority => Item.TopPriority;
 
     public IRelayCommand DeleteCommand { get; }
+
+    /// <summary>Whether a reminder is still waiting for this task.</summary>
+    public bool HasReminder { get; }
+
+    public IReadOnlyList<ReminderChoice> ReminderChoices { get; }
+
+    public bool CanRemind => ReminderChoices.Count > 0;
 
     partial void OnIsDoneChanged(bool value)
     {

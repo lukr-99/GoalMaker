@@ -44,7 +44,8 @@ composition root creates everything
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
   (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
-  `WorkManagerSyncScheduler`).
+  `WorkManagerSyncScheduler`), `planning/` (`AlarmReminderScheduler`, `ReminderNotifications`,
+  `ReminderReceiver`).
 - `ui/`: `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `signin/`,
   `today/`, `settings/`, `nav/` (Navigation 3 back stack).
 - `composition/AppGraph` is the composition root, owned by `GoalMakerApplication`, which also hands
@@ -57,9 +58,10 @@ composition root creates everything
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
   `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
-  `Sync/PostgrestRemoteTables` and `Sync/SupabaseChangeFeed`.
-- `GoalMaker.App` (WPF): `Composition/AppGraph` (composition root), `Shell/` (Fluent main window,
-  tray icon, page provider), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
+  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed` and `Planning/TimerReminderScheduler`.
+- `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
+  `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon, page provider,
+  reminder toasts), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
   (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`.
 - `dotnetlib` was evaluated and is not referenced yet (ADR 0006).
@@ -109,8 +111,14 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   happen at sign-in, when the app comes to the front, on Realtime events and (re)joins, every
   5 minutes on Windows and every 15 minutes through WorkManager on Android. Offline, both retry on
   their own (15 s doubling to 5 min), and Android also queues a network-constrained worker.
+- **Reminders ([docs/reminders.md](docs/reminders.md)):** each device resolves reminders from its
+  replica and keeps one alarm (Android `AlarmManager`) or timer (the Windows tray app) armed for the
+  next. When it goes off, or the device boots, wakes or changes its clock, the device shows what
+  arrived since its last look and arms the next. Buttons write the reminder's state through the
+  outbox; after every sync each device takes down notifications that went stale.
 - **Sign-out:** push once more, then empty the replica; if changes can't be pushed, ask first.
-- **Settings:** theme, dev backend override and (Windows) window placement stay on the device.
+- **Settings:** theme, quiet hours, the last reminder look, dev backend override and (Windows)
+  window placement stay on the device.
 
 ## Capability modules
 
@@ -120,6 +128,9 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 - **syncing:** `Replica` / `IReplica` and `RemoteTables` / `IRemoteTables`, run by `SyncEngine` and
   scheduled by `SyncCoordinator`. Health shows under Today's title (synced at, syncing, offline
   with the number of waiting changes, or changes the server refused).
+- **reminding:** `ReminderScheduler` / `IReminderScheduler` (the platform's one alarm or timer),
+  run by `ReminderService` over `ReminderList` and the shared `ReminderSchedule` rules; the platform
+  shows and takes down the notifications.
 
 ## Connections
 
@@ -151,6 +162,8 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 - The Supabase free plan allows 50 MB per stored file and two active projects per organization.
 - The default Supabase email service only delivers to the project team's own addresses and is
   rate-limited, which suits a single owner.
+- Windows reminder toasts are heard only while GoalMaker runs (ADR 0009); quitting takes them
+  down, and the installer offers to start GoalMaker in the tray at sign-in for that reason.
 - WPF UI's navigation items don't expose an action to UI Automation; the accessibility pass in M6
   must cover them. Test scripts use the `--open` switch instead.
 - The Android session sits in private app storage unencrypted; encrypting it with the Android

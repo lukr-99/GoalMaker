@@ -1,6 +1,6 @@
 # M2-09: Reminders and notifications
 
-**Status:** Android done 2026-09-18, Windows left · **Milestone:** M2
+**Status:** both apps done 2026-09-18; the evening ritual reminder left · **Milestone:** M2
 
 ## Scope
 - Several reminders per task (fixed or relative), scheduled locally from the replica: Android exact
@@ -24,9 +24,16 @@
   `AlarmManager` alarm at a time through `AlarmReminderScheduler`, notifications with Done and two
   snoozes, and `ReminderReceiver` for the alarm, the buttons, a reboot, a changed clock or time
   zone, and an app update. Quiet hours are a device setting; a long press on a task sets a reminder.
+- Shared: each device remembers its last look, so a reminder is shown once and a device that was
+  off catches up; after a sync it takes down notifications that went stale, which is how handling a
+  reminder on one device clears the other. Both rules are in the vectors.
+- Android: opening the app from a notification dismisses it; important reminders ring until handled.
+- Windows (ADR 0009): toasts through the Windows SDK projection with Done and the three snoozes, one
+  timer in the tray app via `TimerReminderScheduler`, a look again after sleep and clock changes,
+  quiet hours in Settings, and a right-click menu on a task that sets or removes its reminders.
 
 ## Left
-- Windows: the tray app's scheduler and toast notifications with the same buttons.
-- The evening Plan tomorrow reminder and its synced "ritual ran today" record.
-- Important reminders that ring until handled, beyond the channel they already use.
+- The evening Plan tomorrow reminder, skipped when the ritual already ran on either device. It needs
+  a synced record of the ritual (a server and a replica migration with pgTAP tests), which waits for
+  Docker so the migration harness can run.
 - Verifying a reminder on two devices at once, which needs the cloud project or the local stack.

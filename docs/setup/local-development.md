@@ -56,7 +56,7 @@ and read the code in the mail viewer.
 
 ```powershell
 dotnet build windows\GoalMaker.slnx
-windows\src\GoalMaker.App\bin\Debug\net10.0-windows\GoalMaker.exe --no-activate
+windows\src\GoalMaker.App\bin\Debug\net10.0-windows10.0.19041.0\GoalMaker.exe --no-activate
 ```
 
 Dev builds use `http://127.0.0.1:55321` and keep their files in `%LOCALAPPDATA%\GoalMaker-dev`

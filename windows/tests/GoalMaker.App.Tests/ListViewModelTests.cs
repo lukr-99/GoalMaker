@@ -126,7 +126,42 @@ public sealed class ListViewModelTests : IDisposable
         Assert.True(today.Sections.Single().IsCollapsible);
     }
 
-    private ListViewModel List(ListKind kind)
+    [Fact]
+    public void ATaskWithATimeOffersToCountBackAndMarksAWaitingReminder()
+    {
+        var reminders = new ReminderService(planner.Reminders, planner.Tasks, new NoTimer(), planner.Settings, planner.Time);
+        var today = List(ListKind.Today, reminders);
+        Add(today, "Call the bank 17:00");
+        var row = today.Sections.Single().Rows.Single();
+
+        Assert.False(row.HasReminder);
+        Assert.Equal(
+            ["Reminder.WhenDue", "Reminder.QuarterBefore", "Reminder.HourBefore", "Reminder.InAnHour", "Reminder.TomorrowMorning"],
+            row.ReminderChoices.Select(choice => choice.Label));
+
+        row.ReminderChoices[1].Command.Execute(null);
+
+        var reminded = today.Sections.Single().Rows.Single();
+        Assert.True(reminded.HasReminder);
+        Assert.Equal("Reminder.RemoveBefore(15)", reminded.ReminderChoices[^1].Label);
+
+        reminded.ReminderChoices[^1].Command.Execute(null);
+        Assert.False(today.Sections.Single().Rows.Single().HasReminder);
+    }
+
+    [Fact]
+    public void ATaskWithoutATimeOnlyOffersTimesOfItsOwn()
+    {
+        var reminders = new ReminderService(planner.Reminders, planner.Tasks, new NoTimer(), planner.Settings, planner.Time);
+        var inbox = List(ListKind.Inbox, reminders);
+        Add(inbox, "Buy milk");
+
+        Assert.Equal(
+            ["Reminder.InAnHour", "Reminder.TomorrowMorning"],
+            inbox.Sections.Single().Rows.Single().ReminderChoices.Select(choice => choice.Label));
+    }
+
+    private ListViewModel List(ListKind kind, ReminderService? reminders = null)
     {
         Func<DateOnly, DateOnly?> defaultDay = kind switch
         {
@@ -137,7 +172,19 @@ public sealed class ListViewModelTests : IDisposable
         var composer = new ComposerViewModel(
             planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, planner.Time, _ => null, defaultDay, action => action());
         return new ListViewModel(
-            kind, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, planner.Strings, planner.Time, _ => null, () => true, planner.Tick, action => action());
+            kind,
+            planner.Tasks,
+            planner.Areas,
+            composer,
+            planner.Sync,
+            planner.Settings,
+            planner.Strings,
+            planner.Time,
+            _ => null,
+            () => true,
+            planner.Tick,
+            action => action(),
+            reminders: reminders);
     }
 
     // A second apart, so creation order breaks ties the way the test reads.
@@ -150,4 +197,15 @@ public sealed class ListViewModelTests : IDisposable
     }
 
     private TaskItem Task(string title) => planner.Task(title);
+
+    private sealed class NoTimer : IReminderScheduler
+    {
+        public void ArmAt(DateTime at)
+        {
+        }
+
+        public void Cancel()
+        {
+        }
+    }
 }

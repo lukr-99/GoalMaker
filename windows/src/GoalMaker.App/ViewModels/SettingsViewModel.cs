@@ -26,6 +26,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly Func<bool> isDark;
     private readonly Action<Appearance> applyAppearance;
     private readonly Action planningDayChanged;
+    private readonly Action quietHoursChanged;
     private readonly Action restartApp;
 
     [ObservableProperty]
@@ -75,6 +76,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         Func<bool> isDark,
         Action<Appearance> applyAppearance,
         Action planningDayChanged,
+        Action quietHoursChanged,
         Action restartApp,
         Action<Action> runOnUi)
     {
@@ -88,6 +90,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         this.isDark = isDark;
         this.applyAppearance = applyAppearance;
         this.planningDayChanged = planningDayChanged;
+        this.quietHoursChanged = quietHoursChanged;
         this.restartApp = restartApp;
         appearance = settings.Appearance;
         backendUrlDraft = appInfo.Backend.Url;
@@ -170,7 +173,47 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>The hours quiet hours can start or end at, 00:00 to 23:00; the index is the hour.</summary>
+    public IReadOnlyList<string> QuietHourChoices { get; } =
+        [.. Enumerable.Range(0, 24).Select(hour => new TimeOnly(hour, 0).ToString("t", CultureInfo.CurrentCulture))];
+
+    /// <summary>When quiet hours start (docs/reminders.md); the same hour as the end switches them off.</summary>
+    public int QuietHoursStart
+    {
+        get => settings.QuietHours.Start.Hour;
+        set => SetQuietHours(settings.QuietHours with { Start = new TimeOnly(Math.Clamp(value, 0, 23), 0) });
+    }
+
+    public int QuietHoursEnd
+    {
+        get => settings.QuietHours.End.Hour;
+        set => SetQuietHours(settings.QuietHours with { End = new TimeOnly(Math.Clamp(value, 0, 23), 0) });
+    }
+
+    /// <summary>What the quiet hours do, in words.</summary>
+    public string QuietHoursSummary => settings.QuietHours.IsOff
+        ? strings.Get("Settings.QuietHoursOff")
+        : strings.Get(
+            "Settings.QuietHoursOn",
+            settings.QuietHours.Start.ToString("t", CultureInfo.CurrentCulture),
+            settings.QuietHours.End.ToString("t", CultureInfo.CurrentCulture));
+
     public bool HasUpdateStatus => UpdateStatus.Length > 0;
+
+    // Quiet hours move ordinary reminders, so the reminder timer is armed again.
+    private void SetQuietHours(QuietHours window)
+    {
+        if (window == settings.QuietHours)
+        {
+            return;
+        }
+
+        settings.QuietHours = window;
+        OnPropertyChanged(nameof(QuietHoursStart));
+        OnPropertyChanged(nameof(QuietHoursEnd));
+        OnPropertyChanged(nameof(QuietHoursSummary));
+        quietHoursChanged();
+    }
 
     public bool HasSignOutWarning => SignOutWarning.Length > 0;
 

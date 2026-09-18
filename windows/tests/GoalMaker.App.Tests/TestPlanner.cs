@@ -32,6 +32,7 @@ internal sealed class TestPlanner : IDisposable
         Areas = new AreaList(replica, rows, ["violet", "blue"], () => { });
         Tags = new TagList(replica, rows, () => { });
         Tasks = new TaskList(replica, rows, Areas, Tags, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
+        Reminders = new ReminderList(replica, rows, () => { }, () => TimeZoneInfo.Utc);
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -47,6 +48,8 @@ internal sealed class TestPlanner : IDisposable
     public TagList Tags { get; }
 
     public TaskList Tasks { get; }
+
+    public ReminderList Reminders { get; }
 
     public TickSound Tick { get; } = new();
 
@@ -80,6 +83,10 @@ internal sealed class TestPlanner : IDisposable
         public Appearance Appearance { get; set; } = Appearance.Default;
 
         public int DayStartHour { get; set; } = PlanningDay.DefaultStartHour;
+
+        public QuietHours QuietHours { get; set; } = QuietHours.Off;
+
+        public DateTimeOffset? RemindedUntil { get; set; }
 
         public bool NavigationCollapsed { get; set; }
 

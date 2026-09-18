@@ -115,6 +115,19 @@
                               SelectedIndex="{Binding DayStartHour}"
                               AutomationProperties.Name="{DynamicResource Settings.DayStart}" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.DayStartHint}" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox MinWidth="120"
+                                  ItemsSource="{Binding QuietHourChoices}"
+                                  SelectedIndex="{Binding QuietHoursStart}"
+                                  AutomationProperties.Name="{DynamicResource Settings.QuietHoursStart}" />
+                        <TextBlock VerticalAlignment="Center" Margin="12,0" Text="{DynamicResource Settings.QuietHoursTo}" />
+                        <ComboBox MinWidth="120"
+                                  ItemsSource="{Binding QuietHourChoices}"
+                                  SelectedIndex="{Binding QuietHoursEnd}"
+                                  AutomationProperties.Name="{DynamicResource Settings.QuietHoursEnd}" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding QuietHoursSummary}" />
                 </StackPanel>
             </ui:Card>
 

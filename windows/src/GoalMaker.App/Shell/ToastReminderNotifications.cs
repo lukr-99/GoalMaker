@@ -1,0 +1,124 @@
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Windows.Media.Imaging;
+using System.Xml.Linq;
+using GoalMaker.App.Localization;
+using GoalMaker.Core.Planning;
+using Microsoft.Win32;
+using Windows.UI.Notifications;
+using WinRtXml = Windows.Data.Xml.Dom;
+
+namespace GoalMaker.App.Shell;
+
+/// <summary>
+/// Reminder toasts through the Windows SDK, without MSIX or the Windows App SDK runtime (ADR 0009).
+/// The app registers its own AppUserModelID for the current user, shows each reminder tagged with its
+/// id, and hears the buttons while it runs, which the tray keeps it doing. An ordinary reminder uses
+/// the reminder style and stays until handled; an important one uses the alarm style and rings.
+/// </summary>
+public sealed class ToastReminderNotifications
+{
+    private const string Group = "reminders";
+    private readonly string appId;
+    private readonly IStrings strings;
+
+    public ToastReminderNotifications(string appId, string displayName, string iconPath, IStrings strings)
+    {
+        this.appId = appId;
+        this.strings = strings;
+        Register(displayName, iconPath);
+    }
+
+    /// <summary>A button or the toast itself was clicked, or the toast was closed. Raised off the UI thread.</summary>
+    public event EventHandler<ToastActivation>? Activated;
+
+    /// <summary>Shows <paramref name="reminder"/>. Does nothing when Windows won't show toasts for GoalMaker.</summary>
+    public void Show(ScheduledReminder reminder)
+    {
+        var content = new WinRtXml.XmlDocument();
+        content.LoadXml(Content(reminder).ToString(SaveOptions.DisableFormatting));
+        var toast = new ToastNotification(content) { Tag = reminder.Id, Group = Group };
+        toast.Activated += (_, args) =>
+        {
+            if (ToastActivation.Parse((args as ToastActivatedEventArgs)?.Arguments) is { } activation)
+            {
+                Activated?.Invoke(this, activation);
+            }
+        };
+        toast.Dismissed += (_, args) =>
+        {
+            if (args.Reason == ToastDismissalReason.UserCanceled)
+            {
+                Activated?.Invoke(this, new ToastActivation(ToastAction.Dismiss, reminder.Id));
+            }
+        };
+        Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>Takes a reminder's toast away, because it was handled here or on the other device.</summary>
+    public void Clear(string reminderId) => Try(() => ToastNotificationManager.History.Remove(reminderId, Group, appId));
+
+    /// <summary>Takes every reminder toast away, when GoalMaker quits and no longer hears the buttons.</summary>
+    public void ClearAll() => Try(() => ToastNotificationManager.History.Clear(appId));
+
+    /// <summary>The reminder ids whose toasts are on screen or in the notification centre.</summary>
+    public IReadOnlyList<string> Shown()
+    {
+        IReadOnlyList<string> shown = [];
+        Try(() => shown = [.. ToastNotificationManager.History.GetHistory(appId).Where(toast => toast.Group == Group).Select(toast => toast.Tag)]);
+        return shown;
+    }
+
+    private static void Try(Action action)
+    {
+        try
+        {
+            action();
+        }
+        catch (Exception error) when (error is COMException or UnauthorizedAccessException)
+        {
+            // Toasts are off for GoalMaker or blocked by policy; the reminder still settles in the replica.
+        }
+    }
+
+    // Windows shows toasts from an unpackaged app once its AppUserModelID has a name under HKCU.
+    private void Register(string displayName, string iconPath)
+    {
+        using (var key = Registry.CurrentUser.CreateSubKey($@"Software\Classes\AppUserModelId\{appId}"))
+        {
+            key.SetValue("DisplayName", displayName);
+            key.SetValue("IconUri", iconPath);
+        }
+
+        var decoder = new IconBitmapDecoder(new Uri("pack://application:,,,/Assets/GoalMaker.ico"), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(decoder.Frames.OrderByDescending(frame => frame.PixelWidth).First()));
+        Directory.CreateDirectory(Path.GetDirectoryName(iconPath)!);
+        using var stream = File.Create(iconPath);
+        encoder.Save(stream);
+    }
+
+    private XElement Content(ScheduledReminder reminder)
+    {
+        XElement Button(string label, ToastAction action, Snooze? snooze = null) => new(
+            "action",
+            new XAttribute("content", strings.Get(label)),
+            new XAttribute("arguments", new ToastActivation(action, reminder.Id, snooze).Arguments),
+            new XAttribute("activationType", "foreground"));
+
+        return new XElement(
+            "toast",
+            new XAttribute("scenario", reminder.Important ? "alarm" : "reminder"),
+            new XAttribute("launch", new ToastActivation(ToastAction.Open, reminder.Id).Arguments),
+            new XElement("visual", new XElement("binding", new XAttribute("template", "ToastGeneric"), new XElement("text", reminder.TaskTitle))),
+            reminder.Important
+                ? new XElement("audio", new XAttribute("src", "ms-winsoundevent:Notification.Looping.Alarm"), new XAttribute("loop", "true"))
+                : null,
+            new XElement(
+                "actions",
+                Button("Reminder.Done", ToastAction.Done),
+                Button("Reminder.SnoozeTenMinutes", ToastAction.Snooze, Snooze.TenMinutes),
+                Button("Reminder.SnoozeOneHour", ToastAction.Snooze, Snooze.OneHour),
+                Button("Reminder.SnoozeTomorrow", ToastAction.Snooze, Snooze.TomorrowMorning)));
+    }
+}

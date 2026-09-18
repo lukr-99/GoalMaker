@@ -28,6 +28,7 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly TickSound tick;
     private readonly Action<Action> runOnUi;
     private readonly Action? openPlan;
+    private readonly ReminderService? reminders;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -60,9 +61,11 @@ public sealed partial class ListViewModel : ObservableObject
         Func<bool> reduceMotion,
         TickSound tick,
         Action<Action> runOnUi,
-        Action? openPlan = null)
+        Action? openPlan = null,
+        ReminderService? reminders = null)
     {
         this.openPlan = openPlan;
+        this.reminders = reminders;
         Kind = kind;
         this.tasks = tasks;
         this.areas = areas;
@@ -88,6 +91,11 @@ public sealed partial class ListViewModel : ObservableObject
         });
         tasks.Changed += (_, _) => runOnUi(Refresh);
         areas.Changed += (_, _) => runOnUi(Refresh);
+        if (reminders is not null)
+        {
+            reminders.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         sync.StatusChanged += (_, status) => runOnUi(() => ShowSync(status));
         ShowSync(sync.Status);
         Refresh();
@@ -103,17 +111,64 @@ public sealed partial class ListViewModel : ObservableObject
 
     public ObservableCollection<ListSectionViewModel> Sections { get; } = [];
 
+    // What a task's menu offers (docs/reminders.md): counting back from its time when it has one, an
+    // hour from now, tomorrow morning, and taking away each reminder already set.
+    private IReadOnlyList<ReminderChoice> ReminderChoices(TaskItem task, IReadOnlyList<ReminderItem> own)
+    {
+        if (reminders is not { } service)
+        {
+            return [];
+        }
+
+        var now = time.GetLocalNow().DateTime;
+        var choices = new List<ReminderChoice>();
+        if (task.PlannedDate is not null && task.PlannedTime is not null)
+        {
+            choices.Add(new(strings.Get("Reminder.WhenDue"), new RelayCommand(() => service.AddBefore(task.Id, 0))));
+            choices.Add(new(strings.Get("Reminder.QuarterBefore"), new RelayCommand(() => service.AddBefore(task.Id, 15))));
+            choices.Add(new(strings.Get("Reminder.HourBefore"), new RelayCommand(() => service.AddBefore(task.Id, 60))));
+        }
+
+        choices.Add(new(strings.Get("Reminder.InAnHour"), new RelayCommand(() => service.AddAt(task.Id, time.GetLocalNow().DateTime.AddHours(1)))));
+        choices.Add(new(
+            strings.Get("Reminder.TomorrowMorning"),
+            new RelayCommand(() => service.AddAt(task.Id, Snooze.TomorrowMorning.Target(time.GetLocalNow().DateTime, settings.DayStartHour)))));
+        foreach (var reminder in own.Where(reminder => reminder.State is ReminderState.Pending or ReminderState.Snoozed))
+        {
+            var when = reminder.State == ReminderState.Snoozed ? reminder.SnoozedUntil : reminder.FireAt;
+            var label = (when, -(reminder.OffsetMinutes ?? 0)) switch
+            {
+                ({ } at, _) => strings.Get("Reminder.RemoveAt", at.ToString(at.Date == now.Date ? "t" : "g", CultureInfo.CurrentCulture)),
+                (null, 0) => strings.Get("Reminder.RemoveWhenDue"),
+                (null, var minutes) => strings.Get("Reminder.RemoveBefore", minutes),
+            };
+            choices.Add(new(label, new RelayCommand(() => service.Remove(reminder.Id))));
+        }
+
+        return choices;
+    }
+
     /// <summary>Rebuilds the list; also called when the planning day or its start hour may have moved on.</summary>
     public void Refresh()
     {
         var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
         var lists = ListRules.Lists(tasks.All(), today);
         var areaById = areas.All().ToDictionary(area => area.Id, StringComparer.Ordinal);
+        var remindersByTask = (reminders?.All() ?? []).ToLookup(reminder => reminder.TaskId, StringComparer.Ordinal);
         List<TaskRowViewModel> Rows(IEnumerable<TaskItem> items, bool showDay = false) =>
             [.. items.Select(item =>
             {
                 var area = item.AreaId is { } id ? areaById.GetValueOrDefault(id) : null;
-                return new TaskRowViewModel(item, area, area is null ? null : areaBrush(area.ColorId), showDay, Complete, Delete);
+                var own = remindersByTask[item.Id].ToList();
+                return new TaskRowViewModel(
+                    item,
+                    area,
+                    area is null ? null : areaBrush(area.ColorId),
+                    showDay,
+                    Complete,
+                    Delete,
+                    own.Any(reminder => reminder.State is ReminderState.Pending or ReminderState.Snoozed),
+                    ReminderChoices(item, own));
             })];
 
         Sections.Clear();

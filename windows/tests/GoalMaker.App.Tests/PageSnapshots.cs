@@ -63,6 +63,36 @@ public sealed class PageSnapshots
         Save(page, folder, "plan-3-done");
     });
 
+    [Fact(Explicit = true)]
+    public void TodayWithAReminder() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Call the bank 17:00", Today);
+        Add(planner, "Stretch !", Today);
+        Add(planner, "Buy milk", Today);
+        using var theme = Theme(planner);
+        var reminders = new ReminderService(planner.Reminders, planner.Tasks, new Unarmed(), planner.Settings, planner.Time);
+        reminders.AddBefore(planner.Task("Call the bank").Id, 15);
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+        var today = new ListViewModel(
+            ListKind.Today,
+            planner.Tasks,
+            planner.Areas,
+            composer,
+            planner.Sync,
+            planner.Settings,
+            strings,
+            planner.Time,
+            theme.AreaBrush,
+            () => true,
+            planner.Tick,
+            action => action(),
+            reminders: reminders);
+        Save(new TodayPage(today), folder, "today-with-a-reminder");
+    });
+
     private static void Add(TestPlanner planner, string line, DateOnly? day)
     {
         var draft = ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime) with { PlannedDate = day };
@@ -100,6 +130,17 @@ public sealed class PageSnapshots
         var frame = new DispatcherFrame();
         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, () => frame.Continue = false);
         Dispatcher.PushFrame(frame);
+    }
+
+    private sealed class Unarmed : IReminderScheduler
+    {
+        public void ArmAt(DateTime at)
+        {
+        }
+
+        public void Cancel()
+        {
+        }
     }
 
     // WPF needs one STA thread with an Application holding the app's resources; nothing is shown.

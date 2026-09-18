@@ -322,7 +322,7 @@ through the Gemini free tier follows as M7.
 ### Reminders
 
 - Each device schedules reminders locally from its replica: Android exact alarms (`AlarmManager`),
-  Windows through the tray app's scheduler plus Windows App SDK notifications.
+  Windows through the tray app's timer plus toast notifications (ADR 0009).
 - The phone stores every upcoming reminder in its database and reschedules on boot, time or time
   zone change and app update.
 - Reminder state changes (dismissed, done, snoozed) sync, and the other device cancels its copy.
@@ -379,8 +379,8 @@ it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build
 
 ### Windows
 
-.NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), LiveCharts2, Windows App SDK app
-notifications (unpackaged; to be confirmed in M2 against the framework-dependent installer),
+.NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), LiveCharts2, toast notifications
+through the Windows SDK projection (unpackaged, without the Windows App SDK; ADR 0009),
 NHotkey (global hotkey), Markdig, the Supabase C# client, the shared SQLite replica through
 Microsoft.Data.Sqlite (ADR 0007).
 Published framework-dependent to stay under the update channel's 50 MB file limit (ADR 0004).

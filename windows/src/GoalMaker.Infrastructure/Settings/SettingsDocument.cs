@@ -3,7 +3,7 @@ using GoalMaker.Core.Settings;
 
 namespace GoalMaker.Infrastructure.Settings;
 
-/// <summary>The settings file's shape. Version 1; appearance fields added in M2 read as defaults from older files.</summary>
+/// <summary>The settings file's shape. Version 1; fields added in M2 (appearance, quiet hours) read as defaults from older files.</summary>
 public sealed record SettingsDocument
 {
     public int Version { get; init; } = 1;
@@ -19,6 +19,12 @@ public sealed record SettingsDocument
     public bool CompletionSound { get; init; }
 
     public int DayStartHour { get; init; } = PlanningDay.DefaultStartHour;
+
+    public TimeOnly QuietHoursStart { get; init; }
+
+    public TimeOnly QuietHoursEnd { get; init; }
+
+    public DateTimeOffset? RemindedUntil { get; init; }
 
     public bool NavigationCollapsed { get; init; }
 

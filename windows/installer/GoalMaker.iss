@@ -16,10 +16,12 @@
   #define MyAppName "GoalMaker Dev"
   #define MyAppId "{{891D7456-7592-58C0-9CA8-9CF02297C384}"
   #define MyRunValue "GoalMaker-dev"
+  #define MyAppUserModelId "GoalMaker.Dev"
 #else
   #define MyAppName "GoalMaker"
   #define MyAppId "{{48A87E5D-3B3D-5624-859B-642F3C4ADBB8}"
   #define MyRunValue "GoalMaker"
+  #define MyAppUserModelId "GoalMaker"
 #endif
 #define MyAppPublisher "Lukáš Krejčí"
 #define MyAppExeName "GoalMaker.exe"
@@ -71,6 +73,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDi
 [Registry]
 ; Per-user sign-in start. Startup Profiles can manage this instead (Settings, Startup).
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyRunValue}"; ValueData: """{app}\{#MyAppExeName}"" --tray"; Tasks: startup; Flags: uninsdeletevalue
+; The app registers its AppUserModelID for reminder toasts at every start (ADR 0009); uninstalling removes it.
+Root: HKCU; Subkey: "Software\Classes\AppUserModelId\{#MyAppUserModelId}"; Flags: uninsdeletekey dontcreatekey
 
 [Run]
 ; Not skipifsilent: after a silent in-app update, GoalMaker starts again by itself.

@@ -38,6 +38,9 @@ public static partial class SyncRules
     public static string Format(DateTimeOffset instant) =>
         instant.ToUniversalTime().ToString(OutputFormat, CultureInfo.InvariantCulture);
 
+    /// <summary>A stored timestamp read back as an instant, or null when the text isn't one.</summary>
+    public static DateTimeOffset? InstantOf(string text) => Parse(text);
+
     private static DateTimeOffset? Parse(string text)
     {
         if (!Shape().IsMatch(text))

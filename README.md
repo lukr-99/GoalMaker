@@ -86,7 +86,7 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
   updates; release builds are plain `X.Y.Z`.
 - **Android:** a signed APK, sideloaded. Debug is `com.goalmaker.app.debug`, release
   `com.goalmaker.app`.
-- **Windows:** a per-user Inno Setup installer (framework-dependent, about 5 MB) that can start
+- **Windows:** a per-user Inno Setup installer (framework-dependent, about 9 MB) that can start
   GoalMaker in the tray at sign-in.
 - **Updates:** tag `vX.Y.Z` and the release workflow publishes the APK, the installer and a signed
   manifest to the private `releases` bucket, and drafts a GitHub Release. Apps check the bucket with

@@ -38,6 +38,11 @@ public partial class App : Application
         graph.Theme.Attach(window);
         graph.Theme.Apply(graph.Settings.Appearance);
         tray = new TrayIcon(strings, build.IsDevBuild, ShowMainWindow, Quit);
+        graph.WindowRequested += (_, page) =>
+        {
+            ShowMainWindow();
+            window.Open(page);
+        };
         instance.Listen(arguments => RunOnUi(() => Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
 
         Handle(StartupOptions.Parse(e.Args), secondLaunch: false);

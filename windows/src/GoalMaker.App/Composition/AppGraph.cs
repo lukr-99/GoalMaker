@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using GoalMaker.App.Localization;
@@ -12,11 +13,13 @@ using GoalMaker.Core.Settings;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 using GoalMaker.Infrastructure.Auth;
+using GoalMaker.Infrastructure.Planning;
 using GoalMaker.Infrastructure.Replica;
 using GoalMaker.Infrastructure.Settings;
 using GoalMaker.Infrastructure.Storage;
 using GoalMaker.Infrastructure.Sync;
 using GoalMaker.Infrastructure.Updates;
+using Microsoft.Win32;
 
 namespace GoalMaker.App.Composition;
 
@@ -39,6 +42,8 @@ public sealed class AppGraph : IDisposable
     private readonly Action<Action> runOnUi;
     private readonly TickSound tick = new();
     private readonly ITimer dayCheck;
+    private readonly TimerReminderScheduler reminderTimer;
+    private readonly ToastReminderNotifications toasts;
     private DateOnly shownDay;
     private CancellationTokenSource? periodicSync;
 
@@ -85,12 +90,32 @@ public sealed class AppGraph : IDisposable
         Tasks = new TaskList(
             replica, newRows, Areas, Tags, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
 
+        // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
+        // carries the next one, and toasts show them with the same buttons as the phone.
+        reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
+        Reminders = new ReminderService(new ReminderList(replica, newRows, Sync.Request), Tasks, reminderTimer, Settings, TimeProvider.System);
+        toasts = new ToastReminderNotifications(
+            build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
+            build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
+            Path.Combine(Paths.Root, "toast-icon.png"),
+            strings);
+        toasts.Activated += (_, activation) => runOnUi(() => OnToast(activation));
+        SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        SystemEvents.TimeChanged += OnTimeChanged;
+
         // A sync can leave a series with two open occurrences; every device settles it the same way.
+        // It can also move the next reminder, and settle ones on screen here that were handled on the
+        // phone, so the timer is armed again and stale toasts come down.
         Sync.RunCompleted += (_, report) =>
         {
             if (report.Pulled > 0)
             {
                 Tasks.RepairSeries();
+            }
+
+            if (report.Pulled > 0 || report.Pushed > 0)
+            {
+                runOnUi(SettleReminders);
             }
         };
         changeFeed = new SupabaseChangeFeed(supabase, catalog, Sync.Request);
@@ -125,7 +150,8 @@ public sealed class AppGraph : IDisposable
             () => Theme.MotionReduced,
             tick,
             runOnUi,
-            OpenPlan);
+            OpenPlan,
+            Reminders);
         Today = List(ListKind.Today, today => today);
         Tomorrow = List(ListKind.Tomorrow, today => today.AddDays(1));
         Inbox = List(ListKind.Inbox, _ => null);
@@ -144,7 +170,7 @@ public sealed class AppGraph : IDisposable
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, RefreshLists, restartApp, runOnUi);
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, RefreshLists, Reminders.Rearm, restartApp, runOnUi);
     }
 
     public AppDataPaths Paths { get; }
@@ -167,6 +193,11 @@ public sealed class AppGraph : IDisposable
 
     public ThemeApplier Theme { get; }
 
+    public ReminderService Reminders { get; }
+
+    /// <summary>A reminder toast was clicked, so the main window should come up on this page.</summary>
+    public event EventHandler<AppPage>? WindowRequested;
+
     /// <summary>A view model asks for a page (Plan tomorrow from a list, Today when the ritual ends); MainWindow opens it.</summary>
     public event EventHandler<AppPage>? PageRequested;
 
@@ -187,6 +218,12 @@ public sealed class AppGraph : IDisposable
     public void Dispose()
     {
         NetworkChange.NetworkAvailabilityChanged -= OnNetworkAvailabilityChanged;
+        SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        SystemEvents.TimeChanged -= OnTimeChanged;
+        reminderTimer.Dispose();
+
+        // Nothing hears the buttons once GoalMaker has quit; the reminders wait in the replica.
+        toasts.ClearAll();
         periodicSync?.Cancel();
         periodicSync?.Dispose();
         dayCheck.Dispose();
@@ -209,11 +246,14 @@ public sealed class AppGraph : IDisposable
         {
             Sync.CancelScheduled();
             _ = changeFeed.StopAsync();
+            reminderTimer.Cancel();
+            toasts.ClearAll();
             return;
         }
 
         ForgetOtherAccounts(signedIn.UserId);
         Sync.Request();
+        runOnUi(LookAtReminders);
         if (supabase.Auth.CurrentSession?.AccessToken is { } token)
         {
             _ = changeFeed.StartAsync(token);
@@ -222,6 +262,64 @@ public sealed class AppGraph : IDisposable
         periodicSync = new CancellationTokenSource();
         _ = SyncPeriodicallyAsync(periodicSync.Token);
     }
+
+    // Shows what arrived since the last look, including anything missed while the PC slept, and arms
+    // the timer for the next one.
+    private void LookAtReminders()
+    {
+        if (Auth.Session is not AuthSession.SignedIn)
+        {
+            return;
+        }
+
+        foreach (var reminder in Reminders.CatchUp())
+        {
+            toasts.Show(reminder);
+        }
+    }
+
+    private void SettleReminders()
+    {
+        Reminders.Rearm();
+        foreach (var id in Reminders.Stale(toasts.Shown()))
+        {
+            toasts.Clear(id);
+        }
+    }
+
+    private void OnToast(ToastActivation activation)
+    {
+        switch (activation.Action)
+        {
+            case ToastAction.Done:
+                Reminders.Done(activation.ReminderId);
+                break;
+            case ToastAction.Snooze when activation.Snooze is { } option:
+                Reminders.Snooze(activation.ReminderId, option);
+                break;
+            case ToastAction.Open:
+                // Opening GoalMaker from a reminder counts as dismissing it (docs/reminders.md).
+                Reminders.Dismiss(activation.ReminderId);
+                WindowRequested?.Invoke(this, AppPage.Today);
+                break;
+            default:
+                Reminders.Dismiss(activation.ReminderId);
+                break;
+        }
+
+        toasts.Clear(activation.ReminderId);
+    }
+
+    // A timer doesn't run while the PC sleeps, and a changed clock moves every reminder.
+    private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == PowerModes.Resume)
+        {
+            runOnUi(LookAtReminders);
+        }
+    }
+
+    private void OnTimeChanged(object? sender, EventArgs e) => runOnUi(LookAtReminders);
 
     // The lists move on when the planning day does (at the start hour, not midnight).
     private void RefreshOnNewDay()

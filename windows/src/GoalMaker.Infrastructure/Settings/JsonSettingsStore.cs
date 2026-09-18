@@ -42,6 +42,18 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { DayStartHour = Math.Clamp(value, 0, PlanningDay.LatestStartHour) });
     }
 
+    public QuietHours QuietHours
+    {
+        get => new(document.QuietHoursStart, document.QuietHoursEnd);
+        set => Save(document with { QuietHoursStart = value.Start, QuietHoursEnd = value.End });
+    }
+
+    public DateTimeOffset? RemindedUntil
+    {
+        get => document.RemindedUntil;
+        set => Save(document with { RemindedUntil = value });
+    }
+
     public bool NavigationCollapsed
     {
         get => document.NavigationCollapsed;

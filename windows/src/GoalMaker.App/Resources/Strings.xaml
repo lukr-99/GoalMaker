@@ -8,6 +8,20 @@
     <sys:String x:Key="Tray.Open">Open GoalMaker</sys:String>
     <sys:String x:Key="Tray.Quit">Quit</sys:String>
 
+    <sys:String x:Key="Reminder.Done">Done</sys:String>
+    <sys:String x:Key="Reminder.SnoozeTenMinutes">10 min</sys:String>
+    <sys:String x:Key="Reminder.SnoozeOneHour">1 hour</sys:String>
+    <sys:String x:Key="Reminder.SnoozeTomorrow">Tomorrow morning</sys:String>
+    <sys:String x:Key="Reminder.Waiting">A reminder is set</sys:String>
+    <sys:String x:Key="Reminder.WhenDue">Remind me when it starts</sys:String>
+    <sys:String x:Key="Reminder.QuarterBefore">Remind me 15 minutes before</sys:String>
+    <sys:String x:Key="Reminder.HourBefore">Remind me an hour before</sys:String>
+    <sys:String x:Key="Reminder.InAnHour">Remind me in an hour</sys:String>
+    <sys:String x:Key="Reminder.TomorrowMorning">Remind me tomorrow morning</sys:String>
+    <sys:String x:Key="Reminder.RemoveAt">Remove the reminder at {0}</sys:String>
+    <sys:String x:Key="Reminder.RemoveBefore">Remove the reminder {0} min before</sys:String>
+    <sys:String x:Key="Reminder.RemoveWhenDue">Remove the reminder when it starts</sys:String>
+
     <sys:String x:Key="Nav.Today">Today</sys:String>
     <sys:String x:Key="Nav.Tomorrow">Tomorrow</sys:String>
     <sys:String x:Key="Nav.Inbox">Inbox</sys:String>
@@ -126,6 +140,12 @@
     <sys:String x:Key="Settings.Planning">Planning</sys:String>
     <sys:String x:Key="Settings.DayStart">The day starts at</sys:String>
     <sys:String x:Key="Settings.DayStartHint">Until then it's still yesterday, so planning after midnight lands on the right tomorrow.</sys:String>
+    <sys:String x:Key="Settings.QuietHours">Quiet hours</sys:String>
+    <sys:String x:Key="Settings.QuietHoursStart">Quiet hours start</sys:String>
+    <sys:String x:Key="Settings.QuietHoursEnd">Quiet hours end</sys:String>
+    <sys:String x:Key="Settings.QuietHoursTo">to</sys:String>
+    <sys:String x:Key="Settings.QuietHoursOff">Off, because they start and end at the same hour. Every reminder arrives at its time.</sys:String>
+    <sys:String x:Key="Settings.QuietHoursOn">Ordinary reminders between {0} and {1} wait for the end. Important ones still ring.</sys:String>
     <sys:String x:Key="Settings.Account">Account</sys:String>
     <sys:String x:Key="Settings.SignOut">Sign out</sys:String>
     <sys:String x:Key="Settings.SignOutUnsynced">{0} change(s) haven't reached the server yet. Signing out now deletes them from this PC.</sys:String>

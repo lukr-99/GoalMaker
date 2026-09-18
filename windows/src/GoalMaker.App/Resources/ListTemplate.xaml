@@ -79,6 +79,17 @@
                                                         MinHeight="{DynamicResource GM.RowMinHeight}"
                                                         CornerRadius="{DynamicResource GM.RowCorner}"
                                                         Background="{DynamicResource GM.SurfaceBrush}">
+                                                    <!-- Right click, or the menu key on the focused row: set or remove reminders. -->
+                                                    <Border.ContextMenu>
+                                                        <ContextMenu ItemsSource="{Binding ReminderChoices}">
+                                                            <ContextMenu.ItemContainerStyle>
+                                                                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                                                    <Setter Property="Header" Value="{Binding Label}" />
+                                                                    <Setter Property="Command" Value="{Binding Command}" />
+                                                                </Style>
+                                                            </ContextMenu.ItemContainerStyle>
+                                                        </ContextMenu>
+                                                    </Border.ContextMenu>
                                                     <DockPanel VerticalAlignment="Center">
                                                         <ui:Button DockPanel.Dock="Right"
                                                                    Appearance="Transparent"
@@ -89,6 +100,14 @@
                                                                    AutomationProperties.Name="{DynamicResource Lists.Delete}">
                                                             <ui:SymbolIcon Symbol="Delete24" />
                                                         </ui:Button>
+                                                        <ui:SymbolIcon DockPanel.Dock="Right"
+                                                                       Margin="4,0,8,0"
+                                                                       FontSize="14"
+                                                                       Symbol="Alert16"
+                                                                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                                       ToolTip="{DynamicResource Reminder.Waiting}"
+                                                                       AutomationProperties.Name="{DynamicResource Reminder.Waiting}"
+                                                                       Visibility="{Binding HasReminder, Converter={StaticResource BoolToVisibility}}" />
                                                         <TextBlock DockPanel.Dock="Right"
                                                                    Margin="8,0"
                                                                    VerticalAlignment="Center"
