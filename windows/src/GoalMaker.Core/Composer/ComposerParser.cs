@@ -17,13 +17,23 @@ public static partial class ComposerParser
 
     private static readonly Dictionary<string, DayOfWeek> Weekdays = new(StringComparer.Ordinal)
     {
-        ["monday"] = DayOfWeek.Monday, ["mon"] = DayOfWeek.Monday,
-        ["tuesday"] = DayOfWeek.Tuesday, ["tue"] = DayOfWeek.Tuesday, ["tues"] = DayOfWeek.Tuesday,
-        ["wednesday"] = DayOfWeek.Wednesday, ["wed"] = DayOfWeek.Wednesday,
-        ["thursday"] = DayOfWeek.Thursday, ["thu"] = DayOfWeek.Thursday, ["thur"] = DayOfWeek.Thursday, ["thurs"] = DayOfWeek.Thursday,
-        ["friday"] = DayOfWeek.Friday, ["fri"] = DayOfWeek.Friday,
-        ["saturday"] = DayOfWeek.Saturday, ["sat"] = DayOfWeek.Saturday,
-        ["sunday"] = DayOfWeek.Sunday, ["sun"] = DayOfWeek.Sunday,
+        ["monday"] = DayOfWeek.Monday,
+        ["mon"] = DayOfWeek.Monday,
+        ["tuesday"] = DayOfWeek.Tuesday,
+        ["tue"] = DayOfWeek.Tuesday,
+        ["tues"] = DayOfWeek.Tuesday,
+        ["wednesday"] = DayOfWeek.Wednesday,
+        ["wed"] = DayOfWeek.Wednesday,
+        ["thursday"] = DayOfWeek.Thursday,
+        ["thu"] = DayOfWeek.Thursday,
+        ["thur"] = DayOfWeek.Thursday,
+        ["thurs"] = DayOfWeek.Thursday,
+        ["friday"] = DayOfWeek.Friday,
+        ["fri"] = DayOfWeek.Friday,
+        ["saturday"] = DayOfWeek.Saturday,
+        ["sat"] = DayOfWeek.Saturday,
+        ["sunday"] = DayOfWeek.Sunday,
+        ["sun"] = DayOfWeek.Sunday,
     };
 
     private static readonly Dictionary<string, int> Months = BuildMonths();
