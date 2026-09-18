@@ -1,0 +1,23 @@
+{
+  "required_documents": [
+    "README.md",
+    "ARCHITECTURE.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE.md"
+  ],
+  "migration_directories": [],
+  "type_scan_roots": [
+    "src",
+    "app/src/main",
+    "agent"
+  ],
+  "type_policy_excludes": [
+    "**/generated/**",
+    "**/obj/**",
+    "**/bin/**",
+    "**/build/**"
+  ],
+  "link_check_excludes": []
+}
