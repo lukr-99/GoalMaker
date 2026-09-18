@@ -6,9 +6,6 @@ import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.TaskItem
 import java.time.LocalDate
 
-/** A task step 1 asks about, with what the ritual shows for it now. */
-data class ReviewItem(val task: TaskItem, val decision: PlanDecision)
-
 data class PlanUiState(
     val loaded: Boolean = false,
     val step: PlanStep = PlanStep.TODAY,

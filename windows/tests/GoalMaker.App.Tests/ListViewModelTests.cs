@@ -1,3 +1,4 @@
+using System.Globalization;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Planning;
 
@@ -20,7 +21,7 @@ public sealed class ListViewModelTests : IDisposable
 
         Assert.Equal(["LISTS.PRIORITIES", "LISTS.SCHEDULED", "LISTS.MORE"], today.Sections.Select(section => section.Header));
         Assert.Equal(["Water plants", "Review budget", "Buy milk"], today.Sections.Select(section => section.Rows.Single().Title));
-        Assert.Equal("18:00", today.Sections[1].Rows[0].TimeText);
+        Assert.Equal(new TimeOnly(18, 0).ToString("t", CultureInfo.CurrentCulture), today.Sections[1].Rows[0].TimeText);
         Assert.True(today.Sections[0].Rows[0].TopPriority);
         Assert.False(today.IsEmpty);
     }
