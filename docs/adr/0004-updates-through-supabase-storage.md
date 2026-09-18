@@ -8,3 +8,7 @@ signed with an ECDSA P-256 key held only in GitHub secrets; the public key is bu
 which verify the signature and each artifact's SHA-256 before installing. ECDSA P-256 is verifiable
 with the platform crypto on Android API 26+ and .NET without extra libraries. Signing the exact
 manifest bytes avoids JSON canonicalization. A manual download path always remains.
+
+The free plan caps a stored file at 50 MB, so the Windows app is published framework-dependent (an
+installer of about 4 MB, against 46 MB self-contained), and the installer checks for the .NET 10
+Desktop Runtime and links to its download page when it's missing.
