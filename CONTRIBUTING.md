@@ -7,7 +7,7 @@ Run what your change touches; CI runs all of it on every push to `main` and ever
 ```powershell
 # Repository baseline (docs, one type per file, migration names, links)
 python tools/validate_repository.py --root .
-powershell -File tools/test-powershell-syntax.ps1
+powershell -ExecutionPolicy Bypass -File tools/test-powershell-syntax.ps1
 
 # Supabase: start the local stack once, then run the migration harness
 npm install

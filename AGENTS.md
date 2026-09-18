@@ -40,7 +40,7 @@
 
 ```powershell
 python tools/validate_repository.py --root .
-powershell -File tools/test-powershell-syntax.ps1
+powershell -ExecutionPolicy Bypass -File tools/test-powershell-syntax.ps1
 python tools/supabase_migrations.py test          # needs: npx supabase start
 android\gradlew.bat -p android testDebugUnitTest assembleDebug lintDebug
 dotnet format windows\GoalMaker.slnx --verify-no-changes
