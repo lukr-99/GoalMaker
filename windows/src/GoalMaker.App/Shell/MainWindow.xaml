@@ -60,7 +60,65 @@
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
+            <!-- Areas and tags as filters for every list (M2-11). -->
+            <ui:NavigationView.PaneFooter>
+                <ScrollViewer x:Name="FilterPane"
+                              MaxHeight="320"
+                              Margin="8,4,8,8"
+                              VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsPaneOpen, ElementName=Navigation, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <DockPanel Margin="8,0,0,4">
+                            <ui:Button DockPanel.Dock="Right"
+                                       Padding="6,0"
+                                       Appearance="Transparent"
+                                       Content="{DynamicResource Nav.ClearFilter}"
+                                       Command="{Binding ClearCommand}"
+                                       Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock VerticalAlignment="Center" Text="{DynamicResource Nav.Filters}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Areas}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ToggleButton Margin="0,1"
+                                                  Padding="8,4"
+                                                  HorizontalAlignment="Stretch"
+                                                  HorizontalContentAlignment="Left"
+                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                  Command="{Binding Command}"
+                                                  AutomationProperties.Name="{Binding Label}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </ToggleButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding Tags}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ToggleButton Margin="0,1"
+                                                  Padding="8,4"
+                                                  HorizontalAlignment="Stretch"
+                                                  HorizontalContentAlignment="Left"
+                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                  Command="{Binding Command}"
+                                                  AutomationProperties.Name="{Binding Label}">
+                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                    </ToggleButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </ui:NavigationView.PaneFooter>
             <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.AreasAndTags}" TargetPageType="{x:Type views:AreasPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Tag24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Settings}" TargetPageType="{x:Type views:SettingsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Settings24" />

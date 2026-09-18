@@ -61,7 +61,8 @@ composition root creates everything
   `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed` and `Planning/TimerReminderScheduler`.
 - `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
   `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon with the Today
-  flyout, page provider, reminder toasts, the quick-add box and its global shortcut through NHotkey), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
+  flyout, page provider, reminder toasts, the quick-add box and its global shortcut through NHotkey,
+  the sidebar's area and tag filters), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
   (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`.
 - `dotnetlib` was evaluated and is not referenced yet (ADR 0006).

@@ -86,6 +86,32 @@
 
     <!-- Lists (docs/lists.md) -->
     <sys:String x:Key="Lists.Today">Today</sys:String>
+    <sys:String x:Key="Lists.Filtered">Showing {0}</sys:String>
+    <sys:String x:Key="Lists.ClearFilter">Show everything</sys:String>
+    <sys:String x:Key="Nav.Filters">Filter</sys:String>
+    <sys:String x:Key="Nav.AreasAndTags">Areas and tags</sys:String>
+
+    <sys:String x:Key="Areas.Title">Areas and tags</sys:String>
+    <sys:String x:Key="Areas.Hint">Areas color your tasks and filter the lists; tags group across areas. Changes save when you leave a field.</sys:String>
+    <sys:String x:Key="Areas.Areas">Areas</sys:String>
+    <sys:String x:Key="Areas.Tags">Tags</sys:String>
+    <sys:String x:Key="Areas.Color">Color</sys:String>
+    <sys:String x:Key="Areas.Emoji">Emoji</sys:String>
+    <sys:String x:Key="Areas.Name">Name</sys:String>
+    <sys:String x:Key="Areas.MoveUp">Move up</sys:String>
+    <sys:String x:Key="Areas.MoveDown">Move down</sys:String>
+    <sys:String x:Key="Areas.DeleteArea">Delete the area</sys:String>
+    <sys:String x:Key="Areas.DeleteTag">Delete the tag</sys:String>
+    <sys:String x:Key="Areas.AddArea">Add area</sys:String>
+    <sys:String x:Key="Areas.AddTag">Add tag</sys:String>
+    <sys:String x:Key="Areas.NewArea">New area</sys:String>
+    <sys:String x:Key="Areas.NewTag">New tag</sys:String>
+    <sys:String x:Key="Areas.NoTags">No tags yet. Type #name in the composer or add one here.</sys:String>
+    <sys:String x:Key="Areas.DeleteHint">Deleting an area keeps its tasks; they just lose the area.</sys:String>
+    <sys:String x:Key="Areas.NameTaken">That name is empty or already taken, so it wasn't changed.</sys:String>
+    <sys:String x:Key="Nav.Areas">Areas</sys:String>
+    <sys:String x:Key="Nav.Tags">Tags</sys:String>
+    <sys:String x:Key="Nav.ClearFilter">Clear</sys:String>
     <sys:String x:Key="Lists.Tomorrow">Tomorrow</sys:String>
     <sys:String x:Key="Lists.Inbox">Inbox</sys:String>
     <sys:String x:Key="Lists.Priorities">Top priorities</sys:String>

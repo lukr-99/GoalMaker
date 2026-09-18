@@ -8,4 +8,5 @@ public enum AppPage
     Inbox,
     Plan,
     Settings,
+    Areas,
 }

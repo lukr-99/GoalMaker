@@ -117,6 +117,41 @@ public sealed class PageSnapshots
         Save(content, folder, "quick-add", new Size(560, 150));
     });
 
+    [Fact(Explicit = true)]
+    public void AreasAndAFilteredList() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Fix the shelf @Home #weekend", Today);
+        Add(planner, "Send the invoice @Work", Today);
+        Add(planner, "Buy stamps @Home #errand", Today);
+        planner.Areas.Create("Health");
+        planner.Areas.SetEmoji(planner.Areas.Find("Home")!.Id, "🏠");
+        using var theme = Theme(planner);
+        Save(new AreasPage(new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action())), folder, "areas-and-tags");
+
+        var filter = new ListFilterState();
+        filter.ToggleArea(planner.Areas.Find("Home")!.Id);
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+        var today = new ListViewModel(
+            ListKind.Today,
+            planner.Tasks,
+            planner.Areas,
+            composer,
+            planner.Sync,
+            planner.Settings,
+            strings,
+            planner.Time,
+            theme.AreaBrush,
+            () => true,
+            planner.Tick,
+            action => action(),
+            tags: planner.Tags,
+            filter: filter);
+        Save(new TodayPage(today), folder, "today-filtered");
+    });
+
     private static void Add(TestPlanner planner, string line, DateOnly? day)
     {
         var draft = ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime) with { PlannedDate = day };

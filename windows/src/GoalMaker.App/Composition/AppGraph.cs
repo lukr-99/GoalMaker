@@ -151,7 +151,11 @@ public sealed class AppGraph : IDisposable
             tick,
             runOnUi,
             OpenPlan,
-            Reminders);
+            Reminders,
+            Tags,
+            Filter);
+        SidebarFilters = new SidebarFiltersViewModel(Areas, Tags, Filter, Theme.AreaBrush, runOnUi);
+        AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,
@@ -203,6 +207,15 @@ public sealed class AppGraph : IDisposable
     public TaskList Tasks { get; }
 
     public ThemeApplier Theme { get; }
+
+    /// <summary>The filter the three lists share (docs/lists.md).</summary>
+    public ListFilterState Filter { get; } = new();
+
+    /// <summary>The sidebar's areas and tags, as filters.</summary>
+    public SidebarFiltersViewModel SidebarFilters { get; private set; } = null!;
+
+    /// <summary>The areas and tags manager.</summary>
+    public AreasViewModel AreasPage { get; private set; } = null!;
 
     public ReminderService Reminders { get; }
 

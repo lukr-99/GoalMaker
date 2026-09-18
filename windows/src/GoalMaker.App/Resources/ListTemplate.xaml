@@ -31,6 +31,17 @@
                 <StackPanel>
                     <controls:HeadlineText Title="{Binding Title}" FontSize="40" />
                     <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <StackPanel Margin="0,6,0,0"
+                                Orientation="Horizontal"
+                                Visibility="{Binding HasFilter, Converter={StaticResource BoolToVisibility}}">
+                        <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="Filter16" Foreground="{DynamicResource GM.AccentBrush}" />
+                        <TextBlock VerticalAlignment="Center" Text="{Binding FilterText}" FontSize="13" />
+                        <ui:Button Margin="8,0,0,0"
+                                   Padding="8,2"
+                                   Appearance="Transparent"
+                                   Content="{DynamicResource Lists.ClearFilter}"
+                                   Command="{Binding ClearFilterCommand}" />
+                    </StackPanel>
                 </StackPanel>
             </DockPanel>
 

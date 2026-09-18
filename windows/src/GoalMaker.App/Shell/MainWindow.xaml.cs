@@ -27,6 +27,7 @@ public partial class MainWindow
         plan = graph.Plan;
         graph.PageRequested += (_, page) => Open(page);
         DataContext = graph.Shell;
+        FilterPane.DataContext = graph.SidebarFilters;
         Navigation.SetPageProviderService(new PageProvider(new Dictionary<Type, Func<object>>
         {
             [typeof(TodayPage)] = () => new TodayPage(graph.Today),
@@ -34,6 +35,7 @@ public partial class MainWindow
             [typeof(InboxPage)] = () => new InboxPage(graph.Inbox),
             [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage),
+            [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
         }));
         Navigation.IsPaneOpen = !settings.NavigationCollapsed;
         Navigation.PaneOpened += (_, _) => settings.NavigationCollapsed = false;
@@ -68,6 +70,7 @@ public partial class MainWindow
             AppPage.Tomorrow => typeof(TomorrowPage),
             AppPage.Inbox => typeof(InboxPage),
             AppPage.Settings => typeof(SettingsPage),
+            AppPage.Areas => typeof(AreasPage),
             _ => typeof(TodayPage),
         };
         NavigateWhenReady();

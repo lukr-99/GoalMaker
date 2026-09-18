@@ -29,6 +29,8 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly Action<Action> runOnUi;
     private readonly Action? openPlan;
     private readonly ReminderService? reminders;
+    private readonly TagList? tags;
+    private readonly ListFilterState? filter;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -48,6 +50,12 @@ public sealed partial class ListViewModel : ObservableObject
     [ObservableProperty]
     private bool hasUndo;
 
+    [ObservableProperty]
+    private string filterText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasFilter;
+
     public ListViewModel(
         ListKind kind,
         TaskList tasks,
@@ -62,10 +70,15 @@ public sealed partial class ListViewModel : ObservableObject
         TickSound tick,
         Action<Action> runOnUi,
         Action? openPlan = null,
-        ReminderService? reminders = null)
+        ReminderService? reminders = null,
+        TagList? tags = null,
+        ListFilterState? filter = null)
     {
         this.openPlan = openPlan;
         this.reminders = reminders;
+        this.tags = tags;
+        this.filter = filter;
+        ClearFilterCommand = new RelayCommand(() => filter?.Clear());
         Kind = kind;
         this.tasks = tasks;
         this.areas = areas;
@@ -96,6 +109,16 @@ public sealed partial class ListViewModel : ObservableObject
             reminders.Changed += (_, _) => runOnUi(Refresh);
         }
 
+        if (tags is not null)
+        {
+            tags.Changed += (_, _) => runOnUi(Refresh);
+        }
+
+        if (filter is not null)
+        {
+            filter.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         sync.StatusChanged += (_, status) => runOnUi(() => ShowSync(status));
         ShowSync(sync.Status);
         Refresh();
@@ -110,6 +133,27 @@ public sealed partial class ListViewModel : ObservableObject
     public ComposerViewModel Composer { get; }
 
     public ObservableCollection<ListSectionViewModel> Sections { get; } = [];
+
+    /// <summary>Lets go of the area and tag filter, from the line under the title.</summary>
+    public IRelayCommand ClearFilterCommand { get; }
+
+    // "Showing Home · #errand" under the title while the lists are narrowed (docs/lists.md).
+    private void ShowFilter(ListFilter narrowed, IReadOnlyDictionary<string, AreaItem> areaById)
+    {
+        var parts = new List<string>();
+        if (narrowed.AreaId is { } areaId && areaById.GetValueOrDefault(areaId) is { } area)
+        {
+            parts.Add(area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name);
+        }
+
+        if (narrowed.TagId is { } tagId && tags?.All().FirstOrDefault(tag => tag.Id == tagId) is { } chosen)
+        {
+            parts.Add("#" + chosen.Name);
+        }
+
+        HasFilter = parts.Count > 0;
+        FilterText = HasFilter ? strings.Get("Lists.Filtered", string.Join(" · ", parts)) : string.Empty;
+    }
 
     // What a task's menu offers (docs/reminders.md): counting back from its time when it has one, an
     // hour from now, tomorrow morning, and taking away each reminder already set.
@@ -152,8 +196,11 @@ public sealed partial class ListViewModel : ObservableObject
     public void Refresh()
     {
         var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
-        var lists = ListRules.Lists(tasks.All(), today);
         var areaById = areas.All().ToDictionary(area => area.Id, StringComparer.Ordinal);
+        var narrowed = filter?.Current ?? ListFilter.None;
+        var all = tasks.All();
+        var lists = ListRules.Lists(narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks()), today);
+        ShowFilter(narrowed, areaById);
         var remindersByTask = (reminders?.All() ?? []).ToLookup(reminder => reminder.TaskId, StringComparer.Ordinal);
         List<TaskRowViewModel> Rows(IEnumerable<TaskItem> items, bool showDay = false) =>
             [.. items.Select(item =>

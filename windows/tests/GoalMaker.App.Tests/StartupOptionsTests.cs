@@ -15,6 +15,7 @@ public sealed class StartupOptionsTests
     [InlineData("tomorrow", AppPage.Tomorrow)]
     [InlineData("Inbox", AppPage.Inbox)]
     [InlineData("Settings", AppPage.Settings)]
+    [InlineData("areas", AppPage.Areas)]
     public void OpenShowsAPage(string page, AppPage expected) =>
         Assert.Equal(new StartupOptions(false, expected), StartupOptions.Parse(["--open", page]));
 
