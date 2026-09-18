@@ -1,6 +1,6 @@
 # M0-08: CI and the release workflow
 
-**Status:** waiting for the first push · **Milestone:** M0
+**Status:** done 2026-09-18 · **Milestone:** M0
 
 ## Scope
 - `ci.yml`: repository validation, Supabase (harness + pgTAP), Android (build, unit tests, lint),
@@ -13,6 +13,9 @@
 
 ## Result
 - `ci.yml` (Supabase, Android, Windows) and `release.yml` are written and pass actionlint; `codeprint.yml` validates the repository.
+- Pushed and watched. All three CI jobs (Supabase migrations and row security, Android build, unit
+  tests and lint, Windows format, build and tests) are green on `main` at `2aa9276`.
 
 ## Left
-- Push, watch the first CI run, fix anything the runners disagree on, then protect `main`.
+- Protecting `main` with these three jobs as required checks stays with the owner's one-time setup
+  (roadmap, M0), because it needs repository admin rights.
