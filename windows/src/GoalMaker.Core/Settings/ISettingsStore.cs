@@ -20,6 +20,9 @@ public interface ISettingsStore
     /// <summary>When this device last looked at its reminders, so each one is shown once (docs/reminders.md).</summary>
     DateTimeOffset? RemindedUntil { get; set; }
 
+    /// <summary>The global quick-add shortcut as text (<c>Win+Alt+Space</c>); null for the default, empty for none.</summary>
+    string? QuickAddHotkey { get; set; }
+
     /// <summary>Whether the sidebar is collapsed to icons.</summary>
     bool NavigationCollapsed { get; set; }
 

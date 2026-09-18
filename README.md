@@ -18,11 +18,14 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 - CI for every part and a tag-driven release workflow.
 
 - Sync (M1): both apps keep a SQLite replica with an outbox, work offline, and sync through
-  Supabase with Realtime refresh ([docs/sync.md](docs/sync.md)). Today shows a plain task list
-  (add, complete, delete) that stays the same on the phone and the PC.
+  Supabase with Realtime refresh ([docs/sync.md](docs/sync.md)).
+- Planning (M2, in progress): four switchable themes, Today, Tomorrow and Inbox, the composer with
+  shortcuts and a live preview, Plan tomorrow, repeating tasks, reminders with quiet hours and
+  snooze on both apps ([docs/reminders.md](docs/reminders.md)), and on Windows the tray's Today
+  flyout and a global quick-add shortcut. Areas and tags management, task details and the archive
+  are next.
 
-Planning (Tomorrow, Inbox, shortcuts, reminders), goals and habits come in M2 to M4. No release has
-been published yet; the cloud project and the signing keys still need the one-time setup in
+The Claude connector comes in M3, goals and habits in M4. No release has been published yet; the cloud project and the signing keys still need the one-time setup in
 [docs/setup/](docs/setup/).
 
 ## Parts

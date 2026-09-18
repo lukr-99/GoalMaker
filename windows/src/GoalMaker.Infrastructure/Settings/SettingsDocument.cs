@@ -26,6 +26,8 @@ public sealed record SettingsDocument
 
     public DateTimeOffset? RemindedUntil { get; init; }
 
+    public string? QuickAddHotkey { get; init; }
+
     public bool NavigationCollapsed { get; init; }
 
     public string? BackendUrl { get; init; }

@@ -152,6 +152,17 @@ public sealed class AppGraph : IDisposable
             runOnUi,
             OpenPlan,
             Reminders);
+        QuickAdd = Composer(_ => null);
+        TrayFlyout = new TrayFlyoutViewModel(
+            Tasks,
+            Areas,
+            Settings,
+            strings,
+            TimeProvider.System,
+            Theme.AreaBrush,
+            runOnUi,
+            () => WindowRequested?.Invoke(this, AppPage.Today),
+            () => QuickAddRequested?.Invoke(this, EventArgs.Empty));
         Today = List(ListKind.Today, today => today);
         Tomorrow = List(ListKind.Tomorrow, today => today.AddDays(1));
         Inbox = List(ListKind.Inbox, _ => null);
@@ -170,7 +181,7 @@ public sealed class AppGraph : IDisposable
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, RefreshLists, Reminders.Rearm, restartApp, runOnUi);
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, RefreshLists, Reminders.Rearm, gesture => ApplyQuickAddHotkey(gesture), restartApp, runOnUi);
     }
 
     public AppDataPaths Paths { get; }
@@ -194,6 +205,18 @@ public sealed class AppGraph : IDisposable
     public ThemeApplier Theme { get; }
 
     public ReminderService Reminders { get; }
+
+    /// <summary>The composer behind the global quick-add box; its lines land in the Inbox unless they name a day.</summary>
+    public ComposerViewModel QuickAdd { get; private set; } = null!;
+
+    /// <summary>The tray's Today flyout.</summary>
+    public TrayFlyoutViewModel TrayFlyout { get; private set; } = null!;
+
+    /// <summary>Asks for the quick-add box (from the flyout); the app shows it.</summary>
+    public event EventHandler? QuickAddRequested;
+
+    /// <summary>Registers the global quick-add shortcut; the app puts the real registration here at start-up.</summary>
+    public Func<HotkeyGesture?, bool> ApplyQuickAddHotkey { get; set; } = _ => true;
 
     /// <summary>A reminder toast was clicked, so the main window should come up on this page.</summary>
     public event EventHandler<AppPage>? WindowRequested;

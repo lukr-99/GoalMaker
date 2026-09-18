@@ -18,6 +18,8 @@ public partial class App : Application
     private AppGraph? graph;
     private TrayIcon? tray;
     private MainWindow? window;
+    private QuickAddWindow? quickAdd;
+    private QuickAddHotkey? hotkey;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -37,12 +39,20 @@ public partial class App : Application
         window = new MainWindow(graph);
         graph.Theme.Attach(window);
         graph.Theme.Apply(graph.Settings.Appearance);
-        tray = new TrayIcon(strings, build.IsDevBuild, ShowMainWindow, Quit);
+        quickAdd = new QuickAddWindow(graph.QuickAdd, strings);
+        tray = new TrayIcon(strings, build.IsDevBuild, new TrayFlyout(graph.TrayFlyout), graph.TrayFlyout.Refresh, ShowMainWindow, SummonQuickAdd, Quit);
         graph.WindowRequested += (_, page) =>
         {
+            tray.CloseFlyout();
             ShowMainWindow();
             window.Open(page);
         };
+        graph.QuickAddRequested += (_, _) => SummonQuickAdd();
+
+        // The global quick-add shortcut (spec, story 11); Settings shows it and can change it.
+        hotkey = new QuickAddHotkey(() => RunOnUi(SummonQuickAdd));
+        graph.ApplyQuickAddHotkey = hotkey.Apply;
+        graph.SettingsPage.ApplyStoredQuickAddHotkey();
         instance.Listen(arguments => RunOnUi(() => Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
 
         Handle(StartupOptions.Parse(e.Args), secondLaunch: false);
@@ -68,6 +78,12 @@ public partial class App : Application
     }
 
     private void ShowMainWindow() => ShowMainWindow(activate: true);
+
+    private void SummonQuickAdd()
+    {
+        tray?.CloseFlyout();
+        quickAdd?.Summon();
+    }
 
     private void ShowMainWindow(bool activate)
     {
@@ -97,6 +113,8 @@ public partial class App : Application
             window.Close();
         }
 
+        hotkey?.Dispose();
+        quickAdd?.CloseForGood();
         tray?.Dispose();
         graph?.Dispose();
         instance?.Dispose();

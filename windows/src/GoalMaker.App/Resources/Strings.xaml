@@ -7,6 +7,12 @@
 
     <sys:String x:Key="Tray.Open">Open GoalMaker</sys:String>
     <sys:String x:Key="Tray.Quit">Quit</sys:String>
+    <sys:String x:Key="Tray.QuickAdd">Add a task</sys:String>
+    <sys:String x:Key="Tray.Empty">Nothing left for today.</sys:String>
+    <sys:String x:Key="Tray.More">and {0} more</sys:String>
+
+    <sys:String x:Key="QuickAdd.Title">Add a task</sys:String>
+    <sys:String x:Key="QuickAdd.Hint">Add a task. It goes to the Inbox unless you name a day. Esc closes.</sys:String>
 
     <sys:String x:Key="Reminder.Done">Done</sys:String>
     <sys:String x:Key="Reminder.SnoozeTenMinutes">10 min</sys:String>
@@ -145,6 +151,15 @@
     <sys:String x:Key="Settings.QuietHoursEnd">Quiet hours end</sys:String>
     <sys:String x:Key="Settings.QuietHoursTo">to</sys:String>
     <sys:String x:Key="Settings.QuietHoursOff">Off, because they start and end at the same hour. Every reminder arrives at its time.</sys:String>
+    <sys:String x:Key="Settings.QuickAdd">Quick add</sys:String>
+    <sys:String x:Key="Settings.QuickAddShortcut">Shortcut from any app</sys:String>
+    <sys:String x:Key="Settings.QuickAddPress">Click here and press the new keys together, for example Ctrl+Alt+N.</sys:String>
+    <sys:String x:Key="Settings.QuickAddReset">Use the default</sys:String>
+    <sys:String x:Key="Settings.QuickAddTurnOff">Turn off</sys:String>
+    <sys:String x:Key="Settings.QuickAddOff">Off</sys:String>
+    <sys:String x:Key="Settings.QuickAddOffHint">No shortcut. The tray menu can still add a task.</sys:String>
+    <sys:String x:Key="Settings.QuickAddOn">Press {0} in any app to add a task without opening GoalMaker.</sys:String>
+    <sys:String x:Key="Settings.QuickAddTaken">Another app already uses {0}. Click the box and press other keys.</sys:String>
     <sys:String x:Key="Settings.QuietHoursOn">Ordinary reminders between {0} and {1} wait for the end. Important ones still ring.</sys:String>
     <sys:String x:Key="Settings.Account">Account</sys:String>
     <sys:String x:Key="Settings.SignOut">Sign out</sys:String>

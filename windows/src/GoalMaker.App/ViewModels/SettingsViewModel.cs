@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
+using GoalMaker.App.Shell;
 using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
@@ -27,6 +29,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly Action<Appearance> applyAppearance;
     private readonly Action planningDayChanged;
     private readonly Action quietHoursChanged;
+    private readonly Func<HotkeyGesture?, bool> applyQuickAddHotkey;
     private readonly Action restartApp;
 
     [ObservableProperty]
@@ -77,6 +80,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action<Appearance> applyAppearance,
         Action planningDayChanged,
         Action quietHoursChanged,
+        Func<HotkeyGesture?, bool> applyQuickAddHotkey,
         Action restartApp,
         Action<Action> runOnUi)
     {
@@ -91,6 +95,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         this.applyAppearance = applyAppearance;
         this.planningDayChanged = planningDayChanged;
         this.quietHoursChanged = quietHoursChanged;
+        this.applyQuickAddHotkey = applyQuickAddHotkey;
         this.restartApp = restartApp;
         appearance = settings.Appearance;
         backendUrlDraft = appInfo.Backend.Url;
@@ -199,6 +204,58 @@ public sealed partial class SettingsViewModel : ObservableObject
             settings.QuietHours.End.ToString("t", CultureInfo.CurrentCulture));
 
     public bool HasUpdateStatus => UpdateStatus.Length > 0;
+
+    /// <summary>The quick-add shortcut in use, as people write it, or that it's off.</summary>
+    public string QuickAddHotkeyText { get; private set; } = string.Empty;
+
+    /// <summary>Whether the shortcut works, or that another app already owns it.</summary>
+    public string QuickAddHotkeyStatus { get; private set; } = string.Empty;
+
+    /// <summary>Registers the stored shortcut (the default unless changed); the app calls it once at start-up.</summary>
+    public void ApplyStoredQuickAddHotkey() => ApplyQuickAddHotkey(settings.QuickAddHotkey switch
+    {
+        null => HotkeyGesture.Default,
+        "" => null,
+        var text => HotkeyGesture.Parse(text) ?? HotkeyGesture.Default,
+    });
+
+    /// <summary>Keys pressed in the shortcut box become the shortcut, when they can make one.</summary>
+    public bool RecordQuickAddHotkey(ModifierKeys modifiers, Key key)
+    {
+        if (HotkeyGesture.FromKeys(modifiers, key) is not { } gesture)
+        {
+            return false;
+        }
+
+        settings.QuickAddHotkey = gesture.ToString();
+        ApplyQuickAddHotkey(gesture);
+        return true;
+    }
+
+    [RelayCommand]
+    private void ResetQuickAddHotkey()
+    {
+        settings.QuickAddHotkey = null;
+        ApplyQuickAddHotkey(HotkeyGesture.Default);
+    }
+
+    [RelayCommand]
+    private void TurnOffQuickAddHotkey()
+    {
+        settings.QuickAddHotkey = string.Empty;
+        ApplyQuickAddHotkey(null);
+    }
+
+    private void ApplyQuickAddHotkey(HotkeyGesture? gesture)
+    {
+        var accepted = applyQuickAddHotkey(gesture);
+        QuickAddHotkeyText = gesture?.ToString() ?? strings.Get("Settings.QuickAddOff");
+        QuickAddHotkeyStatus = gesture is null
+            ? strings.Get("Settings.QuickAddOffHint")
+            : strings.Get(accepted ? "Settings.QuickAddOn" : "Settings.QuickAddTaken", gesture.ToString());
+        OnPropertyChanged(nameof(QuickAddHotkeyText));
+        OnPropertyChanged(nameof(QuickAddHotkeyStatus));
+    }
 
     // Quiet hours move ordinary reminders, so the reminder timer is armed again.
     private void SetQuietHours(QuietHours window)

@@ -54,6 +54,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { RemindedUntil = value });
     }
 
+    public string? QuickAddHotkey
+    {
+        get => document.QuickAddHotkey;
+        set => Save(document with { QuickAddHotkey = value });
+    }
+
     public bool NavigationCollapsed
     {
         get => document.NavigationCollapsed;

@@ -64,6 +64,9 @@ public sealed partial class ComposerViewModel : ObservableObject
     /// <summary>What the line will save, as it's typed.</summary>
     public ObservableCollection<ComposerChipViewModel> Chips { get; } = [];
 
+    /// <summary>Raised after a line was saved as a task, so a quick-add box can close.</summary>
+    public event EventHandler? Added;
+
     partial void OnNewTaskTitleChanged(string value) => UpdatePreview();
 
     private bool IsPlanCommand => draft.Command?.Name == PlanRules.Command && openPlan is not null;
@@ -84,6 +87,7 @@ public sealed partial class ComposerViewModel : ObservableObject
         if (tasks.Add(placed) is not null)
         {
             NewTaskTitle = string.Empty;
+            Added?.Invoke(this, EventArgs.Empty);
         }
     }
 

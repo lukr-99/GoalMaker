@@ -88,6 +88,8 @@ internal sealed class TestPlanner : IDisposable
 
         public DateTimeOffset? RemindedUntil { get; set; }
 
+        public string? QuickAddHotkey { get; set; }
+
         public bool NavigationCollapsed { get; set; }
 
         public BackendEnvironment? BackendOverride { get; set; }

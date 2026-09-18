@@ -93,6 +93,30 @@ public sealed class PageSnapshots
         Save(new TodayPage(today), folder, "today-with-a-reminder");
     });
 
+    [Fact(Explicit = true)]
+    public void TrayAndQuickAdd() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "File the receipts", Today.AddDays(-1));
+        Add(planner, "Stretch !", Today);
+        Add(planner, "Call the bank 17:00", Today);
+        Add(planner, "Buy milk", Today);
+        using var theme = Theme(planner);
+        var flyout = new TrayFlyoutViewModel(
+            planner.Tasks, planner.Areas, planner.Settings, strings, planner.Time, theme.AreaBrush, action => action(), () => { }, () => { });
+        flyout.Rows[1].IsDone = true;
+        Save(new Shell.TrayFlyout(flyout), folder, "tray-flyout", new Size(340, 420));
+
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, _ => null, action => action());
+        composer.NewTaskTitle = "Look up train times tomorrow 9:00 #travel";
+        var box = new Shell.QuickAddWindow(composer, strings);
+        var content = (FrameworkElement)box.Content;
+        box.Content = null;
+        Save(content, folder, "quick-add", new Size(560, 150));
+    });
+
     private static void Add(TestPlanner planner, string line, DateOnly? day)
     {
         var draft = ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime) with { PlannedDate = day };
@@ -107,10 +131,10 @@ public sealed class PageSnapshots
         return theme;
     }
 
-    // Lays the page out at the main window's content size and writes it as a PNG.
-    private static void Save(FrameworkElement page, string folder, string name)
+    // Lays the page out at the main window's content size, or the given one, and writes it as a PNG.
+    private static void Save(FrameworkElement page, string folder, string name, Size? area = null)
     {
-        var size = new Size(852, 672);
+        var size = area ?? new Size(852, 672);
         page.Measure(size);
         page.Arrange(new Rect(size));
         Settle();

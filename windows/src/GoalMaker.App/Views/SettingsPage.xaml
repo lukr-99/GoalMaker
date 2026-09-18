@@ -133,6 +133,28 @@
 
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.QuickAdd}" />
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.QuickAddShortcut}" />
+                    <StackPanel Orientation="Horizontal">
+                        <!-- Press the new keys here; SettingsPage.xaml.cs turns them into the shortcut. -->
+                        <TextBox x:Name="QuickAddShortcut"
+                                 MinWidth="200"
+                                 IsReadOnly="True"
+                                 IsReadOnlyCaretVisible="False"
+                                 Text="{Binding QuickAddHotkeyText, Mode=OneWay}"
+                                 PreviewKeyDown="OnQuickAddShortcutKeyDown"
+                                 ToolTip="{DynamicResource Settings.QuickAddPress}"
+                                 AutomationProperties.Name="{DynamicResource Settings.QuickAddShortcut}"
+                                 AutomationProperties.HelpText="{DynamicResource Settings.QuickAddPress}" />
+                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.QuickAddReset}" Command="{Binding ResetQuickAddHotkeyCommand}" />
+                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.QuickAddTurnOff}" Command="{Binding TurnOffQuickAddHotkeyCommand}" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding QuickAddHotkeyStatus}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />
                     <TextBlock Margin="0,0,0,12" Text="{Binding Email}" FontSize="15" />
                     <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />
