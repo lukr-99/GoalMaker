@@ -72,6 +72,14 @@ timestamp form). Both test suites read the same files. `contracts/schemas/synced
 describes every synced column once; both apps build their replica SQL and JSON mapping from it, and
 `tools/check_synced_tables.py` keeps it equal to the replica and server schemas.
 
+### Design tokens (`contracts/design/`, `fonts/`)
+
+The four switchable themes (ADR 0008, [docs/design/spec.md](docs/design/spec.md)) live once in
+`themes.json`; both apps load it at run time and `tools/check_design_tokens.py` holds every theme to
+WCAG AA. Android maps the roles onto Material 3 (`ui/theme/GoalMakerTheme`, `AppTheme`) and uses
+the variable fonts from `fonts/`; Windows fills `GM.*` resources and WPF UI's keys
+(`Theming/ThemeApplier`) and uses static faces cut by `tools/build_windows_fonts.py`.
+
 ### Replica schema (`replica/`)
 
 One set of immutable SQLite migrations that both apps apply unchanged (ADR 0007): Android packages

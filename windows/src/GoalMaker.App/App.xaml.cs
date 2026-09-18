@@ -32,12 +32,11 @@ public partial class App : Application
         }
 
         var strings = new ResourceStrings(this);
-        var brandAccent = (System.Windows.Media.Color)Resources["Brand.PrimaryColor"];
-        graph = new AppGraph(build, strings, brandAccent, RunOnUi, () => RunOnUi(Quit), () => RunOnUi(Restart));
+        graph = new AppGraph(build, strings, Resources, RunOnUi, () => RunOnUi(Quit), () => RunOnUi(Restart));
         CrashLog.Install(this, graph.Paths.Root);
         window = new MainWindow(graph);
         graph.Theme.Attach(window);
-        graph.Theme.Apply(graph.Settings.ThemeMode);
+        graph.Theme.Apply(graph.Settings.Appearance);
         tray = new TrayIcon(strings, build.IsDevBuild, ShowMainWindow, Quit);
         instance.Listen(arguments => RunOnUi(() => Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
 

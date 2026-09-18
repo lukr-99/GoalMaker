@@ -39,7 +39,7 @@ public sealed class AppGraph : IDisposable
     public AppGraph(
         BuildConfiguration build,
         IStrings strings,
-        System.Windows.Media.Color brandAccent,
+        System.Windows.ResourceDictionary appResources,
         Action<Action> runOnUi,
         Action shutdownApp,
         Action restartApp)
@@ -84,11 +84,12 @@ public sealed class AppGraph : IDisposable
             }
         });
 
-        Theme = new ThemeApplier(brandAccent);
+        Theme = new ThemeApplier(ContractResources.Themes(), appResources);
         SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null);
         Shell = new ShellViewModel(Auth, SignIn, strings, runOnUi);
         Today = new TodayViewModel(Tasks, Sync, Auth, strings, runOnUi);
-        SettingsPage = new SettingsViewModel(Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Apply, restartApp, runOnUi);
+        SettingsPage = new SettingsViewModel(
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, restartApp, runOnUi);
     }
 
     public AppDataPaths Paths { get; }
@@ -121,6 +122,7 @@ public sealed class AppGraph : IDisposable
         periodicSync?.Cancel();
         periodicSync?.Dispose();
         _ = changeFeed.DisposeAsync().AsTask();
+        Theme.Dispose();
         Sync.Dispose();
         replica.Dispose();
         signatureKey?.Dispose();

@@ -2,18 +2,12 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!--
-      GoalMaker's own semantic tokens, beside WPF UI's theme resources. Placeholder values until the
-      design questionnaire; views use the keys, never literal colors. Accents are independent of the
-      neutral surfaces that WPF UI provides for light and dark.
+      GoalMaker's resources that don't depend on the theme. Everything themed (GM.*Brush and
+      GM.*Color for each color role, GM.BodyFont, GM.BodyStrongFont, GM.HeadingFont, GM.NumberFont,
+      GM.CardCorner, GM.RowCorner, GM.ButtonCorner, GM.PagePadding, GM.RowGap, GM.RowMinHeight) is set
+      at run time by Theming/ThemeApplier from contracts/design/themes.json (ADR 0008). Views use
+      DynamicResource for those keys so a theme switch applies at once.
     -->
-    <Color x:Key="Brand.PrimaryColor">#5B2EE6</Color>
-    <Color x:Key="Brand.SecondaryColor">#E5533A</Color>
-    <SolidColorBrush x:Key="Brand.PrimaryBrush" Color="{StaticResource Brand.PrimaryColor}" />
-    <SolidColorBrush x:Key="Brand.SecondaryBrush" Color="{StaticResource Brand.SecondaryColor}" />
-    <SolidColorBrush x:Key="Brand.OnPrimaryBrush" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="Status.ErrorBrush" Color="#D13438" />
-
-    <CornerRadius x:Key="Shape.Card">16</CornerRadius>
-    <CornerRadius x:Key="Shape.Composer">24</CornerRadius>
-    <Thickness x:Key="Space.Page">32,24,32,24</Thickness>
+    <!-- Half the composer's height, so it's a pill (WPF draws larger radii as an ellipse). -->
+    <CornerRadius x:Key="GM.ComposerCorner">22</CornerRadius>
 </ResourceDictionary>

@@ -22,10 +22,17 @@ public sealed class JsonSettingsStore : ISettingsStore
         document = Load(path);
     }
 
-    public ThemeMode ThemeMode
+    public Appearance Appearance
     {
-        get => document.ThemeMode;
-        set => Save(document with { ThemeMode = value });
+        get => new(document.ThemeId, document.ThemeMode, document.PureBlack, document.ReduceMotion, document.CompletionSound);
+        set => Save(document with
+        {
+            ThemeId = value.ThemeId,
+            ThemeMode = value.Mode,
+            PureBlack = value.PureBlack,
+            ReduceMotion = value.ReduceMotion,
+            CompletionSound = value.CompletionSound,
+        });
     }
 
     public BackendEnvironment? BackendOverride

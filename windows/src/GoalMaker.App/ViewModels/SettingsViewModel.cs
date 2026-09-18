@@ -4,6 +4,7 @@ using GoalMaker.App.Localization;
 using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
+using GoalMaker.Core.Design;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
@@ -19,12 +20,16 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly UpdateService updates;
     private readonly AppInfo appInfo;
     private readonly IStrings strings;
-    private readonly Action<ThemeMode> applyTheme;
+    private readonly DesignTokens design;
+    private readonly Func<bool> isDark;
+    private readonly Action<Appearance> applyAppearance;
     private readonly Action restartApp;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSystemTheme), nameof(IsLightTheme), nameof(IsDarkTheme))]
-    private ThemeMode themeMode;
+    [NotifyPropertyChangedFor(nameof(IsSystemTheme), nameof(IsLightTheme), nameof(IsDarkTheme), nameof(PureBlack))]
+    [NotifyPropertyChangedFor(nameof(IsReduceMotionSystem), nameof(IsReduceMotionOn), nameof(IsReduceMotionOff))]
+    [NotifyPropertyChangedFor(nameof(CompletionSound), nameof(Themes))]
+    private Appearance appearance;
 
     [ObservableProperty]
     private string email = string.Empty;
@@ -63,7 +68,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         UpdateService updates,
         AppInfo appInfo,
         IStrings strings,
-        Action<ThemeMode> applyTheme,
+        DesignTokens design,
+        Func<bool> isDark,
+        Action<Appearance> applyAppearance,
         Action restartApp,
         Action<Action> runOnUi)
     {
@@ -73,31 +80,68 @@ public sealed partial class SettingsViewModel : ObservableObject
         this.updates = updates;
         this.appInfo = appInfo;
         this.strings = strings;
-        this.applyTheme = applyTheme;
+        this.design = design;
+        this.isDark = isDark;
+        this.applyAppearance = applyAppearance;
         this.restartApp = restartApp;
-        themeMode = settings.ThemeMode;
+        appearance = settings.Appearance;
         backendUrlDraft = appInfo.Backend.Url;
         backendKeyDraft = appInfo.Backend.PublishableKey;
         auth.SessionChanged += (_, session) => runOnUi(() => ShowSession(session));
         ShowSession(auth.Session);
     }
 
+    /// <summary>The theme cards, drawn for the mode in use; rebuilt whenever the appearance changes.</summary>
+    public IReadOnlyList<ThemeOptionViewModel> Themes =>
+        [.. design.Themes.Select(theme => new ThemeOptionViewModel(
+            theme, isDark(), theme.Id == design.Theme(Appearance.ThemeId).Id, id => Appearance = Appearance with { ThemeId = id }))];
+
     public bool IsSystemTheme
     {
-        get => ThemeMode == ThemeMode.System;
-        set => SelectTheme(value, ThemeMode.System);
+        get => Appearance.Mode == ThemeMode.System;
+        set => SelectMode(value, ThemeMode.System);
     }
 
     public bool IsLightTheme
     {
-        get => ThemeMode == ThemeMode.Light;
-        set => SelectTheme(value, ThemeMode.Light);
+        get => Appearance.Mode == ThemeMode.Light;
+        set => SelectMode(value, ThemeMode.Light);
     }
 
     public bool IsDarkTheme
     {
-        get => ThemeMode == ThemeMode.Dark;
-        set => SelectTheme(value, ThemeMode.Dark);
+        get => Appearance.Mode == ThemeMode.Dark;
+        set => SelectMode(value, ThemeMode.Dark);
+    }
+
+    public bool PureBlack
+    {
+        get => Appearance.PureBlack;
+        set => Appearance = Appearance with { PureBlack = value };
+    }
+
+    public bool IsReduceMotionSystem
+    {
+        get => Appearance.ReduceMotion == ReduceMotion.System;
+        set => SelectReduceMotion(value, ReduceMotion.System);
+    }
+
+    public bool IsReduceMotionOn
+    {
+        get => Appearance.ReduceMotion == ReduceMotion.On;
+        set => SelectReduceMotion(value, ReduceMotion.On);
+    }
+
+    public bool IsReduceMotionOff
+    {
+        get => Appearance.ReduceMotion == ReduceMotion.Off;
+        set => SelectReduceMotion(value, ReduceMotion.Off);
+    }
+
+    public bool CompletionSound
+    {
+        get => Appearance.CompletionSound;
+        set => Appearance = Appearance with { CompletionSound = value };
     }
 
     public bool HasUpdateStatus => UpdateStatus.Length > 0;
@@ -117,10 +161,10 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool IsDevBuild => appInfo.IsDevBuild;
 
-    partial void OnThemeModeChanged(ThemeMode value)
+    partial void OnAppearanceChanged(Appearance value)
     {
-        settings.ThemeMode = value;
-        applyTheme(value);
+        settings.Appearance = value;
+        applyAppearance(value);
     }
 
     /// <summary>Pushes what's waiting, empties the replica, then signs out (docs/sync.md: Sign-out).</summary>
@@ -231,11 +275,19 @@ public sealed partial class SettingsViewModel : ObservableObject
         restartApp();
     }
 
-    private void SelectTheme(bool selected, ThemeMode mode)
+    private void SelectMode(bool selected, ThemeMode mode)
     {
         if (selected)
         {
-            ThemeMode = mode;
+            Appearance = Appearance with { Mode = mode };
+        }
+    }
+
+    private void SelectReduceMotion(bool selected, ReduceMotion choice)
+    {
+        if (selected)
+        {
+            Appearance = Appearance with { ReduceMotion = choice };
         }
     }
 

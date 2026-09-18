@@ -2,9 +2,12 @@
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
       Title="{DynamicResource Today.Title}"
-      Foreground="{DynamicResource TextFillColorPrimaryBrush}">
-    <Grid Margin="{StaticResource Space.Page}">
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Grid Margin="{DynamicResource GM.PagePadding}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -15,13 +18,13 @@
             <TextBlock DockPanel.Dock="Right"
                        VerticalAlignment="Bottom"
                        Text="{Binding SyncText}"
-                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                       Foreground="{DynamicResource GM.TextMutedBrush}" />
             <StackPanel>
-                <TextBlock Text="{DynamicResource Today.Title}" FontSize="40" FontWeight="SemiBold" />
+                <controls:HeadlineText Title="{DynamicResource Today.Title}" FontSize="40" />
                 <TextBlock Margin="0,4,0,0"
                            Text="{Binding Greeting}"
-                           FontSize="15"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                           FontSize="14"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
             </StackPanel>
         </DockPanel>
 
@@ -29,28 +32,31 @@
             <StackPanel>
                 <TextBlock Margin="4,8,0,0"
                            Text="{DynamicResource Today.Empty}"
-                           FontSize="15"
-                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                           FontSize="14"
+                           Foreground="{DynamicResource GM.TextMutedBrush}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
                 <ItemsControl ItemsSource="{Binding Tasks}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="0,0,0,6"
-                                    Padding="14,8"
-                                    CornerRadius="{StaticResource Shape.Card}"
-                                    Background="{DynamicResource CardBackgroundFillColorDefaultBrush}">
-                                <DockPanel>
+                            <Border Margin="{DynamicResource GM.RowGap}"
+                                    Padding="12,2"
+                                    MinHeight="{DynamicResource GM.RowMinHeight}"
+                                    CornerRadius="{DynamicResource GM.RowCorner}"
+                                    Background="{DynamicResource GM.SurfaceBrush}">
+                                <DockPanel VerticalAlignment="Center">
                                     <ui:Button DockPanel.Dock="Right"
                                                Appearance="Transparent"
+                                               Padding="6"
                                                Command="{Binding DeleteCommand}"
                                                ToolTip="{DynamicResource Today.Delete}"
                                                AutomationProperties.Name="{DynamicResource Today.Delete}">
                                         <ui:SymbolIcon Symbol="Delete24" />
                                     </ui:Button>
                                     <CheckBox VerticalAlignment="Center"
+                                              Foreground="{DynamicResource GM.TextBrush}"
                                               IsChecked="{Binding IsDone}"
                                               AutomationProperties.Name="{Binding Title}">
-                                        <TextBlock Text="{Binding Title}" FontSize="15" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
                                     </CheckBox>
                                 </DockPanel>
                             </Border>
@@ -60,17 +66,16 @@
             </StackPanel>
         </ScrollViewer>
 
-        <!-- The composer (spec: chat-app layout). Shortcut parsing arrives in M2. -->
+        <!-- The composer (spec: chat-app layout). Shortcut parsing and the live preview arrive in M2-04 and M2-05. -->
         <Border Grid.Row="2"
                 Margin="0,16,0,0"
-                Padding="8,4"
-                CornerRadius="{StaticResource Shape.Composer}"
-                Background="{DynamicResource ControlFillColorDefaultBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1">
+                Padding="12,4,6,4"
+                CornerRadius="{StaticResource GM.ComposerCorner}"
+                Background="{DynamicResource GM.SurfaceVariantBrush}">
             <DockPanel>
                 <ui:Button DockPanel.Dock="Right"
                            Appearance="Primary"
+                           CornerRadius="{StaticResource GM.ComposerCorner}"
                            Command="{Binding AddTaskCommand}"
                            ToolTip="{DynamicResource Today.Add}"
                            AutomationProperties.Name="{DynamicResource Today.Add}">

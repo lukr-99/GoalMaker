@@ -42,6 +42,15 @@
 
     <sys:String x:Key="Settings.Title">Settings</sys:String>
     <sys:String x:Key="Settings.Appearance">Appearance</sys:String>
+    <sys:String x:Key="Settings.Theme">Theme</sys:String>
+    <sys:String x:Key="Settings.Mode">Light or dark</sys:String>
+    <sys:String x:Key="Settings.PureBlack">Pure black</sys:String>
+    <sys:String x:Key="Settings.PureBlackHint">Dark mode on true black.</sys:String>
+    <sys:String x:Key="Settings.ReduceMotion">Reduce motion</sys:String>
+    <sys:String x:Key="Settings.ReduceMotionOn">On</sys:String>
+    <sys:String x:Key="Settings.ReduceMotionOff">Off</sys:String>
+    <sys:String x:Key="Settings.CompletionSound">Completion sound</sys:String>
+    <sys:String x:Key="Settings.CompletionSoundHint">A soft tick when you finish something.</sys:String>
     <sys:String x:Key="Settings.ThemeSystem">System</sys:String>
     <sys:String x:Key="Settings.ThemeLight">Light</sys:String>
     <sys:String x:Key="Settings.ThemeDark">Dark</sys:String>

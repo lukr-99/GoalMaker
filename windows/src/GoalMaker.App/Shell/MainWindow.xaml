@@ -10,10 +10,11 @@
                  MinHeight="480"
                  Icon="pack://application:,,,/Assets/GoalMaker.ico"
                  ExtendsContentIntoTitleBar="True"
-                 WindowBackdropType="Mica"
+                 WindowBackdropType="None"
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterScreen">
-    <Grid>
+    <!-- The theme's background under everything, title bar included (WPF UI owns the window's own). -->
+    <Grid Background="{DynamicResource GM.BackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
