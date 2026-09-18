@@ -27,7 +27,7 @@ manifest signing key, commit the manifest public key, protect `main`.
 
 ### M1: data and sync
 
-Core schema (areas, tags, tasks, steps, reminders, activity log), the replicas (Room, SQLite), the
+Core schema (areas, tags, tasks, steps, reminders, activity log), the shared SQLite replica (ADR 0007) on both apps, the
 outbox and pull sync, Realtime refresh, tombstone purge, the sync-merge contract vectors.
 
 ### M2: tasks everywhere
