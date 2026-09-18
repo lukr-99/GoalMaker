@@ -59,6 +59,8 @@ $defines = @("/DMyAppVersion=$version", "/DMyVersionInfoVersion=$versionInfoVers
 if ($Dev) { $defines += '/DDevBuild' }
 & $IsccPath /Q @defines $definition
 if ($LASTEXITCODE -ne 0) { throw 'Inno Setup compilation failed.' }
+# The publish folder is only the installer's input; the installer is the artifact.
+Remove-Item -LiteralPath $publish -Recurse -Force
 
 $setup = Join-Path $dist "GoalMaker-$version-setup.exe"
 if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) { throw "Expected installer was not produced: $setup" }
