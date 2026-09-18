@@ -1,6 +1,7 @@
 package com.goalmaker.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.goalmaker.app.data.planning.ReminderAlarm
 import com.goalmaker.app.ui.GoalMakerApp
 
 class MainActivity : ComponentActivity() {
@@ -20,7 +22,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val graph = (application as GoalMakerApplication).graph
         requestNotifications()
+        openedFromReminder(intent)
         setContent { GoalMakerApp(graph) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        openedFromReminder(intent)
+    }
+
+    private fun openedFromReminder(intent: Intent?) {
+        val reminderId = intent?.getStringExtra(ReminderAlarm.EXTRA_REMINDER_ID) ?: return
+        (application as GoalMakerApplication).graph.openedFromReminder(reminderId)
+        intent.removeExtra(ReminderAlarm.EXTRA_REMINDER_ID)
     }
 
     private fun requestNotifications() {

@@ -16,7 +16,8 @@ import com.goalmaker.app.domain.planning.Snooze
 
 /**
  * Shows and clears reminder notifications (docs/reminders.md). Ordinary and important reminders get
- * their own channel, so the owner can tune each and important ones keep ringing.
+ * their own channel, so the owner can tune each; an important one keeps ringing until it is handled.
+ * Each notification is tagged with its reminder id, which is how stale ones are found after a sync.
  */
 class ReminderNotifications(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
@@ -51,18 +52,24 @@ class ReminderNotifications(private val context: Context) {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
             .setOngoing(reminder.important)
-            .setContentIntent(openApp())
+            .setContentIntent(openApp(reminder.id))
             .setDeleteIntent(action(reminder.id, ReminderAlarm.ACTION_DISMISS, null))
             .addAction(0, context.getString(R.string.reminder_done), action(reminder.id, ReminderAlarm.ACTION_DONE, null))
             .addAction(0, context.getString(R.string.reminder_snooze_ten_minutes), snooze(reminder.id, Snooze.TEN_MINUTES))
             .addAction(0, context.getString(R.string.reminder_snooze_tomorrow), snooze(reminder.id, Snooze.TOMORROW_MORNING))
             .build()
+        // Important reminders ring alarm-style until the owner acts (spec, story 57).
+        if (reminder.important) notification.flags = notification.flags or Notification.FLAG_INSISTENT
         notify(reminder.id, notification)
     }
 
     /** Takes a reminder's notification away, because it was handled here or on the other device. */
     fun clear(reminderId: String) = manager.cancel(reminderId, ID)
+
+    /** The reminder ids whose notifications are on screen now. */
+    fun shown(): List<String> = manager.activeNotifications.filter { it.id == ID }.mapNotNull { it.tag }
 
     private fun notify(reminderId: String, notification: Notification) {
         try {
@@ -72,10 +79,14 @@ class ReminderNotifications(private val context: Context) {
         }
     }
 
-    private fun openApp(): PendingIntent = PendingIntent.getActivity(
+    // Opening the app from a notification counts as dismissing it (docs/reminders.md). The activity
+    // settles it, because Android no longer lets a notification tap go through a receiver first.
+    private fun openApp(reminderId: String): PendingIntent = PendingIntent.getActivity(
         context,
-        0,
-        Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        reminderId.hashCode(),
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(ReminderAlarm.EXTRA_REMINDER_ID, reminderId),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 

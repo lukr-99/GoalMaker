@@ -173,10 +173,14 @@ class AppGraph(context: Context) {
     init {
         reminderNotifications.createChannels()
         // A sync can leave a series with two open occurrences; every device settles it the same way.
-        // A pull can also change when the next reminder is due, so the armed alarm is redone.
+        // A sync can also change when the next reminder is due, and settle reminders on screen here
+        // that were handled on the other device, so the alarm is redone and stale ones come down.
         sync.afterRun = { report ->
             if (report.pulled > 0) tasks.repairSeries()
-            if (report.pulled > 0 || report.pushed > 0) reminders.rearm()
+            if (report.pulled > 0 || report.pushed > 0) {
+                reminders.rearm()
+                reminders.stale(reminderNotifications.shown()).forEach(reminderNotifications::clear)
+            }
         }
         scope.launch {
             auth.session.collect { session ->
@@ -226,6 +230,11 @@ class AppGraph(context: Context) {
             appContext.startActivity(Intent.makeRestartActivityTask(launch.component))
         }
         exitProcess(0)
+    }
+
+    /** The owner opened the app from a reminder's notification, which settles it as dismissed. */
+    fun openedFromReminder(reminderId: String) {
+        scope.launch(io) { reminders.dismiss(reminderId) }
     }
 
     private suspend fun onSignedIn(session: AuthSession.SignedIn) {
