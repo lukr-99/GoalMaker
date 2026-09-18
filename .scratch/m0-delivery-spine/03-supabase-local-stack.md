@@ -1,6 +1,6 @@
 # M0-03: Supabase local stack, first migrations, tests
 
-**Status:** todo · **Milestone:** M0
+**Status:** done 2026-09-18 · **Milestone:** M0
 
 ## Scope
 - `supabase/config.toml` for the local stack; email sign-in with a 6-digit code; local email
@@ -13,3 +13,8 @@
 ## Acceptance criteria
 - `tools/supabase-test.ps1` (and the CI job) starts the stack, runs the harness and pgTAP, and
   fails on any error.
+
+## Result
+- The harness is `tools/supabase_migrations.py` (lock, verify, test) rather than a PowerShell script. Migrations are locked by checksum in `supabase/migrations.lock.json`; fixtures live in `supabase/migration-tests/`.
+- The local stack uses ports 553xx because another project's stack holds 543xx.
+- Verified: a failing migration rolls back completely under the CLI.

@@ -1,6 +1,6 @@
 # M0-04: Android app skeleton
 
-**Status:** todo · **Milestone:** M0
+**Status:** done 2026-09-18 · **Milestone:** M0
 
 ## Scope
 - Gradle project in `android/` (Kotlin, Compose, Material 3 Expressive pinned, Navigation 3).
@@ -16,3 +16,12 @@
 ## Acceptance criteria
 - `gradlew testDebugUnitTest assembleDebug lintDebug` passes.
 - On the emulator, a code sent by the local stack signs in.
+
+## Result
+- compileSdk 37 (required by the Expressive alpha), targetSdk 36.
+- Verified on the emulator: email code sign-in against the local stack, profile row created, Settings, dark theme.
+- A minified, signed release APK starts and reaches the network layer without R8 problems.
+
+## Follow-up
+- Sign in with a release build over HTTPS once the cloud project exists.
+- Encrypt the stored session with the Android Keystore before v1.0.

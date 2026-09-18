@@ -1,6 +1,6 @@
 # M0-09: Setup guides
 
-**Status:** todo · **Milestone:** M0
+**Status:** done 2026-09-18 · **Milestone:** M0
 
 ## Scope
 - `docs/setup/local-development.md`: tools, local stack, running both apps against it.

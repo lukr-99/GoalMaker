@@ -372,14 +372,17 @@ statistics.
 
 Kotlin, Jetpack Compose with **Material 3 Expressive** (pinned alpha, ADR 0005), Navigation 3,
 Room, WorkManager, Glance widgets, supabase-kt, Vico charts, Haze blur, Kizitonwose Calendar,
-Reorderable, Konfetti, a Markdown renderer. Min SDK 26, compile and target SDK 36. Debug build:
+Reorderable, Konfetti, a Markdown renderer. Min SDK 26, compile SDK 37 (the Expressive alpha needs
+it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build:
 `com.goalmaker.app.debug`, version suffix `-dev`, local stack by default.
 
 ### Windows
 
 .NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), LiveCharts2, Windows App SDK app
-notifications (unpackaged), NHotkey (global hotkey), Markdig, the Supabase C# client, SQLite
-through Microsoft.Data.Sqlite. `dotnetlib` was checked; see ADR 0006. Single instance, launch
+notifications (unpackaged; to be confirmed in M2 against the framework-dependent installer),
+NHotkey (global hotkey), Markdig, the Supabase C# client, SQLite through Microsoft.Data.Sqlite.
+Published framework-dependent to stay under the update channel's 50 MB file limit (ADR 0004).
+`dotnetlib` was checked; see ADR 0006. Single instance, launch
 switches, `goalmaker://` links, Startup Profiles registration through its public contract.
 
 ### Supabase operations

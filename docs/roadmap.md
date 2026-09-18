@@ -7,7 +7,7 @@ and each has markdown issues under `.scratch/<milestone>/`.
 
 1. Spec grilling (done: `docs/grilling/`)
 2. Spec, roadmap, glossary and ADRs (done)
-3. **M0: delivery spine** (in progress)
+3. **M0: delivery spine** (built 2026-09-18; the first push and the owner's one-time setup remain)
 4. Design questionnaire (type, color, motion) before M2
 5. M1 to M6, then v1.0
 6. M7 and the post-v1 list
@@ -20,6 +20,10 @@ Repository layout, CI for every part, local Supabase with migration and row-secu
 code sign-in on both apps, debug/release identity and version, Android release signing, Windows
 installer, and the update channel (signed manifest in a private Storage bucket, verified by both
 apps). Issues: `.scratch/m0-delivery-spine/`.
+
+Owner's one-time setup before the first release (guides in `docs/setup/`): create the cloud
+project and push the schema, set the Supabase secrets, create the Android release key and the
+manifest signing key, commit the manifest public key, protect `main`.
 
 ### M1: data and sync
 

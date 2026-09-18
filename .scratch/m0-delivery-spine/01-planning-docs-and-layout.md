@@ -1,6 +1,6 @@
 # M0-01: Planning docs and repository layout
 
-**Status:** in progress · **Milestone:** M0
+**Status:** done 2026-09-18 · **Milestone:** M0
 
 ## Scope
 - `docs/spec.md`, `docs/roadmap.md`, `CONTEXT.md`, ADRs 0001 to 0006.
