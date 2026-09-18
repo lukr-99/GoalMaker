@@ -28,4 +28,24 @@ public sealed class AppDataPaths
         Directory.CreateDirectory(Root);
         return Root;
     }
+
+    /// <summary>Deletes downloaded installers left from an earlier update; they are never reused.</summary>
+    public void ClearUpdates()
+    {
+        try
+        {
+            if (Directory.Exists(Updates))
+            {
+                Directory.Delete(Updates, recursive: true);
+            }
+        }
+        catch (IOException)
+        {
+            // Still in use by a running installer; the next start clears it.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // Same as above.
+        }
+    }
 }

@@ -31,6 +31,7 @@ public sealed class AppGraph : IDisposable
     {
         Paths = new AppDataPaths(build.IsDevBuild);
         Paths.EnsureRoot();
+        Paths.ClearUpdates();
         Settings = new JsonSettingsStore(Paths.Settings);
 
         var backend = (build.IsDevBuild ? Settings.BackendOverride : null) ?? build.DefaultBackend;
