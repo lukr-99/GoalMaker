@@ -18,7 +18,7 @@ Kotlin and C# implement it separately and both must pass
 | a date | `today`, `tomorrow` (`tmrw`, `tmr`), a weekday (`monday`, `mon`), `next monday`, `next week`, `next month`, `in 3 days`, `in a week`, `in 2 months`, `2026-10-05`, `21.9.`, `21.9.2027`, `sep 25`, `25 october`. `on` may come first: `on monday`. |
 | a time | `17:00`, `9:30`, `5pm`, `5:30 pm`, `12am`, `noon`, `midnight`. `at` may come first. |
 | a repeat | `daily`, `every day`, `weekdays`, `every weekend`, `weekly`, `monthly`, `every 3 days`, `every 2 weeks`, `every 2 months`, `every monday`, `every mon, wed and fri`, `every 15th`. |
-| `/command` | At the very start: a command (`/plan`, `/review`, `/habit`, `/goal`); the rest of the line is its argument and nothing else is parsed. |
+| `/command` | At the very start: a command (`/plan`, `/review`, `/habit`, `/goal`); the rest of the line is its argument and nothing else is parsed. `/plan` opens [Plan tomorrow](plan-tomorrow.md) (inside the ritual it starts over); the others arrive with their milestones. |
 
 Words are matched without regard to case. Punctuation stuck to the end of a marker or a date
 (`#health,`, `tomorrow.`) goes with it. A backslash keeps a word as text: `\#launch`, `\tomorrow`.

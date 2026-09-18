@@ -116,6 +116,23 @@ public sealed class TaskList
 
     public void Delete(string id) => Change(id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
+    /// <summary>Plans the task for <paramref name="day"/>, keeping its time; reopens it if it was done or dropped (Plan tomorrow).</summary>
+    public void Plan(string id, DateOnly day) => Change(id, row =>
+    {
+        row["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        row["status"] = "open";
+        row["completed_at"] = null;
+    });
+
+    /// <summary>Drops the task: it stays in the history but leaves every list.</summary>
+    public void Drop(string id) => Change(id, row =>
+    {
+        row["status"] = "dropped";
+        row["completed_at"] = null;
+    });
+
+    public void SetTopPriority(string id, bool top) => Change(id, row => row["top_priority"] = top);
+
     private void Change(string id, Action<JsonObject> edit)
     {
         var row = replica.Get(Table, id);

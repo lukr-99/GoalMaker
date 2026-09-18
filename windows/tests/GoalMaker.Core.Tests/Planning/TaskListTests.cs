@@ -126,6 +126,48 @@ public sealed class TaskListTests : IDisposable
     }
 
     [Fact]
+    public void PlanningReopensATaskOnItsNewDayAndKeepsItsTime()
+    {
+        var tasks = Tasks();
+        var call = tasks.Add(Draft("Call mum today 18:00"))!;
+        tasks.SetDone(call.Id, true);
+        tasks.Plan(call.Id, new DateOnly(2026, 9, 19));
+
+        var row = test.Replica.Get("tasks", call.Id)!;
+        Assert.Equal("2026-09-19", (string?)row["planned_date"]);
+        Assert.Equal("18:00:00", (string?)row["planned_time"]);
+        Assert.Equal("open", (string?)row["status"]);
+        Assert.Null(row["completed_at"]);
+    }
+
+    [Fact]
+    public void DroppingKeepsTheTaskButClosesIt()
+    {
+        var tasks = Tasks();
+        var run = tasks.Add("Run")!;
+        tasks.SetDone(run.Id, true);
+        tasks.Drop(run.Id);
+
+        var row = test.Replica.Get("tasks", run.Id)!;
+        Assert.Equal("dropped", (string?)row["status"]);
+        Assert.Null(row["completed_at"]);
+        Assert.Null(row["deleted_at"]);
+        Assert.Empty(tasks.Open());
+        Assert.Equal(TaskState.Dropped, Assert.Single(tasks.All()).State);
+    }
+
+    [Fact]
+    public void TopPriorityCanBeSetAndCleared()
+    {
+        var tasks = Tasks();
+        var run = tasks.Add("Run")!;
+        tasks.SetTopPriority(run.Id, true);
+        Assert.True(Assert.Single(tasks.All()).TopPriority);
+        tasks.SetTopPriority(run.Id, false);
+        Assert.False(Assert.Single(tasks.All()).TopPriority);
+    }
+
+    [Fact]
     public void TheListAnnouncesChanges()
     {
         var tasks = Tasks();

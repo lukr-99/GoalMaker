@@ -89,6 +89,21 @@ class TaskList(
 
     fun delete(id: String) = change(id) { row -> row[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
 
+    /** Plans the task for [day], keeping its time; reopens it if it was done or dropped (Plan tomorrow). */
+    fun plan(id: String, day: LocalDate) = change(id) { row ->
+        row["planned_date"] = JsonPrimitive(day.toString())
+        row["status"] = JsonPrimitive("open")
+        row["completed_at"] = JsonNull
+    }
+
+    /** Drops the task: it stays in the history but leaves every list. */
+    fun drop(id: String) = change(id) { row ->
+        row["status"] = JsonPrimitive("dropped")
+        row["completed_at"] = JsonNull
+    }
+
+    fun setTopPriority(id: String, top: Boolean) = change(id) { row -> row["top_priority"] = JsonPrimitive(top) }
+
     private fun change(id: String, edit: (MutableMap<String, JsonElement>) -> Unit) {
         val row = replica.get(TABLE, id) ?: return
         val values = LinkedHashMap(row)

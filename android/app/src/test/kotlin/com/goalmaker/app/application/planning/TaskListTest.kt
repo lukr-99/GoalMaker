@@ -5,6 +5,7 @@ import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.replica.text
 import com.goalmaker.app.domain.composer.ComposerParser
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -136,6 +137,45 @@ class TaskListTest {
 
         assertEquals(1, tasks.open().size)
         assertNull(test.replica.get("tasks", run.id)!!.text("completed_at"))
+    }
+
+    @Test
+    fun `planning reopens a task on its new day and keeps its time`() {
+        val tasks = tasks()
+        val call = tasks.add(draft("Call mum today 18:00"))!!
+        tasks.setDone(call.id, true)
+        tasks.plan(call.id, LocalDate.parse("2026-09-19"))
+
+        val row = test.replica.get("tasks", call.id)!!
+        assertEquals("2026-09-19", row.text("planned_date"))
+        assertEquals("18:00:00", row.text("planned_time"))
+        assertEquals("open", row.text("status"))
+        assertNull(row.text("completed_at"))
+    }
+
+    @Test
+    fun `dropping keeps the task but closes it`() {
+        val tasks = tasks()
+        val run = tasks.add("Run")!!
+        tasks.setDone(run.id, true)
+        tasks.drop(run.id)
+
+        val row = test.replica.get("tasks", run.id)!!
+        assertEquals("dropped", row.text("status"))
+        assertNull(row.text("completed_at"))
+        assertNull(row.text("deleted_at"))
+        assertTrue(tasks.open().isEmpty())
+        assertEquals(TaskState.DROPPED, tasks.all().single().state)
+    }
+
+    @Test
+    fun `top priority can be set and cleared`() {
+        val tasks = tasks()
+        val run = tasks.add("Run")!!
+        tasks.setTopPriority(run.id, true)
+        assertTrue(tasks.all().single().topPriority)
+        tasks.setTopPriority(run.id, false)
+        assertEquals(false, tasks.all().single().topPriority)
     }
 
     @Test
