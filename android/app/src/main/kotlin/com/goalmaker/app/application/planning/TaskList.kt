@@ -34,6 +34,15 @@ class TaskList(
     /** [open], again after every change to the tasks table. Collect it off the main thread. */
     fun watchOpen(): Flow<List<TaskItem>> = replica.watch(TABLE).map { open() }
 
+    /** Every task that isn't deleted, whatever its status: what the list rules work from. */
+    fun all(): List<TaskItem> = replica.all(TABLE).filter { it.isNull(SyncedTable.DELETED_AT) }.map(::toItem)
+
+    /** [all], again after every change to the tasks table. Collect it off the main thread. */
+    fun watchAll(): Flow<List<TaskItem>> = replica.watch(TABLE).map { all() }
+
+    /** Brings a deleted task back (undo). */
+    fun restore(id: String) = change(id) { row -> row[SyncedTable.DELETED_AT] = JsonNull }
+
     fun add(title: String): TaskItem? = add(ComposerDraft(title = title))
 
     /**

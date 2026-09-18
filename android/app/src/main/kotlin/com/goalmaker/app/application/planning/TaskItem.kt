@@ -14,4 +14,5 @@ data class TaskItem(
     val plannedTime: LocalTime? = null,
     val areaId: String? = null,
     val recurrence: String? = null,
+    val deleted: Boolean = false,
 )

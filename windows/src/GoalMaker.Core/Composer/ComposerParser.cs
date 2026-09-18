@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using GoalMaker.Core.Planning;
 
 namespace GoalMaker.Core.Composer;
 
@@ -42,7 +43,7 @@ public static partial class ComposerParser
         }
 
         var tokens = Tokenize(line);
-        var today = DateOnly.FromDateTime(now.AddHours(-rolloverHour));
+        var today = PlanningDay.Of(now, rolloverHour);
         var markers = tokens.Select(MarkerOf).ToList();
         var candidates = Enumerable.Range(0, tokens.Count).SelectMany(start => PhrasesAt(tokens, start, today)).ToList();
 

@@ -1,0 +1,127 @@
+{
+  "schema": 1,
+  "description": "Which open tasks each list shows, in order (docs/lists.md). Tasks list only fields that differ from 'taskDefaults'; their creation order is their order in the case (the first was created first). 'expect' lists task ids per list; lists it omits are empty, and an omitted summary is 0 of 0. 'now' is local time; the day starts at 'rolloverHour'. 2026-09-18 is a Friday.",
+  "now": "2026-09-18T14:05",
+  "rolloverHour": 4,
+  "taskDefaults": { "planned": null, "time": null, "top": false, "status": "open", "area": null, "deleted": false },
+  "cases": [
+    {
+      "name": "planned today lands in Today, by section",
+      "tasks": [
+        { "id": "p1", "planned": "2026-09-18", "top": true },
+        { "id": "s1", "planned": "2026-09-18", "time": "17:00" },
+        { "id": "s2", "planned": "2026-09-18", "time": "09:00" },
+        { "id": "m1", "planned": "2026-09-18" },
+        { "id": "m2", "planned": "2026-09-18" }
+      ],
+      "expect": { "priorities": ["p1"], "scheduled": ["s2", "s1"], "more": ["m1", "m2"], "summary": { "done": 0, "total": 5 } }
+    },
+    {
+      "name": "a timed top priority is a priority",
+      "tasks": [{ "id": "t", "planned": "2026-09-18", "time": "10:00", "top": true }],
+      "expect": { "priorities": ["t"], "summary": { "done": 0, "total": 1 } }
+    },
+    {
+      "name": "priorities in time order, untimed last",
+      "tasks": [
+        { "id": "a", "planned": "2026-09-18", "top": true },
+        { "id": "b", "planned": "2026-09-18", "time": "08:00", "top": true },
+        { "id": "c", "planned": "2026-09-18", "time": "12:00", "top": true }
+      ],
+      "expect": { "priorities": ["b", "c", "a"], "summary": { "done": 0, "total": 3 } }
+    },
+    {
+      "name": "same-time tasks keep their creation order",
+      "tasks": [
+        { "id": "late", "planned": "2026-09-18", "time": "09:00" },
+        { "id": "early", "planned": "2026-09-18", "time": "09:00" }
+      ],
+      "expect": { "scheduled": ["late", "early"], "summary": { "done": 0, "total": 2 } }
+    },
+    {
+      "name": "yesterday and before are overdue, oldest first",
+      "tasks": [
+        { "id": "o1", "planned": "2026-09-17" },
+        { "id": "o2", "planned": "2026-09-10" },
+        { "id": "o3", "planned": "2026-09-17", "time": "08:00" }
+      ],
+      "expect": { "overdue": ["o2", "o3", "o1"] }
+    },
+    {
+      "name": "tomorrow: top priority first, then time, then the rest",
+      "tasks": [
+        { "id": "t1", "planned": "2026-09-19" },
+        { "id": "t2", "planned": "2026-09-19", "time": "09:00", "top": true },
+        { "id": "t3", "planned": "2026-09-19", "time": "08:00" },
+        { "id": "t4", "planned": "2026-09-20" }
+      ],
+      "expect": { "tomorrow": ["t2", "t3", "t1"] }
+    },
+    {
+      "name": "no day and no area is the Inbox",
+      "tasks": [
+        { "id": "i1" },
+        { "id": "i2", "area": "area-1" },
+        { "id": "i3" }
+      ],
+      "expect": { "inbox": ["i1", "i3"] }
+    },
+    {
+      "name": "a day takes a task out of the Inbox",
+      "tasks": [{ "id": "x", "planned": "2026-09-18" }],
+      "expect": { "more": ["x"], "summary": { "done": 0, "total": 1 } }
+    },
+    {
+      "name": "done, dropped and deleted tasks leave the lists",
+      "tasks": [
+        { "id": "d1", "planned": "2026-09-18", "status": "done" },
+        { "id": "d2", "planned": "2026-09-18", "status": "dropped" },
+        { "id": "d3", "planned": "2026-09-18", "deleted": true },
+        { "id": "d4", "status": "done" },
+        { "id": "d5", "planned": "2026-09-17", "status": "done" },
+        { "id": "d6", "planned": "2026-09-19", "deleted": true }
+      ],
+      "expect": { "summary": { "done": 1, "total": 1 } }
+    },
+    {
+      "name": "the summary counts today's plan",
+      "tasks": [
+        { "id": "a", "planned": "2026-09-18" },
+        { "id": "b", "planned": "2026-09-18", "status": "done" },
+        { "id": "c", "planned": "2026-09-18", "time": "10:00" },
+        { "id": "d", "planned": "2026-09-17", "status": "done" },
+        { "id": "e", "planned": "2026-09-19" }
+      ],
+      "expect": { "scheduled": ["c"], "more": ["a"], "tomorrow": ["e"], "summary": { "done": 1, "total": 3 } }
+    },
+    {
+      "name": "after midnight, today is still yesterday",
+      "now": "2026-09-19T01:30",
+      "tasks": [
+        { "id": "a", "planned": "2026-09-18" },
+        { "id": "b", "planned": "2026-09-19" },
+        { "id": "c", "planned": "2026-09-17" }
+      ],
+      "expect": { "more": ["a"], "tomorrow": ["b"], "overdue": ["c"], "summary": { "done": 0, "total": 1 } }
+    },
+    {
+      "name": "with the day starting at midnight, the date is the day",
+      "now": "2026-09-19T01:30",
+      "rolloverHour": 0,
+      "tasks": [
+        { "id": "a", "planned": "2026-09-18" },
+        { "id": "b", "planned": "2026-09-19" }
+      ],
+      "expect": { "more": ["b"], "overdue": ["a"], "summary": { "done": 0, "total": 1 } }
+    },
+    {
+      "name": "the day starts at the hour, not before",
+      "now": "2026-09-19T04:00",
+      "tasks": [
+        { "id": "a", "planned": "2026-09-18" },
+        { "id": "b", "planned": "2026-09-19" }
+      ],
+      "expect": { "more": ["b"], "overdue": ["a"], "summary": { "done": 0, "total": 1 } }
+    }
+  ]
+}

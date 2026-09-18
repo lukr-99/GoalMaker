@@ -1,5 +1,6 @@
 package com.goalmaker.app.domain.composer
 
+import com.goalmaker.app.domain.planning.PlanningDay
 import java.time.DateTimeException
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -47,7 +48,7 @@ object ComposerParser {
         command(line)?.let { return it }
 
         val tokens = tokenize(line)
-        val today = now.minusHours(rolloverHour.toLong()).toLocalDate()
+        val today = PlanningDay.of(now, rolloverHour)
         val markers = tokens.map(::marker)
         val candidates = tokens.indices.flatMap { start -> phrasesAt(tokens, start, today) }
 

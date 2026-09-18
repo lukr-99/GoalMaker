@@ -10,4 +10,5 @@ public sealed record TaskItem(
     DateOnly? PlannedDate = null,
     TimeOnly? PlannedTime = null,
     string? AreaId = null,
-    string? Recurrence = null);
+    string? Recurrence = null,
+    bool Deleted = false);

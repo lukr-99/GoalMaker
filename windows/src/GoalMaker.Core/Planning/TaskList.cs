@@ -45,6 +45,13 @@ public sealed class TaskList
             .Select(ToItem)
             .OrderBy(item => item.CreatedAt, StringComparer.Ordinal)];
 
+    /// <summary>Every task that isn't deleted, whatever its status: what the list rules work from.</summary>
+    public IReadOnlyList<TaskItem> All() =>
+        [.. replica.All(Table).Where(row => row[SyncedTable.DeletedAt] is null).Select(ToItem)];
+
+    /// <summary>Brings a deleted task back (undo).</summary>
+    public void Restore(string id) => Change(id, row => row[SyncedTable.DeletedAt] = null);
+
     public TaskItem? Add(string title) => Add(new ComposerDraft(title, null, null, [], null, null, false, false, null, null, []));
 
     /// <summary>

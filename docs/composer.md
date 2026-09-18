@@ -60,6 +60,12 @@ given time has passed), and today counts: `every friday` on a Friday starts toda
 `every 2 weeks`, `monthly` and `every 2 months` take their weekday or day of the month from the
 planned date. A day some months lack (`every 31st`) starts in the first month that has it.
 
+## The screen supplies the day
+
+When a line names no day (and no repeat or time, which bring their own), the list you type on
+supplies it: Today plans the task for today, Tomorrow for tomorrow, and the Inbox leaves it without
+a day. The parser itself never guesses; the composer applies this after parsing.
+
 ## The result
 
 The title is what remains, words joined by single spaces. It may be empty; the composer then has
