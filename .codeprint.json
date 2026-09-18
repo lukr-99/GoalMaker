@@ -7,17 +7,20 @@
     "SECURITY.md",
     "LICENSE.md"
   ],
-  "migration_directories": [],
+  "migration_directories": [
+    "supabase/migrations"
+  ],
   "type_scan_roots": [
-    "src",
-    "app/src/main",
-    "agent"
+    "android/app/src/main/kotlin",
+    "windows/src"
   ],
   "type_policy_excludes": [
     "**/generated/**",
     "**/obj/**",
     "**/bin/**",
-    "**/build/**"
+    "**/build/**",
+    "**/node_modules/**",
+    "**/.gradle/**"
   ],
   "link_check_excludes": []
 }

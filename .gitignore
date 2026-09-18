@@ -29,3 +29,6 @@ keystore.properties
 !.env.example
 supabase/.temp/
 supabase/.branches/
+
+# Node tooling (Supabase CLI)
+node_modules/

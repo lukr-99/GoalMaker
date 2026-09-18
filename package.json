@@ -1,0 +1,12 @@
+{
+  "name": "goalmaker-tooling",
+  "private": true,
+  "description": "Pinned command-line tools for the GoalMaker repository (Supabase CLI). The apps themselves are Kotlin and C#; Edge Functions run on Deno.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "scripts": {
+    "supabase": "supabase"
+  },
+  "devDependencies": {
+    "supabase": "2.117.0"
+  }
+}
