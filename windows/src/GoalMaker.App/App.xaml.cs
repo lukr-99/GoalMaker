@@ -52,7 +52,7 @@ public partial class App : Application
             return;
         }
 
-        ShowMainWindow();
+        ShowMainWindow(activate: !options.NoActivate);
         if (options.OpenPage is { } page)
         {
             window?.Open(page);
@@ -63,20 +63,26 @@ public partial class App : Application
         }
     }
 
-    private void ShowMainWindow()
+    private void ShowMainWindow() => ShowMainWindow(activate: true);
+
+    private void ShowMainWindow(bool activate)
     {
         if (window is null)
         {
             return;
         }
 
+        window.ShowActivated = activate;
         window.Show();
         if (window.WindowState == WindowState.Minimized)
         {
             window.WindowState = WindowState.Normal;
         }
 
-        window.Activate();
+        if (activate)
+        {
+            window.Activate();
+        }
     }
 
     private void Quit()

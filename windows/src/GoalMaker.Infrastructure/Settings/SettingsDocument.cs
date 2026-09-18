@@ -12,4 +12,6 @@ public sealed record SettingsDocument
     public string? BackendUrl { get; init; }
 
     public string? BackendKey { get; init; }
+
+    public WindowPlacement? MainWindowPlacement { get; init; }
 }

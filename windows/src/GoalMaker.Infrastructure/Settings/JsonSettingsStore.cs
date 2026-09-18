@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using GoalMaker.Core.Backend;
 using GoalMaker.Core.Settings;
 
@@ -7,7 +8,11 @@ namespace GoalMaker.Infrastructure.Settings;
 /// <summary><see cref="ISettingsStore"/> in a small JSON file next to the session. Not synced.</summary>
 public sealed class JsonSettingsStore : ISettingsStore
 {
-    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions Options = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
     private readonly string path;
     private SettingsDocument document;
 
@@ -37,6 +42,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         }
 
         set => Save(document with { BackendUrl = value?.Url.Trim(), BackendKey = value?.PublishableKey.Trim() });
+    }
+
+    public WindowPlacement? MainWindowPlacement
+    {
+        get => document.MainWindowPlacement;
+        set => Save(document with { MainWindowPlacement = value });
     }
 
     private static SettingsDocument Load(string path)

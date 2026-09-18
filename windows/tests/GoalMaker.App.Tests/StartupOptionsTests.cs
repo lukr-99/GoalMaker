@@ -25,6 +25,10 @@ public sealed class StartupOptionsTests
         Assert.Equal(new StartupOptions(false, AppPage.Today), StartupOptions.Parse(["goalmaker://open/today/"]));
 
     [Fact]
+    public void NoActivateShowsWithoutFocus() =>
+        Assert.Equal(new StartupOptions(false, AppPage.Today, NoActivate: true), StartupOptions.Parse(["--no-activate", "--open", "today"]));
+
+    [Fact]
     public void UnknownValuesAreIgnored() =>
         Assert.Equal(new StartupOptions(true, null), StartupOptions.Parse(["--tray", "--open", "habits", "--mini", "today"]));
 }
