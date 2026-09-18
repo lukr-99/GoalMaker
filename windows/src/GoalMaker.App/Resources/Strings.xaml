@@ -1,0 +1,67 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- English copy. A Czech dictionary with the same keys can be merged later. -->
+    <sys:String x:Key="App.Name">GoalMaker</sys:String>
+
+    <sys:String x:Key="Tray.Open">Open GoalMaker</sys:String>
+    <sys:String x:Key="Tray.Quit">Quit</sys:String>
+
+    <sys:String x:Key="Nav.Today">Today</sys:String>
+    <sys:String x:Key="Nav.Settings">Settings</sys:String>
+
+    <sys:String x:Key="SignIn.Title">Plan tomorrow.&#10;Keep your goals alive.</sys:String>
+    <sys:String x:Key="SignIn.EmailLabel">Email</sys:String>
+    <sys:String x:Key="SignIn.EmailHint">We'll email you a 6-digit code. No password.</sys:String>
+    <sys:String x:Key="SignIn.SendCode">Send code</sys:String>
+    <sys:String x:Key="SignIn.CodeLabel">6-digit code</sys:String>
+    <sys:String x:Key="SignIn.CodeSent">We sent a code to {0}. It works for 10 minutes.</sys:String>
+    <sys:String x:Key="SignIn.Verify">Sign in</sys:String>
+    <sys:String x:Key="SignIn.Resend">Send a new code</sys:String>
+    <sys:String x:Key="SignIn.UseAnotherEmail">Use another email</sys:String>
+    <sys:String x:Key="SignIn.Error.InvalidEmail">Enter a valid email address.</sys:String>
+    <sys:String x:Key="SignIn.Error.InvalidCode">Enter the 6 digits from the email.</sys:String>
+    <sys:String x:Key="SignIn.Error.WrongCode">That code is wrong or has expired. Try again or send a new one.</sys:String>
+    <sys:String x:Key="SignIn.Error.TooManyRequests">Too many attempts. Wait a minute, then try again.</sys:String>
+    <sys:String x:Key="SignIn.Error.Offline">No connection to GoalMaker's server. Check your internet and try again.</sys:String>
+    <sys:String x:Key="SignIn.Error.Other">Sign-in failed: {0}</sys:String>
+    <sys:String x:Key="SignIn.DevBackend">Development build · {0}</sys:String>
+
+    <sys:String x:Key="Today.Title">Today</sys:String>
+    <sys:String x:Key="Today.Greeting">Signed in as {0}</sys:String>
+    <sys:String x:Key="Today.SpineTitle">The delivery spine is in place</sys:String>
+    <sys:String x:Key="Today.SpineBody">Sign-in, updates and the backend work. Tasks, goals and habits arrive in the next milestones.</sys:String>
+    <sys:String x:Key="Today.ComposerPlaceholder">Add a task… (arrives in M2)</sys:String>
+
+    <sys:String x:Key="Settings.Title">Settings</sys:String>
+    <sys:String x:Key="Settings.Appearance">Appearance</sys:String>
+    <sys:String x:Key="Settings.ThemeSystem">System</sys:String>
+    <sys:String x:Key="Settings.ThemeLight">Light</sys:String>
+    <sys:String x:Key="Settings.ThemeDark">Dark</sys:String>
+    <sys:String x:Key="Settings.Account">Account</sys:String>
+    <sys:String x:Key="Settings.SignOut">Sign out</sys:String>
+    <sys:String x:Key="Settings.Updates">Updates</sys:String>
+    <sys:String x:Key="Settings.CheckUpdates">Check for updates</sys:String>
+    <sys:String x:Key="Settings.InstallUpdate">Install {0}</sys:String>
+    <sys:String x:Key="Settings.Update.Checking">Checking…</sys:String>
+    <sys:String x:Key="Settings.Update.Downloading">Downloading {0:P0}…</sys:String>
+    <sys:String x:Key="Settings.Update.NotConfigured">The update channel isn't set up in this build yet.</sys:String>
+    <sys:String x:Key="Settings.Update.DevBuild">Development builds don't update themselves. Install a release build instead.</sys:String>
+    <sys:String x:Key="Settings.Update.UpToDate">You have the latest version ({0}).</sys:String>
+    <sys:String x:Key="Settings.Update.Available">Version {0} is available.</sys:String>
+    <sys:String x:Key="Settings.Update.Untrusted">The update channel returned a release that failed verification. Nothing was installed.</sys:String>
+    <sys:String x:Key="Settings.Update.Failed">Couldn't check for updates: {0}</sys:String>
+    <sys:String x:Key="Settings.Update.Corrupted">The download didn't match its checksum and was discarded.</sys:String>
+    <sys:String x:Key="Settings.Update.Started">The installer is running. GoalMaker restarts when it finishes.</sys:String>
+    <sys:String x:Key="Settings.Update.Manual">You can always install an update by hand from the GoalMaker GitHub release.</sys:String>
+    <sys:String x:Key="Settings.About">About</sys:String>
+    <sys:String x:Key="Settings.Version">Version {0}</sys:String>
+    <sys:String x:Key="Settings.Backend">Backend: {0}</sys:String>
+    <sys:String x:Key="Settings.Developer">Developer</sys:String>
+    <sys:String x:Key="Settings.BackendUrl">Supabase URL</sys:String>
+    <sys:String x:Key="Settings.BackendKey">Publishable key</sys:String>
+    <sys:String x:Key="Settings.BackendSave">Save and restart</sys:String>
+    <sys:String x:Key="Settings.BackendReset">Use the default</sys:String>
+    <sys:String x:Key="Settings.BackendHint">Dev builds only. The local stack runs at http://127.0.0.1:55321.</sys:String>
+</ResourceDictionary>

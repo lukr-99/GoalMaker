@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Pure domain and application code: no UI, storage, network or Windows APIs (CodePrint). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>GoalMaker.Core</RootNamespace>
+  </PropertyGroup>
+</Project>

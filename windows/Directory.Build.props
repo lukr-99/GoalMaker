@@ -1,0 +1,33 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Company>Lukáš Krejčí</Company>
+    <Product>GoalMaker</Product>
+    <Copyright>Copyright Lukáš Krejčí. PolyForm Noncommercial 1.0.0.</Copyright>
+    <RepositoryRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepositoryRoot>
+  </PropertyGroup>
+
+  <!--
+    One version for every part of GoalMaker (repository-root version.properties). Only builds made
+    with -p:GoalMakerReleaseBuild=true (the installer script and the release workflow) carry the plain
+    version; every other build is "-dev", so the updater never mistakes it for a release.
+  -->
+  <PropertyGroup>
+    <GoalMakerReleaseBuild Condition="'$(GoalMakerReleaseBuild)' == ''">false</GoalMakerReleaseBuild>
+    <_GoalMakerVersionText>$([System.IO.File]::ReadAllText('$(RepositoryRoot)\version.properties'))</_GoalMakerVersionText>
+    <GoalMakerVersion>$([System.Text.RegularExpressions.Regex]::Match($(_GoalMakerVersionText), 'versionName=([0-9]+\.[0-9]+\.[0-9]+)').Groups[1].Value)</GoalMakerVersion>
+    <Version Condition="'$(GoalMakerReleaseBuild)' == 'true'">$(GoalMakerVersion)</Version>
+    <Version Condition="'$(GoalMakerReleaseBuild)' != 'true'">$(GoalMakerVersion)-dev</Version>
+    <AssemblyVersion>$(GoalMakerVersion).0</AssemblyVersion>
+    <FileVersion>$(GoalMakerVersion).0</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <!-- Untracked machine settings, for example the cloud backend for local release builds. -->
+  <Import Project="$(MSBuildThisFileDirectory)GoalMaker.local.props" Condition="Exists('$(MSBuildThisFileDirectory)GoalMaker.local.props')" />
+</Project>

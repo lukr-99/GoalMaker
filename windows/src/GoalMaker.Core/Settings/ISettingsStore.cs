@@ -1,0 +1,12 @@
+using GoalMaker.Core.Backend;
+
+namespace GoalMaker.Core.Settings;
+
+/// <summary>Device-local settings that are not synced: the theme and, in dev builds, a backend override.</summary>
+public interface ISettingsStore
+{
+    ThemeMode ThemeMode { get; set; }
+
+    /// <summary>Dev builds only: another Supabase project to use from the next app start.</summary>
+    BackendEnvironment? BackendOverride { get; set; }
+}

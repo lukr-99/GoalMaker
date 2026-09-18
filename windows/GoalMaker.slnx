@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GoalMaker.App/GoalMaker.App.csproj" />
+    <Project Path="src/GoalMaker.Core/GoalMaker.Core.csproj" />
+    <Project Path="src/GoalMaker.Infrastructure/GoalMaker.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GoalMaker.App.Tests/GoalMaker.App.Tests.csproj" />
+    <Project Path="tests/GoalMaker.Core.Tests/GoalMaker.Core.Tests.csproj" />
+  </Folder>
+</Solution>

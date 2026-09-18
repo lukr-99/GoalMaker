@@ -32,3 +32,6 @@ supabase/.branches/
 
 # Node tooling (Supabase CLI)
 node_modules/
+
+# Machine-local build settings (cloud Supabase URL/key for release builds)
+windows/GoalMaker.local.props

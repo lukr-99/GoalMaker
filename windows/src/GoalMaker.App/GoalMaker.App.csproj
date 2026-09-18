@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>GoalMaker.App</RootNamespace>
+    <AssemblyName>GoalMaker</AssemblyName>
+    <ApplicationIcon>Assets\GoalMaker.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <!--
+    Backend and update-channel settings baked into the build (ADR 0001, ADR 0004). Dev builds default
+    to the local Supabase stack; release builds need the cloud project from GOALMAKER_SUPABASE_URL and
+    GOALMAKER_SUPABASE_KEY or windows/GoalMaker.local.props (untracked).
+  -->
+  <PropertyGroup>
+    <GoalMakerSupabaseUrl Condition="'$(GoalMakerSupabaseUrl)' == ''">$(GOALMAKER_SUPABASE_URL)</GoalMakerSupabaseUrl>
+    <GoalMakerSupabaseKey Condition="'$(GoalMakerSupabaseKey)' == ''">$(GOALMAKER_SUPABASE_KEY)</GoalMakerSupabaseKey>
+    <GoalMakerSupabaseUrl Condition="'$(GoalMakerSupabaseUrl)' == '' and '$(GoalMakerReleaseBuild)' != 'true'">http://127.0.0.1:55321</GoalMakerSupabaseUrl>
+    <GoalMakerSupabaseKey Condition="'$(GoalMakerSupabaseKey)' == '' and '$(GoalMakerReleaseBuild)' != 'true'">sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH</GoalMakerSupabaseKey>
+    <_ManifestKeyFile>$(RepositoryRoot)\contracts\keys\release-manifest-public.b64</_ManifestKeyFile>
+    <GoalMakerManifestPublicKey Condition="'$(GoalMakerManifestPublicKey)' == ''">$(GOALMAKER_MANIFEST_PUBLIC_KEY)</GoalMakerManifestPublicKey>
+    <GoalMakerManifestPublicKey Condition="'$(GoalMakerManifestPublicKey)' == '' and Exists('$(_ManifestKeyFile)')">$([System.IO.File]::ReadAllText('$(_ManifestKeyFile)').Trim())</GoalMakerManifestPublicKey>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyMetadata Include="GoalMaker.ReleaseBuild" Value="$(GoalMakerReleaseBuild)" />
+    <AssemblyMetadata Include="GoalMaker.SupabaseUrl" Value="$(GoalMakerSupabaseUrl)" />
+    <AssemblyMetadata Include="GoalMaker.SupabaseKey" Value="$(GoalMakerSupabaseKey)" />
+    <AssemblyMetadata Include="GoalMaker.ManifestPublicKey" Value="$(GoalMakerManifestPublicKey)" />
+  </ItemGroup>
+
+  <Target Name="RequireCloudBackendForRelease"
+          BeforeTargets="CoreCompile"
+          Condition="'$(GoalMakerReleaseBuild)' == 'true' and ('$(GoalMakerSupabaseUrl)' == '' or '$(GoalMakerSupabaseKey)' == '')">
+    <Error Text="Release builds need GOALMAKER_SUPABASE_URL and GOALMAKER_SUPABASE_KEY (or windows/GoalMaker.local.props). See docs/setup/cloud-supabase.md." />
+  </Target>
+
+  <ItemGroup>
+    <Resource Include="Assets\GoalMaker.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GoalMaker.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GoalMaker.Core\GoalMaker.Core.csproj" />
+    <ProjectReference Include="..\GoalMaker.Infrastructure\GoalMaker.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
+    <PackageReference Include="WPF-UI" Version="4.3.0" />
+  </ItemGroup>
+</Project>

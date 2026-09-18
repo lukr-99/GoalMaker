@@ -1,0 +1,90 @@
+<Page x:Class="GoalMaker.App.Views.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="{DynamicResource Settings.Title}"
+      Foreground="{DynamicResource TextFillColorPrimaryBrush}">
+    <Page.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{StaticResource Space.Page}" MaxWidth="760" HorizontalAlignment="Left">
+            <TextBlock Margin="0,0,0,24" Text="{DynamicResource Settings.Title}" FontSize="40" FontWeight="SemiBold" />
+
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Appearance}" />
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Margin="0,0,24,0" GroupName="Theme" Content="{DynamicResource Settings.ThemeSystem}" IsChecked="{Binding IsSystemTheme}" />
+                        <RadioButton Margin="0,0,24,0" GroupName="Theme" Content="{DynamicResource Settings.ThemeLight}" IsChecked="{Binding IsLightTheme}" />
+                        <RadioButton GroupName="Theme" Content="{DynamicResource Settings.ThemeDark}" IsChecked="{Binding IsDarkTheme}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />
+                    <TextBlock Margin="0,0,0,12" Text="{Binding Email}" FontSize="15" />
+                    <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Updates}" />
+                    <TextBlock Margin="0,0,0,12"
+                               Text="{Binding UpdateStatus}"
+                               TextWrapping="Wrap"
+                               FontSize="15"
+                               Visibility="{Binding HasUpdateStatus, Converter={StaticResource BoolToVisibility}}" />
+                    <ProgressBar Margin="0,0,0,12"
+                                 Maximum="1"
+                                 Value="{Binding DownloadProgress}"
+                                 Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Margin="0,0,8,0" Content="{DynamicResource Settings.CheckUpdates}" Command="{Binding CheckForUpdatesCommand}" />
+                        <ui:Button Appearance="Primary"
+                                   Content="{Binding InstallText}"
+                                   Command="{Binding InstallUpdateCommand}"
+                                   Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                    <TextBlock Margin="0,12,0,0"
+                               Text="{DynamicResource Settings.Update.Manual}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.About}" />
+                    <TextBlock Text="{Binding VersionText}" FontSize="15" />
+                    <TextBlock Margin="0,4,0,0" Text="{Binding BackendText}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20" Visibility="{Binding IsDevBuild, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Developer}" />
+                    <TextBlock Margin="0,0,0,12"
+                               Text="{DynamicResource Settings.BackendHint}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <ui:TextBox Margin="0,0,0,8" PlaceholderText="{DynamicResource Settings.BackendUrl}" Text="{Binding BackendUrlDraft, UpdateSourceTrigger=PropertyChanged}" />
+                    <ui:TextBox Margin="0,0,0,12" PlaceholderText="{DynamicResource Settings.BackendKey}" Text="{Binding BackendKeyDraft, UpdateSourceTrigger=PropertyChanged}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{DynamicResource Settings.BackendSave}" Command="{Binding SaveBackendCommand}" />
+                        <ui:Button Content="{DynamicResource Settings.BackendReset}" Command="{Binding ResetBackendCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+        </StackPanel>
+    </ScrollViewer>
+</Page>
