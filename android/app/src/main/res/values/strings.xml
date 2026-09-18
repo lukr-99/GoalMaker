@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GoalMaker</string>
+
+    <!-- Sign-in -->
+    <string name="sign_in_title">Plan tomorrow.\nKeep your goals alive.</string>
+    <string name="sign_in_email_label">Email</string>
+    <string name="sign_in_email_hint">We\'ll email you a 6-digit code. No password.</string>
+    <string name="sign_in_send_code">Send code</string>
+    <string name="sign_in_code_label">6-digit code</string>
+    <string name="sign_in_code_sent">We sent a code to %1$s. It works for 10 minutes.</string>
+    <string name="sign_in_verify">Sign in</string>
+    <string name="sign_in_use_other_email">Use another email</string>
+    <string name="sign_in_resend">Send a new code</string>
+    <string name="sign_in_error_email">Enter a valid email address.</string>
+    <string name="sign_in_error_code">Enter the 6 digits from the email.</string>
+    <string name="sign_in_error_wrong_code">That code is wrong or has expired. Try again or send a new one.</string>
+    <string name="sign_in_error_rate">Too many attempts. Wait a minute, then try again.</string>
+    <string name="sign_in_error_offline">No connection to GoalMaker\'s server. Check your internet and try again.</string>
+    <string name="sign_in_error_other">Sign-in failed: %1$s</string>
+    <string name="sign_in_local_backend">Development build · %1$s</string>
+
+    <!-- Home -->
+    <string name="home_title">Today</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_greeting">Signed in as %1$s</string>
+    <string name="home_spine_title">The delivery spine is in place</string>
+    <string name="home_spine_body">Sign-in, updates and the backend work. Tasks, goals and habits arrive in the next milestones.</string>
+    <string name="home_composer_placeholder">Add a task… (arrives in M2)</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_back">Back</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_account">Account</string>
+    <string name="settings_sign_out">Sign out</string>
+    <string name="settings_updates">Updates</string>
+    <string name="settings_check_updates">Check for updates</string>
+    <string name="settings_install_update">Install %1$s</string>
+    <string name="settings_update_checking">Checking…</string>
+    <string name="settings_update_downloading">Downloading %1$d%%…</string>
+    <string name="settings_update_not_configured">The update channel isn\'t set up in this build yet.</string>
+    <string name="settings_update_dev_build">Development builds don\'t update themselves. Install a release build instead.</string>
+    <string name="settings_update_up_to_date">You have the latest version (%1$s).</string>
+    <string name="settings_update_available">Version %1$s is available.</string>
+    <string name="settings_update_untrusted">The update channel returned a release that failed verification. Nothing was installed.</string>
+    <string name="settings_update_failed">Couldn\'t check for updates: %1$s</string>
+    <string name="settings_update_corrupted">The download didn\'t match its checksum and was discarded.</string>
+    <string name="settings_update_opened">The installer is open. Confirm there to update.</string>
+    <string name="settings_update_manual">You can always install an update by hand from the GoalMaker GitHub release.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_backend">Backend: %1$s</string>
+    <string name="settings_developer">Developer</string>
+    <string name="settings_backend_url">Supabase URL</string>
+    <string name="settings_backend_key">Publishable key</string>
+    <string name="settings_backend_save">Save and restart</string>
+    <string name="settings_backend_reset">Use the default</string>
+    <string name="settings_backend_hint">Dev builds only. On a phone, use your PC\'s LAN address, for example http://192.168.1.20:55321.</string>
+
+    <string name="loading">Loading</string>
+</resources>

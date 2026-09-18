@@ -16,3 +16,14 @@
 *.exe binary
 *.apk binary
 *.jar binary
+
+gradlew text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.kts text eol=lf
+*.kt text eol=lf
+*.toml text eol=lf
+*.cs text eol=lf
+*.xaml text eol=lf
+*.iss text eol=crlf
