@@ -15,12 +15,14 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
   </ItemGroup>
 
-  <!-- The shared replica schema and synced-table contract, built in (ADR 0007). -->
+  <!-- The shared replica schema, synced-table contract and theme tokens, built in (ADR 0007, 0008). -->
   <ItemGroup>
     <EmbeddedResource Include="$(RepositoryRoot)\replica\migrations\*.sql"
                       LogicalName="GoalMaker.Replica.Migrations.%(Filename)%(Extension)" />
     <EmbeddedResource Include="$(RepositoryRoot)\contracts\schemas\synced-tables.json"
                       LogicalName="GoalMaker.Contracts.synced-tables.json" />
+    <EmbeddedResource Include="$(RepositoryRoot)\contracts\design\themes.json"
+                      LogicalName="GoalMaker.Contracts.themes.json" />
   </ItemGroup>
 
   <ItemGroup>

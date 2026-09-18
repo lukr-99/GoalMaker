@@ -39,6 +39,12 @@
 
   <ItemGroup>
     <Resource Include="Assets\GoalMaker.ico" />
+    <!-- Static faces cut from fonts/ by tools/build_windows_fonts.py (ADR 0008). -->
+    <Resource Include="Assets\Fonts\*.ttf" />
+    <!-- The SIL Open Font License travels with the fonts. -->
+    <Content Include="$(RepositoryRoot)\fonts\**\OFL.txt"
+             Link="Licenses\Fonts\%(RecursiveDir)OFL.txt"
+             CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

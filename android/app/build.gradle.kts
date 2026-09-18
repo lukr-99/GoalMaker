@@ -2,11 +2,12 @@ import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 /**
- * Copies the files both apps share into generated assets (ADR 0007): the replica migrations as
- * assets/replica/NNNN_name.sql, byte for byte, and the synced-table contract as
- * assets/synced-tables.json. The repository copies stay the only ones anyone edits.
+ * Copies the files both apps share into generated assets, byte for byte, so the repository copies
+ * stay the only ones anyone edits: the replica migrations as assets/replica/NNNN_name.sql and the
+ * synced-table contract as assets/synced-tables.json (ADR 0007), the theme tokens as
+ * assets/themes.json and the variable fonts with their licenses as assets/fonts/<family>/ (ADR 0008).
  */
-abstract class SharedReplicaAssets : DefaultTask() {
+abstract class SharedAssets : DefaultTask() {
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val migrations: DirectoryProperty
@@ -14,6 +15,14 @@ abstract class SharedReplicaAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val syncedTables: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val themes: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val fonts: DirectoryProperty
 
     @get:OutputDirectory
     abstract val outputDirectory: DirectoryProperty
@@ -27,6 +36,11 @@ abstract class SharedReplicaAssets : DefaultTask() {
             file.copyTo(replica.resolve(file.name))
         }
         syncedTables.get().asFile.copyTo(output.resolve("synced-tables.json"))
+        themes.get().asFile.copyTo(output.resolve("themes.json"))
+        val fontRoot = fonts.get().asFile
+        fontRoot.walkTopDown()
+            .filter { it.isFile && (it.extension == "ttf" || it.name == "OFL.txt") }
+            .forEach { file -> file.copyTo(output.resolve("fonts").resolve(file.relativeTo(fontRoot).invariantSeparatorsPath)) }
     }
 }
 
@@ -87,10 +101,12 @@ val manifestPublicKeyFile = repositoryRoot.resolve("contracts/keys/release-manif
 val manifestPublicKey: String = setting("goalmaker.manifestPublicKey", "GOALMAKER_MANIFEST_PUBLIC_KEY")
     .ifEmpty { if (manifestPublicKeyFile.isFile) manifestPublicKeyFile.readText().trim() else "" }
 
-val sharedReplicaAssets = tasks.register<SharedReplicaAssets>("sharedReplicaAssets") {
+val sharedAssets = tasks.register<SharedAssets>("sharedAssets") {
     migrations.set(repositoryRoot.resolve("replica/migrations"))
     syncedTables.set(repositoryRoot.resolve("contracts/schemas/synced-tables.json"))
-    outputDirectory.set(layout.buildDirectory.dir("generated/shared-replica-assets"))
+    themes.set(repositoryRoot.resolve("contracts/design/themes.json"))
+    fonts.set(repositoryRoot.resolve("fonts"))
+    outputDirectory.set(layout.buildDirectory.dir("generated/shared-assets"))
 }
 
 fun quoted(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
@@ -181,7 +197,7 @@ android {
 
 androidComponents {
     onVariants { variant ->
-        variant.sources.assets?.addGeneratedSourceDirectory(sharedReplicaAssets, SharedReplicaAssets::outputDirectory)
+        variant.sources.assets?.addGeneratedSourceDirectory(sharedAssets, SharedAssets::outputDirectory)
     }
 }
 
