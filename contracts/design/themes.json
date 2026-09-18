@@ -1,0 +1,164 @@
+{
+  "schema": 1,
+  "description": "GoalMaker's themes (ADR 0008, docs/design/spec.md): the four directions from the 2026-09-18 design board. Both apps load this file at run time; tools/check_design_tokens.py checks that every theme is complete and that text and controls meet WCAG AA contrast. Colors are #RRGGBB. Each theme has light and dark palettes; 'black' overrides the dark palette's surfaces for the pure-black option.",
+  "defaultTheme": "track",
+  "roles": {
+    "background": "The page behind everything.",
+    "surface": "Cards and list rows.",
+    "surfaceVariant": "The composer, inputs and secondary containers.",
+    "text": "Body text and titles.",
+    "textMuted": "Secondary text: dates, counts, hints, section labels.",
+    "outline": "Unchecked checkboxes, input borders, dividers that must be visible.",
+    "primary": "Primary buttons, the send button, selected navigation.",
+    "onPrimary": "Text and icons on primary.",
+    "accent": "Checked boxes, progress fills, habit rings.",
+    "onAccent": "The check mark and icons on accent.",
+    "hero": "Big-number cards (goal progress, stats).",
+    "onHero": "Text on hero.",
+    "heroAccent": "The big number and the progress bar on hero.",
+    "danger": "Destructive actions and errors, as text or icons on background or surface."
+  },
+  "themes": {
+    "track": {
+      "name": "Track",
+      "summary": "Black, white and volt. Wide italic Archivo, big numbers, sharp corners.",
+      "typography": {
+        "heading": { "family": "Archivo", "weight": 900, "width": 112.5, "italic": true, "uppercase": true, "tracking": -0.01 },
+        "body": { "family": "Archivo", "weight": 400, "strongWeight": 600, "width": 100 },
+        "number": { "family": "Archivo", "weight": 900, "width": 112.5, "italic": true }
+      },
+      "shape": { "card": 12, "row": 8, "checkbox": 3, "button": 8 },
+      "light": {
+        "background": "#FFFFFF", "surface": "#F2F2EF", "surfaceVariant": "#E8E8E3",
+        "text": "#0A0A0A", "textMuted": "#5A5A56", "outline": "#6E6E69",
+        "primary": "#0A0A0A", "onPrimary": "#D6FF3A",
+        "accent": "#0A0A0A", "onAccent": "#D6FF3A",
+        "hero": "#0A0A0A", "onHero": "#FFFFFF", "heroAccent": "#D6FF3A",
+        "danger": "#C8231B"
+      },
+      "dark": {
+        "background": "#111310", "surface": "#1B1D19", "surfaceVariant": "#252821",
+        "text": "#F5F5F2", "textMuted": "#A4A79D", "outline": "#80837A",
+        "primary": "#D6FF3A", "onPrimary": "#0A0A0A",
+        "accent": "#D6FF3A", "onAccent": "#0A0A0A",
+        "hero": "#D6FF3A", "onHero": "#0A0A0A", "heroAccent": "#0A0A0A",
+        "danger": "#FF7A6E"
+      },
+      "black": { "background": "#000000", "surface": "#111210", "surfaceVariant": "#1B1D19" }
+    },
+    "electric": {
+      "name": "Electric",
+      "summary": "Violet and coral. Plus Jakarta Sans, very round.",
+      "typography": {
+        "heading": { "family": "Plus Jakarta Sans", "weight": 800, "width": 100, "italic": false, "uppercase": false, "tracking": -0.03 },
+        "body": { "family": "Plus Jakarta Sans", "weight": 400, "strongWeight": 600, "width": 100 },
+        "number": { "family": "Plus Jakarta Sans", "weight": 800, "width": 100, "italic": false }
+      },
+      "shape": { "card": 24, "row": 16, "checkbox": 999, "button": 999 },
+      "light": {
+        "background": "#F6F3FF", "surface": "#FFFFFF", "surfaceVariant": "#ECE6FF",
+        "text": "#1B1433", "textMuted": "#5E5680", "outline": "#7D74A2",
+        "primary": "#5B2EE6", "onPrimary": "#FFFFFF",
+        "accent": "#D9402A", "onAccent": "#FFFFFF",
+        "hero": "#5B2EE6", "onHero": "#FFFFFF", "heroAccent": "#FFD0C4",
+        "danger": "#C62828"
+      },
+      "dark": {
+        "background": "#15111F", "surface": "#211B31", "surfaceVariant": "#2A2340",
+        "text": "#F2EEFF", "textMuted": "#A69EC6", "outline": "#8A81B0",
+        "primary": "#9579FF", "onPrimary": "#120A2E",
+        "accent": "#FF7A5E", "onAccent": "#1F0904",
+        "hero": "#5B2EE6", "onHero": "#FFFFFF", "heroAccent": "#FFB8A6",
+        "danger": "#FF8A80"
+      },
+      "black": { "background": "#000000", "surface": "#140F20", "surfaceVariant": "#1E182D" }
+    },
+    "night": {
+      "name": "Night",
+      "summary": "Indigo and cyan. Space Grotesk, compact, medium corners.",
+      "typography": {
+        "heading": { "family": "Space Grotesk", "weight": 700, "width": 100, "italic": false, "uppercase": false, "tracking": -0.02 },
+        "body": { "family": "Space Grotesk", "weight": 400, "strongWeight": 500, "width": 100 },
+        "number": { "family": "Space Grotesk", "weight": 700, "width": 100, "italic": false }
+      },
+      "shape": { "card": 10, "row": 7, "checkbox": 5, "button": 8 },
+      "light": {
+        "background": "#FBFAFF", "surface": "#F0EEFA", "surfaceVariant": "#E6E3F6",
+        "text": "#12101F", "textMuted": "#5A5679", "outline": "#76729A",
+        "primary": "#4F46E5", "onPrimary": "#FFFFFF",
+        "accent": "#0E7490", "onAccent": "#FFFFFF",
+        "hero": "#4F46E5", "onHero": "#FFFFFF", "heroAccent": "#A5F3FC",
+        "danger": "#C62828"
+      },
+      "dark": {
+        "background": "#0B0A14", "surface": "#15132A", "surfaceVariant": "#1C1935",
+        "text": "#E9E7FF", "textMuted": "#938FB8", "outline": "#76729A",
+        "primary": "#8B80FF", "onPrimary": "#0B0A14",
+        "accent": "#22D3EE", "onAccent": "#04141A",
+        "hero": "#3730A3", "onHero": "#FFFFFF", "heroAccent": "#67E8F9",
+        "danger": "#FF7A7A"
+      },
+      "black": { "background": "#000000", "surface": "#0E0C1C", "surfaceVariant": "#161429" }
+    },
+    "sunrise": {
+      "name": "Sunrise",
+      "summary": "Tangerine and magenta. Rounded Outfit, blobby cards.",
+      "typography": {
+        "heading": { "family": "Outfit", "weight": 800, "width": 100, "italic": false, "uppercase": false, "tracking": -0.02 },
+        "body": { "family": "Outfit", "weight": 400, "strongWeight": 600, "width": 100 },
+        "number": { "family": "Outfit", "weight": 800, "width": 100, "italic": false }
+      },
+      "shape": { "card": 28, "row": 20, "checkbox": 7, "button": 999 },
+      "light": {
+        "background": "#FFF6EC", "surface": "#FFFFFF", "surfaceVariant": "#FFE7D1",
+        "text": "#2B1408", "textMuted": "#765646", "outline": "#957464",
+        "primary": "#C2410C", "onPrimary": "#FFFFFF",
+        "accent": "#C2185B", "onAccent": "#FFFFFF",
+        "hero": "#C2185B", "onHero": "#FFFFFF", "heroAccent": "#FFD23F",
+        "danger": "#B91C1C"
+      },
+      "dark": {
+        "background": "#1C120C", "surface": "#2A1C14", "surfaceVariant": "#33231A",
+        "text": "#FFF1E6", "textMuted": "#C4A696", "outline": "#9E8070",
+        "primary": "#FF8A3D", "onPrimary": "#2B1408",
+        "accent": "#FF5C93", "onAccent": "#2B0612",
+        "hero": "#B0205A", "onHero": "#FFFFFF", "heroAccent": "#FFD23F",
+        "danger": "#FF8A80"
+      },
+      "black": { "background": "#000000", "surface": "#170E09", "surfaceVariant": "#21150E" }
+    }
+  },
+  "areaPalette": {
+    "description": "The 12 area colors, the same in every theme. 'swatch' is the dot and picker color; chips use container and content, per light or dark. Custom colors derive their pair at run time (docs/design/spec.md).",
+    "colors": [
+      { "id": "violet", "swatch": "#8B5CF6", "light": { "container": "#EDE9FE", "content": "#5B21B6" }, "dark": { "container": "#3B1F74", "content": "#DDD6FE" } },
+      { "id": "blue", "swatch": "#3B82F6", "light": { "container": "#DBEAFE", "content": "#1E40AF" }, "dark": { "container": "#1E3A8A", "content": "#DBEAFE" } },
+      { "id": "cyan", "swatch": "#06B6D4", "light": { "container": "#CFFAFE", "content": "#155E75" }, "dark": { "container": "#164E63", "content": "#CFFAFE" } },
+      { "id": "teal", "swatch": "#14B8A6", "light": { "container": "#CCFBF1", "content": "#115E59" }, "dark": { "container": "#134E4A", "content": "#CCFBF1" } },
+      { "id": "green", "swatch": "#22C55E", "light": { "container": "#DCFCE7", "content": "#166534" }, "dark": { "container": "#14532D", "content": "#DCFCE7" } },
+      { "id": "lime", "swatch": "#84CC16", "light": { "container": "#ECFCCB", "content": "#3F6212" }, "dark": { "container": "#365314", "content": "#ECFCCB" } },
+      { "id": "yellow", "swatch": "#EAB308", "light": { "container": "#FEF9C3", "content": "#854D0E" }, "dark": { "container": "#713F12", "content": "#FEF9C3" } },
+      { "id": "orange", "swatch": "#F97316", "light": { "container": "#FFEDD5", "content": "#9A3412" }, "dark": { "container": "#7C2D12", "content": "#FFEDD5" } },
+      { "id": "red", "swatch": "#EF4444", "light": { "container": "#FEE2E2", "content": "#991B1B" }, "dark": { "container": "#7F1D1D", "content": "#FEE2E2" } },
+      { "id": "pink", "swatch": "#EC4899", "light": { "container": "#FCE7F3", "content": "#9D174D" }, "dark": { "container": "#831843", "content": "#FCE7F3" } },
+      { "id": "magenta", "swatch": "#D946EF", "light": { "container": "#FAE8FF", "content": "#86198F" }, "dark": { "container": "#701A75", "content": "#FAE8FF" } },
+      { "id": "slate", "swatch": "#64748B", "light": { "container": "#E2E8F0", "content": "#1E293B" }, "dark": { "container": "#334155", "content": "#F1F5F9" } }
+    ]
+  },
+  "density": {
+    "description": "Spacing belongs to the device, not the theme (questionnaire D8). Units: dp on Android, device-independent pixels on Windows.",
+    "phone": { "rowMinHeight": 52, "rowGap": 8, "pagePadding": 16, "cardPadding": 16 },
+    "windows": { "rowMinHeight": 36, "rowGap": 4, "pagePadding": 24, "cardPadding": 12 }
+  },
+  "motion": {
+    "description": "Durations in milliseconds. 'Reduce motion' (the system setting, or the in-app switch) turns movement into fades of 'quick' length and skips bursts and confetti.",
+    "quick": 120,
+    "standard": 250,
+    "emphasized": 400,
+    "celebration": {
+      "task": "check morph, then the row slides away; a light haptic on the phone",
+      "habit": "the ring fills with a spring and a small burst",
+      "milestone": "confetti for a goal hit or a streak milestone only"
+    }
+  }
+}

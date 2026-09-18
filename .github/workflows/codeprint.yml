@@ -29,6 +29,9 @@ jobs:
       - name: The synced-tables contract matches the replica
         run: python tools/check_synced_tables.py
 
+      - name: Every theme is complete and readable (WCAG AA)
+        run: python tools/check_design_tokens.py
+
       - name: Check PowerShell syntax
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1
