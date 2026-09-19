@@ -197,7 +197,8 @@ public sealed partial class TaskDetailViewModel : ObservableObject
             Set(ref plannedTimeText, task.PlannedTime?.ToString("t", CultureInfo.CurrentCulture) ?? string.Empty, nameof(PlannedTimeText));
             Set(ref deadline, task.Deadline?.ToDateTime(TimeOnly.MinValue), nameof(Deadline));
 
-            AreaChoices = [new ChoiceViewModel(null, strings.Get("Task.NoArea")), .. areas.All().Select(area => new ChoiceViewModel(area.Id, area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name))];
+            // Archived areas leave the picker, but the task's own area stays listed.
+            AreaChoices = [new ChoiceViewModel(null, strings.Get("Task.NoArea")), .. areas.All().Where(area => !area.Archived || area.Id == task.AreaId).Select(area => new ChoiceViewModel(area.Id, area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name))];
             Set(ref selectedArea, AreaChoices.FirstOrDefault(choice => choice.Id == task.AreaId) ?? AreaChoices[0], nameof(SelectedArea));
 
             var anchor = task.PlannedDate ?? DateOnly.FromDateTime(time.GetLocalNow().DateTime);

@@ -6,7 +6,7 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// One area in the manager, edited in place: a name the list refuses when it is blank or taken, an
-/// emoji, a palette color, and buttons to move it or delete it. The manager updates a row instead of
+/// emoji, a palette color, and buttons to move, archive or delete it. The manager updates a row instead of
 /// replacing it, so editing one field doesn't take the keyboard from the next.
 /// </summary>
 public sealed partial class AreaRowViewModel : ObservableObject
@@ -33,6 +33,7 @@ public sealed partial class AreaRowViewModel : ObservableObject
         MoveUpCommand = new RelayCommand(() => owner.MoveArea(Id, -1));
         MoveDownCommand = new RelayCommand(() => owner.MoveArea(Id, 1));
         DeleteCommand = new RelayCommand(() => owner.DeleteArea(Id));
+        ArchiveCommand = new RelayCommand(() => owner.ArchiveArea(Id));
     }
 
     public string Id { get; }
@@ -86,6 +87,9 @@ public sealed partial class AreaRowViewModel : ObservableObject
     public IRelayCommand MoveDownCommand { get; }
 
     public IRelayCommand DeleteCommand { get; }
+
+    /// <summary>Hides the area from pickers and filters; the manager keeps it under Archived.</summary>
+    public IRelayCommand ArchiveCommand { get; }
 
     /// <summary>Takes what the replica says now without replacing the row.</summary>
     public void Update(AreaItem area, bool first, bool last)

@@ -51,7 +51,8 @@ public sealed partial class SidebarFiltersViewModel : ObservableObject
 
     public void Refresh()
     {
-        var areaList = areas.All();
+        // Archived areas leave the filters, and a filter on one falls away.
+        var areaList = areas.Active();
         var tagList = tags.All();
         filter.Forget([.. areaList.Select(area => area.Id)], [.. tagList.Select(tag => tag.Id)]);
         var current = filter.Current;

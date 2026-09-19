@@ -35,3 +35,8 @@ owner switches between Today, Tomorrow and the Inbox. Pinned by the `filter` cas
 
 Deleting an area keeps its tasks and takes the area off them, so an undated one returns to the
 Inbox. Deleting a tag takes it off every task.
+
+**Archiving** an area keeps everything: its tasks keep the area and show its chip, and it keeps its
+color and name. It only leaves the pickers and the filters, and a filter on it falls away. Naming it
+again (`@Garden` in the composer) brings it back, and so does Restore in the areas manager, where
+archived areas are listed apart. The synced `areas.archived_at` says when it was archived.

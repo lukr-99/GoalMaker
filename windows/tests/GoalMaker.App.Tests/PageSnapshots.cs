@@ -126,6 +126,7 @@ public sealed class PageSnapshots
         Add(planner, "Send the invoice @Work", Today);
         Add(planner, "Buy stamps @Home #errand", Today);
         planner.Areas.Create("Health");
+        planner.Areas.Archive(planner.Areas.Create("Garden")!.Id);
         planner.Areas.SetEmoji(planner.Areas.Find("Home")!.Id, "🏠");
         using var theme = Theme(planner);
         Save(new AreasPage(new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action())), folder, "areas-and-tags");

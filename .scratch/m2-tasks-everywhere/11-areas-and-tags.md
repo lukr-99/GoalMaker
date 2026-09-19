@@ -1,6 +1,6 @@
 # M2-11: Areas and tags
 
-**Status:** done 2026-09-19, except archiving and custom colors · **Milestone:** M2
+**Status:** done 2026-09-19, except custom colors (the owner's decision) · **Milestone:** M2
 
 ## Scope
 - Create, rename, recolor (palette or custom), add an emoji, reorder and archive areas; tags
@@ -24,8 +24,14 @@
   and `--open areas`.
 - Chips already used the area palette from the design tokens (M2-05).
 
+- Archiving (migration 0006, `areas.archived_at`): an archived area keeps its tasks and chips but
+  leaves the pickers and filters; the managers list it under Archived with Restore, and naming it
+  in the composer brings it back. Checked on the emulator: archived on the phone, synced, the task
+  kept its chip and the filter row went away.
+
 ## Left
-- **Archiving areas** and **custom colors** need a migration: `areas` has no archive column, and
-  `areas.color` only accepts palette ids (`^[a-z][a-z0-9-]{0,23}$`). Custom colors also need a rule
-  for staying readable in every theme and mode. Both wait for Docker so the migration harness runs.
+- **Custom colors** wait for the owner's decision. `areas.color` holds a palette id so every theme
+  can draw it for light and dark and keep WCAG AA contrast (migration 0003, ADR 0008); a free hex
+  color would undo that. Options: more palette entries (no migration), or a custom hex that each
+  theme adjusts for contrast (a migration, a contract rule, and both renderers).
 - Windows draws emoji in one color; WPF has no color emoji.

@@ -9,14 +9,16 @@ using GoalMaker.Core.Planning;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The areas and tags manager (M2-11): add, rename, recolor from the palette, give an emoji, reorder
-/// and delete areas; add, rename and delete tags. A refused name leaves the old one and says why.
+/// The areas and tags manager (M2-11): add, rename, recolor from the palette, give an emoji, reorder,
+/// archive, restore and delete areas; add, rename and delete tags. A refused name leaves the old one
+/// and says why.
 /// </summary>
 public sealed partial class AreasViewModel : ObservableObject
 {
     private readonly AreaList areas;
     private readonly TagList tags;
     private readonly IStrings strings;
+    private readonly Func<string, Brush?> areaBrush;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddAreaCommand))]
@@ -32,11 +34,15 @@ public sealed partial class AreasViewModel : ObservableObject
     [ObservableProperty]
     private bool hasTags;
 
+    [ObservableProperty]
+    private bool hasArchived;
+
     public AreasViewModel(AreaList areas, TagList tags, IStrings strings, Func<string, Brush?> areaBrush, Action<Action> runOnUi)
     {
         this.areas = areas;
         this.tags = tags;
         this.strings = strings;
+        this.areaBrush = areaBrush;
         Colors = [.. areas.Palette().Select(id => new ColorOptionViewModel(id, CultureInfo.CurrentCulture.TextInfo.ToTitleCase(id.Replace('-', ' ')), areaBrush(id)))];
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);
@@ -49,13 +55,17 @@ public sealed partial class AreasViewModel : ObservableObject
 
     public ObservableCollection<TagRowViewModel> Tags { get; } = [];
 
+    /// <summary>The archived areas, each with Restore.</summary>
+    public ObservableCollection<ArchivedAreaRowViewModel> ArchivedAreas { get; } = [];
+
     public bool HasStatus => Status.Length > 0;
 
     public bool HasNoTags => !HasTags;
 
     public void Refresh()
     {
-        var areaList = areas.All();
+        var all = areas.All();
+        var areaList = all.Where(area => !area.Archived).ToList();
         if (!Areas.Select(row => row.Id).SequenceEqual(areaList.Select(area => area.Id)))
         {
             Areas.Clear();
@@ -69,6 +79,14 @@ public sealed partial class AreasViewModel : ObservableObject
         {
             Areas[index].Update(areaList[index], index == 0, index == areaList.Count - 1);
         }
+
+        ArchivedAreas.Clear();
+        foreach (var area in all.Where(area => area.Archived))
+        {
+            ArchivedAreas.Add(new ArchivedAreaRowViewModel(area, areaBrush(area.ColorId), id => areas.Restore(id), DeleteArea));
+        }
+
+        HasArchived = ArchivedAreas.Count > 0;
 
         var tagList = tags.All();
         if (!Tags.Select(row => row.Id).SequenceEqual(tagList.Select(tag => tag.Id)))
@@ -96,7 +114,7 @@ public sealed partial class AreasViewModel : ObservableObject
 
     internal void MoveArea(string id, int by)
     {
-        var index = areas.All().ToList().FindIndex(area => area.Id == id);
+        var index = areas.Active().ToList().FindIndex(area => area.Id == id);
         if (index >= 0)
         {
             areas.Move(id, index + by);
@@ -104,6 +122,8 @@ public sealed partial class AreasViewModel : ObservableObject
     }
 
     internal void DeleteArea(string id) => areas.Delete(id);
+
+    internal void ArchiveArea(string id) => areas.Archive(id);
 
     internal bool RenameTag(string id, string name) => Report(tags.Rename(id, name));
 

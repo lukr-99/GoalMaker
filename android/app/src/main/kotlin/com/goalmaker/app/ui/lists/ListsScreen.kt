@@ -199,7 +199,7 @@ fun ListsScreen(
                 Column {
                     ListFilterRow(
                         filter = state.filter,
-                        areas = state.areas,
+                        areas = state.areas.filterNot { it.archived },
                         tags = state.tags,
                         onArea = viewModel::filterByArea,
                         onTag = viewModel::filterByTag,

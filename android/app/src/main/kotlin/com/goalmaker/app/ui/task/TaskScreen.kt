@@ -270,7 +270,8 @@ private fun AreaField(task: TaskItem, state: TaskUiState, onArea: (String?) -> U
                 open = false
                 onArea(null)
             })
-            state.areas.forEach { choice ->
+            // Archived areas leave the picker, but the task's own area stays listed.
+            state.areas.filter { !it.archived || it.id == task.areaId }.forEach { choice ->
                 DropdownMenuItem(text = { Text(listOfNotNull(choice.emoji, choice.name).joinToString(" ")) }, onClick = {
                     open = false
                     onArea(choice.id)

@@ -5,12 +5,14 @@ namespace GoalMaker.Core.Planning;
 
 /// <summary>
 /// The owner's areas, read from the replica and created through its outbox. M2-11 adds renaming,
-/// colors, emoji and order.
+/// colors, emoji, order and archiving: an archived area keeps its tasks but leaves the pickers and
+/// filters, and naming it again (the composer's @Area) brings it back.
 /// </summary>
 public sealed class AreaList
 {
     private const string Table = "areas";
     private const string Tasks = "tasks";
+    private const string ArchivedAt = "archived_at";
     private const int MaxName = 60;
     private const int MaxEmoji = 16;
     private readonly IReplica replica;
@@ -43,11 +45,33 @@ public sealed class AreaList
             .ThenBy(row => ((string?)row["name"] ?? string.Empty).ToLowerInvariant(), StringComparer.Ordinal)
             .Select(ToItem)];
 
+    /// <summary>The areas in use, for pickers and filters: <see cref="All"/> without the archived ones.</summary>
+    public IReadOnlyList<AreaItem> Active() => [.. All().Where(area => !area.Archived)];
+
     /// <summary>The area with this name, ignoring case and surrounding spaces.</summary>
     public AreaItem? Find(string name) => All().FirstOrDefault(area => Key(area.Name) == Key(name));
 
-    /// <summary>The area with this name, created (with the next unused palette color) when there is none.</summary>
-    public AreaItem? FindOrCreate(string name) => Find(name) ?? Create(name);
+    /// <summary>The area with this name, brought back if archived, or created (with the next unused palette color) when there is none.</summary>
+    public AreaItem? FindOrCreate(string name)
+    {
+        if (Find(name) is not { } found)
+        {
+            return Create(name);
+        }
+
+        if (found.Archived)
+        {
+            Restore(found.Id);
+        }
+
+        return found with { Archived = false };
+    }
+
+    /// <summary>Hides an area from the pickers and filters; its tasks keep it.</summary>
+    public bool Archive(string id) => Change(id, row => row[ArchivedAt] = rows.Timestamp());
+
+    /// <summary>Brings an archived area back into the pickers and filters.</summary>
+    public bool Restore(string id) => Change(id, row => row[ArchivedAt] = null);
 
     public AreaItem? Create(string name)
     {
@@ -99,10 +123,14 @@ public sealed class AreaList
         return Change(id, row => row["emoji"] = trimmed);
     }
 
-    /// <summary>Moves an area to <paramref name="index"/> in the order the lists and pickers use, and numbers them all again.</summary>
+    /// <summary>
+    /// Moves an area in use to <paramref name="index"/> among the areas in use, the order the pickers
+    /// use, and numbers them all again; archived areas keep their order after them.
+    /// </summary>
     public void Move(string id, int index)
     {
-        var order = All().ToList();
+        var all = All();
+        var order = all.Where(area => !area.Archived).ToList();
         var at = order.FindIndex(area => area.Id == id);
         if (at < 0)
         {
@@ -112,6 +140,7 @@ public sealed class AreaList
         var moved = order[at];
         order.RemoveAt(at);
         order.Insert(Math.Clamp(index, 0, order.Count), moved);
+        order.AddRange(all.Where(area => area.Archived));
         replica.InTransaction(() =>
         {
             for (var position = 0; position < order.Count; position++)
@@ -167,5 +196,6 @@ public sealed class AreaList
         (string)row[SyncedTable.Id]!,
         (string?)row["name"] ?? string.Empty,
         (string?)row["color"] ?? string.Empty,
-        (string?)row["emoji"]);
+        (string?)row["emoji"],
+        row[ArchivedAt] is not null);
 }

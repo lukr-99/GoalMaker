@@ -85,5 +85,25 @@ public sealed class AreasViewModelTests : IDisposable
         Assert.True(manager.HasNoTags);
     }
 
+    [Fact]
+    public void ArchivingMovesARowUnderArchivedAndRestoreBringsItBack()
+    {
+        planner.Areas.Create("Home");
+        planner.Areas.Create("Work");
+        var manager = Manager();
+
+        manager.Areas[0].ArchiveCommand.Execute(null);
+
+        Assert.Equal(["Work"], manager.Areas.Select(row => row.Name));
+        Assert.Equal(["Home"], manager.ArchivedAreas.Select(row => row.Label));
+        Assert.True(manager.HasArchived);
+        Assert.False(manager.Areas[0].CanMoveUp || manager.Areas[0].CanMoveDown);
+
+        manager.ArchivedAreas.Single().RestoreCommand.Execute(null);
+
+        Assert.Equal(["Home", "Work"], manager.Areas.Select(row => row.Name));
+        Assert.False(manager.HasArchived);
+    }
+
     private AreasViewModel Manager() => new(planner.Areas, planner.Tags, planner.Strings, _ => null, action => action());
 }

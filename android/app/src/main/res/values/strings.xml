@@ -261,6 +261,9 @@
     <string name="areas_save">Save</string>
     <string name="areas_cancel">Cancel</string>
     <string name="areas_delete">Delete</string>
+    <string name="areas_archive">Archive</string>
+    <string name="areas_restore">Restore</string>
+    <string name="areas_archived">Archived</string>
     <string name="areas_move_up">Move %1$s up</string>
     <string name="areas_move_down">Move %1$s down</string>
 

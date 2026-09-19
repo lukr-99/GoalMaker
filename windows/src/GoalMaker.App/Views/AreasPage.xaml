@@ -76,6 +76,10 @@
                                                    ToolTip="{DynamicResource Areas.MoveDown}" AutomationProperties.Name="{DynamicResource Areas.MoveDown}">
                                             <ui:SymbolIcon Symbol="ArrowDown24" />
                                         </ui:Button>
+                                        <ui:Button Padding="6" Appearance="Transparent" Command="{Binding ArchiveCommand}"
+                                                   ToolTip="{DynamicResource Areas.ArchiveArea}" AutomationProperties.Name="{DynamicResource Areas.ArchiveArea}">
+                                            <ui:SymbolIcon Symbol="Archive24" />
+                                        </ui:Button>
                                         <ui:Button Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
                                                    ToolTip="{DynamicResource Areas.DeleteArea}" AutomationProperties.Name="{DynamicResource Areas.DeleteArea}">
                                             <ui:SymbolIcon Symbol="Delete24" />
@@ -97,6 +101,28 @@
                         </ui:TextBox>
                     </DockPanel>
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Areas.DeleteHint}" />
+                </StackPanel>
+            </ui:Card>
+
+            <ui:Card Margin="0,0,0,12" Padding="20" Visibility="{Binding HasArchived, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Areas.Archived}" />
+                    <ItemsControl ItemsSource="{Binding ArchivedAreas}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ArchivedAreaRowViewModel}">
+                                <DockPanel Margin="0,0,0,8">
+                                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
+                                               ToolTip="{DynamicResource Areas.DeleteArea}" AutomationProperties.Name="{DynamicResource Areas.DeleteArea}">
+                                        <ui:SymbolIcon Symbol="Delete24" />
+                                    </ui:Button>
+                                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Areas.Restore}" Command="{Binding RestoreCommand}" />
+                                    <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Label}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Areas.ArchivedHint}" />
                 </StackPanel>
             </ui:Card>
 

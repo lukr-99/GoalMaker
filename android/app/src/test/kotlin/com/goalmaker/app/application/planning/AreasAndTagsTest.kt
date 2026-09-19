@@ -74,6 +74,38 @@ class AreasAndTagsTest {
     }
 
     @Test
+    fun `an archived area keeps its tasks, leaves the pickers and comes back when named again`() {
+        tasks.add(ComposerParser.parse("Fix the shelf @Home", LocalDateTime.parse("2026-09-18T14:00")))
+        val home = areas.find("Home")!!
+        areas.create("Work")
+
+        assertTrue(areas.archive(home.id))
+
+        assertEquals(listOf("Work"), areas.active().map(AreaItem::name))
+        assertTrue(areas.find("Home")!!.archived)
+        assertEquals(home.id, tasks.all().single().areaId)
+
+        tasks.add(ComposerParser.parse("Paint the door @home", LocalDateTime.parse("2026-09-18T14:00")))
+
+        assertEquals(listOf("Home", "Work"), areas.active().map(AreaItem::name))
+        assertEquals(setOf(home.id), tasks.all().map { it.areaId }.toSet())
+    }
+
+    @Test
+    fun `moving skips archived areas, which keep their place after the rest`() {
+        val home = areas.create("Home")!!
+        val work = areas.create("Work")!!
+        areas.create("Health")
+        areas.archive(work.id)
+
+        areas.move(home.id, 1)
+
+        assertEquals(listOf("Health", "Home", "Work"), areas.all().map(AreaItem::name))
+        assertTrue(areas.restore(work.id))
+        assertEquals(listOf("Health", "Home", "Work"), areas.active().map(AreaItem::name))
+    }
+
+    @Test
     fun `deleting an area keeps its tasks without it`() {
         tasks.add(ComposerParser.parse("Fix the shelf @Home", LocalDateTime.parse("2026-09-18T14:00")))
         val home = areas.find("Home")!!

@@ -8,4 +8,10 @@ data class AreasUiState(
     val areas: List<AreaItem> = emptyList(),
     val tags: List<TagItem> = emptyList(),
     val palette: List<String> = emptyList(),
-)
+) {
+    /** The areas in use, which the arrows reorder. */
+    val active: List<AreaItem> get() = areas.filterNot(AreaItem::archived)
+
+    /** The archived areas, each with a way back. */
+    val archived: List<AreaItem> get() = areas.filter(AreaItem::archived)
+}

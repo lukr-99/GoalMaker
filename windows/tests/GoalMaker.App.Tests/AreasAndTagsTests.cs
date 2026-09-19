@@ -49,6 +49,40 @@ public sealed class AreasAndTagsTests : IDisposable
     }
 
     [Fact]
+    public void AnArchivedAreaKeepsItsTasksLeavesThePickersAndComesBackWhenNamedAgain()
+    {
+        Add("Fix the shelf @Home");
+        var home = planner.Areas.Find("Home")!;
+        planner.Areas.Create("Work");
+
+        Assert.True(planner.Areas.Archive(home.Id));
+
+        Assert.Equal(["Work"], planner.Areas.Active().Select(area => area.Name));
+        Assert.True(planner.Areas.Find("Home")!.Archived);
+        Assert.Equal(home.Id, planner.Task("Fix the shelf").AreaId);
+
+        Add("Paint the door @home");
+
+        Assert.Equal(["Home", "Work"], planner.Areas.Active().Select(area => area.Name));
+        Assert.Equal(home.Id, planner.Task("Paint the door").AreaId);
+    }
+
+    [Fact]
+    public void MovingSkipsArchivedAreasWhichKeepTheirPlaceAfterTheRest()
+    {
+        var home = planner.Areas.Create("Home")!;
+        var work = planner.Areas.Create("Work")!;
+        planner.Areas.Create("Health");
+        planner.Areas.Archive(work.Id);
+
+        planner.Areas.Move(home.Id, 1);
+
+        Assert.Equal(["Health", "Home", "Work"], planner.Areas.All().Select(area => area.Name));
+        Assert.True(planner.Areas.Restore(work.Id));
+        Assert.Equal(["Health", "Home", "Work"], planner.Areas.Active().Select(area => area.Name));
+    }
+
+    [Fact]
     public void DeletingAnAreaKeepsItsTasksWithoutIt()
     {
         Add("Fix the shelf @Home");

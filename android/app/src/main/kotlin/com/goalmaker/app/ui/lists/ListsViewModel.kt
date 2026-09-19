@@ -69,7 +69,7 @@ class ListsViewModel(
     private val chosenFilter = MutableStateFlow(ListFilter.NONE)
     private val filter = combine(chosenFilter, areas.watch().flowOn(io), tags.watch().flowOn(io)) { chosen, areaList, tagList ->
         ListFilter(
-            areaId = chosen.areaId?.takeIf { id -> areaList.any { it.id == id } },
+            areaId = chosen.areaId?.takeIf { id -> areaList.any { it.id == id && !it.archived } },
             tagId = chosen.tagId?.takeIf { id -> tagList.any { it.id == id } },
         )
     }

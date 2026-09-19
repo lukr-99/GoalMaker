@@ -14,8 +14,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The areas and tags manager (M2-11): add, rename, recolor, give an emoji, reorder and delete areas;
- * add, rename and delete tags. Saving reports false when the name is blank or already taken, so the
+ * The areas and tags manager (M2-11): add, rename, recolor, give an emoji, reorder, archive, restore
+ * and delete areas; add, rename and delete tags. Saving reports false when the name is blank or already taken, so the
  * dialog can say so. Disk work runs on [io].
  */
 class AreasViewModel(
@@ -44,9 +44,17 @@ class AreasViewModel(
     /** Moves an area one place up ([by] -1) or down ([by] 1). */
     fun moveArea(id: String, by: Int) {
         viewModelScope.launch(io) {
-            val index = areas.all().indexOfFirst { it.id == id }
+            val index = areas.active().indexOfFirst { it.id == id }
             if (index >= 0) areas.move(id, index + by)
         }
+    }
+
+    fun archiveArea(id: String) {
+        viewModelScope.launch(io) { areas.archive(id) }
+    }
+
+    fun restoreArea(id: String) {
+        viewModelScope.launch(io) { areas.restore(id) }
     }
 
     fun deleteArea(id: String) {

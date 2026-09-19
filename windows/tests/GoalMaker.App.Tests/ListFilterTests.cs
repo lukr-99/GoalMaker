@@ -83,6 +83,22 @@ public sealed class ListFilterTests : IDisposable
     }
 
     [Fact]
+    public void ArchivingTheChosenAreaLetsGoOfTheFilterAndTakesItOutOfTheSidebar()
+    {
+        Add("Fix the shelf @Home", Today);
+        Add("Send the invoice @Work", Today);
+        var today = List(ListKind.Today);
+        var sidebar = Sidebar();
+        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
+
+        planner.Areas.Archive(planner.Areas.Find("Home")!.Id);
+
+        Assert.True(filter.Current.IsEmpty);
+        Assert.Equal(2, Titles(today).Count);
+        Assert.Equal(["Work"], sidebar.Areas.Select(area => area.Label));
+    }
+
+    [Fact]
     public void TheSidebarShowsNoFilterHeaderUntilThereIsAnAreaOrTag()
     {
         var sidebar = Sidebar();

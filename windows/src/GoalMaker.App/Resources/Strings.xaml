@@ -140,6 +140,10 @@
     <sys:String x:Key="Areas.MoveUp">Move up</sys:String>
     <sys:String x:Key="Areas.MoveDown">Move down</sys:String>
     <sys:String x:Key="Areas.DeleteArea">Delete the area</sys:String>
+    <sys:String x:Key="Areas.ArchiveArea">Archive the area</sys:String>
+    <sys:String x:Key="Areas.Archived">Archived</sys:String>
+    <sys:String x:Key="Areas.Restore">Restore</sys:String>
+    <sys:String x:Key="Areas.ArchivedHint">Archived areas keep their tasks but leave the pickers and filters. Naming one in the composer brings it back.</sys:String>
     <sys:String x:Key="Areas.DeleteTag">Delete the tag</sys:String>
     <sys:String x:Key="Areas.AddArea">Add area</sys:String>
     <sys:String x:Key="Areas.AddTag">Add tag</sys:String>
