@@ -23,6 +23,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 |---|---|
 | `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules |
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
+| `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat |
 | `complete_task`, `drop_task`, `reopen_task`, `move_task` | A repeating task moves on and back like in the apps |
 | `delete_task`, `restore_task` | Deletes are soft and need the owner's yes in the conversation first |
@@ -79,8 +80,8 @@ A scheduled Claude routine (or any assistant that can use MCP connectors) can le
 week waiting in GoalMaker (spec, story 75). Schedule it for Sunday evening with GoalMaker turned on
 and a prompt like this:
 
-> Use GoalMaker. Look at this week: call get_today and search_tasks with an empty query for what I
-> completed this week, and get_review_summaries for last week's summary. Write a short summary of
+> Use GoalMaker. Look at my week: get_completed_tasks for what I finished, get_today for what is
+> still open or overdue, and get_review_summaries for last week's summary. Write a short summary of
 > my week in plain words: what I got done, what slipped, and one focus for next week, in at most
 > six sentences. Save it with save_review_summary, kind weekly. Don't change any tasks.
 

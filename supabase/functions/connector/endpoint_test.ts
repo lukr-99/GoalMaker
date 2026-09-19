@@ -128,6 +128,8 @@ Deno.test({
         const id = /\(id ([0-9a-f-]{36})\)/.exec(added.text)![1];
         const done = await client.tool("complete_task", { id });
         assertStringIncludes(done.text, "Next occurrence:");
+        const completed = await client.tool("get_completed_tasks");
+        assertStringIncludes(completed.text, "[x] Water the plants");
         const [next] = await sql`
           select count(*)::int as open from public.tasks
           where owner_id = ${OWNER} and series_id = ${id} and status = 'open' and deleted_at is null`;

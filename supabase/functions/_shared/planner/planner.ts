@@ -5,7 +5,7 @@ import { seriesOf, successorId, tagLinkId } from "../rules/occurrences.ts";
 import { DEFAULT_START_HOUR, planningDay } from "../rules/planningDay.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { periodStart, reviewId, type ReviewKind } from "../rules/reviews.ts";
-import type { TaskItem, TaskState } from "../rules/task.ts";
+import { compareText, type TaskItem, type TaskState } from "../rules/task.ts";
 import { colorForNewArea } from "./palette.ts";
 
 export interface Area {
@@ -93,6 +93,16 @@ export class Planner {
   async dayOf(timestamp: string): Promise<Day> {
     await this.now();
     return planningDay(localNow(this.profile!.timeZone, new Date(timestamp)), this.profile!.startHour);
+  }
+
+  /** The done tasks among `tasks` completed on a planning day from `first` to `last`, in the order they were done. */
+  async completedBetween(tasks: TaskItem[], first: Day, last: Day): Promise<TaskItem[]> {
+    const done: TaskItem[] = [];
+    for (const task of tasks.filter((task) => task.state === "done" && task.completedAt !== null)) {
+      const day = await this.dayOf(task.completedAt!);
+      if (day >= first && day <= last) done.push(task);
+    }
+    return done.sort((a, b) => compareText(a.completedAt!, b.completedAt!));
   }
 
   /** `today`, `tomorrow` or an ISO date, as a day; null for anything else. */

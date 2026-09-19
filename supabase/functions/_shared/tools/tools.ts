@@ -1,7 +1,7 @@
 import { z } from "../deps.ts";
 import { type Planner, PlannerError, type TaskFields } from "../planner/planner.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
-import { addDays, type Day } from "../rules/day.ts";
+import { addDays, type Day, mondayOf } from "../rules/day.ts";
 import { lists } from "../rules/listRules.ts";
 import { byCreation } from "../rules/task.ts";
 import * as format from "./format.ts";
@@ -135,6 +135,32 @@ export const tools: Tool[] = [
         tags.length === 0 ? "No tags yet." : "Tags:",
         ...tags.map((tag) => `- #${tag.name}`),
       ].join("\n");
+    },
+  },
+  {
+    name: "get_completed_tasks",
+    title: "Completed tasks",
+    description:
+      "The tasks the owner completed from one planning day to another, in the order they were done: this week " +
+      "(Monday to today) unless told otherwise. For reviews and summaries.",
+    input: {
+      from: day.optional().describe("The first day; this week's Monday by default."),
+      to: day.optional().describe("The last day; today by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const { today } = await planner.now();
+      const first = (await dayFrom(planner, args.from)) ?? mondayOf(today);
+      const last = (await dayFrom(planner, args.to)) ?? today;
+      const done = await planner.completedBetween(await planner.tasks(), first, last);
+      const names = await namesOf(planner);
+      const period = `${format.longDay(first)} to ${format.longDay(last)}`;
+      return done.length === 0 ? `Nothing was completed from ${period}.` : [
+        `Completed from ${period}: ${done.length}`,
+        ...done.map((task) => format.taskLine(task, names, { showDay: true })),
+      ]
+        .join("\n");
     },
   },
   {

@@ -32,16 +32,6 @@ async function namesOf(planner: Planner): Promise<format.Names> {
   return format.names(await planner.areas(), await planner.tags(), await planner.tagLinks());
 }
 
-/** The done tasks completed on a planning day from `first` to `last`. */
-async function completedBetween(planner: Planner, tasks: TaskItem[], first: Day, last: Day): Promise<TaskItem[]> {
-  const done: TaskItem[] = [];
-  for (const task of tasks.filter((task) => task.state === "done" && task.completedAt !== null)) {
-    const day = await planner.dayOf(task.completedAt!);
-    if (day >= first && day <= last) done.push(task);
-  }
-  return done.sort((a, b) => (a.completedAt! < b.completedAt! ? -1 : 1));
-}
-
 export const prompts: Prompt[] = [
   {
     name: "plan_tomorrow",
@@ -89,7 +79,7 @@ export const prompts: Prompt[] = [
       return message([
         `Let's do my GoalMaker weekly review for the week of ${format.longDay(first)} to ${format.longDay(last)}.`,
         "",
-        block("Done this week", await completedBetween(planner, tasks, first, last), names, "nothing marked done."),
+        block("Done this week", await planner.completedBetween(tasks, first, last), names, "nothing marked done."),
         block(
           "Still open from this week or earlier",
           open.filter((task) => task.plannedDate !== null && task.plannedDate <= last).sort((a, b) =>
@@ -135,7 +125,7 @@ export const prompts: Prompt[] = [
       const last = addDays(next, -1);
       const tasks = await planner.tasks();
       const names = await namesOf(planner);
-      const done = await completedBetween(planner, tasks, first, last);
+      const done = await planner.completedBetween(tasks, first, last);
       const byArea = new Map<string, number>();
       for (const task of done) {
         const area = task.areaId ? names.areas.get(task.areaId)?.name ?? "No area" : "No area";
