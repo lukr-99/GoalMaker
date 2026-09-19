@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "description": "Light Markdown in task notes (docs/archive.md). A note splits into lines (\\n, with \\r dropped); each line is a block, a list item when it starts, after spaces, with '- ' or '* '. Inside a line: **bold**, *italic* (not when the stars touch a space on the inside), and http:// or https:// links running to the next space, without a trailing . , ; : ! ? or ). Unmatched markers stay as text. Spans leave out styles they don't have; an empty note has no blocks.",
+  "cases": [
+    {"name": "plain text is one line", "text": "Pack the night before", "blocks": [{"bullet": false, "spans": [{"text": "Pack the night before"}]}]},
+    {"name": "bold in the middle", "text": "Check the **passport** first", "blocks": [{"bullet": false, "spans": [{"text": "Check the "}, {"text": "passport", "bold": true}, {"text": " first"}]}]},
+    {"name": "italic in the middle", "text": "It is *really* late", "blocks": [{"bullet": false, "spans": [{"text": "It is "}, {"text": "really", "italic": true}, {"text": " late"}]}]},
+    {"name": "a lone pair of stars stays", "text": "a ** b", "blocks": [{"bullet": false, "spans": [{"text": "a ** b"}]}]},
+    {"name": "stars with spaces inside aren't italic", "text": "2 * 3 * 4", "blocks": [{"bullet": false, "spans": [{"text": "2 * 3 * 4"}]}]},
+    {"name": "empty markers stay", "text": "****", "blocks": [{"bullet": false, "spans": [{"text": "****"}]}]},
+    {"name": "two bold runs side by side", "text": "**a****b**", "blocks": [{"bullet": false, "spans": [{"text": "a", "bold": true}, {"text": "b", "bold": true}]}]},
+    {"name": "a star inside bold", "text": "**a*b**", "blocks": [{"bullet": false, "spans": [{"text": "a*b", "bold": true}]}]},
+    {"name": "a link keeps its query", "text": "See https://example.com/a?b=1, then call", "blocks": [{"bullet": false, "spans": [{"text": "See "}, {"text": "https://example.com/a?b=1", "link": "https://example.com/a?b=1"}, {"text": ", then call"}]}]},
+    {"name": "a full stop after a link isn't part of it", "text": "Docs at http://x.org.", "blocks": [{"bullet": false, "spans": [{"text": "Docs at "}, {"text": "http://x.org", "link": "http://x.org"}, {"text": "."}]}]},
+    {"name": "a closing bracket after a link isn't part of it", "text": "(see https://x.org)", "blocks": [{"bullet": false, "spans": [{"text": "(see "}, {"text": "https://x.org", "link": "https://x.org"}, {"text": ")"}]}]},
+    {"name": "a scheme alone isn't a link", "text": "https:// and more", "blocks": [{"bullet": false, "spans": [{"text": "https:// and more"}]}]},
+    {"name": "each line is its own block", "text": "One\nTwo", "blocks": [{"bullet": false, "spans": [{"text": "One"}]}, {"bullet": false, "spans": [{"text": "Two"}]}]},
+    {"name": "windows line ends", "text": "One\r\nTwo", "blocks": [{"bullet": false, "spans": [{"text": "One"}]}, {"bullet": false, "spans": [{"text": "Two"}]}]},
+    {"name": "an empty line stays as space", "text": "One\n\nTwo", "blocks": [{"bullet": false, "spans": [{"text": "One"}]}, {"bullet": false, "spans": []}, {"bullet": false, "spans": [{"text": "Two"}]}]},
+    {"name": "dash lines are a list", "text": "- milk\n- eggs", "blocks": [{"bullet": true, "spans": [{"text": "milk"}]}, {"bullet": true, "spans": [{"text": "eggs"}]}]},
+    {"name": "star lines are a list too", "text": "* bread", "blocks": [{"bullet": true, "spans": [{"text": "bread"}]}]},
+    {"name": "an indented list line", "text": "  - butter", "blocks": [{"bullet": true, "spans": [{"text": "butter"}]}]},
+    {"name": "a dash without a space isn't a list", "text": "-5 degrees", "blocks": [{"bullet": false, "spans": [{"text": "-5 degrees"}]}]},
+    {"name": "styles inside a list line", "text": "- **Passport** and *visa*", "blocks": [{"bullet": true, "spans": [{"text": "Passport", "bold": true}, {"text": " and "}, {"text": "visa", "italic": true}]}]},
+    {"name": "emoji pass through", "text": "🏠 **home**", "blocks": [{"bullet": false, "spans": [{"text": "🏠 "}, {"text": "home", "bold": true}]}]},
+    {"name": "no text, no blocks", "text": "", "blocks": []}
+  ]
+}
