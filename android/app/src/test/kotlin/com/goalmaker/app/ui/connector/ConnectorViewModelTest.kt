@@ -81,6 +81,20 @@ class ConnectorViewModelTest {
     }
 
     @Test
+    fun `a new link revoked on the other device is no longer shown`() = kotlinx.coroutines.test.runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.create()
+        viewModel.refresh()
+        assertEquals("https://example.supabase.co/functions/v1/connector/secret-1", viewModel.uiState.value.newUrl)
+
+        links.revoke()
+        viewModel.refresh()
+
+        assertNull(viewModel.uiState.value.newUrl)
+        assertNull(viewModel.uiState.value.active)
+    }
+
+    @Test
     fun `offline, the screen says it needs a connection`() {
         links.offline = true
 

@@ -1,6 +1,6 @@
 # M3-03: The shared planning rules in TypeScript
 
-**Status:** rules done 2026-09-19; the apps writing the profile is left · **Milestone:** M3
+**Status:** done 2026-09-19 · **Milestone:** M3
 
 ## Scope
 - The connector must see the same Today, Tomorrow and Inbox as the apps and move a repeating task
@@ -23,5 +23,7 @@
   ritual ids in reminders.json; all pass.
 - `planner/palette.ts` mirrors the area palette, with a test against contracts/design/themes.json.
 
-## Left
-- Both apps writing the device's day start and time zone to the profile.
+- Both apps write the device's time zone and day start to the profile at sign-in and when the day
+  start changes (Android `PostgrestProfileSettings`, Windows the same; Windows converts its zone id
+  to an IANA one, using the region to pick the city). Checked on the local stack: the profile had
+  the PC's zone and day start right after sign-in.

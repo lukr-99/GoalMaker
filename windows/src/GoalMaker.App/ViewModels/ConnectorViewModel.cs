@@ -52,6 +52,9 @@ public sealed partial class ConnectorViewModel : ObservableObject
     [ObservableProperty]
     private bool copied;
 
+    // The link the new URL belongs to, so the URL goes once that link stops being the active one.
+    private string? newLinkId;
+
     public ConnectorViewModel(IConnectorLinks links, string backendUrl, IStrings strings, Action<string> copy)
     {
         this.links = links;
@@ -91,6 +94,7 @@ public sealed partial class ConnectorViewModel : ObservableObject
         var secret = await links.CreateAsync();
         NewUrl = IConnectorLinks.Url(backendUrl, secret);
         Copied = false;
+        newLinkId = null;
         await LoadAsync();
     });
 
@@ -139,6 +143,17 @@ public sealed partial class ConnectorViewModel : ObservableObject
     private async Task LoadAsync()
     {
         var active = (await links.ListAsync()).FirstOrDefault(link => link.Active);
+        if (HasNewUrl)
+        {
+            // Made just now: remember its link. Revoked or replaced elsewhere since: the URL is dead.
+            newLinkId ??= active?.Id;
+            if (active is null || active.Id != newLinkId)
+            {
+                NewUrl = string.Empty;
+                Copied = false;
+            }
+        }
+
         HasActive = active is not null;
         Status = active is null ? strings.Get("Connector.None") : strings.Get("Connector.Active", Format(active.CreatedAt));
         LastUsed = active is null

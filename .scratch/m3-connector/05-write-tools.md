@@ -1,6 +1,6 @@
 # M3-05: Tools that change things
 
-**Status:** done 2026-09-19 (the two-app check waits for M3-07) · **Milestone:** M3
+**Status:** done 2026-09-19 · **Milestone:** M3
 
 ## Scope
 - Add a task (title, day, time, deadline, area by name, tags, top priority, notes, repeat), edit
@@ -22,3 +22,5 @@
   `remove_reminder`, `add_step`, `check_step`, over `_shared/planner/planner.ts`, which does what the
   apps' task, area and tag lists do (a repeating task moves on with the successor id; a new area gets
   the next free palette color; an archived one comes back).
+- Checked on the local stack: a task Claude added through the link showed on the PC's Today and the
+  phone's, as "Claude added" in Activity on both.

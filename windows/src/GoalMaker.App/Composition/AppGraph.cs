@@ -458,8 +458,10 @@ public sealed class AppGraph : IDisposable
     // zone id (Europe/Prague), which Windows' own ids (Central Europe Standard Time) convert to.
     private async Task UpdateProfileAsync()
     {
+        // The region picks the zone's city (Central Europe Standard Time is Europe/Prague in Czechia).
         var zone = TimeZoneInfo.Local;
-        var iana = zone.HasIanaId ? zone.Id : TimeZoneInfo.TryConvertWindowsIdToIanaId(zone.Id, out var converted) ? converted : null;
+        var region = System.Globalization.RegionInfo.CurrentRegion.TwoLetterISORegionName;
+        var iana = zone.HasIanaId ? zone.Id : TimeZoneInfo.TryConvertWindowsIdToIanaId(zone.Id, region, out var converted) ? converted : null;
         if (iana is null)
         {
             return;

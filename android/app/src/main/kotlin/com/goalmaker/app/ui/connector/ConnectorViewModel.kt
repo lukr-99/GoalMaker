@@ -25,6 +25,9 @@ class ConnectorViewModel(
     private val state = MutableStateFlow(ConnectorUiState())
     val uiState: StateFlow<ConnectorUiState> = state.asStateFlow()
 
+    // The link the new URL belongs to, so the URL goes once that link stops being the active one.
+    private var newLinkId: String? = null
+
     init {
         refresh()
     }
@@ -34,6 +37,7 @@ class ConnectorViewModel(
     /** Makes a link; when one is active, this is rotating: the old one stops working. */
     fun create() = call {
         val secret = withContext(io) { links.create() }
+        newLinkId = null
         state.update { it.copy(newUrl = ConnectorLinks.url(backendUrl, secret)) }
         withContext(io) { load() }
     }
@@ -49,6 +53,11 @@ class ConnectorViewModel(
 
     private suspend fun load() {
         val active = links.list().firstOrNull { it.active }
+        if (state.value.newUrl != null) {
+            // Made just now: remember its link. Revoked or replaced elsewhere since: the URL is dead.
+            if (newLinkId == null) newLinkId = active?.id
+            if (active == null || active.id != newLinkId) state.update { it.copy(newUrl = null) }
+        }
         state.update { it.copy(loaded = true, active = active, unavailable = false) }
     }
 

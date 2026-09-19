@@ -53,6 +53,21 @@ public sealed class ConnectorViewModelTests
     }
 
     [Fact]
+    public async Task ANewLinkRevokedOnTheOtherDeviceIsNoLongerShown()
+    {
+        var connector = Connector();
+        await connector.CreateCommand.ExecuteAsync(null);
+        await connector.RefreshAsync();
+        Assert.True(connector.HasNewUrl);
+
+        await links.RevokeAsync(TestContext.Current.CancellationToken);
+        await connector.RefreshAsync();
+
+        Assert.False(connector.HasNewUrl);
+        Assert.True(connector.ShowCreate);
+    }
+
+    [Fact]
     public async Task OfflineTheCardSaysItNeedsAConnection()
     {
         links.Offline = true;
