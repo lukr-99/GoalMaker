@@ -1,6 +1,7 @@
 import type { Db } from "../owner.ts";
 import { addDays, type Day, isDay, localNow } from "../rules/day.ts";
 import { nameBasedUuid } from "../rules/nameBasedUuid.ts";
+import { moves } from "../rules/planRules.ts";
 import { seriesOf, successorId, tagLinkId } from "../rules/occurrences.ts";
 import { DEFAULT_START_HOUR, planningDay } from "../rules/planningDay.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
@@ -209,6 +210,7 @@ export class Planner {
         title = ${fields.title === undefined ? task.title : cleanTitle(fields.title)},
         notes = ${fields.notes === undefined ? task.notes : cleanNotes(fields.notes)},
         planned_date = ${day},
+        moved_count = ${moves(task.plannedDate, day, task.movedCount)},
         planned_time = ${time},
         deadline = ${fields.deadline === undefined ? task.deadline : fields.deadline},
         area_id = ${areaId},
@@ -236,6 +238,7 @@ export class Planner {
     const planned = day === undefined ? task.plannedDate : day;
     await this.db`
       update public.tasks set status = 'open', completed_at = null, planned_date = ${planned},
+        moved_count = ${moves(task.plannedDate, planned, task.movedCount)},
         planned_time = ${planned === null ? null : task.plannedTime}
       where id = ${id}`;
     if (task.state !== "open") {
@@ -403,7 +406,7 @@ export class Planner {
     return this.db`
       select id::text, title, notes, status, top_priority, planned_date::text,
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
-             series_id::text, goal_id::text,
+             series_id::text, goal_id::text, moved_count,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
@@ -489,6 +492,7 @@ function toTask(row: any): TaskItem {
     deadline: row.deadline,
     completedAt: row.completed_at,
     goalId: row.goal_id,
+    movedCount: row.moved_count ?? 0,
   };
 }
 

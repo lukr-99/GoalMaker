@@ -24,4 +24,5 @@ data class TaskItem(
     val deadline: LocalDate? = null,
     val completedAt: String? = null,
     val goalId: String? = null,
+    val movedCount: Int = 0,
 )

@@ -50,6 +50,8 @@ class RitualRunList(
 
     companion object {
         const val PLAN_TOMORROW = "plan_tomorrow"
+        const val WEEKLY_REVIEW = "weekly_review"
+        const val MONTHLY_REVIEW = "monthly_review"
         private const val TABLE = "ritual_runs"
         private const val NAMESPACE = "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91"
 

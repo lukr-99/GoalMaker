@@ -37,6 +37,7 @@ internal sealed class TestPlanner : IDisposable
         Rituals = new RitualRunList(replica, rows, () => { });
         Goals = new GoalList(replica, rows, () => { });
         Habits = new HabitList(replica, rows, () => { });
+        Reviews = new ReviewList(replica, rows, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -62,6 +63,11 @@ internal sealed class TestPlanner : IDisposable
     public GoalList Goals { get; }
 
     public HabitList Habits { get; }
+
+    public ReviewList Reviews { get; }
+
+    /// <summary>The replica itself, for tests that write a row the app can't.</summary>
+    public IReplica Replica => replica;
 
     public TickSound Tick { get; } = new();
 

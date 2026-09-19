@@ -46,4 +46,12 @@ public static class PlanRules
         var tomorrow = today.AddDays(1);
         return tasks.Count(task => !task.Deleted && task.State == TaskState.Open && task.TopPriority && task.PlannedDate == tomorrow);
     }
+
+    /// <summary>
+    /// How often a task was moved once it goes from <paramref name="before"/> to <paramref name="after"/>
+    /// (tasks.moved_count, docs/reviews.md): moving a planned task to another day counts, planning one
+    /// that had no day doesn't, and neither does taking its day away.
+    /// </summary>
+    public static int Moves(DateOnly? before, DateOnly? after, int count) =>
+        before is { } from && after is { } to && from != to ? count + 1 : count;
 }

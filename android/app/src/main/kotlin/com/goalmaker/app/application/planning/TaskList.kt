@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.booleanOrNull
 
 /**
@@ -68,6 +69,7 @@ class TaskList(
                     "top_priority" to JsonPrimitive(draft.topPriority),
                     "status" to JsonPrimitive("open"),
                     "position" to JsonPrimitive(0.0),
+                    "moved_count" to JsonPrimitive(0),
                     "planned_date" to (draft.plannedDate?.toString()?.let(::JsonPrimitive) ?: JsonNull),
                     "planned_time" to (draft.plannedTime?.format(TIME)?.let(::JsonPrimitive) ?: JsonNull),
                     "area_id" to (areaId?.let(::JsonPrimitive) ?: JsonNull),
@@ -92,7 +94,11 @@ class TaskList(
     fun delete(id: String) = change(id) { row -> row[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
 
     /** Plans the task for [day], keeping its time; reopens it if it was done or dropped (Plan tomorrow). */
-    fun plan(id: String, day: LocalDate) = reopen(id) { row -> row["planned_date"] = JsonPrimitive(day.toString()) }
+    fun plan(id: String, day: LocalDate) = reopen(id) { row ->
+        val current = toItem(JsonObject(row))
+        row["moved_count"] = JsonPrimitive(PlanRules.moves(current.plannedDate, day, current.movedCount))
+        row["planned_date"] = JsonPrimitive(day.toString())
+    }
 
     /** Drops the task: it stays in the history but leaves every list. A repeating task moves on. */
     fun drop(id: String) = finish(id, "dropped")
@@ -139,6 +145,8 @@ class TaskList(
      * needs a day, so no day clears the time too.
      */
     fun schedule(id: String, day: LocalDate?, time: LocalTime?) = change(id) { row ->
+        val current = toItem(JsonObject(row))
+        row["moved_count"] = JsonPrimitive(PlanRules.moves(current.plannedDate, day, current.movedCount))
         row["planned_date"] = day?.toString()?.let(::JsonPrimitive) ?: JsonNull
         row["planned_time"] = if (day == null) JsonNull else time?.format(TIME)?.let(::JsonPrimitive) ?: JsonNull
     }
@@ -230,6 +238,7 @@ class TaskList(
                 "top_priority" to JsonPrimitive(current.topPriority),
                 "status" to JsonPrimitive("open"),
                 "position" to JsonPrimitive(0.0),
+                "moved_count" to JsonPrimitive(0),
                 "planned_date" to JsonPrimitive(day.toString()),
                 "planned_time" to (row["planned_time"] ?: JsonNull),
                 "area_id" to (current.areaId?.let(::JsonPrimitive) ?: JsonNull),
@@ -281,6 +290,7 @@ class TaskList(
         topPriority = (row["top_priority"] as? JsonPrimitive)?.booleanOrNull ?: false,
         createdAt = row.text(SyncedTable.CREATED_AT).orEmpty(),
         plannedDate = row.text("planned_date")?.let(LocalDate::parse),
+        movedCount = (row["moved_count"] as? JsonPrimitive)?.intOrNull ?: 0,
         plannedTime = row.text("planned_time")?.let(LocalTime::parse),
         areaId = row.text("area_id"),
         recurrence = row.text("recurrence"),

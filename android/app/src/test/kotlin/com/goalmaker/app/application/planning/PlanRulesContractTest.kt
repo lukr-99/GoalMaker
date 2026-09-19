@@ -57,6 +57,18 @@ class PlanRulesContractTest {
         assertTrue(failures.joinToString("\n", prefix = "${failures.size} of ${cases.size} failed:\n"), failures.isEmpty())
     }
 
+    @Test
+    fun `every move count`() {
+        vectors.getValue("moves").jsonArray.map { it.jsonObject }.forEach { case ->
+            fun day(name: String) = case[name]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content?.let(LocalDate::parse)
+            assertEquals(
+                case.getValue("name").jsonPrimitive.content,
+                case.getValue("expect").jsonPrimitive.int,
+                PlanRules.moves(day("before"), day("after"), case.getValue("count").jsonPrimitive.int),
+            )
+        }
+    }
+
     private fun task(fields: JsonObject, index: Int): TaskItem {
         fun text(name: String) = fields[name]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content
         return TaskItem(

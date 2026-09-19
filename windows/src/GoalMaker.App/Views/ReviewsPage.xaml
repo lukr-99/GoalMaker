@@ -1,0 +1,63 @@
+<Page x:Class="GoalMaker.App.Views.ReviewsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource Reviews.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Page.Resources>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="4,16,0,6" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+        </Style>
+
+        <!-- One period to review, or one review already written. -->
+        <DataTemplate x:Key="ReviewRow" DataType="{x:Type vm:ReviewStartViewModel}">
+            <Border Margin="0,0,0,6"
+                    Padding="12,8"
+                    MinHeight="{DynamicResource GM.RowMinHeight}"
+                    CornerRadius="{DynamicResource GM.RowCorner}"
+                    Background="{DynamicResource GM.SurfaceBrush}">
+                <DockPanel>
+                    <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
+                               Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}"
+                               ToolTip="{DynamicResource Reviews.Delete}" AutomationProperties.Name="{DynamicResource Reviews.Delete}">
+                        <ui:SymbolIcon Symbol="Delete24" />
+                    </ui:Button>
+                    <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding OpenCommand}" Content="{Binding Action}"
+                               Foreground="{DynamicResource GM.AccentBrush}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" FontSize="14" />
+                        <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+    </Page.Resources>
+
+    <!-- Reviews (docs/reviews.md): what is waiting, and what was written before. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+            <controls:HeadlineText Title="{DynamicResource Reviews.Title}" FontSize="40" />
+            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,8" Text="{DynamicResource Reviews.Hint}" />
+
+            <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.ToWrite}" />
+            <ItemsControl ItemsSource="{Binding ToWrite}" ItemTemplate="{StaticResource ReviewRow}" Focusable="False" />
+
+            <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Past}" />
+            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Reviews.Empty}"
+                       Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+            <ItemsControl ItemsSource="{Binding Past}" ItemTemplate="{StaticResource ReviewRow}" Focusable="False" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>

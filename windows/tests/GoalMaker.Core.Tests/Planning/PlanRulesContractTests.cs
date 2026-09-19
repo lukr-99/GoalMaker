@@ -60,6 +60,20 @@ public sealed class PlanRulesContractTests
         Assert.True(failures.Count == 0, $"{failures.Count} of {cases.Count} failed:\n{string.Join('\n', failures)}");
     }
 
+    [Fact]
+    public void EveryMoveCount()
+    {
+        foreach (var testCase in vectors.GetProperty("moves").EnumerateArray())
+        {
+            DateOnly? Day(string name) => testCase.GetProperty(name).ValueKind == JsonValueKind.Null
+                ? null
+                : DateOnly.ParseExact(testCase.GetProperty(name).GetString()!, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            Assert.True(
+                testCase.GetProperty("expect").GetInt32() == PlanRules.Moves(Day("before"), Day("after"), testCase.GetProperty("count").GetInt32()),
+                testCase.GetProperty("name").GetString());
+        }
+    }
+
     private static TaskItem Task(JsonElement task, JsonElement defaults, int index)
     {
         JsonElement Field(string name) => task.TryGetProperty(name, out var value) ? value : defaults.GetProperty(name);

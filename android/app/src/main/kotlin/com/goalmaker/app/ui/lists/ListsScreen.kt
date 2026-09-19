@@ -23,14 +23,16 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material.icons.outlined.EditCalendar
-import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Inbox
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.WbTwilight
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
@@ -106,6 +108,7 @@ fun ListsScreen(
     onOpenArchive: () -> Unit,
     onOpenGoals: () -> Unit,
     onOpenHabits: () -> Unit,
+    onOpenReviews: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
@@ -185,9 +188,7 @@ fun ListsScreen(
                         IconButton(onClick = onOpenGoals) {
                             Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
                         }
-                        IconButton(onClick = onOpenArchive) {
-                            Icon(Icons.Outlined.Inventory2, contentDescription = stringResource(R.string.archive_title))
-                        }
+                        MoreMenu(onOpenArchive = onOpenArchive, onOpenReviews = onOpenReviews)
                         IconButton(onClick = onOpenPlan) {
                             Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
                         }
@@ -366,6 +367,33 @@ private fun ListContent(
                 if (lists.inbox.isEmpty()) item(key = "empty") { Empty(stringResource(R.string.lists_inbox_empty)) }
                 rows(lists.inbox)
             }
+        }
+    }
+}
+
+/** What doesn't fit the top bar: the reviews and the archive. */
+@Composable
+private fun MoreMenu(onOpenArchive: () -> Unit, onOpenReviews: () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.lists_more_menu))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.reviews_title)) },
+                onClick = {
+                    open = false
+                    onOpenReviews()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.archive_title)) },
+                onClick = {
+                    open = false
+                    onOpenArchive()
+                },
+            )
         }
     }
 }

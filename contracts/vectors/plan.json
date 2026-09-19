@@ -1,96 +1,340 @@
 {
   "schema": 1,
-  "description": "The Plan tomorrow ritual's rules (docs/plan-tomorrow.md). Tasks list only fields that differ from 'taskDefaults'; their creation order is their order in the case. 'review' is step 1's task ids in order (omitted: none). 'decisions' maps every task that isn't deleted to what the ritual shows for it (omitted: not checked); values are undecided, tomorrow, later, unplanned, done, dropped. 'priorities' counts tomorrow's open top priorities (omitted: 0). 'tomorrow' is step 2's task ids in order (omitted: none). 'now' is local time; the day starts at 'rolloverHour'. 2026-09-18 is a Friday.",
+  "description": "The Plan tomorrow ritual's rules (docs/plan-tomorrow.md). Tasks list only fields that differ from 'taskDefaults'; their creation order is their order in the case. 'review' is step 1's task ids in order (omitted: none). 'decisions' maps every task that isn't deleted to what the ritual shows for it (omitted: not checked); values are undecided, tomorrow, later, unplanned, done, dropped. 'priorities' counts tomorrow's open top priorities (omitted: 0). 'tomorrow' is step 2's task ids in order (omitted: none). 'now' is local time; the day starts at 'rolloverHour'. 2026-09-18 is a Friday. 'moves': how often a task was moved (tasks.moved_count, docs/reviews.md): planning a task that already had a day for another day counts one more; planning it from nothing, for the same day, or taking its day away leaves the count alone.",
   "now": "2026-09-18T21:30",
   "rolloverHour": 4,
   "maxPriorities": 3,
-  "taskDefaults": { "planned": null, "time": null, "top": false, "status": "open", "area": null, "deleted": false },
+  "taskDefaults": {
+    "planned": null,
+    "time": null,
+    "top": false,
+    "status": "open",
+    "area": null,
+    "deleted": false
+  },
   "cases": [
     {
       "name": "today's and earlier open tasks are reviewed, oldest day first",
       "tasks": [
-        { "id": "t1", "planned": "2026-09-18" },
-        { "id": "o1", "planned": "2026-09-17", "time": "08:00" },
-        { "id": "o2", "planned": "2026-09-10" },
-        { "id": "t2", "planned": "2026-09-18", "time": "09:00" },
-        { "id": "tm", "planned": "2026-09-19" },
-        { "id": "n" },
-        { "id": "d", "planned": "2026-09-18", "status": "done" },
-        { "id": "x", "planned": "2026-09-18", "status": "dropped" },
-        { "id": "del", "planned": "2026-09-18", "deleted": true }
+        {
+          "id": "t1",
+          "planned": "2026-09-18"
+        },
+        {
+          "id": "o1",
+          "planned": "2026-09-17",
+          "time": "08:00"
+        },
+        {
+          "id": "o2",
+          "planned": "2026-09-10"
+        },
+        {
+          "id": "t2",
+          "planned": "2026-09-18",
+          "time": "09:00"
+        },
+        {
+          "id": "tm",
+          "planned": "2026-09-19"
+        },
+        {
+          "id": "n"
+        },
+        {
+          "id": "d",
+          "planned": "2026-09-18",
+          "status": "done"
+        },
+        {
+          "id": "x",
+          "planned": "2026-09-18",
+          "status": "dropped"
+        },
+        {
+          "id": "del",
+          "planned": "2026-09-18",
+          "deleted": true
+        }
       ],
       "expect": {
-        "review": ["o2", "o1", "t2", "t1"],
-        "tomorrow": ["tm"],
-        "decisions": { "t1": "undecided", "o1": "undecided", "o2": "undecided", "t2": "undecided", "tm": "tomorrow", "n": "unplanned", "d": "done", "x": "dropped" }
+        "review": [
+          "o2",
+          "o1",
+          "t2",
+          "t1"
+        ],
+        "tomorrow": [
+          "tm"
+        ],
+        "decisions": {
+          "t1": "undecided",
+          "o1": "undecided",
+          "o2": "undecided",
+          "t2": "undecided",
+          "tm": "tomorrow",
+          "n": "unplanned",
+          "d": "done",
+          "x": "dropped"
+        }
       }
     },
     {
       "name": "on the same day, timed tasks come first, then creation order",
       "tasks": [
-        { "id": "a", "planned": "2026-09-18" },
-        { "id": "b", "planned": "2026-09-18", "time": "20:00" },
-        { "id": "c", "planned": "2026-09-18" },
-        { "id": "d", "planned": "2026-09-18", "time": "07:30" }
+        {
+          "id": "a",
+          "planned": "2026-09-18"
+        },
+        {
+          "id": "b",
+          "planned": "2026-09-18",
+          "time": "20:00"
+        },
+        {
+          "id": "c",
+          "planned": "2026-09-18"
+        },
+        {
+          "id": "d",
+          "planned": "2026-09-18",
+          "time": "07:30"
+        }
       ],
-      "expect": { "review": ["d", "b", "a", "c"] }
+      "expect": {
+        "review": [
+          "d",
+          "b",
+          "a",
+          "c"
+        ]
+      }
     },
     {
       "name": "after midnight it is still the evening's day",
       "now": "2026-09-19T01:30",
       "tasks": [
-        { "id": "a", "planned": "2026-09-18" },
-        { "id": "b", "planned": "2026-09-19" }
+        {
+          "id": "a",
+          "planned": "2026-09-18"
+        },
+        {
+          "id": "b",
+          "planned": "2026-09-19"
+        }
       ],
-      "expect": { "review": ["a"], "decisions": { "a": "undecided", "b": "tomorrow" }, "tomorrow": ["b"] }
+      "expect": {
+        "review": [
+          "a"
+        ],
+        "decisions": {
+          "a": "undecided",
+          "b": "tomorrow"
+        },
+        "tomorrow": [
+          "b"
+        ]
+      }
     },
     {
       "name": "with the day starting at midnight, 01:30 is the next day",
       "now": "2026-09-19T01:30",
       "rolloverHour": 0,
       "tasks": [
-        { "id": "a", "planned": "2026-09-18" },
-        { "id": "b", "planned": "2026-09-19" },
-        { "id": "c", "planned": "2026-09-20" }
+        {
+          "id": "a",
+          "planned": "2026-09-18"
+        },
+        {
+          "id": "b",
+          "planned": "2026-09-19"
+        },
+        {
+          "id": "c",
+          "planned": "2026-09-20"
+        }
       ],
-      "expect": { "review": ["a", "b"], "decisions": { "a": "undecided", "b": "undecided", "c": "tomorrow" }, "tomorrow": ["c"] }
+      "expect": {
+        "review": [
+          "a",
+          "b"
+        ],
+        "decisions": {
+          "a": "undecided",
+          "b": "undecided",
+          "c": "tomorrow"
+        },
+        "tomorrow": [
+          "c"
+        ]
+      }
     },
     {
       "name": "decisions follow each task's state",
       "tasks": [
-        { "id": "u", "planned": "2026-09-18" },
-        { "id": "tm", "planned": "2026-09-19", "time": "08:00" },
-        { "id": "l", "planned": "2026-09-25" },
-        { "id": "dn", "planned": "2026-09-19", "status": "done" },
-        { "id": "dr", "status": "dropped" },
-        { "id": "n", "area": "home" }
+        {
+          "id": "u",
+          "planned": "2026-09-18"
+        },
+        {
+          "id": "tm",
+          "planned": "2026-09-19",
+          "time": "08:00"
+        },
+        {
+          "id": "l",
+          "planned": "2026-09-25"
+        },
+        {
+          "id": "dn",
+          "planned": "2026-09-19",
+          "status": "done"
+        },
+        {
+          "id": "dr",
+          "status": "dropped"
+        },
+        {
+          "id": "n",
+          "area": "home"
+        }
       ],
       "expect": {
-        "review": ["u"],
-        "tomorrow": ["tm"],
-        "decisions": { "u": "undecided", "tm": "tomorrow", "l": "later", "dn": "done", "dr": "dropped", "n": "unplanned" }
+        "review": [
+          "u"
+        ],
+        "tomorrow": [
+          "tm"
+        ],
+        "decisions": {
+          "u": "undecided",
+          "tm": "tomorrow",
+          "l": "later",
+          "dn": "done",
+          "dr": "dropped",
+          "n": "unplanned"
+        }
       }
     },
     {
       "name": "tomorrow's priorities count open flagged tasks planned tomorrow",
       "tasks": [
-        { "id": "p1", "planned": "2026-09-19", "top": true },
-        { "id": "p2", "planned": "2026-09-19", "time": "08:00", "top": true },
-        { "id": "p3", "planned": "2026-09-19", "top": true, "status": "done" },
-        { "id": "p4", "planned": "2026-09-20", "top": true },
-        { "id": "p5", "planned": "2026-09-18", "top": true },
-        { "id": "p6", "planned": "2026-09-19", "top": true, "deleted": true },
-        { "id": "plain", "planned": "2026-09-19" }
+        {
+          "id": "p1",
+          "planned": "2026-09-19",
+          "top": true
+        },
+        {
+          "id": "p2",
+          "planned": "2026-09-19",
+          "time": "08:00",
+          "top": true
+        },
+        {
+          "id": "p3",
+          "planned": "2026-09-19",
+          "top": true,
+          "status": "done"
+        },
+        {
+          "id": "p4",
+          "planned": "2026-09-20",
+          "top": true
+        },
+        {
+          "id": "p5",
+          "planned": "2026-09-18",
+          "top": true
+        },
+        {
+          "id": "p6",
+          "planned": "2026-09-19",
+          "top": true,
+          "deleted": true
+        },
+        {
+          "id": "plain",
+          "planned": "2026-09-19"
+        }
       ],
-      "expect": { "review": ["p5"], "priorities": 2, "tomorrow": ["p2", "p1", "plain"] }
+      "expect": {
+        "review": [
+          "p5"
+        ],
+        "priorities": 2,
+        "tomorrow": [
+          "p2",
+          "p1",
+          "plain"
+        ]
+      }
     },
     {
       "name": "nothing left over",
       "tasks": [
-        { "id": "d", "planned": "2026-09-18", "status": "done" },
-        { "id": "tm", "planned": "2026-09-19" }
+        {
+          "id": "d",
+          "planned": "2026-09-18",
+          "status": "done"
+        },
+        {
+          "id": "tm",
+          "planned": "2026-09-19"
+        }
       ],
-      "expect": { "decisions": { "d": "done", "tm": "tomorrow" }, "tomorrow": ["tm"] }
+      "expect": {
+        "decisions": {
+          "d": "done",
+          "tm": "tomorrow"
+        },
+        "tomorrow": [
+          "tm"
+        ]
+      }
+    }
+  ],
+  "moves": [
+    {
+      "name": "planning a task that had no day is not a move",
+      "before": null,
+      "after": "2026-09-19",
+      "count": 0,
+      "expect": 0
+    },
+    {
+      "name": "moving a planned task to another day counts",
+      "before": "2026-09-18",
+      "after": "2026-09-19",
+      "count": 0,
+      "expect": 1
+    },
+    {
+      "name": "another move counts again",
+      "before": "2026-09-19",
+      "after": "2026-09-21",
+      "count": 2,
+      "expect": 3
+    },
+    {
+      "name": "planning it for the same day changes nothing",
+      "before": "2026-09-19",
+      "after": "2026-09-19",
+      "count": 3,
+      "expect": 3
+    },
+    {
+      "name": "taking the day off is not a move",
+      "before": "2026-09-19",
+      "after": null,
+      "count": 3,
+      "expect": 3
+    },
+    {
+      "name": "a task that never had a day keeps its count",
+      "before": null,
+      "after": null,
+      "count": 0,
+      "expect": 0
     }
   ]
 }

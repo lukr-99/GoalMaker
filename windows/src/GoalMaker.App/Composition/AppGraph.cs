@@ -99,13 +99,14 @@ public sealed class AppGraph : IDisposable
         // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
         // carries the next one, and toasts show them with the same buttons as the phone.
         reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
+        Rituals = new RitualRunList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
             new ReminderList(replica, newRows, Sync.Request),
             Tasks,
             reminderTimer,
             Settings,
             TimeProvider.System,
-            new RitualRunList(replica, newRows, Sync.Request));
+            Rituals);
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -185,6 +186,22 @@ public sealed class AppGraph : IDisposable
         Habits = new HabitList(replica, newRows, Sync.Request);
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits);
         HabitsPage = new HabitsViewModel(Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
+        Reviews = new ReviewList(replica, newRows, Sync.Request);
+        Review = new ReviewViewModel(
+            ReviewRules.Weekly,
+            ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),
+            Reviews,
+            Tasks,
+            Areas,
+            Goals,
+            Habits,
+            ContractResources.Prompts(),
+            Rituals,
+            Settings,
+            strings,
+            TimeProvider.System,
+            runOnUi);
+        ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
@@ -281,6 +298,18 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The Habits page.</summary>
     public HabitsViewModel HabitsPage { get; private set; } = null!;
+
+    /// <summary>Which rituals ran on which planning day (docs/reminders.md, docs/reviews.md).</summary>
+    public RitualRunList Rituals { get; private set; } = null!;
+
+    /// <summary>The owner's weekly, monthly and yearly reviews (docs/reviews.md).</summary>
+    public ReviewList Reviews { get; private set; } = null!;
+
+    /// <summary>The Reviews page.</summary>
+    public ReviewsViewModel ReviewsPage { get; private set; } = null!;
+
+    /// <summary>The guided review, opened from the Reviews page.</summary>
+    public ReviewViewModel Review { get; private set; } = null!;
 
     public ReminderService Reminders { get; }
 
@@ -510,6 +539,7 @@ public sealed class AppGraph : IDisposable
         Plan.Refresh();
         GoalsPage.Refresh();
         HabitsPage.Refresh();
+        ReviewsPage.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.
@@ -546,5 +576,12 @@ public sealed class AppGraph : IDisposable
         {
             // Signed out or shutting down.
         }
+    }
+
+    // The Reviews page opens one period's review on the review page.
+    private void OpenReview(string kind, DateOnly periodStart)
+    {
+        Review.Open(kind, periodStart);
+        PageRequested?.Invoke(this, AppPage.Review);
     }
 }

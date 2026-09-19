@@ -26,7 +26,7 @@ import { lists } from "./listRules.ts";
 import { nameBasedUuid } from "./nameBasedUuid.ts";
 import { successorId, tagLinkId, toDrop } from "./occurrences.ts";
 import { planningDay } from "./planningDay.ts";
-import { decision, priorities, review, tomorrow } from "./planRules.ts";
+import { decision, moves, priorities, review, tomorrow } from "./planRules.ts";
 import { nextOccurrence, parseRecurrence } from "./recurrence.ts";
 import {
   nextPrompt,
@@ -114,6 +114,9 @@ Deno.test("plan.json: every step and decision", async () => {
     for (const [id, expected] of Object.entries(expect.decisions ?? {})) {
       assertEquals(decision(tasks.find((item) => item.id === id)!, today), expected, `${vector.name}: ${id}`);
     }
+  }
+  for (const vector of file.moves) {
+    assertEquals(moves(vector.before, vector.after, vector.count), vector.expect, vector.name);
   }
 });
 

@@ -20,4 +20,7 @@ public sealed record TaskItem(
     string Notes = "",
     DateOnly? Deadline = null,
     string? CompletedAt = null,
-    string? GoalId = null);
+    string? GoalId = null,
+
+    /// <summary>How often the task was moved from one planned day to another (docs/reviews.md).</summary>
+    int MovedCount = 0);

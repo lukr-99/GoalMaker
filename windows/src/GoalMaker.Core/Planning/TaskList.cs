@@ -86,6 +86,7 @@ public sealed class TaskList
                 ["top_priority"] = draft.TopPriority,
                 ["status"] = "open",
                 ["position"] = 0.0,
+                ["moved_count"] = 0,
                 ["planned_date"] = draft.PlannedDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 ["planned_time"] = draft.PlannedTime?.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                 ["area_id"] = areaId,
@@ -135,8 +136,12 @@ public sealed class TaskList
     public void Delete(string id) => Change(id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
     /// <summary>Plans the task for <paramref name="day"/>, keeping its time; reopens it if it was done or dropped (Plan tomorrow).</summary>
-    public void Plan(string id, DateOnly day) =>
-        Reopen(id, row => row["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+    public void Plan(string id, DateOnly day) => Reopen(id, row =>
+    {
+        var current = ToItem(row);
+        row["moved_count"] = PlanRules.Moves(current.PlannedDate, day, current.MovedCount);
+        row["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    });
 
     /// <summary>Drops the task: it stays in the history but leaves every list. A repeating task moves on.</summary>
     public void Drop(string id) => Finish(id, "dropped");
@@ -197,6 +202,8 @@ public sealed class TaskList
     /// </summary>
     public void Schedule(string id, DateOnly? day, TimeOnly? time) => Change(id, row =>
     {
+        var current = ToItem(row);
+        row["moved_count"] = PlanRules.Moves(current.PlannedDate, day, current.MovedCount);
         row["planned_date"] = day?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         row["planned_time"] = day is null ? null : time?.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
     });
@@ -338,6 +345,7 @@ public sealed class TaskList
             ["top_priority"] = current.TopPriority,
             ["status"] = "open",
             ["position"] = 0.0,
+            ["moved_count"] = 0,
             ["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["planned_time"] = row["planned_time"]?.DeepClone(),
             ["area_id"] = current.AreaId,
@@ -411,5 +419,6 @@ public sealed class TaskList
         Notes: (string?)row["notes"] ?? string.Empty,
         Deadline: (string?)row["deadline"] is { } deadline ? DateOnly.ParseExact(deadline, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null,
         CompletedAt: (string?)row["completed_at"],
-        GoalId: (string?)row[GoalId]);
+        GoalId: (string?)row[GoalId],
+        MovedCount: row["moved_count"] is System.Text.Json.Nodes.JsonValue moved && moved.TryGetValue<long>(out var count) ? (int)count : 0);
 }

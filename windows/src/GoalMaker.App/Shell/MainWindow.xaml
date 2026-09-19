@@ -70,6 +70,11 @@
                         <ui:SymbolIcon Symbol="ArrowRepeatAll24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Reviews}" TargetPageType="{x:Type views:ReviewsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="BookOpen24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Archive}" TargetPageType="{x:Type views:ArchivePage}">

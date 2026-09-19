@@ -37,3 +37,12 @@ export function priorities(tasks: TaskItem[], today: Day): number {
   return tasks.filter((task) => !task.deleted && task.state === "open" && task.topPriority && task.plannedDate === next)
     .length;
 }
+
+/**
+ * How often a task was moved once it goes from `before` to `after` (tasks.moved_count,
+ * docs/reviews.md): moving a planned task to another day counts, planning one that had no day
+ * doesn't, and neither does taking its day away.
+ */
+export function moves(before: Day | null, after: Day | null, count: number): number {
+  return before !== null && after !== null && before !== after ? count + 1 : count;
+}

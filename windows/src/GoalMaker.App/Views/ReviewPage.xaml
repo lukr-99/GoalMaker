@@ -1,0 +1,220 @@
+<Page x:Class="GoalMaker.App.Views.ReviewPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource Reviews.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Page.Resources>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,16,0,6" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,0,6" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="CornerRadius" Value="{DynamicResource GM.RowCorner}" />
+            <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+        </Style>
+    </Page.Resources>
+
+    <!-- The guided review (docs/reviews.md): one step at a time, with a bar across the top. -->
+    <DockPanel Margin="{DynamicResource GM.PagePadding}">
+        <StackPanel DockPanel.Dock="Top">
+            <controls:HeadlineText Title="{Binding Heading}" FontSize="34" />
+            <ProgressBar Margin="0,10,0,0" Height="4" Minimum="0" Maximum="1" Value="{Binding Progress, Mode=OneWay}"
+                         Foreground="{DynamicResource GM.AccentBrush}" Background="{DynamicResource GM.SurfaceBrush}" />
+        </StackPanel>
+
+        <DockPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <TextBlock VerticalAlignment="Center" Text="{Binding PeriodText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <ui:Button Command="{Binding BackCommand}" Content="{DynamicResource Reviews.Back}"
+                           Visibility="{Binding CanGoBack, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Margin="8,0,0,0" Appearance="Primary" Command="{Binding NextCommand}" Content="{Binding NextLabel}" />
+            </StackPanel>
+        </DockPanel>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxWidth="760" HorizontalAlignment="Left">
+            <StackPanel>
+                <!-- Look back. -->
+                <StackPanel Visibility="{Binding IsLookBack, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.LookBack}" />
+                    <TextBlock Text="{Binding DoneText}" FontSize="24" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="{Binding ChangeText}" />
+                    <ItemsControl ItemsSource="{Binding Days}" Focusable="False" Margin="0,8,0,8">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Width="34" VerticalAlignment="Bottom">
+                                    <controls:DayBar Height="64" Done="{Binding Done}"
+                                                     Most="{Binding DataContext.MostDone, RelativeSource={RelativeSource AncestorType=Page}}" />
+                                    <TextBlock HorizontalAlignment="Center" Text="{Binding Date.Day}" FontSize="10"
+                                               Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Highlights}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <ui:SymbolIcon Symbol="Checkmark20" FontSize="14" Foreground="{DynamicResource GM.AccentBrush}" />
+                                    <TextBlock Margin="8,0,0,0" Text="{Binding}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Goals}"
+                               Visibility="{Binding HasPeriodGoals, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding PeriodGoals}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource Card}">
+                                    <DockPanel>
+                                        <controls:GoalRing DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,10,0" Fraction="{Binding Fraction}" Thickness="3" />
+                                        <ui:SymbolIcon DockPanel.Dock="Right" Symbol="Checkmark20" Foreground="{DynamicResource GM.AccentBrush}"
+                                                       Visibility="{Binding Hit, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Habits}"
+                               Visibility="{Binding HasPeriodHabits, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding PeriodHabits}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource Card}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" FontSize="12"
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}">
+                                            <Run Text="{Binding Met, Mode=OneWay}" /><Run Text=" / " /><Run Text="{Binding Periods, Mode=OneWay}" />
+                                        </TextBlock>
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- What is still open. -->
+                <StackPanel Visibility="{Binding IsTasks, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.OpenTasks}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="{Binding OpenTasksText}" />
+                    <ItemsControl ItemsSource="{Binding OpenTasks}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ReviewTaskViewModel}">
+                                <Border Style="{StaticResource Card}">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                            <ui:Button Appearance="Transparent" Command="{Binding ForwardCommand}" Content="{DynamicResource Reviews.TaskForward}" />
+                                            <ui:Button Margin="4,0,0,0" Appearance="Transparent" Command="{Binding DoneCommand}" Content="{DynamicResource Reviews.TaskDone}" />
+                                            <ui:Button Margin="4,0,0,0" Appearance="Transparent" Command="{Binding DropCommand}" Content="{DynamicResource Reviews.TaskDrop}"
+                                                       Foreground="{DynamicResource GM.DangerBrush}" />
+                                        </StackPanel>
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Reflect. -->
+                <StackPanel Visibility="{Binding IsReflect, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Reflect}" />
+                    <ItemsControl ItemsSource="{Binding QuestionRows}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ReviewQuestionViewModel}">
+                                <StackPanel Margin="0,0,0,14">
+                                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" FontSize="14" />
+                                    <ui:TextBox Margin="0,6,0,0"
+                                                AcceptsReturn="True"
+                                                MinHeight="72"
+                                                TextWrapping="Wrap"
+                                                PlaceholderText="{DynamicResource Reviews.Answer}"
+                                                Text="{Binding Answer, UpdateSourceTrigger=PropertyChanged}"
+                                                AutomationProperties.Name="{Binding Text}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- Mood and energy. -->
+                <StackPanel Visibility="{Binding IsRate, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Rate}" />
+                    <TextBlock Text="{DynamicResource Reviews.Mood}" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,12">
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="1" Command="{Binding SetMoodCommand}" CommandParameter="1" />
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="2" Command="{Binding SetMoodCommand}" CommandParameter="2" />
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="3" Command="{Binding SetMoodCommand}" CommandParameter="3" />
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="4" Command="{Binding SetMoodCommand}" CommandParameter="4" />
+                        <ui:Button Width="44" Height="44" Content="5" Command="{Binding SetMoodCommand}" CommandParameter="5" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding Mood}" FontSize="14"
+                                   Foreground="{DynamicResource GM.AccentBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="{DynamicResource Reviews.Energy}" FontSize="14" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="1" Command="{Binding SetEnergyCommand}" CommandParameter="1" />
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="2" Command="{Binding SetEnergyCommand}" CommandParameter="2" />
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="3" Command="{Binding SetEnergyCommand}" CommandParameter="3" />
+                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="4" Command="{Binding SetEnergyCommand}" CommandParameter="4" />
+                        <ui:Button Width="44" Height="44" Content="5" Command="{Binding SetEnergyCommand}" CommandParameter="5" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding Energy}" FontSize="14"
+                                   Foreground="{DynamicResource GM.AccentBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- The period ahead. -->
+                <StackPanel Visibility="{Binding IsGoals, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.NextGoals}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Reviews.NextIntro}" />
+                    <ItemsControl ItemsSource="{Binding Goals}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:GoalRowViewModel}">
+                                <Border Style="{StaticResource Card}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Text="{Binding ProgressText}" FontSize="12"
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                        <controls:GoalRing DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,10,0" Fraction="{Binding Fraction}" Thickness="3" />
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    </DockPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ui:Button Margin="0,6,0,0" Appearance="Transparent" Command="{Binding CopyGoalsCommand}" Content="{DynamicResource Reviews.CopyGoals}"
+                               Visibility="{Binding CanCopyGoals, Converter={StaticResource BoolToVisibility}}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Copy24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </StackPanel>
+
+                <!-- Written. -->
+                <StackPanel Visibility="{Binding IsDone, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.DoneTitle}" />
+                    <TextBlock Text="{Binding DoneSummary}" FontSize="16" TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Page>

@@ -279,7 +279,7 @@ private fun GoalMenu(goal: GoalItem, onLog: () -> Unit, onStatus: (String) -> Un
 /** Adds or edits a goal: its name and emoji, horizon and period, how progress is measured, and the goal it serves. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun GoalDialog(
+internal fun GoalDialog(
     goal: GoalItem,
     today: LocalDate,
     goals: List<GoalItem>,

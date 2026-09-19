@@ -14,6 +14,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import java.time.LocalDate
 import java.time.LocalDateTime
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
@@ -39,6 +40,12 @@ import com.goalmaker.app.ui.habits.HabitsViewModel
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
+import com.goalmaker.app.ui.review.ReviewKey
+import com.goalmaker.app.ui.review.ReviewScreen
+import com.goalmaker.app.ui.review.ReviewViewModel
+import com.goalmaker.app.ui.review.ReviewsKey
+import com.goalmaker.app.ui.review.ReviewsScreen
+import com.goalmaker.app.ui.review.ReviewsViewModel
 import com.goalmaker.app.ui.plan.PlanViewModel
 import com.goalmaker.app.ui.task.TaskKey
 import com.goalmaker.app.ui.task.TaskScreen
@@ -101,11 +108,38 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenArchive = { backStack.add(ArchiveKey) },
                             onOpenGoals = { backStack.add(GoalsKey) },
                             onOpenHabits = { backStack.add(HabitsKey) },
+                            onOpenReviews = { backStack.add(ReviewsKey) },
                         )
                     }
                     entry<GoalsKey> {
                         val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
                         GoalsScreen(viewModel = goalsViewModel, onBack = { backStack.removeLastOrNull() })
+                    }
+                    entry<ReviewsKey> {
+                        val reviewsViewModel = viewModel { ReviewsViewModel(graph.reviews, graph.settings, graph.io, LocalDateTime::now) }
+                        ReviewsScreen(
+                            viewModel = reviewsViewModel,
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                        )
+                    }
+                    entry<ReviewKey> { key ->
+                        val reviewViewModel = viewModel(key = "${key.kind}-${key.periodStart}") {
+                            ReviewViewModel(
+                                kind = key.kind,
+                                periodStart = LocalDate.parse(key.periodStart),
+                                reviews = graph.reviews,
+                                tasks = graph.tasks,
+                                areas = graph.areas,
+                                goals = graph.goals,
+                                habits = graph.habits,
+                                prompts = graph.prompts,
+                                rituals = graph.rituals,
+                                io = graph.io,
+                                today = graph::today,
+                            )
+                        }
+                        ReviewScreen(viewModel = reviewViewModel, onClose = { backStack.removeLastOrNull() })
                     }
                     entry<HabitsKey> {
                         val habitsViewModel = viewModel { HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }

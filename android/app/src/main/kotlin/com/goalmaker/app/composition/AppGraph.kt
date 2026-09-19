@@ -16,6 +16,7 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
+import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderService
@@ -186,6 +187,7 @@ class AppGraph(context: Context) {
     val steps = StepList(replica, newRows, sync::request)
     val goals = GoalList(replica, newRows, sync::request)
     val habits = HabitList(replica, newRows, sync::request)
+    val reviews = ReviewList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, sync::request, ::today)
 
     /** The planning day it is now, by the owner's day start (docs/lists.md). */
@@ -194,7 +196,8 @@ class AppGraph(context: Context) {
     // Reminders (docs/reminders.md): the replica decides, AlarmManager carries the one armed alarm.
     val reminderNotifications = ReminderNotifications(appContext)
     private val reminderList = ReminderList(replica, newRows, sync::request)
-    private val rituals = RitualRunList(replica, newRows, sync::request)
+    /** Which rituals ran on which planning day (docs/reminders.md, docs/reviews.md). */
+    val rituals = RitualRunList(replica, newRows, sync::request)
     val reminders = ReminderService(
         reminders = reminderList,
         tasks = tasks,

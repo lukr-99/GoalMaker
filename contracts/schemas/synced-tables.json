@@ -361,6 +361,10 @@
           "kind": "time"
         },
         {
+          "name": "moved_count",
+          "kind": "integer"
+        },
+        {
           "name": "deadline",
           "kind": "date"
         },

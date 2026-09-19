@@ -45,4 +45,12 @@ object PlanRules {
         val tomorrow = today.plusDays(1)
         return tasks.count { !it.deleted && it.state == TaskState.OPEN && it.topPriority && it.plannedDate == tomorrow }
     }
+
+    /**
+     * How often a task was moved once it goes from [before] to [after] (tasks.moved_count,
+     * docs/reviews.md): moving a planned task to another day counts, planning one that had no day
+     * doesn't, and neither does taking its day away.
+     */
+    fun moves(before: LocalDate?, after: LocalDate?, count: Int): Int =
+        if (before != null && after != null && before != after) count + 1 else count
 }

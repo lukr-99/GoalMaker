@@ -11,6 +11,10 @@ namespace GoalMaker.Core.Planning;
 public sealed class RitualRunList
 {
     public const string PlanTomorrow = "plan_tomorrow";
+
+    public const string WeeklyReview = "weekly_review";
+
+    public const string MonthlyReview = "monthly_review";
     private const string Table = "ritual_runs";
     private const string Namespace = "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91";
     private readonly IReplica replica;

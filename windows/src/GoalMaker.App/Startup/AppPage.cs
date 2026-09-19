@@ -13,6 +13,10 @@ public enum AppPage
     Activity,
     Goals,
     Habits,
+    Reviews,
+
+    /// <summary>One period's guided review; opened from the Reviews page.</summary>
+    Review,
 
     /// <summary>A task's details; opened from a list, never by a launch switch.</summary>
     Task,
