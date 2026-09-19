@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
@@ -42,6 +43,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -72,6 +74,7 @@ import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
+import com.goalmaker.app.ui.goals.GoalSummaryRow
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -88,6 +91,7 @@ fun ListsScreen(
     onOpenSettings: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenArchive: () -> Unit,
+    onOpenGoals: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
@@ -137,6 +141,9 @@ fun ListsScreen(
                 subtitle = { state.lists?.let { Text(subtitle(tab, it)) } },
                 actions = {
                     SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
+                    IconButton(onClick = onOpenGoals) {
+                        Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
+                    }
                     IconButton(onClick = onOpenArchive) {
                         Icon(Icons.Outlined.Inventory2, contentDescription = stringResource(R.string.archive_title))
                     }
@@ -205,7 +212,7 @@ fun ListsScreen(
                         onTag = viewModel::filterByTag,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                    ListContent(tab, lists, state, viewModel, tick, onOpenTask) { remindFor = it }
+                    ListContent(tab, lists, state, viewModel, tick, onOpenTask, onOpenGoals) { remindFor = it }
                 }
             }
         }
@@ -220,9 +227,11 @@ private fun ListContent(
     viewModel: ListsViewModel,
     tick: () -> Unit,
     onOpenTask: (String) -> Unit,
+    onOpenGoals: () -> Unit,
     onRemind: (TaskItem) -> Unit,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
+    var goalsOpen by rememberSaveable { mutableStateOf(false) }
     val areaById = state.areas.associateBy(AreaItem::id)
     LazyColumn(
         contentPadding = PaddingValues(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
@@ -274,6 +283,21 @@ private fun ListContent(
                         )
                     }
                     if (overdueOpen) rows(sections.overdue, showDay = true)
+                }
+                // This week's goals, folded like the overdue ones (design spec, Today).
+                if (state.weekGoals.isNotEmpty()) {
+                    val goals = state.weekGoals
+                    item(key = "h-goals") {
+                        SectionHeader(
+                            text = pluralStringResource(R.plurals.goals_week_count, goals.size, goals.count { it.progress.hit }, goals.size),
+                            expanded = goalsOpen,
+                            onToggle = { goalsOpen = !goalsOpen },
+                        )
+                    }
+                    if (goalsOpen) {
+                        items(goals, key = { "goal-" + it.goal.id }) { row -> GoalSummaryRow(row, onClick = onOpenGoals, modifier = Modifier.animateItem()) }
+                        item(key = "all-goals") { TextButton(onClick = onOpenGoals) { Text(stringResource(R.string.goals_all)) } }
+                    }
                 }
             }
             ListTab.TOMORROW -> {

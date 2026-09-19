@@ -68,7 +68,7 @@ class ActivityViewModel(
 
     companion object {
         // Rows the server can put back (undo_activity in supabase/migrations/0008).
-        private val UNDOABLE = setOf("areas", "tags", "tasks", "task_steps", "task_tags", "reminders", "ritual_runs", "reviews")
+        private val UNDOABLE = setOf("areas", "tags", "goals", "goal_entries", "tasks", "task_steps", "task_tags", "reminders", "ritual_runs", "reviews")
 
         /** The entries as rows, newest first, with Undo on each row's latest change that stands. */
         fun rows(entries: List<ActivityEntry>): List<ActivityRow> {

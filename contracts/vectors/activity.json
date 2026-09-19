@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); otherwise edited. 'subject' is the row's title (tasks, task_steps) or name (areas, tags) from 'after', else null.",
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals) or name (areas, tags) from 'after', else null.",
   "cases": [
     {
       "name": "a new task is added",
@@ -132,6 +132,53 @@
       "before": { "kind": "weekly", "summary": "Wins" },
       "after": { "kind": "weekly", "summary": "Wins and lessons" },
       "expect": { "change": "edited", "subject": null }
+    },
+    {
+      "name": "a new goal is added",
+      "entity": "goals", "action": "create", "before": null,
+      "after": { "title": "Run 80 km", "status": "open", "horizon": "month" },
+      "expect": { "change": "added", "subject": "Run 80 km" }
+    },
+    {
+      "name": "hitting a goal by hand",
+      "entity": "goals", "action": "update",
+      "before": { "title": "Book the race", "status": "open", "completed_at": null },
+      "after": { "title": "Book the race", "status": "done", "completed_at": "2026-09-19T10:00:00Z" },
+      "expect": { "change": "completed", "subject": "Book the race" }
+    },
+    {
+      "name": "dropping a goal",
+      "entity": "goals", "action": "update",
+      "before": { "title": "Old plan", "status": "open" },
+      "after": { "title": "Old plan", "status": "dropped" },
+      "expect": { "change": "dropped", "subject": "Old plan" }
+    },
+    {
+      "name": "reopening a goal",
+      "entity": "goals", "action": "update",
+      "before": { "title": "Book the race", "status": "done" },
+      "after": { "title": "Book the race", "status": "open" },
+      "expect": { "change": "reopened", "subject": "Book the race" }
+    },
+    {
+      "name": "renaming a goal",
+      "entity": "goals", "action": "update",
+      "before": { "title": "Run 80 km", "status": "open", "target": 80 },
+      "after": { "title": "Run 100 km", "status": "open", "target": 100 },
+      "expect": { "change": "renamed", "subject": "Run 100 km" }
+    },
+    {
+      "name": "a goal's new target is an edit",
+      "entity": "goals", "action": "update",
+      "before": { "title": "Run 100 km", "status": "open", "target": 80 },
+      "after": { "title": "Run 100 km", "status": "open", "target": 100 },
+      "expect": { "change": "edited", "subject": "Run 100 km" }
+    },
+    {
+      "name": "an amount logged on a goal has no subject of its own",
+      "entity": "goal_entries", "action": "create", "before": null,
+      "after": { "goal_id": "cccccccc-0000-0000-0000-000000000001", "day": "2026-09-19", "amount": 5 },
+      "expect": { "change": "added", "subject": null }
     }
   ]
 }

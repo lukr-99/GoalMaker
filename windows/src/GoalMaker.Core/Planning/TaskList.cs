@@ -15,6 +15,8 @@ public sealed class TaskList
     private const string Table = "tasks";
     private const string TagLinks = "task_tags";
     private const string SeriesId = "series_id";
+    private const string GoalId = "goal_id";
+    private const string Goals = "goals";
     private const int MaxTitle = 500;
     private const int MaxNotes = 20_000;
     private readonly IReplica replica;
@@ -203,6 +205,9 @@ public sealed class TaskList
 
     public void SetArea(string id, string? areaId) => Change(id, row => row["area_id"] = areaId);
 
+    /// <summary>Makes the task serve <paramref name="goalId"/> (docs/goals.md), or no goal when it is null.</summary>
+    public void SetGoal(string id, string? goalId) => Change(id, row => row[GoalId] = goalId);
+
     /// <summary>
     /// How the task repeats (docs/repeating.md), or not at all when <paramref name="rule"/> is null.
     /// False for a rule the apps can't follow. A task that starts repeating becomes the first of its series.
@@ -338,6 +343,7 @@ public sealed class TaskList
             ["area_id"] = current.AreaId,
             ["recurrence"] = current.Recurrence,
             [SeriesId] = Occurrences.SeriesOf(current),
+            [GoalId] = GoalFor(current.GoalId, day),
         });
         if (next is null)
         {
@@ -358,6 +364,19 @@ public sealed class TaskList
                 replica.Queue(TagLinks, copy);
             }
         }
+    }
+
+    // The goal a next occurrence on day still serves: the current one's, while its period lasts (docs/repeating.md).
+    private string? GoalFor(string? goalId, DateOnly day)
+    {
+        if (goalId is null || replica.Get(Goals, goalId) is not { } goal || goal[SyncedTable.DeletedAt] is not null
+            || GoalRules.HorizonOf((string?)goal["horizon"]) is not { } horizon || (string?)goal["period_start"] is not { } text)
+        {
+            return null;
+        }
+
+        var start = DateOnly.ParseExact(text, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return day >= start && day <= GoalRules.PeriodEnd(horizon, start) ? goalId : null;
     }
 
     private void Change(string id, Action<JsonObject> edit)
@@ -391,5 +410,6 @@ public sealed class TaskList
         SeriesId: (string?)row[SeriesId],
         Notes: (string?)row["notes"] ?? string.Empty,
         Deadline: (string?)row["deadline"] is { } deadline ? DateOnly.ParseExact(deadline, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null,
-        CompletedAt: (string?)row["completed_at"]);
+        CompletedAt: (string?)row["completed_at"],
+        GoalId: (string?)row[GoalId]);
 }

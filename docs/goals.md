@@ -40,6 +40,21 @@ When a new week (or month) has no goals yet, the owner can copy last period's: e
 wasn't dropped comes back open, with the same title, emoji, mode, target and unit, keeping its
 parent only when the parent's period still overlaps the new one.
 
+## Tasks that serve a goal
+
+A task can serve one goal, picked in its details from the open goals whose period hasn't ended.
+Deleting a goal leaves its tasks without one. A repeating task's next occurrence keeps the goal
+only while its day falls inside the goal's period ([repeating](repeating.md)).
+
+## On screen
+
+- **Android:** the flag in Today's top bar opens Goals: this year, month, week and day, then next
+  week for planning ahead, each goal with a ring and where it stands. A tap edits a goal, + logs an
+  amount on a numeric one, the box marks a done-or-not goal done, and the menu drops, reopens or
+  deletes it. The tree button shows the same goals as the cascade. Hitting a goal throws confetti
+  (skipped under reduce motion). Today ends with this week's goals, folded like the overdue tasks.
+- **Windows:** the same Goals page from the sidebar (M4-02, in progress).
+
 ## Storage
 
 `goals` and `goal_entries` are synced tables (Supabase migration 0009, replica migration 0004), and

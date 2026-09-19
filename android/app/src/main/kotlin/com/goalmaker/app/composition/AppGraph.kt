@@ -14,6 +14,7 @@ import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.connector.ConnectorLinks
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderService
@@ -174,9 +175,11 @@ class AppGraph(context: Context) {
     val areas = AreaList(replica, newRows, design.areaColors.map { it.id }, sync::request)
     val tags = TagList(replica, newRows, sync::request)
     val steps = StepList(replica, newRows, sync::request)
-    val tasks = TaskList(replica, newRows, areas, tags, sync::request) {
-        PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)
-    }
+    val goals = GoalList(replica, newRows, sync::request)
+    val tasks = TaskList(replica, newRows, areas, tags, sync::request, ::today)
+
+    /** The planning day it is now, by the owner's day start (docs/lists.md). */
+    fun today(): LocalDate = PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)
 
     // Reminders (docs/reminders.md): the replica decides, AlarmManager carries the one armed alarm.
     val reminderNotifications = ReminderNotifications(appContext)

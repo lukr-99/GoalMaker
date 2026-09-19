@@ -28,6 +28,8 @@ fun activitySentence(row: ActivityRow): String {
         "task_tags" -> stringResource(R.string.activity_tag_link)
         "ritual_runs" -> stringResource(R.string.activity_ritual)
         "reviews" -> stringResource(R.string.activity_review)
+        "goals" -> stringResource(R.string.activity_goal, subject)
+        "goal_entries" -> stringResource(R.string.activity_goal_entry)
         else -> entry.entity
     }
     val days = DateTimeFormatter.ofPattern("EEE d MMM", LocalConfiguration.current.locales[0])

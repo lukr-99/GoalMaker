@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.StepItem
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.TaskItem
@@ -120,6 +121,7 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
             HorizontalDivider()
             Schedule(task, onSchedule = viewModel::schedule, onDeadline = viewModel::setDeadline)
             AreaField(task, state, onArea = viewModel::setArea)
+            GoalField(task, state, onGoal = viewModel::setGoal)
             RepeatField(task, onRepeat = viewModel::setRecurrence)
             HorizontalDivider()
             Tags(state, onToggle = viewModel::toggleTag, onAdd = viewModel::addTag)
@@ -276,6 +278,49 @@ private fun AreaField(task: TaskItem, state: TaskUiState, onArea: (String?) -> U
                     open = false
                     onArea(choice.id)
                 })
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalField(task: TaskItem, state: TaskUiState, onGoal: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val goal = state.goals.firstOrNull { it.id == task.goalId }
+    Box {
+        Field(
+            label = stringResource(R.string.task_goal),
+            value = goal?.let { listOfNotNull(it.emoji, it.title).joinToString(" ") } ?: stringResource(R.string.task_no_goal),
+            onClick = { open = true },
+            onClear = goal?.let { { onGoal(null) } },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.task_no_goal)) }, onClick = {
+                open = false
+                onGoal(null)
+            })
+            state.goals.forEach { choice ->
+                DropdownMenuItem(
+                    text = { Text(listOfNotNull(choice.emoji, choice.title).joinToString(" ")) },
+                    trailingIcon = {
+                        Text(
+                            stringResource(
+                                when (choice.horizon) {
+                                    GoalHorizon.YEAR -> R.string.goals_horizon_year
+                                    GoalHorizon.MONTH -> R.string.goals_horizon_month
+                                    GoalHorizon.WEEK -> R.string.goals_horizon_week
+                                    GoalHorizon.DAY -> R.string.goals_horizon_day
+                                },
+                            ),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AppTheme.colors.textMuted,
+                        )
+                    },
+                    onClick = {
+                        open = false
+                        onGoal(choice.id)
+                    },
+                )
             }
         }
     }

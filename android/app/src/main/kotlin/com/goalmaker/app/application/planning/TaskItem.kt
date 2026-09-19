@@ -5,7 +5,8 @@ import java.time.LocalTime
 
 /**
  * A task as the lists, the detail view and the archive show it. [seriesId] groups a repeating task's
- * occurrences (docs/repeating.md); [completedAt] is the server timestamp of a done task.
+ * occurrences (docs/repeating.md); [completedAt] is the server timestamp of a done task; [goalId] is
+ * the goal it serves (docs/goals.md).
  */
 data class TaskItem(
     val id: String,
@@ -22,4 +23,5 @@ data class TaskItem(
     val notes: String = "",
     val deadline: LocalDate? = null,
     val completedAt: String? = null,
+    val goalId: String? = null,
 )

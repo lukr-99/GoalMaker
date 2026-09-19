@@ -138,6 +138,8 @@
     <sys:String x:Key="Activity.TagLink">a task's tag</sys:String>
     <sys:String x:Key="Activity.Ritual">a ritual</sys:String>
     <sys:String x:Key="Activity.Review">a review</sys:String>
+    <sys:String x:Key="Activity.Goal">goal “{0}”</sys:String>
+    <sys:String x:Key="Activity.GoalEntry">an amount on a goal</sys:String>
     <sys:String x:Key="Activity.Added">{0} added {1}</sys:String>
     <sys:String x:Key="Activity.Deleted">{0} deleted {1}</sys:String>
     <sys:String x:Key="Activity.Restored">{0} restored {1}</sys:String>

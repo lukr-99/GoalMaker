@@ -16,6 +16,8 @@ work = "2.11.2"
 ktor = "3.6.0"
 junit = "4.13.2"
 robolectric = "4.17"
+# Goal-hit confetti (design spec, motion and feedback).
+konfetti = "2.0.5"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -48,6 +50,7 @@ supabase-realtime = { module = "io.github.jan-tennert.supabase:realtime-kt" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+konfetti-compose = { module = "nl.dionsegijn:konfetti-compose", version.ref = "konfetti" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

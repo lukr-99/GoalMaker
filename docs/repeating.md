@@ -12,7 +12,9 @@ later, Claude. Moving an occurrence to another day moves only that occurrence; d
 series (the earlier ones stay as history).
 
 The next occurrence copies the current one's plan: title, notes, time, area, tags, top priority and
-repeat. It starts open, without a deadline or steps.
+repeat. It starts open, without a deadline or steps. It keeps the [goal](goals.md) the task serves
+only while its day is still inside that goal's period, so a daily run stops counting toward this
+week's goal once the week is over.
 
 ## The next day
 

@@ -18,7 +18,7 @@ public sealed partial class ActivityViewModel : ObservableObject
 {
     // Rows the server can put back (undo_activity in supabase/migrations/0008).
     private static readonly HashSet<string> Undoable =
-        ["areas", "tags", "tasks", "task_steps", "task_tags", "reminders", "ritual_runs", "reviews"];
+        ["areas", "tags", "goals", "goal_entries", "tasks", "task_steps", "task_tags", "reminders", "ritual_runs", "reviews"];
 
     private readonly IActivityLog log;
     private readonly IStrings strings;
@@ -150,6 +150,8 @@ public sealed partial class ActivityViewModel : ObservableObject
             "task_tags" => strings.Get("Activity.TagLink"),
             "ritual_runs" => strings.Get("Activity.Ritual"),
             "reviews" => strings.Get("Activity.Review"),
+            "goals" => strings.Get("Activity.Goal", subject),
+            "goal_entries" => strings.Get("Activity.GoalEntry"),
             _ => entry.Entity,
         };
         return change.Change switch

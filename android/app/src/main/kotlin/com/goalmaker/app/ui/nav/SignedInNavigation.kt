@@ -26,6 +26,9 @@ import com.goalmaker.app.ui.areas.AreasViewModel
 import com.goalmaker.app.ui.connector.ConnectorKey
 import com.goalmaker.app.ui.connector.ConnectorScreen
 import com.goalmaker.app.ui.connector.ConnectorViewModel
+import com.goalmaker.app.ui.goals.GoalsKey
+import com.goalmaker.app.ui.goals.GoalsScreen
+import com.goalmaker.app.ui.goals.GoalsViewModel
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
@@ -60,6 +63,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         tasks = graph.tasks,
                         areas = graph.areas,
                         tags = graph.tags,
+                        goals = graph.goals,
                         settings = graph.settings,
                         reminders = graph.reminders,
                         sync = graph.sync,
@@ -73,7 +77,12 @@ fun SignedInNavigation(graph: AppGraph) {
                     onOpenSettings = { backStack.add(SettingsKey) },
                     onOpenTask = { id -> backStack.add(TaskKey(id)) },
                     onOpenArchive = { backStack.add(ArchiveKey) },
+                    onOpenGoals = { backStack.add(GoalsKey) },
                 )
+            }
+            entry<GoalsKey> {
+                val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
+                GoalsScreen(viewModel = goalsViewModel, onBack = { backStack.removeLastOrNull() })
             }
             entry<PlanKey> {
                 val planViewModel = viewModel {
@@ -120,7 +129,9 @@ fun SignedInNavigation(graph: AppGraph) {
                 ActivityScreen(viewModel = activityViewModel, onBack = { backStack.removeLastOrNull() })
             }
             entry<TaskKey> { key ->
-                val taskViewModel = viewModel(key = key.id) { TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.io) }
+                val taskViewModel = viewModel(key = key.id) {
+                    TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.goals, graph.io, graph::today)
+                }
                 TaskScreen(viewModel = taskViewModel, onBack = { backStack.removeLastOrNull() })
             }
             entry<ArchiveKey> {

@@ -147,6 +147,9 @@ class TaskList(
 
     fun setArea(id: String, areaId: String?) = change(id) { row -> row["area_id"] = areaId?.let(::JsonPrimitive) ?: JsonNull }
 
+    /** Makes the task serve [goalId] (docs/goals.md), or no goal when it is null. */
+    fun setGoal(id: String, goalId: String?) = change(id) { row -> row[GOAL_ID] = goalId?.let(::JsonPrimitive) ?: JsonNull }
+
     /**
      * How the task repeats (docs/repeating.md), or not at all when [rule] is null. False for a rule the
      * apps can't follow. A task that starts repeating becomes the first of its series.
@@ -232,6 +235,7 @@ class TaskList(
                 "area_id" to (current.areaId?.let(::JsonPrimitive) ?: JsonNull),
                 "recurrence" to (current.recurrence?.let(::JsonPrimitive) ?: JsonNull),
                 SERIES_ID to JsonPrimitive(Occurrences.seriesOf(current)),
+                GOAL_ID to (goalFor(current.goalId, day)?.let(::JsonPrimitive) ?: JsonNull),
             ),
         ) ?: return
         replica.queue(TABLE, next)
@@ -248,6 +252,14 @@ class TaskList(
                     ),
                 )?.let { replica.queue(TAGS, it) }
             }
+    }
+
+    // The goal a next occurrence on [day] still serves: the current one's, while its period lasts (docs/repeating.md).
+    private fun goalFor(goalId: String?, day: LocalDate): String? {
+        val goal = goalId?.let { replica.get(GOALS, it) }?.takeIf { it.isNull(SyncedTable.DELETED_AT) } ?: return null
+        val horizon = GoalHorizon.of(goal.text("horizon")) ?: return null
+        val start = goal.text("period_start")?.let(LocalDate::parse) ?: return null
+        return goalId.takeIf { !day.isBefore(start) && !day.isAfter(GoalRules.periodEnd(horizon, start)) }
     }
 
     private fun change(id: String, edit: (MutableMap<String, JsonElement>) -> Unit) {
@@ -276,12 +288,15 @@ class TaskList(
         notes = row.text("notes").orEmpty(),
         deadline = row.text("deadline")?.let(LocalDate::parse),
         completedAt = row.text("completed_at"),
+        goalId = row.text(GOAL_ID),
     )
 
     private companion object {
         const val TABLE = "tasks"
         const val TAGS = "task_tags"
         const val SERIES_ID = "series_id"
+        const val GOAL_ID = "goal_id"
+        const val GOALS = "goals"
         const val MAX_TITLE = 500
         const val MAX_NOTES = 20_000
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")

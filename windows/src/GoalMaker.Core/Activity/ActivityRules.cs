@@ -10,7 +10,7 @@ public static class ActivityRules
     {
         var subject = entity switch
         {
-            "tasks" or "task_steps" => Text(after, "title"),
+            "tasks" or "task_steps" or "goals" => Text(after, "title"),
             "areas" or "tags" => Text(after, "name"),
             _ => null,
         };
@@ -35,6 +35,10 @@ public static class ActivityRules
             "tasks" when Changed("status") && status == "open" => "reopened",
             "tasks" when Changed("planned_date") => "moved",
             "tasks" when Changed("title") => "renamed",
+            "goals" when Changed("status") && status == "done" => "completed",
+            "goals" when Changed("status") && status == "dropped" => "dropped",
+            "goals" when Changed("status") && status == "open" => "reopened",
+            "goals" when Changed("title") => "renamed",
             "areas" when Changed("archived_at") => Text(after, "archived_at") is not null ? "archived" : "unarchived",
             "areas" or "tags" when Changed("name") => "renamed",
             "task_steps" when Changed("done") => Text(after, "done") == "true" ? "checked" : "unchecked",

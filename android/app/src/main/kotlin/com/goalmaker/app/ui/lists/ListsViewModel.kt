@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.lists
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ReminderItem
@@ -17,6 +18,7 @@ import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.Snooze
+import com.goalmaker.app.ui.goals.GoalBoard
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,14 +40,15 @@ import kotlinx.coroutines.withContext
 
 /**
  * Today, Tomorrow and the Inbox (docs/lists.md), the composer with its live preview
- * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), and the
- * sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
+ * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), this week's
+ * goals (docs/goals.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
  * composer read.
  */
 class ListsViewModel(
     private val tasks: TaskList,
     areas: AreaList,
     private val tags: TagList,
+    goals: GoalList,
     private val settings: SettingsStore,
     private val reminders: ReminderService,
     private val sync: SyncCoordinator,
@@ -88,12 +91,19 @@ class ListsViewModel(
 
     private val rows = combine(areas.watch().flowOn(io), tags.watch().flowOn(io), reminded, ::RowContext)
 
+    // This week's goals and where they stand, for Today's folded section (design spec, Today).
+    private val weekGoals = combine(goals.watch().flowOn(io), tasks.watchAll().flowOn(io), settings.dayStartHour, minutes) {
+            (all, entries), taskList, startHour, _ ->
+        GoalBoard.thisWeek(all, entries, taskList, PlanningDay.of(clock(), startHour))
+    }
+
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
         rows,
         sync.status,
         refreshing,
-    ) { (planning, narrowed), context, status, pulled ->
+        weekGoals,
+    ) { (planning, narrowed), context, status, pulled, goalRows ->
         ListsUiState(
             lists = planning,
             sync = status,
@@ -103,6 +113,7 @@ class ListsViewModel(
             reminded = context.reminded,
             filter = narrowed,
             tags = context.tags,
+            weekGoals = goalRows,
         )
     }.stateIn(
         scope = viewModelScope,
