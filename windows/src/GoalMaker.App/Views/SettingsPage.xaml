@@ -139,6 +139,57 @@
                 </StackPanel>
             </ui:Card>
 
+            <!-- The Claude connector (docs/connector.md); its DataContext is the ConnectorViewModel, set in code. -->
+            <ui:Card x:Name="ConnectorCard" Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Connector.Title}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Connector.Intro}" />
+                    <Border Margin="0,8,0,8" Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceVariantBrush}"
+                            Visibility="{Binding HasNewUrl, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Connector.NewTitle}" />
+                            <TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding NewUrl, Mode=OneWay}"
+                                     AutomationProperties.Name="{DynamicResource Connector.NewTitle}" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,8" Text="{DynamicResource Connector.NewSteps}" />
+                            <StackPanel Orientation="Horizontal">
+                                <ui:Button Appearance="Primary" Content="{DynamicResource Connector.Copy}" Command="{Binding CopyCommand}" />
+                                <ui:Button Margin="8,0,0,0" Content="{DynamicResource Connector.Done}" Command="{Binding HideNewUrlCommand}" />
+                                <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Connector.Copied}"
+                                           Foreground="{DynamicResource GM.TextMutedBrush}"
+                                           Visibility="{Binding Copied, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel Visibility="{Binding Unavailable, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="0,4,0,8" TextWrapping="Wrap" Text="{DynamicResource Connector.Offline}" />
+                        <ui:Button HorizontalAlignment="Left" Content="{DynamicResource Connector.Retry}" Command="{Binding RefreshCommand}" />
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding ShowCreate, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="0,4,0,8" Text="{Binding Status}" />
+                        <ui:Button HorizontalAlignment="Left" Appearance="Primary" Content="{DynamicResource Connector.Create}" Command="{Binding CreateCommand}" />
+                    </StackPanel>
+                    <StackPanel Visibility="{Binding ShowActive, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="0,4,0,0" Text="{Binding Status}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="{Binding LastUsed}" />
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <ui:Button Content="{DynamicResource Connector.Rotate}" Command="{Binding RotateCommand}" />
+                            <ui:Button Margin="8,0,0,0" Content="{DynamicResource Connector.Revoke}" Command="{Binding RevokeCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Border Margin="0,8,0,0" Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceVariantBrush}"
+                            Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel>
+                            <TextBlock TextWrapping="Wrap" Text="{Binding ConfirmText}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <ui:Button Appearance="Danger" Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}" />
+                                <ui:Button Margin="8,0,0,0" Content="{DynamicResource Connector.Cancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0" Text="{DynamicResource Connector.Risk}" />
+                </StackPanel>
+            </ui:Card>
+
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.QuickAdd}" />

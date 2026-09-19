@@ -1,0 +1,137 @@
+{
+  "schema": 1,
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); otherwise edited. 'subject' is the row's title (tasks, task_steps) or name (areas, tags) from 'after', else null.",
+  "cases": [
+    {
+      "name": "a new task is added",
+      "entity": "tasks", "action": "create", "before": null,
+      "after": { "title": "Book the dentist", "status": "open", "planned_date": "2026-09-18" },
+      "expect": { "change": "added", "subject": "Book the dentist" }
+    },
+    {
+      "name": "completing a task",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Book the dentist", "status": "open", "planned_date": "2026-09-18" },
+      "after": { "title": "Book the dentist", "status": "done", "planned_date": "2026-09-18" },
+      "expect": { "change": "completed", "subject": "Book the dentist" }
+    },
+    {
+      "name": "dropping a task",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Old idea", "status": "open", "planned_date": null },
+      "after": { "title": "Old idea", "status": "dropped", "planned_date": null },
+      "expect": { "change": "dropped", "subject": "Old idea" }
+    },
+    {
+      "name": "reopening a done task wins over its move",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Call the bank", "status": "done", "planned_date": "2026-09-17" },
+      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-19" },
+      "expect": { "change": "reopened", "subject": "Call the bank" }
+    },
+    {
+      "name": "moving a task to another day",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18" },
+      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-19" },
+      "expect": { "change": "moved", "subject": "Call the bank", "day": "2026-09-19" }
+    },
+    {
+      "name": "taking a task's day away",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18" },
+      "after": { "title": "Call the bank", "status": "open", "planned_date": null },
+      "expect": { "change": "moved", "subject": "Call the bank", "day": null }
+    },
+    {
+      "name": "renaming a task",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Call bank", "status": "open", "planned_date": "2026-09-18" },
+      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18" },
+      "expect": { "change": "renamed", "subject": "Call the bank" }
+    },
+    {
+      "name": "any other task change is an edit",
+      "entity": "tasks", "action": "update",
+      "before": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18", "top_priority": false },
+      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18", "top_priority": true },
+      "expect": { "change": "edited", "subject": "Call the bank" }
+    },
+    {
+      "name": "deleting and restoring use the server's action",
+      "entity": "tasks", "action": "delete",
+      "before": { "title": "Oops", "status": "open" },
+      "after": { "title": "Oops", "status": "open" },
+      "expect": { "change": "deleted", "subject": "Oops" }
+    },
+    {
+      "name": "a restored task",
+      "entity": "tasks", "action": "restore",
+      "before": { "title": "Oops", "status": "open" },
+      "after": { "title": "Oops", "status": "open" },
+      "expect": { "change": "restored", "subject": "Oops" }
+    },
+    {
+      "name": "archiving an area",
+      "entity": "areas", "action": "update",
+      "before": { "name": "Garden", "archived_at": null },
+      "after": { "name": "Garden", "archived_at": "2026-09-19T10:16:50.397366+00:00" },
+      "expect": { "change": "archived", "subject": "Garden" }
+    },
+    {
+      "name": "bringing an area back",
+      "entity": "areas", "action": "update",
+      "before": { "name": "Garden", "archived_at": "2026-09-19T10:16:50.397366+00:00" },
+      "after": { "name": "Garden", "archived_at": null },
+      "expect": { "change": "unarchived", "subject": "Garden" }
+    },
+    {
+      "name": "renaming a tag",
+      "entity": "tags", "action": "update",
+      "before": { "name": "errand" },
+      "after": { "name": "errands" },
+      "expect": { "change": "renamed", "subject": "errands" }
+    },
+    {
+      "name": "checking a step",
+      "entity": "task_steps", "action": "update",
+      "before": { "title": "Pack the charger", "done": false },
+      "after": { "title": "Pack the charger", "done": true },
+      "expect": { "change": "checked", "subject": "Pack the charger" }
+    },
+    {
+      "name": "unchecking a step",
+      "entity": "task_steps", "action": "update",
+      "before": { "title": "Pack the charger", "done": true },
+      "after": { "title": "Pack the charger", "done": false },
+      "expect": { "change": "unchecked", "subject": "Pack the charger" }
+    },
+    {
+      "name": "handling a reminder",
+      "entity": "reminders", "action": "update",
+      "before": { "state": "pending" },
+      "after": { "state": "done" },
+      "expect": { "change": "handled", "subject": null }
+    },
+    {
+      "name": "snoozing a reminder",
+      "entity": "reminders", "action": "update",
+      "before": { "state": "pending" },
+      "after": { "state": "snoozed" },
+      "expect": { "change": "snoozed", "subject": null }
+    },
+    {
+      "name": "a tag link has no subject of its own",
+      "entity": "task_tags", "action": "create", "before": null,
+      "after": { "task_id": "aaaaaaaa-0000-0000-0000-000000000001", "tag_id": "bbbbbbbb-0000-0000-0000-000000000001" },
+      "expect": { "change": "added", "subject": null }
+    },
+    {
+      "name": "a review's summary changes",
+      "entity": "reviews", "action": "update",
+      "before": { "kind": "weekly", "summary": "Wins" },
+      "after": { "kind": "weekly", "summary": "Wins and lessons" },
+      "expect": { "change": "edited", "subject": null }
+    }
+  ]
+}

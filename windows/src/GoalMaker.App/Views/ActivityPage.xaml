@@ -1,0 +1,58 @@
+<Page x:Class="GoalMaker.App.Views.ActivityPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource Activity.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <!-- Recent changes by the owner and by Claude, with undo (docs/activity.md). Read online. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MaxWidth="760" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel Margin="{DynamicResource GM.PagePadding}">
+                <DockPanel Margin="0,0,0,8">
+                    <ui:Button DockPanel.Dock="Right" VerticalAlignment="Center" Appearance="Transparent" Padding="6"
+                               Command="{Binding RefreshCommand}"
+                               ToolTip="{DynamicResource Activity.Refresh}" AutomationProperties.Name="{DynamicResource Activity.Refresh}">
+                        <ui:SymbolIcon Symbol="ArrowClockwise24" />
+                    </ui:Button>
+                    <controls:HeadlineText Title="{DynamicResource Activity.Title}" FontSize="40" />
+                </DockPanel>
+                <TextBlock Margin="0,0,0,12" TextWrapping="Wrap" Text="{DynamicResource Activity.Intro}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                <TextBlock Margin="0,0,0,12" Text="{Binding Message}" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                           Visibility="{Binding HasMessage, Converter={StaticResource BoolToVisibility}}"
+                           AutomationProperties.LiveSetting="Polite" />
+                <StackPanel Visibility="{Binding Unavailable, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="{DynamicResource Activity.Offline}" />
+                    <ui:Button HorizontalAlignment="Left" Content="{DynamicResource Connector.Retry}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+                <TextBlock Text="{DynamicResource Activity.Empty}" Foreground="{DynamicResource GM.TextMutedBrush}"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                <ItemsControl ItemsSource="{Binding Rows}" Focusable="False" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ActivityRowViewModel}">
+                            <Border Margin="{DynamicResource GM.RowGap}" Padding="12,6" MinHeight="{DynamicResource GM.RowMinHeight}"
+                                    CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
+                                <DockPanel VerticalAlignment="Center">
+                                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Activity.Undo}" Command="{Binding UndoCommand}"
+                                               Visibility="{Binding Undoable, Converter={StaticResource BoolToVisibility}}"
+                                               AutomationProperties.HelpText="{Binding Sentence}" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Sentence}" FontSize="14" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding When}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

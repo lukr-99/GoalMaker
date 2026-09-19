@@ -10,6 +10,7 @@ public enum AppPage
     Settings,
     Areas,
     Archive,
+    Activity,
 
     /// <summary>A task's details; opened from a list, never by a launch switch.</summary>
     Task,

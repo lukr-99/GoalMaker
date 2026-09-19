@@ -57,7 +57,13 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onOpenAreas: () -> Unit) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onBack: () -> Unit,
+    onOpenAreas: () -> Unit,
+    onOpenConnector: () -> Unit = {},
+    onOpenActivity: () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
@@ -141,6 +147,20 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onOpenAreas
                 OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
                 Text(
                     stringResource(R.string.areas_open_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Section(stringResource(R.string.settings_claude)) {
+                OutlinedButton(onClick = onOpenConnector) { Text(stringResource(R.string.connector_open)) }
+                Text(
+                    stringResource(R.string.connector_open_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(onClick = onOpenActivity) { Text(stringResource(R.string.activity_open)) }
+                Text(
+                    stringResource(R.string.activity_open_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

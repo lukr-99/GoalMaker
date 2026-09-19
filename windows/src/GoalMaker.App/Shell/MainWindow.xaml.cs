@@ -34,7 +34,8 @@ public partial class MainWindow
             [typeof(TomorrowPage)] = () => new TomorrowPage(graph.Tomorrow),
             [typeof(InboxPage)] = () => new InboxPage(graph.Inbox),
             [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
-            [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage),
+            [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage, graph.Connector),
+            [typeof(ActivityPage)] = () => new ActivityPage(graph.Activity),
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
@@ -74,6 +75,7 @@ public partial class MainWindow
             AppPage.Settings => typeof(SettingsPage),
             AppPage.Areas => typeof(AreasPage),
             AppPage.Archive => typeof(ArchivePage),
+            AppPage.Activity => typeof(ActivityPage),
             AppPage.Task => typeof(TaskPage),
             _ => typeof(TodayPage),
         };

@@ -9,7 +9,9 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.goalmaker.app.BuildConfig
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.AuthGateway
+import com.goalmaker.app.application.activity.ActivityLog
 import com.goalmaker.app.application.auth.AuthSession
+import com.goalmaker.app.application.connector.ConnectorLinks
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.NewRows
@@ -19,20 +21,27 @@ import com.goalmaker.app.application.planning.RitualRunList
 import com.goalmaker.app.application.planning.StepList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.settings.ProfileSettings
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
+import com.goalmaker.app.application.sync.RemoteRejectedException
+import com.goalmaker.app.application.sync.RemoteUnavailableException
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.application.sync.SyncState
 import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateService
+import com.goalmaker.app.data.activity.PostgrestActivityLog
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
+import com.goalmaker.app.data.connector.PostgrestConnectorLinks
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
 import com.goalmaker.app.data.planning.ReminderNotifications
 import com.goalmaker.app.data.replica.ReplicaFileName
 import com.goalmaker.app.data.replica.ReplicaMigrator
 import com.goalmaker.app.data.replica.SqliteReplica
+import com.goalmaker.app.data.settings.PostgrestProfileSettings
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
+import com.goalmaker.app.data.supabase.PostgrestHttp
 import com.goalmaker.app.data.supabase.SupabaseClientFactory
 import com.goalmaker.app.data.sync.PostgrestRemoteTables
 import com.goalmaker.app.data.sync.SupabaseChangeFeed
@@ -63,6 +72,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -131,8 +141,20 @@ class AppGraph(context: Context) {
             requestTimeoutMillis = 30_000
         }
     }
-    private val remote = PostgrestRemoteTables(http, backend.url, backend.publishableKey) {
+    private val postgrest = PostgrestHttp(http, backend.url, backend.publishableKey) {
         supabase.auth.currentAccessTokenOrNull()
+    }
+    private val remote = PostgrestRemoteTables(postgrest)
+
+    /** The Claude connector's links (docs/connector.md), read and changed online. */
+    val connectorLinks: ConnectorLinks = PostgrestConnectorLinks(postgrest)
+
+    /** The server's activity log with undo (docs/activity.md), read online. */
+    val activity: ActivityLog = PostgrestActivityLog(postgrest)
+
+    // The profile keeps the device's time zone and day start, so the connector's "today" agrees.
+    private val profile: ProfileSettings = PostgrestProfileSettings(postgrest) {
+        (auth.session.value as? AuthSession.SignedIn)?.userId?.takeIf(String::isNotBlank)
     }
 
     val sync = SyncCoordinator(
@@ -208,6 +230,9 @@ class AppGraph(context: Context) {
                     AuthSession.Loading -> Unit
                 }
             }
+        }
+        scope.launch {
+            settings.dayStartHour.drop(1).collect { if (signedIn) updateProfile() }
         }
         scope.launch {
             sync.status.collect { status ->
@@ -289,6 +314,16 @@ class AppGraph(context: Context) {
             look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
         }
         if (visible) changeFeed.start()
+        updateProfile()
+    }
+
+    // Best effort: offline, the next sign-in or day-start change writes it.
+    private suspend fun updateProfile() {
+        try {
+            withContext(io) { profile.update(ZoneId.systemDefault().id, settings.dayStartHour.value) }
+        } catch (_: RemoteUnavailableException) {
+        } catch (_: RemoteRejectedException) {
+        }
     }
 
     private fun onSignedOut() {

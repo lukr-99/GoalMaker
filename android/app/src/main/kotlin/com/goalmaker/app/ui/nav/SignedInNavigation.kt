@@ -14,12 +14,18 @@ import java.time.LocalDateTime
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
+import com.goalmaker.app.ui.activity.ActivityKey
+import com.goalmaker.app.ui.activity.ActivityScreen
+import com.goalmaker.app.ui.activity.ActivityViewModel
 import com.goalmaker.app.ui.archive.ArchiveKey
 import com.goalmaker.app.ui.archive.ArchiveScreen
 import com.goalmaker.app.ui.archive.ArchiveViewModel
 import com.goalmaker.app.ui.areas.AreasKey
 import com.goalmaker.app.ui.areas.AreasScreen
 import com.goalmaker.app.ui.areas.AreasViewModel
+import com.goalmaker.app.ui.connector.ConnectorKey
+import com.goalmaker.app.ui.connector.ConnectorScreen
+import com.goalmaker.app.ui.connector.ConnectorViewModel
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
@@ -101,7 +107,17 @@ fun SignedInNavigation(graph: AppGraph) {
                     viewModel = settingsViewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onOpenAreas = { backStack.add(AreasKey) },
+                    onOpenConnector = { backStack.add(ConnectorKey) },
+                    onOpenActivity = { backStack.add(ActivityKey) },
                 )
+            }
+            entry<ConnectorKey> {
+                val connectorViewModel = viewModel { ConnectorViewModel(graph.connectorLinks, graph.appInfo.backend.url, graph.io) }
+                ConnectorScreen(viewModel = connectorViewModel, onBack = { backStack.removeLastOrNull() })
+            }
+            entry<ActivityKey> {
+                val activityViewModel = viewModel { ActivityViewModel(graph.activity, graph.sync::request, graph.io) }
+                ActivityScreen(viewModel = activityViewModel, onBack = { backStack.removeLastOrNull() })
             }
             entry<TaskKey> { key ->
                 val taskViewModel = viewModel(key = key.id) { TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.io) }

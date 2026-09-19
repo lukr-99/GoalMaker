@@ -12,8 +12,11 @@ using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
+using GoalMaker.Infrastructure.Activity;
 using GoalMaker.Infrastructure.Auth;
+using GoalMaker.Infrastructure.Connector;
 using GoalMaker.Infrastructure.Planning;
+using GoalMaker.Infrastructure.Postgrest;
 using GoalMaker.Infrastructure.Replica;
 using GoalMaker.Infrastructure.Settings;
 using GoalMaker.Infrastructure.Storage;
@@ -38,6 +41,7 @@ public sealed class AppGraph : IDisposable
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly SqliteReplica replica;
     private readonly SupabaseChangeFeed changeFeed;
+    private readonly IProfileSettings profile;
     private readonly SyncedTableCatalog catalog;
     private readonly Action<Action> runOnUi;
     private readonly TickSound tick = new();
@@ -82,7 +86,9 @@ public sealed class AppGraph : IDisposable
         catalog = ContractResources.SyncedTables();
         var design = ContractResources.Themes();
         replica = new SqliteReplica(Paths.ReplicaFor(backend.Url), catalog, ReplicaMigrator.BuiltIn());
-        var remote = new PostgrestRemoteTables(http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken);
+        var postgrest = new PostgrestHttp(http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken);
+        var remote = new PostgrestRemoteTables(postgrest);
+        profile = new PostgrestProfileSettings(postgrest, () => (Auth.Session as AuthSession.SignedIn)?.UserId);
         Sync = new SyncCoordinator(new SyncEngine(catalog, replica, remote, TimeProvider.System), replica, TimeProvider.System, SyncDebounce);
         var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
         Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
@@ -201,8 +207,18 @@ public sealed class AppGraph : IDisposable
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, RefreshLists, Reminders.Rearm, gesture => ApplyQuickAddHotkey(gesture), restartApp, runOnUi);
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm, gesture => ApplyQuickAddHotkey(gesture), restartApp, runOnUi);
+
+        // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
+        Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
+        Activity = new ActivityViewModel(new PostgrestActivityLog(postgrest), strings, Sync.Request);
     }
+
+    /// <summary>The Claude connector card in Settings.</summary>
+    public ConnectorViewModel Connector { get; }
+
+    /// <summary>Recent changes with undo.</summary>
+    public ActivityViewModel Activity { get; }
 
     public AppDataPaths Paths { get; }
 
@@ -321,6 +337,7 @@ public sealed class AppGraph : IDisposable
         ForgetOtherAccounts(signedIn.UserId);
         Sync.Request();
         runOnUi(LookAtReminders);
+        _ = UpdateProfileAsync();
         if (supabase.Auth.CurrentSession?.AccessToken is { } token)
         {
             _ = changeFeed.StartAsync(token);
@@ -427,6 +444,33 @@ public sealed class AppGraph : IDisposable
         if (PlanningDay.Of(DateTime.Now, Settings.DayStartHour) != shownDay)
         {
             RefreshLists();
+        }
+    }
+
+    // The day start moves the lists here and "today" for the connector, which reads it from the profile.
+    private void PlanningDayChanged()
+    {
+        RefreshLists();
+        _ = UpdateProfileAsync();
+    }
+
+    // Best effort: offline, the next sign-in or day-start change writes it. The connector wants an IANA
+    // zone id (Europe/Prague), which Windows' own ids (Central Europe Standard Time) convert to.
+    private async Task UpdateProfileAsync()
+    {
+        var zone = TimeZoneInfo.Local;
+        var iana = zone.HasIanaId ? zone.Id : TimeZoneInfo.TryConvertWindowsIdToIanaId(zone.Id, out var converted) ? converted : null;
+        if (iana is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await profile.UpdateAsync(iana, Settings.DayStartHour).ConfigureAwait(false);
+        }
+        catch (Exception error) when (error is RemoteUnavailableException or RemoteRejectedException)
+        {
         }
     }
 
