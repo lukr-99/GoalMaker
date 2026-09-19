@@ -73,6 +73,7 @@ import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProgressRing
+import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.theme.AppTheme
 import java.text.NumberFormat
@@ -111,7 +112,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: () -> Unit) {
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             topBar = {
                 MediumFlexibleTopAppBar(
-                    title = { Text(AppTheme.headline(stringResource(R.string.goals_title))) },
+                    title = { ScreenTitle(stringResource(R.string.goals_title)) },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))

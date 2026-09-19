@@ -59,6 +59,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.StepItem
@@ -96,7 +97,7 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { Text(AppTheme.headline(stringResource(R.string.task_title))) },
+                title = { ScreenTitle(stringResource(R.string.task_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))

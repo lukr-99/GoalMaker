@@ -38,6 +38,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.ZoneId
@@ -60,7 +61,7 @@ fun ConnectorScreen(viewModel: ConnectorViewModel, onBack: () -> Unit) {
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { Text(AppTheme.headline(stringResource(R.string.connector_title))) },
+                title = { ScreenTitle(stringResource(R.string.connector_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))

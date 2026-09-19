@@ -19,6 +19,7 @@ import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.nav.SignedInNavigation
 import com.goalmaker.app.ui.signin.SignInScreen
 import com.goalmaker.app.ui.signin.SignInViewModel
+import com.goalmaker.app.ui.components.LaunchIntro
 import com.goalmaker.app.ui.theme.GoalMakerTheme
 
 /** Root composable: the theme, then sign-in or the signed-in app depending on the session. */
@@ -27,17 +28,19 @@ fun GoalMakerApp(graph: AppGraph) {
     val appearance by graph.settings.appearance.collectAsStateWithLifecycle()
     val session by graph.auth.session.collectAsStateWithLifecycle()
     GoalMakerTheme(graph.design, appearance, graph.logo) {
-        Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
-            Crossfade(targetState = session, label = "session") { current ->
-                when (current) {
-                    AuthSession.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingIndicator(Modifier.size(64.dp))
+        LaunchIntro {
+            Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+                Crossfade(targetState = session, label = "session") { current ->
+                    when (current) {
+                        AuthSession.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            LoadingIndicator(Modifier.size(64.dp))
+                        }
+                        AuthSession.SignedOut -> SignInScreen(
+                            viewModel = viewModel { SignInViewModel(graph.auth) },
+                            backendLabel = graph.appInfo.backend.url.takeIf { graph.appInfo.isDevBuild },
+                        )
+                        is AuthSession.SignedIn -> SignedInNavigation(graph = graph)
                     }
-                    AuthSession.SignedOut -> SignInScreen(
-                        viewModel = viewModel { SignInViewModel(graph.auth) },
-                        backendLabel = graph.appInfo.backend.url.takeIf { graph.appInfo.isDevBuild },
-                    )
-                    is AuthSession.SignedIn -> SignedInNavigation(graph = graph)
                 }
             }
         }

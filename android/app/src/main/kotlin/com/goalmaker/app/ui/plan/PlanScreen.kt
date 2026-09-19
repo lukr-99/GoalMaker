@@ -75,6 +75,7 @@ import com.goalmaker.app.application.planning.PlanDecision
 import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.rememberTickSound
+import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
@@ -105,7 +106,7 @@ fun PlanScreen(viewModel: PlanViewModel, onClose: () -> Unit) {
     Scaffold(
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { Text(AppTheme.headline(stringResource(R.string.plan_title))) },
+                title = { ScreenTitle(stringResource(R.string.plan_title)) },
                 subtitle = { Text(subtitle(state)) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {

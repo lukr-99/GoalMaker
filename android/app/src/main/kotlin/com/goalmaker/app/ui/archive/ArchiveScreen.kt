@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.domain.sync.SyncRules
 import com.goalmaker.app.ui.theme.AppTheme
@@ -53,7 +54,7 @@ fun ArchiveScreen(viewModel: ArchiveViewModel, onBack: () -> Unit, onOpenTask: (
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { Text(AppTheme.headline(stringResource(R.string.archive_title))) },
+                title = { ScreenTitle(stringResource(R.string.archive_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))

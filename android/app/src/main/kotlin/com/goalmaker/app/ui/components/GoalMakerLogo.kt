@@ -38,11 +38,12 @@ import kotlinx.coroutines.launch
 /**
  * The GoalMaker mark in the current theme's logo colors (themes.json): the tile, the G and the trend
  * arrow (contracts/design/logo.json). When the theme changes it recolors, the arrow draws itself
- * again and the tile gives a small bounce; with reduce motion the colors just cross-fade. Nothing is
- * drawn where the theme has no mark (previews).
+ * again and the tile gives a small bounce; with [intro] it does that as it first appears (the launch
+ * moment). With reduce motion the colors just cross-fade. Nothing is drawn where the theme has no mark
+ * (previews).
  */
 @Composable
-fun GoalMakerLogo(modifier: Modifier = Modifier, size: Dp = 48.dp) {
+fun GoalMakerLogo(modifier: Modifier = Modifier, size: Dp = 48.dp, intro: Boolean = false) {
     val logo = AppTheme.logo ?: return
     val mark = logo.mark
     val motion = AppTheme.motion
@@ -53,9 +54,10 @@ fun GoalMakerLogo(modifier: Modifier = Modifier, size: Dp = 48.dp) {
     val arrow by animateColorAsState(Color(logo.colors.arrow), fade, label = "arrow")
 
     // The arrow's drawn share (0 to 1) and the tile's scale, replayed when the theme changes.
-    val drawn = remember { Animatable(1f) }
-    val bounce = remember { Animatable(1f) }
-    var shown by remember { mutableStateOf(logo.colors) }
+    val playIntro = intro && !reduced
+    val drawn = remember { Animatable(if (playIntro) 0f else 1f) }
+    val bounce = remember { Animatable(if (playIntro) 0.88f else 1f) }
+    var shown by remember { mutableStateOf(if (playIntro) null else logo.colors) }
     LaunchedEffect(logo.colors) {
         if (shown == logo.colors) return@LaunchedEffect
         shown = logo.colors
