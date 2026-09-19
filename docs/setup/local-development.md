@@ -70,6 +70,24 @@ A side-by-side dev installer ("GoalMaker Dev") for testing the installer itself:
 powershell -File windows\installer\build-installer.ps1 -Dev
 ```
 
+## Checking both apps together
+
+Run this after changing sync or reminders. Sign both apps in with the same address, then:
+
+1. Add a task for today on one app and check it appears on the other within a few seconds
+   (Realtime nudges a sync). Complete it on the other and check the first shows it done.
+2. Give a task a reminder a minute or two out. Both devices should show it at that time: a toast
+   on Windows, a notification on Android. `adb shell dumpsys alarm | findstr goalmaker` shows the
+   armed alarm on the emulator.
+3. Tap Done on one device. The other takes its notification down after the next sync, which is a
+   few seconds with both online.
+
+To script it, get a session for the same address from `/auth/v1/otp` and `/auth/v1/verify` with the
+code from the mail viewer, then write `reminders` rows through PostgREST (`/rest/v1/reminders`).
+From Windows PowerShell 5.1, wrap WinRT collections in `@()` before reading `.Count`:
+`@([Windows.UI.Notifications.ToastNotificationManager]::History.GetHistory('GoalMaker.Dev')).Count`
+returns 0 for no toasts, while the bare `.Count` is empty, not 0.
+
 ## Testing the update channel locally
 
 1. Make a throwaway key: `openssl ecparam -name prime256v1 -genkey -noout -out test.pem`, and its
