@@ -1,6 +1,6 @@
 # M3-01: Connector links, owner context and undo in the database
 
-**Status:** todo · **Milestone:** M3
+**Status:** done 2026-09-19 · **Milestone:** M3
 
 ## Scope
 - Migration 0007: `connector_links` (hashed secret, created at, last used at, revoked at, a
@@ -20,3 +20,12 @@
 - pgTAP: undo restores an update, a delete and a create, refuses someone else's entry and an entry
   already undone, and the undo itself is logged.
 - The migration harness passes the full chain and the isolated 0006 to 0007 step.
+
+## Result
+- `supabase/migrations/0007_connector_links_and_undo.sql`, locked. Secrets are 43 URL-safe
+  characters (32 random bytes); owners can read when a link was made, used and revoked, not its
+  hash. `connector_resolve` is granted to `service_role` only and allows 120 calls a minute.
+- `undo_activity` refuses with `40001` when the row changed after the entry, so an undo never
+  throws away later work; `55000` when already undone, `P0002` for someone else's entry.
+- pgTAP: 25 checks in `supabase/tests/database/0007_connector_links_and_undo.test.sql`; fixtures
+  `supabase/migration-tests/0007_*.sql` undo an entry logged before 0007 and resolve a new link.
