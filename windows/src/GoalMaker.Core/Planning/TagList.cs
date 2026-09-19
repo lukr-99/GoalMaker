@@ -107,6 +107,13 @@ public sealed class TagList
         return (string?)row[SyncedTable.Id];
     }
 
+    /// <summary>The tags linked to one task, oldest tag first.</summary>
+    public IReadOnlyList<TagItem> ForTask(string taskId)
+    {
+        var linked = TagLinks().TryGetValue(taskId, out var ids) ? ids : new HashSet<string>();
+        return [.. All().Where(tag => linked.Contains(tag.Id))];
+    }
+
     private static string Trimmed(string name)
     {
         var trimmed = name.Trim();

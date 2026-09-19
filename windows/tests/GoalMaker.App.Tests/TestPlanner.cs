@@ -33,6 +33,7 @@ internal sealed class TestPlanner : IDisposable
         Tags = new TagList(replica, rows, () => { });
         Tasks = new TaskList(replica, rows, Areas, Tags, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
         Reminders = new ReminderList(replica, rows, () => { }, () => TimeZoneInfo.Utc);
+        Steps = new StepList(replica, rows, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -50,6 +51,8 @@ internal sealed class TestPlanner : IDisposable
     public TaskList Tasks { get; }
 
     public ReminderList Reminders { get; }
+
+    public StepList Steps { get; }
 
     public TickSound Tick { get; } = new();
 

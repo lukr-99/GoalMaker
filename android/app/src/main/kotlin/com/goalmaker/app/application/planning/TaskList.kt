@@ -117,6 +117,65 @@ class TaskList(
 
     fun setTopPriority(id: String, top: Boolean) = change(id) { row -> row["top_priority"] = JsonPrimitive(top) }
 
+    /** The task with this id, whatever its status, or null when it is gone. */
+    fun find(id: String): TaskItem? = all().firstOrNull { it.id == id }
+
+    /** [find], again after every change to the tasks table. Collect it off the main thread. */
+    fun watch(id: String): Flow<TaskItem?> = replica.watch(TABLE).map { find(id) }
+
+    /** A new title. False when it is blank, which the task can't have. */
+    fun rename(id: String, title: String): Boolean {
+        val trimmed = title.trim().take(MAX_TITLE)
+        if (trimmed.isEmpty()) return false
+        change(id) { row -> row["title"] = JsonPrimitive(trimmed) }
+        return true
+    }
+
+    /** The notes, in light Markdown (docs/archive.md), up to 20,000 characters. */
+    fun setNotes(id: String, notes: String) = change(id) { row -> row["notes"] = JsonPrimitive(notes.take(MAX_NOTES)) }
+
+    /**
+     * The planned day and time, without reopening the task (Plan tomorrow's [plan] does that). A time
+     * needs a day, so no day clears the time too.
+     */
+    fun schedule(id: String, day: LocalDate?, time: LocalTime?) = change(id) { row ->
+        row["planned_date"] = day?.toString()?.let(::JsonPrimitive) ?: JsonNull
+        row["planned_time"] = if (day == null) JsonNull else time?.format(TIME)?.let(::JsonPrimitive) ?: JsonNull
+    }
+
+    fun setDeadline(id: String, day: LocalDate?) = change(id) { row -> row["deadline"] = day?.toString()?.let(::JsonPrimitive) ?: JsonNull }
+
+    fun setArea(id: String, areaId: String?) = change(id) { row -> row["area_id"] = areaId?.let(::JsonPrimitive) ?: JsonNull }
+
+    /**
+     * How the task repeats (docs/repeating.md), or not at all when [rule] is null. False for a rule the
+     * apps can't follow. A task that starts repeating becomes the first of its series.
+     */
+    fun setRecurrence(id: String, rule: String?): Boolean {
+        if (rule != null && Recurrence.parse(rule) == null) return false
+        change(id) { row ->
+            row["recurrence"] = rule?.let(::JsonPrimitive) ?: JsonNull
+            if (rule != null && row[SERIES_ID].let { it == null || it == JsonNull }) row[SERIES_ID] = JsonPrimitive(id)
+        }
+        return true
+    }
+
+    /** Links the task to exactly these tags, by name, creating tags it names for the first time. */
+    fun setTags(id: String, names: List<String>) {
+        replica.inTransaction {
+            val wanted = names.mapNotNull { tags.findOrCreate(it) }.toSet()
+            val links = replica.all(TAGS).filter { it.text("task_id") == id && it.isNull(SyncedTable.DELETED_AT) }
+            links.filter { it.text("tag_id") !in wanted }.forEach { link ->
+                replica.queue(TAGS, JsonObject(link + (SyncedTable.DELETED_AT to JsonPrimitive(rows.timestamp()))))
+            }
+            val linked = links.mapNotNull { it.text("tag_id") }.toSet()
+            (wanted - linked).forEach { tagId ->
+                rows.create(TAGS, mapOf("task_id" to JsonPrimitive(id), "tag_id" to JsonPrimitive(tagId)))?.let { replica.queue(TAGS, it) }
+            }
+        }
+        requestSync()
+    }
+
     // Done or dropped; an open repeating task makes its next occurrence in the same transaction.
     private fun finish(id: String, status: String) {
         val changed = replica.inTransaction {
@@ -214,6 +273,9 @@ class TaskList(
         areaId = row.text("area_id"),
         recurrence = row.text("recurrence"),
         seriesId = row.text(SERIES_ID),
+        notes = row.text("notes").orEmpty(),
+        deadline = row.text("deadline")?.let(LocalDate::parse),
+        completedAt = row.text("completed_at"),
     )
 
     private companion object {
@@ -221,6 +283,7 @@ class TaskList(
         const val TAGS = "task_tags"
         const val SERIES_ID = "series_id"
         const val MAX_TITLE = 500
+        const val MAX_NOTES = 20_000
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
         fun JsonObject.isNull(name: String): Boolean = this[name].let { it == null || it == JsonNull }

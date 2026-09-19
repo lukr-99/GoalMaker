@@ -3,7 +3,10 @@ package com.goalmaker.app.application.planning
 import java.time.LocalDate
 import java.time.LocalTime
 
-/** A task as the lists show it. [seriesId] groups a repeating task's occurrences (docs/repeating.md). */
+/**
+ * A task as the lists, the detail view and the archive show it. [seriesId] groups a repeating task's
+ * occurrences (docs/repeating.md); [completedAt] is the server timestamp of a done task.
+ */
 data class TaskItem(
     val id: String,
     val title: String,
@@ -16,4 +19,7 @@ data class TaskItem(
     val recurrence: String? = null,
     val deleted: Boolean = false,
     val seriesId: String? = null,
+    val notes: String = "",
+    val deadline: LocalDate? = null,
+    val completedAt: String? = null,
 )

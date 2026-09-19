@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "description": "The archive of done tasks (docs/archive.md). 'keep' lists the task ids the archive shows for 'query', in order: done tasks that aren't deleted, the most recently completed first, ties by id. A task matches when every word of the query (split on spaces) is found in its title or notes, ignoring case and accents; an empty query matches every done task. Tasks leave out fields that keep their defaults: notes empty, not deleted.",
+  "cases": [
+    { "name": "newest completion first", "query": "", "tasks": [
+      { "id": "a", "title": "File the receipts", "status": "done", "completedAt": "2026-09-16T10:00:00.000000Z" },
+      { "id": "b", "title": "Call the bank", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "c", "title": "Buy milk", "status": "done", "completedAt": "2026-09-17T18:30:00.000000Z" }
+    ], "keep": ["b", "c", "a"] },
+    { "name": "open, dropped and deleted tasks stay out", "query": "", "tasks": [
+      { "id": "open", "title": "Water plants", "status": "open" },
+      { "id": "dropped", "title": "Read the manual", "status": "dropped" },
+      { "id": "deleted", "title": "Old chore", "status": "done", "completedAt": "2026-09-17T08:00:00.000000Z", "deleted": true },
+      { "id": "done", "title": "Pay rent", "status": "done", "completedAt": "2026-09-15T08:00:00.000000Z" }
+    ], "keep": ["done"] },
+    { "name": "the same moment falls back to the id", "query": "", "tasks": [
+      { "id": "y", "title": "Second", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "x", "title": "First", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" }
+    ], "keep": ["x", "y"] },
+    { "name": "a word of the title finds it, whatever its case", "query": "BANK", "tasks": [
+      { "id": "a", "title": "Call the bank", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Buy milk", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["a"] },
+    { "name": "part of a word is enough", "query": "invo", "tasks": [
+      { "id": "a", "title": "Send the invoice", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Buy milk", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["a"] },
+    { "name": "every word has to match", "query": "call mum", "tasks": [
+      { "id": "a", "title": "Call the bank", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Call mum", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["b"] },
+    { "name": "accents don't matter either way", "query": "mleko", "tasks": [
+      { "id": "a", "title": "Koupit mléko", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Zavolat do banky", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["a"] },
+    { "name": "an accented query finds plain letters", "query": "Zavolát", "tasks": [
+      { "id": "a", "title": "Koupit mléko", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Zavolat do banky", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["b"] },
+    { "name": "the notes count too", "query": "passport", "tasks": [
+      { "id": "a", "title": "Book the trip", "notes": "Check the passport expires after June", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Buy milk", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["a"] },
+    { "name": "a word split between title and notes still has to match whole", "query": "trip passport", "tasks": [
+      { "id": "a", "title": "Book the trip", "notes": "Check the passport", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" },
+      { "id": "b", "title": "Book the dentist", "status": "done", "completedAt": "2026-09-17T09:00:00.000000Z" }
+    ], "keep": ["a"] },
+    { "name": "extra spaces around and between words", "query": "  call   bank ", "tasks": [
+      { "id": "a", "title": "Call the bank", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" }
+    ], "keep": ["a"] },
+    { "name": "nothing matches", "query": "zebra", "tasks": [
+      { "id": "a", "title": "Call the bank", "status": "done", "completedAt": "2026-09-18T09:00:00.000000Z" }
+    ], "keep": [] }
+  ]
+}

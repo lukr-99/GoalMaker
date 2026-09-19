@@ -13,6 +13,7 @@ wrong.
 | `vectors/lists.json` | What Today, Tomorrow and Inbox hold, and filtering by area and tag ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |
 | `vectors/plan.json` | The Plan tomorrow ritual ([plan tomorrow](../docs/plan-tomorrow.md)) | `PlanRulesContractTest` | `PlanRulesContractTests` |
 | `vectors/recurrence.json` | Repeating tasks and their occurrences ([repeating](../docs/repeating.md)) | `RecurrenceContractTest` | `RecurrenceContractTests` |
+| `vectors/archive.json` | The archive of done tasks and its search ([archive](../docs/archive.md)) | `ArchiveContractTest` | `ArchiveContractTests` |
 | `vectors/reminders.json` | Reminder times, quiet hours and snooze ([reminders](../docs/reminders.md)) | `ReminderRulesContractTest` | `ReminderRulesContractTests` |
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |
 | `schemas/synced-tables.json` | Every synced column once, for both replicas and the JSON mapping | (`tools/check_synced_tables.py`) | (`tools/check_synced_tables.py`) |

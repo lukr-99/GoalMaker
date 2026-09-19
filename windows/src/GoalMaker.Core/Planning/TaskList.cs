@@ -16,6 +16,7 @@ public sealed class TaskList
     private const string TagLinks = "task_tags";
     private const string SeriesId = "series_id";
     private const int MaxTitle = 500;
+    private const int MaxNotes = 20_000;
     private readonly IReplica replica;
     private readonly NewRows rows;
     private readonly AreaList areas;
@@ -168,6 +169,87 @@ public sealed class TaskList
 
     public void SetTopPriority(string id, bool top) => Change(id, row => row["top_priority"] = top);
 
+    /// <summary>The task with this id, whatever its status, or null when it is gone.</summary>
+    public TaskItem? Find(string id) => All().FirstOrDefault(task => task.Id == id);
+
+    /// <summary>A new title. False when it is blank, which the task can't have.</summary>
+    public bool Rename(string id, string title)
+    {
+        var trimmed = title.Trim();
+        trimmed = trimmed.Length > MaxTitle ? trimmed[..MaxTitle] : trimmed;
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        Change(id, row => row["title"] = trimmed);
+        return true;
+    }
+
+    /// <summary>The notes, in light Markdown (docs/archive.md), up to 20,000 characters.</summary>
+    public void SetNotes(string id, string notes) => Change(id, row => row["notes"] = notes.Length > MaxNotes ? notes[..MaxNotes] : notes);
+
+    /// <summary>
+    /// The planned day and time, without reopening the task (Plan tomorrow's <see cref="Plan"/> does
+    /// that). A time needs a day, so no day clears the time too.
+    /// </summary>
+    public void Schedule(string id, DateOnly? day, TimeOnly? time) => Change(id, row =>
+    {
+        row["planned_date"] = day?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        row["planned_time"] = day is null ? null : time?.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
+    });
+
+    public void SetDeadline(string id, DateOnly? day) => Change(id, row => row["deadline"] = day?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
+    public void SetArea(string id, string? areaId) => Change(id, row => row["area_id"] = areaId);
+
+    /// <summary>
+    /// How the task repeats (docs/repeating.md), or not at all when <paramref name="rule"/> is null.
+    /// False for a rule the apps can't follow. A task that starts repeating becomes the first of its series.
+    /// </summary>
+    public bool SetRecurrence(string id, string? rule)
+    {
+        if (rule is not null && Planning.Recurrence.Parse(rule) is null)
+        {
+            return false;
+        }
+
+        Change(id, row =>
+        {
+            row["recurrence"] = rule;
+            if (rule is not null && row[SeriesId] is null)
+            {
+                row[SeriesId] = id;
+            }
+        });
+        return true;
+    }
+
+    /// <summary>Links the task to exactly these tags, by name, creating tags it names for the first time.</summary>
+    public void SetTags(string id, IEnumerable<string> names)
+    {
+        replica.InTransaction(() =>
+        {
+            var wanted = names.Select(tags.FindOrCreate).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            var links = replica.All(TagLinks).Where(link => (string?)link["task_id"] == id && link[SyncedTable.DeletedAt] is null).ToList();
+            foreach (var link in links.Where(link => !wanted.Contains((string?)link["tag_id"] ?? string.Empty)))
+            {
+                link[SyncedTable.DeletedAt] = rows.Timestamp();
+                replica.Queue(TagLinks, link);
+            }
+
+            var linked = links.Select(link => (string?)link["tag_id"]).OfType<string>().ToHashSet(StringComparer.Ordinal);
+            foreach (var tagId in wanted.Where(tagId => !linked.Contains(tagId)))
+            {
+                if (rows.Create(TagLinks, new Dictionary<string, JsonNode?> { ["task_id"] = id, ["tag_id"] = tagId }) is { } link)
+                {
+                    replica.Queue(TagLinks, link);
+                }
+            }
+        });
+        requestSync();
+    }
+
     // Done or dropped; an open repeating task makes its next occurrence in the same transaction.
     private void Finish(string id, string status)
     {
@@ -306,5 +388,8 @@ public sealed class TaskList
         (string?)row["planned_time"] is { } time ? TimeOnly.Parse(time, CultureInfo.InvariantCulture) : null,
         (string?)row["area_id"],
         (string?)row["recurrence"],
-        SeriesId: (string?)row[SeriesId]);
+        SeriesId: (string?)row[SeriesId],
+        Notes: (string?)row["notes"] ?? string.Empty,
+        Deadline: (string?)row["deadline"] is { } deadline ? DateOnly.ParseExact(deadline, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null,
+        CompletedAt: (string?)row["completed_at"]);
 }

@@ -71,6 +71,12 @@ class TagList(
             .mapValues { (_, ids) -> ids.toSet() }
     }
 
+    /** The tags linked to one task, oldest tag first. */
+    fun forTask(taskId: String): List<TagItem> {
+        val linked = links()[taskId].orEmpty()
+        return all().filter { it.id in linked }
+    }
+
     /** [links], again after every change to the links. Collect it off the main thread. */
     fun watchLinks(): Flow<Map<String, Set<String>>> = replica.watch(LINKS).map { links() }
 

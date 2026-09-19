@@ -71,8 +71,8 @@ composition root creates everything
 
 Rules that must match across Kotlin and C# live as vector files, one per rule, listed in
 [contracts/README.md](contracts/README.md): versions and the update offer policy, release manifest
-verification, the sync rules, the composer grammar, the lists, Plan tomorrow, repeating tasks, and
-reminder times. Both test suites read the same files. `contracts/schemas/synced-tables.json`
+verification, the sync rules, the composer grammar, the lists and their filter, Plan tomorrow,
+repeating tasks, reminder times, and the archive. Both test suites read the same files. `contracts/schemas/synced-tables.json`
 describes every synced column once; both apps build their replica SQL and JSON mapping from it, and
 `tools/check_synced_tables.py` keeps it equal to the replica and server schemas.
 
