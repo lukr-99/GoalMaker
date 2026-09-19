@@ -23,6 +23,10 @@ public sealed partial class SidebarFiltersViewModel : ObservableObject
     [ObservableProperty]
     private bool hasTags;
 
+    /// <summary>Whether there is anything to filter by; without areas or tags the sidebar shows no Filter header.</summary>
+    [ObservableProperty]
+    private bool hasAny;
+
     [ObservableProperty]
     private bool isFiltering;
 
@@ -67,6 +71,7 @@ public sealed partial class SidebarFiltersViewModel : ObservableObject
 
         HasAreas = Areas.Count > 0;
         HasTags = Tags.Count > 0;
+        HasAny = HasAreas || HasTags;
         IsFiltering = !current.IsEmpty;
     }
 }

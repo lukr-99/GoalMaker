@@ -19,6 +19,8 @@
                     <StackPanel Visibility="{Binding IsEmailStep, Converter={StaticResource BoolToVisibility}}">
                         <ui:TextBox x:Name="EmailBox"
                                     PlaceholderText="{DynamicResource SignIn.EmailLabel}"
+                                    AutomationProperties.Name="{DynamicResource SignIn.EmailLabel}"
+                                    AutomationProperties.HelpText="{DynamicResource SignIn.EmailHint}"
                                     Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"
                                     IsEnabled="{Binding IsIdle}">
                             <ui:TextBox.InputBindings>
@@ -40,6 +42,7 @@
                         <TextBlock Margin="0,0,0,12" Text="{Binding CodeSentText}" TextWrapping="Wrap" FontSize="15" />
                         <ui:TextBox x:Name="CodeBox"
                                     PlaceholderText="{DynamicResource SignIn.CodeLabel}"
+                                    AutomationProperties.Name="{DynamicResource SignIn.CodeLabel}"
                                     Text="{Binding Code, UpdateSourceTrigger=PropertyChanged}"
                                     FontSize="24"
                                     MaxLength="6"

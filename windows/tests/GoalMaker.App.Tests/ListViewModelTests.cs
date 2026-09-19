@@ -23,6 +23,7 @@ public sealed class ListViewModelTests : IDisposable
         Assert.Equal(["Water plants", "Review budget", "Buy milk"], today.Sections.Select(section => section.Rows.Single().Title));
         Assert.Equal(new TimeOnly(18, 0).ToString("t", CultureInfo.CurrentCulture), today.Sections[1].Rows[0].TimeText);
         Assert.True(today.Sections[0].Rows[0].TopPriority);
+        Assert.Equal("Lists.TopPriority", today.Sections[0].Rows[0].Status);
         Assert.False(today.IsEmpty);
     }
 
@@ -135,6 +136,7 @@ public sealed class ListViewModelTests : IDisposable
         var row = today.Sections.Single().Rows.Single();
 
         Assert.False(row.HasReminder);
+        Assert.Equal(string.Empty, row.Status);
         Assert.Equal(
             ["Reminder.WhenDue", "Reminder.QuarterBefore", "Reminder.HourBefore", "Reminder.InAnHour", "Reminder.TomorrowMorning"],
             row.ReminderChoices.Select(choice => choice.Label));
@@ -143,6 +145,7 @@ public sealed class ListViewModelTests : IDisposable
 
         var reminded = today.Sections.Single().Rows.Single();
         Assert.True(reminded.HasReminder);
+        Assert.Equal("Reminder.Waiting", reminded.Status);
         Assert.Equal("Reminder.RemoveBefore(15)", reminded.ReminderChoices[^1].Label);
 
         reminded.ReminderChoices[^1].Command.Execute(null);

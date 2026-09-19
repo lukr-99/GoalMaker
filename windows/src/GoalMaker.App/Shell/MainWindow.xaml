@@ -67,7 +67,7 @@
                               Margin="8,4,8,8"
                               VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding IsPaneOpen, ElementName=Navigation, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel>
+                    <StackPanel Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}}">
                         <DockPanel Margin="8,0,0,4">
                             <ui:Button DockPanel.Dock="Right"
                                        Padding="6,0"

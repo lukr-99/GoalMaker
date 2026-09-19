@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GoalMaker.App.Localization;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.ViewModels;
@@ -27,7 +28,8 @@ public sealed partial class TaskRowViewModel : ObservableObject
         Action<TaskRowViewModel> delete,
         bool hasReminder = false,
         IReadOnlyList<ReminderChoice>? reminderChoices = null,
-        Action<TaskRowViewModel>? open = null)
+        Action<TaskRowViewModel>? open = null,
+        IStrings? strings = null)
     {
         OpenCommand = new RelayCommand(() => open?.Invoke(this), () => open is not null);
         HasReminder = hasReminder;
@@ -39,6 +41,12 @@ public sealed partial class TaskRowViewModel : ObservableObject
         TimeText = item.PlannedTime?.ToString("t", CultureInfo.CurrentCulture) ?? string.Empty;
         DayText = showDay && item.PlannedDate is { } day ? day.ToString("ddd d MMM", CultureInfo.CurrentCulture) : string.Empty;
         DeleteCommand = new RelayCommand(() => delete(this));
+        Status = strings is null ? string.Empty : string.Join(", ", new[]
+        {
+            TopPriority ? strings.Get("Lists.TopPriority") : null,
+            Repeats ? strings.Get("Lists.Repeats") : null,
+            HasReminder ? strings.Get("Reminder.Waiting") : null,
+        }.OfType<string>());
     }
 
     public TaskItem Item { get; }
@@ -70,6 +78,12 @@ public sealed partial class TaskRowViewModel : ObservableObject
 
     /// <summary>Whether a reminder is still waiting for this task.</summary>
     public bool HasReminder { get; }
+
+    /// <summary>
+    /// What the row's icons say, for screen readers: the flag, the repeat and the bell have no
+    /// accessible text of their own, so the done box carries it as help text.
+    /// </summary>
+    public string Status { get; }
 
     public IReadOnlyList<ReminderChoice> ReminderChoices { get; }
 

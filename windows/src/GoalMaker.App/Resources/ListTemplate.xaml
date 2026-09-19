@@ -139,7 +139,8 @@
                                                         <CheckBox VerticalAlignment="Center"
                                                                   Foreground="{DynamicResource GM.TextBrush}"
                                                                   IsChecked="{Binding IsDone}"
-                                                                  AutomationProperties.Name="{Binding Title}">
+                                                                  AutomationProperties.Name="{Binding Title}"
+                                                                  AutomationProperties.HelpText="{Binding Status}">
                                                             <StackPanel>
                                                                 <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
                                                                 <StackPanel Orientation="Horizontal">

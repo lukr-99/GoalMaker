@@ -219,7 +219,8 @@ public sealed partial class ListViewModel : ObservableObject
                     Delete,
                     own.Any(reminder => reminder.State is ReminderState.Pending or ReminderState.Snoozed),
                     ReminderChoices(item, own),
-                    openTask is null ? null : row => openTask(row.Item.Id));
+                    openTask is null ? null : row => openTask(row.Item.Id),
+                    strings);
             })];
 
         Sections.Clear();

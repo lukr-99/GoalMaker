@@ -164,6 +164,7 @@
     <sys:String x:Key="Lists.InboxEmpty">Inbox zero. Anything without a day or an area lands here.</sys:String>
     <sys:String x:Key="Lists.Delete">Delete task</sys:String>
     <sys:String x:Key="Lists.Repeats">Repeats</sys:String>
+    <sys:String x:Key="Lists.TopPriority">Top priority</sys:String>
     <sys:String x:Key="Lists.Done">Done: {0}</sys:String>
     <sys:String x:Key="Lists.Deleted">Deleted: {0}</sys:String>
     <sys:String x:Key="Lists.Undo">Undo</sys:String>

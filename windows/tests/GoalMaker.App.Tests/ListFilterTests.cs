@@ -82,6 +82,17 @@ public sealed class ListFilterTests : IDisposable
         Assert.Equal(2, Titles(today).Count);
     }
 
+    [Fact]
+    public void TheSidebarShowsNoFilterHeaderUntilThereIsAnAreaOrTag()
+    {
+        var sidebar = Sidebar();
+        Assert.False(sidebar.HasAny);
+
+        Add("Buy stamps #errand", Today);
+        Assert.True(sidebar.HasAny);
+        Assert.False(sidebar.HasAreas);
+    }
+
     private static List<string> Titles(ListViewModel list) => [.. list.Sections.SelectMany(section => section.Rows).Select(row => row.Title)];
 
     private SidebarFiltersViewModel Sidebar() => new(planner.Areas, planner.Tags, filter, _ => null, action => action());
