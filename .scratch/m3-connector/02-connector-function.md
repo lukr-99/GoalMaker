@@ -1,6 +1,6 @@
 # M3-02: The connector Edge Function
 
-**Status:** todo · **Milestone:** M3
+**Status:** done 2026-09-19 · **Milestone:** M3
 
 ## Scope
 - `supabase/functions/connector/`: a remote MCP server (official TypeScript SDK, Streamable HTTP,
@@ -19,3 +19,14 @@
 - `initialize`, `tools/list` and `prompts/list` answer over HTTP on the local stack.
 - A revoked link gets 404 and the 121st call in a minute gets 429.
 - A change made through the connector shows `claude` as the actor in the activity log.
+
+## Result
+- `supabase/functions/connector/index.ts` with the SDK's `WebStandardStreamableHTTPServerTransport`
+  (stateless, JSON responses); `_shared/owner.ts` resolves the link and runs each call through
+  `asOwner` (`set local role authenticated`, the owner's claims, `x-goalmaker-actor: claude`).
+- Deno 2.1.4 pinned in `package.json` (the edge runtime's version); `supabase/functions/deno.json`
+  has `test`, `check` and `lint` tasks. The SDK's `.js` subpaths need `@ts-types` hints
+  (`_shared/deps.ts`), and a `prompts/get` without `arguments` gets `{}` before the SDK sees it.
+- `connector/endpoint_test.ts` (10 steps) passes on the local stack, including 404 for unknown and
+  revoked links and 429 over the limit; CI's Supabase job runs lint, types, unit and endpoint tests.
+- docs/connector.md.

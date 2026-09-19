@@ -1,6 +1,6 @@
 # M3-05: Tools that change things
 
-**Status:** todo · **Milestone:** M3
+**Status:** done 2026-09-19 (the two-app check waits for M3-07) · **Milestone:** M3
 
 ## Scope
 - Add a task (title, day, time, deadline, area by name, tags, top priority, notes, repeat), edit
@@ -15,3 +15,10 @@
 - Endpoint tests: each tool's change lands in the table, is logged with the claude actor, and a
   delete without confirmation changes nothing.
 - A task added through the connector shows up on both apps after a sync.
+
+## Result
+- `add_task`, `update_task`, `complete_task`, `drop_task`, `reopen_task`, `move_task`,
+  `delete_task` (refused without `confirmed: true`), `restore_task`, `add_reminder`,
+  `remove_reminder`, `add_step`, `check_step`, over `_shared/planner/planner.ts`, which does what the
+  apps' task, area and tag lists do (a repeating task moves on with the successor id; a new area gets
+  the next free palette color; an archived one comes back).

@@ -389,6 +389,11 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# The Claude connector (docs/connector.md): Claude calls it with the secret link, not a Supabase JWT,
+# so the gateway's JWT check is off for this function only; the function checks the link itself.
+[functions.connector]
+verify_jwt = false
+
 [analytics]
 # Off locally: GoalMaker does not use log analytics and it saves memory.
 enabled = false

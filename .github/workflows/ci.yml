@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   supabase:
-    name: Supabase migrations and row security
+    name: Supabase migrations, row security and the connector
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -32,18 +32,41 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install the pinned Supabase CLI
+      - name: Install the pinned Supabase CLI and Deno
         run: npm ci
 
       - name: Start the local stack
-        # Only the database, auth, storage and the gateway are needed for the tests.
-        run: npx supabase start -x studio,imgproxy,vector,logflare,edge-runtime,supavisor
+        # The database, auth, storage, the gateway and the Edge Functions runtime are needed for the tests.
+        run: npx supabase start -x studio,imgproxy,vector,logflare,supavisor
 
       - name: Full chain, isolated steps and pgTAP
         run: python tools/supabase_migrations.py test
 
       - name: The synced-tables contract matches the replica and the server
         run: python tools/check_synced_tables.py --server
+
+      - name: Connector lint, types and unit tests (the shared rules run the contract vectors)
+        working-directory: supabase/functions
+        run: |
+          npx deno task lint
+          npx deno task check
+          npx deno test --allow-read --allow-env --allow-net _shared connector
+
+      - name: Connector end to end through its MCP endpoint
+        working-directory: supabase/functions
+        run: |
+          npx supabase functions serve > "$RUNNER_TEMP/functions.log" 2>&1 &
+          # The function answers 404 to an unknown link once it is up.
+          for attempt in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://127.0.0.1:55321/functions/v1/connector/$(printf 'x%.0s' $(seq 1 43))") || true
+            if [ "$code" = "404" ]; then break; fi
+            sleep 2
+          done
+          GOALMAKER_CONNECTOR_TEST=1 npx deno test --allow-read --allow-env --allow-net connector/endpoint_test.ts
+
+      - name: Functions log
+        if: failure()
+        run: cat "$RUNNER_TEMP/functions.log" || true
 
       - name: Stop the local stack
         if: always()

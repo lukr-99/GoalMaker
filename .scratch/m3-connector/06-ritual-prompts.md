@@ -1,6 +1,6 @@
 # M3-06: Ritual prompts
 
-**Status:** todo · **Milestone:** M3
+**Status:** done 2026-09-19 · **Milestone:** M3
 
 ## Scope
 - MCP prompts for Plan tomorrow, Weekly review and Monthly review (spec, story 74), each carrying
@@ -12,3 +12,8 @@
 ## Acceptance criteria
 - `prompts/get` returns each prompt with the owner's tasks for the period; recording the ritual
   writes the same `ritual_runs` row the apps would.
+
+## Result
+- `_shared/prompts/prompts.ts`: `plan_tomorrow` (leftovers, tomorrow, the Inbox), `weekly_review`
+  (a week's done, open and next week's tasks) and `monthly_review` (a month's done tasks by area and
+  what is overdue); `finish_plan_tomorrow` records the run under the vectors' id.

@@ -1,6 +1,6 @@
 # M3-03: The shared planning rules in TypeScript
 
-**Status:** todo · **Milestone:** M3
+**Status:** rules done 2026-09-19; the apps writing the profile is left · **Milestone:** M3
 
 ## Scope
 - The connector must see the same Today, Tomorrow and Inbox as the apps and move a repeating task
@@ -15,3 +15,13 @@
 ## Acceptance criteria
 - `deno task test` passes every case of the vector files it ports; a changed case fails it.
 - Changing the day start on one app updates `profiles.day_rollover_hour`.
+
+## Result
+- `supabase/functions/_shared/rules/`: day arithmetic, the planning day, the list rules, the plan
+  rules, recurrence, occurrences (successor and tag-link ids, repair), the archive search and UUID
+  version 5. `rules_test.ts` runs lists.json, plan.json, recurrence.json, archive.json and the
+  ritual ids in reminders.json; all pass.
+- `planner/palette.ts` mirrors the area palette, with a test against contracts/design/themes.json.
+
+## Left
+- Both apps writing the device's day start and time zone to the profile.

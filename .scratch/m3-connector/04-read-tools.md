@@ -1,6 +1,6 @@
 # M3-04: Tools that read
 
-**Status:** todo · **Milestone:** M3
+**Status:** done 2026-09-19 · **Milestone:** M3
 
 ## Scope
 - Read Today (with its sections), Tomorrow, the Inbox, one task with its steps, tags, reminders
@@ -12,3 +12,7 @@
 ## Acceptance criteria
 - Endpoint tests on the local stack: a seeded owner's Today through the connector matches the list
   rules' sections, a stranger's rows never appear, and search finds a done task in the archive.
+
+## Result
+- `get_today`, `get_tomorrow`, `get_inbox`, `get_task`, `list_areas_and_tags`, `search_tasks` in
+  `_shared/tools/tools.ts`, rendered by `tools/format.ts` as one line per task with its id.

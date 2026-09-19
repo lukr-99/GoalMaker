@@ -1,0 +1,12 @@
+{
+  "tasks": {
+    "test": "deno test --allow-read --allow-env --allow-net _shared connector",
+    "check": "deno check connector/index.ts",
+    "lint": "deno lint && deno fmt --check"
+  },
+  "fmt": {
+    "lineWidth": 120,
+    "exclude": ["**/*.md"]
+  },
+  "lock": false
+}
