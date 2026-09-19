@@ -171,11 +171,17 @@ public sealed class AppGraph : IDisposable
                 ListKind.Tomorrow => AppPage.Tomorrow,
                 ListKind.Inbox => AppPage.Inbox,
                 _ => AppPage.Today,
-            }));
-        SidebarFilters = new SidebarFiltersViewModel(Areas, Tags, Filter, Theme.AreaBrush, runOnUi);
+            }),
+            Filters,
+            Goals,
+            () => PageRequested?.Invoke(this, AppPage.Goals));
+        Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
-        TaskDetail = new TaskDetailViewModel(Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page));
+        Goals = new GoalList(replica, newRows, Sync.Request);
+        GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
+        TaskDetail = new TaskDetailViewModel(
+            Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
         Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
@@ -243,8 +249,8 @@ public sealed class AppGraph : IDisposable
     /// <summary>The filter the three lists share (docs/lists.md).</summary>
     public ListFilterState Filter { get; } = new();
 
-    /// <summary>The sidebar's areas and tags, as filters.</summary>
-    public SidebarFiltersViewModel SidebarFilters { get; private set; } = null!;
+    /// <summary>The area and tag pickers above the lists.</summary>
+    public ListFiltersViewModel Filters { get; private set; } = null!;
 
     /// <summary>The areas and tags manager.</summary>
     public AreasViewModel AreasPage { get; private set; } = null!;
@@ -256,6 +262,12 @@ public sealed class AppGraph : IDisposable
     public ArchiveViewModel Archive { get; private set; } = null!;
 
     public StepList Steps { get; private set; } = null!;
+
+    /// <summary>The owner's goals and the amounts logged on them (docs/goals.md).</summary>
+    public GoalList Goals { get; private set; } = null!;
+
+    /// <summary>The Goals page.</summary>
+    public GoalsViewModel GoalsPage { get; private set; } = null!;
 
     public ReminderService Reminders { get; }
 
@@ -483,6 +495,7 @@ public sealed class AppGraph : IDisposable
         Tomorrow.Refresh();
         Inbox.Refresh();
         Plan.Refresh();
+        GoalsPage.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

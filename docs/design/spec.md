@@ -37,7 +37,8 @@ Screens use roles, never raw colors: `background`, `surface` (cards, rows), `sur
 Windows get their own color slots filled from these roles, so built-in controls match.
 
 The accent is each theme's second color (coral in Electric, cyan in Night, magenta in Sunrise), so it
-also carries labels and times: the owner found it too rare when it only marked checks (2026-09-19).
+also carries every screen's headline, labels and times: the owner found it too rare when it only
+marked checks (2026-09-19).
 Because it is text there, it has to reach 4.5:1 like any text, which `tools/check_design_tokens.py`
 checks.
 
@@ -90,6 +91,8 @@ Level 3 of 5 on the celebration scale:
 - **Habit done:** its ring fills with a spring and a small burst.
 - **Goal hit or streak milestone:** confetti (Konfetti on Android, a lighter burst on Windows).
   Nothing else gets confetti.
+- **Opening the app:** the logo in the theme's colors draws its arrow in the middle of the screen,
+  then the app fades in (about a second, once per start; a tap skips it).
 - **Opening a task:** its row grows into the details, and leaving drains them back into the row
   while the list comes back up (Android; a back swipe drives it with the finger). Other screens
   slide in a little and fade.
@@ -118,8 +121,10 @@ tasks, then overdue items and this week's goals, both collapsed.
 
 ### Windows
 
-A sidebar with Today, Tomorrow, Inbox, Habits, Goals, Projects, Calendar, Reviews and Stats, then
-areas and tags as filters, and Settings at the bottom. It collapses to icons and remembers that.
+A sidebar with Today, Tomorrow, Inbox, Habits, Goals, Projects, Calendar, Reviews and Stats, and
+Settings at the bottom. It collapses to icons and remembers that. The area and tag filters live on
+each list's toolbar line, with the sync state and a filled Plan tomorrow button, all on one line
+([lists](../lists.md#filtering)).
 
 ## Identity
 

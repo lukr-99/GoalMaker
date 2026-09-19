@@ -3,6 +3,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:views="clr-namespace:GoalMaker.App.Views"
+                 xmlns:controls="clr-namespace:GoalMaker.App.Controls"
                  Title="{DynamicResource App.Name}"
                  Width="1100"
                  Height="720"
@@ -59,60 +60,12 @@
                         <ui:SymbolIcon Symbol="MailInbox24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Goals}" TargetPageType="{x:Type views:GoalsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Flag24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
-            <!-- Areas and tags as filters for every list (M2-11). -->
-            <ui:NavigationView.PaneFooter>
-                <ScrollViewer x:Name="FilterPane"
-                              MaxHeight="320"
-                              Margin="8,4,8,8"
-                              VerticalScrollBarVisibility="Auto"
-                              Visibility="{Binding IsPaneOpen, ElementName=Navigation, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}}">
-                        <DockPanel Margin="8,0,0,4">
-                            <ui:Button DockPanel.Dock="Right"
-                                       Padding="6,0"
-                                       Appearance="Transparent"
-                                       Content="{DynamicResource Nav.ClearFilter}"
-                                       Command="{Binding ClearCommand}"
-                                       Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
-                            <TextBlock VerticalAlignment="Center" Text="{DynamicResource Nav.Filters}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                        </DockPanel>
-                        <ItemsControl ItemsSource="{Binding Areas}" Focusable="False">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <ToggleButton Margin="0,1"
-                                                  Padding="8,4"
-                                                  HorizontalAlignment="Stretch"
-                                                  HorizontalContentAlignment="Left"
-                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                  Command="{Binding Command}"
-                                                  AutomationProperties.Name="{Binding Label}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
-                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                                        </StackPanel>
-                                    </ToggleButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding Tags}" Focusable="False">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <ToggleButton Margin="0,1"
-                                                  Padding="8,4"
-                                                  HorizontalAlignment="Stretch"
-                                                  HorizontalContentAlignment="Left"
-                                                  IsChecked="{Binding IsSelected, Mode=OneWay}"
-                                                  Command="{Binding Command}"
-                                                  AutomationProperties.Name="{Binding Label}">
-                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                                    </ToggleButton>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
-                </ScrollViewer>
-            </ui:NavigationView.PaneFooter>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Archive}" TargetPageType="{x:Type views:ArchivePage}">
                     <ui:NavigationViewItem.Icon>
@@ -136,5 +89,10 @@
                 </ui:NavigationViewItem>
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
+
+        <!-- The launch moment: the logo in the theme's colors draws its arrow, then the app shows through. -->
+        <Grid x:Name="Intro" Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource GM.BackgroundBrush}">
+            <controls:GoalMakerLogo x:Name="IntroLogo" Width="112" Height="112" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Grid>
     </Grid>
 </ui:FluentWindow>

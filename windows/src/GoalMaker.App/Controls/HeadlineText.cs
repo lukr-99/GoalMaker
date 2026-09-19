@@ -5,7 +5,8 @@ using System.Windows.Controls;
 namespace GoalMaker.App.Controls;
 
 /// <summary>
-/// A screen or section title in the theme's heading font, uppercased when the theme shouts (Track).
+/// A screen or section title in the theme's heading font and accent (each theme's second color leads the
+/// page), uppercased when the theme shouts (Track).
 /// WPF has no text-transform, so the casing follows the GM.HeadlineUppercase resource the theme
 /// applier sets.
 /// </summary>
@@ -21,6 +22,7 @@ public sealed class HeadlineText : TextBlock
     {
         SetResourceReference(UppercaseProperty, "GM.HeadlineUppercase");
         SetResourceReference(FontFamilyProperty, "GM.HeadingFont");
+        SetResourceReference(ForegroundProperty, "GM.AccentBrush");
     }
 
     public string Title

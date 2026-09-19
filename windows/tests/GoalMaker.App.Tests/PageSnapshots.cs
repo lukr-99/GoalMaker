@@ -136,7 +136,7 @@ public sealed class PageSnapshots
         Save(new AreasPage(new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action())), folder, "areas-and-tags");
 
         var filter = new ListFilterState();
-        filter.ToggleArea(planner.Areas.Find("Home")!.Id);
+        filter.SetArea(planner.Areas.Find("Home")!.Id);
         var composer = new ComposerViewModel(
             planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
         var today = new ListViewModel(
@@ -153,8 +153,15 @@ public sealed class PageSnapshots
             planner.Tick,
             action => action(),
             tags: planner.Tags,
-            filter: filter);
-        Save(new TodayPage(today), folder, "today-filtered");
+            filter: filter,
+            filters: new ListFiltersViewModel(planner.Areas, planner.Tags, filter, strings, theme.AreaBrush, action => action()),
+            goals: planner.Goals);
+        planner.Goals.Add(new GoalDraft("3 runs", GoalHorizon.Week, Today, GoalRules.ModeTasks));
+        planner.Goals.Add(new GoalDraft("Book the dentist", GoalHorizon.Week, Today));
+        today.IsWeekGoalsExpanded = true;
+        Save(new TodayPage(today), folder, "today-filtered-dark");
+        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Light });
+        Save(new TodayPage(today), folder, "today-filtered-light");
     });
 
     [Fact(Explicit = true)]
@@ -212,6 +219,73 @@ public sealed class PageSnapshots
         Assert.NotNull(planner.Tasks.Add(draft));
         planner.Time.Advance(TimeSpan.FromSeconds(1));
     }
+
+    [Fact(Explicit = true)]
+    public void GoalsPageAndEditor() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        var year = planner.Goals.Add(new GoalDraft("Run a half marathon", GoalHorizon.Year, Today, Emoji: "🏃"))!;
+        var month = planner.Goals.Add(new GoalDraft("Run 80 km", GoalHorizon.Month, Today, GoalRules.ModeNumber, ParentId: year.Id, Target: 80, Unit: "km"))!;
+        planner.Goals.LogAmount(month.Id, Today, 32.5);
+        var week = planner.Goals.Add(new GoalDraft("3 runs this week", GoalHorizon.Week, Today, GoalRules.ModeTasks, ParentId: month.Id))!;
+        Add(planner, "Morning run", Today);
+        Add(planner, "Long run", Today.AddDays(1));
+        planner.Tasks.SetGoal(planner.Task("Morning run").Id, week.Id);
+        planner.Tasks.SetGoal(planner.Task("Long run").Id, week.Id);
+        planner.Tasks.SetDone(planner.Task("Morning run").Id, true);
+        var book = planner.Goals.Add(new GoalDraft("Book the dentist", GoalHorizon.Week, Today))!;
+        planner.Goals.SetStatus(book.Id, GoalRules.Done);
+        planner.Goals.Add(new GoalDraft("Inbox zero", GoalHorizon.Day, Today));
+        using var theme = Theme(planner);
+        var goals = new GoalsViewModel(planner.Goals, planner.Tasks, planner.Settings, strings, planner.Time, () => true, action => action());
+        var page = new GoalsPage(goals);
+        Save(page, folder, "goals-by-period", new Size(852, 1100));
+
+        goals.ToggleTreeCommand.Execute(null);
+        Save(page, folder, "goals-tree", new Size(852, 672));
+
+        goals.ToggleTreeCommand.Execute(null);
+        goals.Edit(planner.Goals.Find(month.Id)!);
+        Save(page, folder, "goals-editor", new Size(852, 760));
+    });
+
+    // Controls made under one theme take the next theme's accent (in a window, where resource changes
+    // reach them): Electric's toggles once stayed Track's lime.
+    [Fact(Explicit = true)]
+    public void ControlsFollowAThemeSwitch() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.Appearance = Appearance.Default with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark };
+        using var theme = Theme(planner);
+        var panel = new StackPanel { Orientation = Orientation.Horizontal };
+        panel.Children.Add(new RadioButton { IsChecked = true, Content = "Radio", Margin = new Thickness(8) });
+        panel.Children.Add(new Wpf.Ui.Controls.ToggleSwitch { IsChecked = true, Margin = new Thickness(8) });
+        panel.Children.Add(new CheckBox { IsChecked = true, Content = "Check", Margin = new Thickness(8) });
+        panel.Children.Add(new Wpf.Ui.Controls.Button { Appearance = Wpf.Ui.Controls.ControlAppearance.Primary, Content = "Plan tomorrow", Margin = new Thickness(8) });
+        var page = OnPage(panel);
+        var window = new Window { Content = page, Width = 560, Height = 140, Left = -4000, Top = 100, ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None };
+        window.Show();
+        void Shot(string name)
+        {
+            Settle();
+            page.UpdateLayout();
+            Settle();
+            var bitmap = new RenderTargetBitmap((int)page.ActualWidth, (int)page.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(page);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var file = File.Create(Path.Combine(folder, name + ".png"));
+            encoder.Save(file);
+        }
+
+        Shot("theme-switch-1-track");
+        theme.Apply(planner.Settings.Appearance with { ThemeId = "electric" });
+        Shot("theme-switch-2-electric");
+        theme.Apply(planner.Settings.Appearance with { ThemeId = "sunrise", Mode = GoalMaker.Core.Settings.ThemeMode.Light });
+        Shot("theme-switch-3-sunrise-light");
+        window.Close();
+    });
 
     [Fact(Explicit = true)]
     public void LogoInEveryTheme() => OnUiThread(folder =>

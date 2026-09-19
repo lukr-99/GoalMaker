@@ -82,6 +82,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Day}" />
                         <DatePicker Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" SelectedDate="{Binding PlannedDate}" AutomationProperties.Name="{DynamicResource Task.Day}" />
@@ -97,8 +98,13 @@
                         <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Area}" />
                         <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding AreaChoices}" SelectedItem="{Binding SelectedArea}"
                                   DisplayMemberPath="Label" AutomationProperties.Name="{DynamicResource Task.Area}" />
-                        <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Repeat}" />
-                        <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding RepeatChoices}" SelectedItem="{Binding SelectedRepeat}"
+                        <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Goal}"
+                                   Visibility="{Binding HasGoals, Converter={StaticResource BoolToVisibility}}" />
+                        <ComboBox Grid.Row="4" Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding GoalChoices}" SelectedItem="{Binding SelectedGoal}"
+                                  DisplayMemberPath="Label" AutomationProperties.Name="{DynamicResource Task.Goal}"
+                                  Visibility="{Binding HasGoals, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Grid.Row="5" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Repeat}" />
+                        <ComboBox Grid.Row="5" Grid.Column="1" ItemsSource="{Binding RepeatChoices}" SelectedItem="{Binding SelectedRepeat}"
                                   DisplayMemberPath="Label" AutomationProperties.Name="{DynamicResource Task.Repeat}" />
                     </Grid>
                 </ui:Card>

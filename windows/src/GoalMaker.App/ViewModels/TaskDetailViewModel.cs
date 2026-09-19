@@ -5,12 +5,13 @@ using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
 using GoalMaker.App.Startup;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Settings;
 
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// One task's detail page (spec stories 12 to 19, docs/archive.md): title and done box, notes in
-/// light Markdown, day, time and deadline, area, repeat, tags and the checklist. Each field saves when
+/// light Markdown, day, time and deadline, area, the goal it serves, repeat, tags and the checklist. Each field saves when
 /// it changes; a refused value goes back to what was saved. Rebuilt in place when the replica
 /// changes, so editing one field doesn't take the keyboard from another.
 /// </summary>
@@ -25,6 +26,8 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private readonly IStrings strings;
     private readonly TimeProvider time;
     private readonly Action<AppPage> openPage;
+    private readonly GoalList? goals;
+    private readonly ISettingsStore? settings;
     private string? taskId;
     private AppPage back = AppPage.Today;
     private bool loading;
@@ -35,6 +38,7 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private DateTime? deadline;
     private ChoiceViewModel? selectedArea;
     private ChoiceViewModel? selectedRepeat;
+    private ChoiceViewModel? selectedGoal;
 
     [ObservableProperty]
     private bool hasTask;
@@ -55,6 +59,9 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private IReadOnlyList<ChoiceViewModel> repeatChoices = [];
 
     [ObservableProperty]
+    private IReadOnlyList<ChoiceViewModel> goalChoices = [];
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddTagCommand))]
     private string newTagName = string.Empty;
 
@@ -63,8 +70,19 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private string newStepTitle = string.Empty;
 
     public TaskDetailViewModel(
-        TaskList tasks, AreaList areas, TagList tags, StepList steps, IStrings strings, TimeProvider time, Action<Action> runOnUi, Action<AppPage> openPage)
+        TaskList tasks,
+        AreaList areas,
+        TagList tags,
+        StepList steps,
+        IStrings strings,
+        TimeProvider time,
+        Action<Action> runOnUi,
+        Action<AppPage> openPage,
+        GoalList? goals = null,
+        ISettingsStore? settings = null)
     {
+        this.goals = goals;
+        this.settings = settings;
         this.tasks = tasks;
         this.areas = areas;
         this.tags = tags;
@@ -76,7 +94,14 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);
         steps.Changed += (_, _) => runOnUi(Refresh);
+        if (goals is not null)
+        {
+            goals.Changed += (_, _) => runOnUi(Refresh);
+        }
     }
+
+    /// <summary>Whether the page offers the goal picker (there is a goal list to pick from).</summary>
+    public bool HasGoals => goals is not null;
 
     public ObservableCollection<FilterOptionViewModel> Tags { get; } = [];
 
@@ -156,6 +181,17 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         });
     }
 
+    /// <summary>The goal the task serves (docs/goals.md), or none.</summary>
+    public ChoiceViewModel? SelectedGoal
+    {
+        get => selectedGoal;
+        set => Commit(ref selectedGoal, value, id =>
+        {
+            tasks.SetGoal(id, value?.Id);
+            return true;
+        });
+    }
+
     public ChoiceViewModel? SelectedRepeat
     {
         get => selectedRepeat;
@@ -200,6 +236,18 @@ public sealed partial class TaskDetailViewModel : ObservableObject
             // Archived areas leave the picker, but the task's own area stays listed.
             AreaChoices = [new ChoiceViewModel(null, strings.Get("Task.NoArea")), .. areas.All().Where(area => !area.Archived || area.Id == task.AreaId).Select(area => new ChoiceViewModel(area.Id, area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name))];
             Set(ref selectedArea, AreaChoices.FirstOrDefault(choice => choice.Id == task.AreaId) ?? AreaChoices[0], nameof(SelectedArea));
+
+            // The goals a task can serve: the open ones whose period hasn't ended, and the one it serves now.
+            if (goals is not null)
+            {
+                var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings?.DayStartHour ?? PlanningDay.DefaultStartHour);
+                GoalChoices = [new ChoiceViewModel(null, strings.Get("Task.NoGoal")), .. goals.All()
+                    .Where(goal => goal.Id == task.GoalId || (goal.Status == GoalRules.Open && GoalRules.PeriodEnd(goal.Horizon, goal.PeriodStart) >= today))
+                    .Select(goal => new ChoiceViewModel(
+                        goal.Id,
+                        $"{(goal.Emoji is { } emoji ? emoji + " " : string.Empty)}{goal.Title} · {strings.Get("Goals.Horizon" + goal.Horizon)}"))];
+                Set(ref selectedGoal, GoalChoices.FirstOrDefault(choice => choice.Id == task.GoalId) ?? GoalChoices[0], nameof(SelectedGoal));
+            }
 
             var anchor = task.PlannedDate ?? DateOnly.FromDateTime(time.GetLocalNow().DateTime);
             var rules = new List<string>

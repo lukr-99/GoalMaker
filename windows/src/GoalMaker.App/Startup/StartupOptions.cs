@@ -47,6 +47,7 @@ public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool No
         "areas" => AppPage.Areas,
         "archive" => AppPage.Archive,
         "activity" => AppPage.Activity,
+        "goals" => AppPage.Goals,
         _ => null,
     };
 }

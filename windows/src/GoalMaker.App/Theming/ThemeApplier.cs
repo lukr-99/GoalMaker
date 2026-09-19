@@ -71,6 +71,7 @@ public sealed class ThemeApplier : IDisposable
 
         ApplicationThemeManager.Apply(wpfTheme, WindowBackdropType.None, false);
         ApplicationAccentColorManager.Apply(ToColor(palette.Primary), wpfTheme, false, false);
+        SetAccentBrushes(IsDark);
 
         SetColors(palette);
         SetFonts(theme.Typography);
@@ -122,6 +123,52 @@ public sealed class ThemeApplier : IDisposable
         }
     }
 
+    // WPF UI's theme dictionaries build some control brushes from the accent once, so controls made
+    // under one theme kept its accent after a switch (Electric's toggles stayed Track's lime). Fresh
+    // brushes under the same keys reach them, because the templates look these keys up dynamically.
+    private void SetAccentBrushes(bool dark)
+    {
+        foreach (var (key, darkVariant, lightVariant) in AccentBrushes)
+        {
+            if (resources["SystemAccentColor" + (dark ? darkVariant : lightVariant)] is Color color)
+            {
+                resources[key] = Frozen(color);
+            }
+        }
+    }
+
+    // The brushes WPF UI 4.3's Dark.xaml and Light.xaml make from SystemAccentColor{Primary,Secondary,Tertiary}.
+    private static readonly (string Key, string Dark, string Light)[] AccentBrushes =
+    [
+        ("BadgeBackground", "Primary", "Primary"),
+        ("CalendarViewSelectedBackground", "Primary", "Primary"),
+        ("CalendarViewSelectedBorderBrush", "Primary", "Primary"),
+        ("CalendarViewTodayBackground", "Primary", "Primary"),
+        ("CheckBoxCheckBackgroundFillChecked", "Primary", "Primary"),
+        ("ComboBoxBorderBrushFocused", "Secondary", "Secondary"),
+        ("ComboBoxItemPillFillBrush", "Primary", "Primary"),
+        ("HyperlinkButtonForeground", "Tertiary", "Secondary"),
+        ("HyperlinkButtonForegroundPointerOver", "Tertiary", "Tertiary"),
+        ("HyperlinkButtonForegroundPressed", "Secondary", "Primary"),
+        ("InfoBarInformationalSeverityIconBackground", "Primary", "Primary"),
+        ("ListBoxItemSelectedBackgroundThemeBrush", "Primary", "Primary"),
+        ("ListViewItemPillFillBrush", "Primary", "Primary"),
+        ("NavigationViewSelectionIndicatorForeground", "Primary", "Primary"),
+        ("ProgressBarForeground", "Primary", "Primary"),
+        ("ProgressRingForegroundThemeBrush", "Primary", "Primary"),
+        ("RadioButtonOuterEllipseCheckedStroke", "Primary", "Primary"),
+        ("RatingControlSelectedForeground", "Primary", "Primary"),
+        ("SliderThumbBackground", "Primary", "Primary"),
+        ("TextControlFocusedBorderBrush", "Primary", "Primary"),
+        ("ThumbRateForeground", "Primary", "Primary"),
+        ("ToggleButtonBackgroundChecked", "Primary", "Primary"),
+        ("ToggleButtonForegroundCheckedPointerOver", "Secondary", "Secondary"),
+        ("ToggleButtonBackgroundCheckedPressed", "Tertiary", "Tertiary"),
+        ("ToggleSwitchStrokeOn", "Primary", "Primary"),
+        ("ToggleSwitchFillOn", "Primary", "Primary"),
+        ("TreeViewItemSelectionIndicatorForeground", "Primary", "Primary"),
+    ];
+
     private void SetColors(Palette p)
     {
         var roles = new Dictionary<string, uint>
@@ -172,6 +219,19 @@ public sealed class ThemeApplier : IDisposable
         resources["TextControlBackgroundFocused"] = ToBrush(p.Surface);
         resources["SubtleFillColorSecondaryBrush"] = Frozen(hover);
         resources["AccentFillColorDefaultBrush"] = ToBrush(p.Primary);
+
+        // Primary buttons (Plan tomorrow, Save, Send code): the theme's primary with its onPrimary text,
+        // and hover and press as a light onPrimary state layer over it, the same in every theme (WPF UI's
+        // own keys use lighter variants of the accent that don't match the theme).
+        var primary = ToColor(p.Primary);
+        var onPrimary = ToColor(p.OnPrimary);
+        resources["AccentButtonBackground"] = ToBrush(p.Primary);
+        resources["AccentButtonBackgroundPointerOver"] = Frozen(Blend(primary, onPrimary, 0.12));
+        resources["AccentButtonBackgroundPressed"] = Frozen(Blend(primary, onPrimary, 0.22));
+        resources["AccentButtonForeground"] = ToBrush(p.OnPrimary);
+        resources["AccentButtonForegroundPointerOver"] = ToBrush(p.OnPrimary);
+        resources["AccentButtonForegroundPressed"] = ToBrush(p.OnPrimary);
+        resources["AccentControlElevationBorderBrush"] = Frozen(Blend(primary, onPrimary, 0.08));
         resources["TextOnAccentFillColorPrimaryBrush"] = ToBrush(p.OnPrimary);
         resources["AccentTextFillColorPrimaryBrush"] = ToBrush(p.Primary);
         resources["SystemFillColorCriticalBrush"] = ToBrush(p.Danger);

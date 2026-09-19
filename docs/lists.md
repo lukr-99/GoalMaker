@@ -33,6 +33,11 @@ empty under an area filter. The filter belongs to the screen, not to one list, s
 owner switches between Today, Tomorrow and the Inbox. Pinned by the `filter` cases in
 [`contracts/vectors/lists.json`](../contracts/vectors/lists.json).
 
+The pickers sit above the list on both apps: a chip row on the phone, and on Windows an area and a
+tag picker on the toolbar line under the day, next to the sync state and Plan tomorrow. A chosen area
+or tag is outlined in the theme's accent, so a narrowed list is plain to see. (Windows had them at
+the foot of the sidebar at first; the owner found them hidden there, 2026-09-19.)
+
 Deleting an area keeps its tasks and takes the area off them, so an undated one returns to the
 Inbox. Deleting a tag takes it off every task.
 

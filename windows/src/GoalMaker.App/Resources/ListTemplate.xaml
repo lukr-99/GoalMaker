@@ -4,6 +4,15 @@
                     xmlns:controls="clr-namespace:GoalMaker.App.Controls"
                     xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
 
+    <!-- An area (with its color) or a tag in the pickers above the lists. -->
+    <DataTemplate x:Key="FilterChoice" DataType="{x:Type vm:FilterChoiceViewModel}">
+        <StackPanel Orientation="Horizontal">
+            <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}"
+                     Visibility="{Binding HasBrush, Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock VerticalAlignment="Center" Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+    </DataTemplate>
+
     <!-- One list (Today, Tomorrow, Inbox) as ListPage shows it (docs/lists.md). -->
     <DataTemplate x:Key="ListTemplate" DataType="{x:Type vm:ListViewModel}">
         <Grid Margin="{DynamicResource GM.PagePadding}">
@@ -14,36 +23,77 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <DockPanel Grid.Row="0" Margin="0,0,0,16">
-                <ui:Button DockPanel.Dock="Right"
-                           Margin="16,0,0,0"
-                           VerticalAlignment="Bottom"
-                           Content="{DynamicResource Plan.Title}"
-                           Command="{Binding OpenPlanCommand}">
-                    <ui:Button.Icon>
-                        <ui:SymbolIcon Symbol="CalendarEdit24" />
-                    </ui:Button.Icon>
-                </ui:Button>
-                <TextBlock DockPanel.Dock="Right"
-                           VerticalAlignment="Bottom"
-                           Text="{Binding SyncText}"
-                           Foreground="{DynamicResource GM.TextMutedBrush}" />
-                <StackPanel>
-                    <controls:HeadlineText Title="{Binding Title}" FontSize="40" />
-                    <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                    <StackPanel Margin="0,6,0,0"
+            <!-- The title and the day, then one toolbar line: the area and tag pickers on the left, the sync
+                 state and Plan tomorrow on the right, all centered on the same line. -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <controls:HeadlineText Title="{Binding Title}" FontSize="40" />
+                <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                <DockPanel Margin="0,14,0,0" LastChildFill="False">
+                    <ui:Button DockPanel.Dock="Right"
+                               VerticalAlignment="Center"
+                               Appearance="Primary"
+                               Content="{DynamicResource Plan.Title}"
+                               Command="{Binding OpenPlanCommand}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="CalendarEdit24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <TextBlock DockPanel.Dock="Right"
+                               Margin="0,0,16,0"
+                               VerticalAlignment="Center"
+                               Text="{Binding SyncText}"
+                               FontSize="13"
+                               Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <StackPanel DockPanel.Dock="Left"
                                 Orientation="Horizontal"
-                                Visibility="{Binding HasFilter, Converter={StaticResource BoolToVisibility}}">
-                        <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="Filter16" Foreground="{DynamicResource GM.AccentBrush}" />
-                        <TextBlock VerticalAlignment="Center" Text="{Binding FilterText}" FontSize="13" />
+                                DataContext="{Binding Filters}"
+                                Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+                        <ComboBox MinWidth="160"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding AreaChoices}"
+                                  SelectedItem="{Binding SelectedArea}"
+                                  ItemTemplate="{StaticResource FilterChoice}"
+                                  AutomationProperties.Name="{DynamicResource Lists.FilterArea}"
+                                  Visibility="{Binding HasAreas, Converter={StaticResource BoolToVisibility}}">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsAreaChosen}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
+                        <ComboBox MinWidth="140"
+                                  Margin="8,0,0,0"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding TagChoices}"
+                                  SelectedItem="{Binding SelectedTag}"
+                                  ItemTemplate="{StaticResource FilterChoice}"
+                                  AutomationProperties.Name="{DynamicResource Lists.FilterTag}"
+                                  Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
+                            <ComboBox.Style>
+                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsTagChosen}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                            <Setter Property="BorderThickness" Value="2" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ComboBox.Style>
+                        </ComboBox>
                         <ui:Button Margin="8,0,0,0"
-                                   Padding="8,2"
+                                   VerticalAlignment="Center"
                                    Appearance="Transparent"
                                    Content="{DynamicResource Lists.ClearFilter}"
-                                   Command="{Binding ClearFilterCommand}" />
+                                   Command="{Binding ClearCommand}"
+                                   Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
-                </StackPanel>
-            </DockPanel>
+                </DockPanel>
+            </StackPanel>
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
@@ -177,6 +227,47 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- This week's goals, folded like the overdue tasks (design spec, Today). -->
+                    <StackPanel Visibility="{Binding HasWeekGoals, Converter={StaticResource BoolToVisibility}}">
+                        <ToggleButton Margin="0,8,0,6"
+                                      HorizontalAlignment="Left"
+                                      Padding="4,2"
+                                      Background="Transparent"
+                                      BorderThickness="0"
+                                      Cursor="Hand"
+                                      IsChecked="{Binding IsWeekGoalsExpanded}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{Binding WeekGoalsHeader}"
+                                           FontSize="11"
+                                           FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                           Foreground="{DynamicResource GM.AccentBrush}" />
+                                <ui:SymbolIcon Margin="6,0,0,0" FontSize="12" Symbol="ChevronDown16" Foreground="{DynamicResource GM.AccentBrush}" />
+                            </StackPanel>
+                        </ToggleButton>
+                        <StackPanel Visibility="{Binding IsWeekGoalsExpanded, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl ItemsSource="{Binding WeekGoals}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:GoalRowViewModel}">
+                                        <Border Margin="{DynamicResource GM.RowGap}"
+                                                Padding="12,4"
+                                                MinHeight="{DynamicResource GM.RowMinHeight}"
+                                                CornerRadius="{DynamicResource GM.RowCorner}"
+                                                Background="{DynamicResource GM.SurfaceBrush}">
+                                            <DockPanel VerticalAlignment="Center">
+                                                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Text="{Binding ProgressText}"
+                                                           FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                                <controls:GoalRing DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,10,0" Fraction="{Binding Fraction}" Thickness="3" />
+                                                <TextBlock VerticalAlignment="Center" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                            </DockPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ui:Button Margin="0,4,0,0" Appearance="Transparent" Content="{DynamicResource Goals.All}" Command="{Binding OpenGoalsCommand}" />
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 

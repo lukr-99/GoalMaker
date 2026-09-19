@@ -4,7 +4,7 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The one filter Today, Tomorrow and the Inbox share (docs/lists.md), so it stays when the owner
-/// switches lists. Choosing the area or tag already chosen clears it again.
+/// switches lists. A null area or tag lets go of that half of the filter.
 /// </summary>
 public sealed class ListFilterState
 {
@@ -12,9 +12,9 @@ public sealed class ListFilterState
 
     public event EventHandler? Changed;
 
-    public void ToggleArea(string areaId) => Set(Current with { AreaId = Current.AreaId == areaId ? null : areaId });
+    public void SetArea(string? areaId) => Set(Current with { AreaId = areaId });
 
-    public void ToggleTag(string tagId) => Set(Current with { TagId = Current.TagId == tagId ? null : tagId });
+    public void SetTag(string? tagId) => Set(Current with { TagId = tagId });
 
     public void Clear() => Set(ListFilter.None);
 

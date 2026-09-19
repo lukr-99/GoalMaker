@@ -96,8 +96,15 @@
                         <RadioButton GroupName="Mode" Content="{DynamicResource Settings.ThemeDark}" IsChecked="{Binding IsDarkTheme}" />
                     </StackPanel>
 
-                    <ui:ToggleSwitch Margin="0,16,0,0" Content="{DynamicResource Settings.PureBlack}" IsChecked="{Binding PureBlack}" />
-                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.PureBlackHint}" />
+                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
+                    <DockPanel Margin="0,16,0,0">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding PureBlack}"
+                                         AutomationProperties.Name="{DynamicResource Settings.PureBlack}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings.PureBlack}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.PureBlackHint}" />
+                        </StackPanel>
+                    </DockPanel>
 
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Settings.ReduceMotion}" />
                     <StackPanel Orientation="Horizontal">
@@ -106,8 +113,15 @@
                         <RadioButton GroupName="Motion" Content="{DynamicResource Settings.ReduceMotionOff}" IsChecked="{Binding IsReduceMotionOff}" />
                     </StackPanel>
 
-                    <ui:ToggleSwitch Margin="0,16,0,0" Content="{DynamicResource Settings.CompletionSound}" IsChecked="{Binding CompletionSound}" />
-                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.CompletionSoundHint}" />
+                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
+                    <DockPanel Margin="0,16,0,0">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding CompletionSound}"
+                                         AutomationProperties.Name="{DynamicResource Settings.CompletionSound}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings.CompletionSound}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.CompletionSoundHint}" />
+                        </StackPanel>
+                    </DockPanel>
                 </StackPanel>
             </ui:Card>
 
@@ -121,14 +135,21 @@
                               SelectedIndex="{Binding DayStartHour}"
                               AutomationProperties.Name="{DynamicResource Settings.DayStart}" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.DayStartHint}" />
-                    <ui:ToggleSwitch Margin="0,20,0,8" Content="{DynamicResource Settings.PlanReminder}" IsChecked="{Binding PlanReminderOn}" />
+                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
+                    <DockPanel Margin="0,20,0,8">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding PlanReminderOn}"
+                                         AutomationProperties.Name="{DynamicResource Settings.PlanReminder}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings.PlanReminder}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{Binding PlanReminderSummary}" />
+                        </StackPanel>
+                    </DockPanel>
                     <ComboBox MinWidth="140"
                               HorizontalAlignment="Left"
                               ItemsSource="{Binding PlanReminderChoices}"
                               SelectedIndex="{Binding PlanReminderTime}"
                               IsEnabled="{Binding PlanReminderOn}"
                               AutomationProperties.Name="{DynamicResource Settings.PlanReminderTime}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding PlanReminderSummary}" />
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
                     <StackPanel Orientation="Horizontal">
                         <ComboBox MinWidth="120"

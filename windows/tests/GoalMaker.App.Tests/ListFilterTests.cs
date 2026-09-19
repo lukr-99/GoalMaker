@@ -3,7 +3,7 @@ using GoalMaker.Core.Composer;
 
 namespace GoalMaker.App.Tests;
 
-/// <summary>Filtering the lists by area and tag from the sidebar (docs/lists.md, M2-11).</summary>
+/// <summary>Filtering the lists by area and tag from the pickers above them (docs/lists.md, M2-11).</summary>
 public sealed class ListFilterTests : IDisposable
 {
     private static readonly DateOnly Today = new(2026, 9, 18);
@@ -20,15 +20,16 @@ public sealed class ListFilterTests : IDisposable
         Add("Water plants @Home", Today.AddDays(1));
         var today = List(ListKind.Today);
         var tomorrow = List(ListKind.Tomorrow);
-        var sidebar = Sidebar();
+        var filters = Filters();
 
-        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Home");
 
         Assert.Equal(["Fix the shelf"], Titles(today));
         Assert.Equal(["Water plants"], Titles(tomorrow));
         Assert.True(today.HasFilter);
         Assert.Equal("Lists.Filtered(Home)", today.FilterText);
-        Assert.True(sidebar.Areas.Single(area => area.Label == "Home").IsSelected);
+        Assert.Equal("Home", filters.SelectedArea!.Label);
+        Assert.True(filters.IsAreaChosen);
     }
 
     [Fact]
@@ -38,33 +39,34 @@ public sealed class ListFilterTests : IDisposable
         Add("Pick up parcel @Work #errand", Today);
         Add("Fix the shelf @Home", Today);
         var today = List(ListKind.Today);
-        var sidebar = Sidebar();
+        var filters = Filters();
 
-        sidebar.Tags.Single(tag => tag.Label == "#errand").Command.Execute(null);
+        filters.SelectedTag = filters.TagChoices.Single(tag => tag.Label == "#errand");
         Assert.Equal(["Buy stamps", "Pick up parcel"], Titles(today));
 
-        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Home");
         Assert.Equal(["Buy stamps"], Titles(today));
         Assert.Equal("Lists.Filtered(Home · #errand)", today.FilterText);
     }
 
     [Fact]
-    public void ChoosingTheSameAreaAgainOrClearingShowsEverything()
+    public void ChoosingAllAreasOrClearingShowsEverything()
     {
         Add("Fix the shelf @Home", Today);
         Add("Send the invoice @Work", Today);
         var today = List(ListKind.Today);
-        var sidebar = Sidebar();
+        var filters = Filters();
 
-        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
-        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Home");
+        filters.SelectedArea = filters.AreaChoices[0];
         Assert.Equal(2, Titles(today).Count);
+        Assert.False(filters.IsAreaChosen);
 
-        sidebar.Areas.Single(area => area.Label == "Work").Command.Execute(null);
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Work");
         today.ClearFilterCommand.Execute(null);
         Assert.Equal(2, Titles(today).Count);
         Assert.False(today.HasFilter);
-        Assert.False(sidebar.IsFiltering);
+        Assert.False(filters.IsFiltering);
     }
 
     [Fact]
@@ -73,8 +75,8 @@ public sealed class ListFilterTests : IDisposable
         Add("Fix the shelf @Home", Today);
         Add("Send the invoice @Work", Today);
         var today = List(ListKind.Today);
-        var sidebar = Sidebar();
-        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
+        var filters = Filters();
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Home");
 
         planner.Areas.Delete(planner.Areas.Find("Home")!.Id);
 
@@ -83,35 +85,35 @@ public sealed class ListFilterTests : IDisposable
     }
 
     [Fact]
-    public void ArchivingTheChosenAreaLetsGoOfTheFilterAndTakesItOutOfTheSidebar()
+    public void ArchivingTheChosenAreaLetsGoOfTheFilterAndTakesItOutOfThePicker()
     {
         Add("Fix the shelf @Home", Today);
         Add("Send the invoice @Work", Today);
         var today = List(ListKind.Today);
-        var sidebar = Sidebar();
-        sidebar.Areas.Single(area => area.Label == "Home").Command.Execute(null);
+        var filters = Filters();
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Home");
 
         planner.Areas.Archive(planner.Areas.Find("Home")!.Id);
 
         Assert.True(filter.Current.IsEmpty);
         Assert.Equal(2, Titles(today).Count);
-        Assert.Equal(["Work"], sidebar.Areas.Select(area => area.Label));
+        Assert.Equal(["Lists.AllAreas", "Work"], filters.AreaChoices.Select(area => area.Label));
     }
 
     [Fact]
-    public void TheSidebarShowsNoFilterHeaderUntilThereIsAnAreaOrTag()
+    public void ThePickersStayAwayUntilThereIsAnAreaOrTag()
     {
-        var sidebar = Sidebar();
-        Assert.False(sidebar.HasAny);
+        var filters = Filters();
+        Assert.False(filters.HasAny);
 
         Add("Buy stamps #errand", Today);
-        Assert.True(sidebar.HasAny);
-        Assert.False(sidebar.HasAreas);
+        Assert.True(filters.HasAny);
+        Assert.False(filters.HasAreas);
     }
 
     private static List<string> Titles(ListViewModel list) => [.. list.Sections.SelectMany(section => section.Rows).Select(row => row.Title)];
 
-    private SidebarFiltersViewModel Sidebar() => new(planner.Areas, planner.Tags, filter, _ => null, action => action());
+    private ListFiltersViewModel Filters() => new(planner.Areas, planner.Tags, filter, planner.Strings, _ => null, action => action());
 
     private ListViewModel List(ListKind kind)
     {

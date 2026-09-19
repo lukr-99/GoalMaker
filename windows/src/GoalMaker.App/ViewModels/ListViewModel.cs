@@ -32,6 +32,8 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly TagList? tags;
     private readonly ListFilterState? filter;
     private readonly Action<string>? openTask;
+    private readonly GoalList? goals;
+    private readonly Action? openGoals;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -44,6 +46,19 @@ public sealed partial class ListViewModel : ObservableObject
 
     [ObservableProperty]
     private bool isEmpty;
+
+    [ObservableProperty]
+    private IReadOnlyList<GoalRowViewModel> weekGoals = [];
+
+    [ObservableProperty]
+    private string weekGoalsHeader = string.Empty;
+
+    [ObservableProperty]
+    private bool hasWeekGoals;
+
+    /// <summary>Whether this week's goals are unfolded under Today; they start folded (design spec, Today).</summary>
+    [ObservableProperty]
+    private bool isWeekGoalsExpanded;
 
     [ObservableProperty]
     private string undoText = string.Empty;
@@ -74,9 +89,15 @@ public sealed partial class ListViewModel : ObservableObject
         ReminderService? reminders = null,
         TagList? tags = null,
         ListFilterState? filter = null,
-        Action<string>? openTask = null)
+        Action<string>? openTask = null,
+        ListFiltersViewModel? filters = null,
+        GoalList? goals = null,
+        Action? openGoals = null)
     {
         this.openTask = openTask;
+        this.goals = goals;
+        this.openGoals = openGoals;
+        Filters = filters;
         this.openPlan = openPlan;
         this.reminders = reminders;
         this.tags = tags;
@@ -122,6 +143,11 @@ public sealed partial class ListViewModel : ObservableObject
             filter.Changed += (_, _) => runOnUi(Refresh);
         }
 
+        if (goals is not null && kind == ListKind.Today)
+        {
+            goals.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         sync.StatusChanged += (_, status) => runOnUi(() => ShowSync(status));
         ShowSync(sync.Status);
         Refresh();
@@ -134,6 +160,11 @@ public sealed partial class ListViewModel : ObservableObject
     public string EmptyText { get; }
 
     public ComposerViewModel Composer { get; }
+
+    /// <summary>The area and tag pickers above the list, shared by every list; null where there are none.</summary>
+    public ListFiltersViewModel? Filters { get; }
+
+    public bool HasFilters => Filters is not null;
 
     public ObservableCollection<ListSectionViewModel> Sections { get; } = [];
 
@@ -243,6 +274,13 @@ public sealed partial class ListViewModel : ObservableObject
                         expanded => overdueExpanded = expanded));
                 }
 
+                if (goals is not null)
+                {
+                    WeekGoals = GoalsViewModel.ThisWeek(goals, tasks, today, strings);
+                    HasWeekGoals = WeekGoals.Count > 0;
+                    WeekGoalsHeader = Upper(strings.Get("Goals.WeekCount", WeekGoals.Count(row => row.IsHit), WeekGoals.Count));
+                }
+
                 var date = today.ToString("dddd d MMMM", CultureInfo.CurrentCulture);
                 Subtitle = lists.Summary.Total == 0 ? date : strings.Get("Lists.TodaySummary", date, lists.Summary.Done, lists.Summary.Total);
                 break;
@@ -261,6 +299,9 @@ public sealed partial class ListViewModel : ObservableObject
 
     [RelayCommand]
     private void OpenPlan() => openPlan?.Invoke();
+
+    [RelayCommand]
+    private void OpenGoals() => openGoals?.Invoke();
 
     [RelayCommand]
     private void Undo()

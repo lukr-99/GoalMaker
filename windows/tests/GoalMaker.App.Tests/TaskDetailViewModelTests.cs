@@ -139,9 +139,29 @@ public sealed class TaskDetailViewModelTests : IDisposable
         Assert.Equal("Archive.NoMatch", archive.EmptyText);
     }
 
+    [Fact]
+    public void TheGoalPickerOffersOpenGoalsStillRunningAndLinksOne()
+    {
+        var task = Add("Long run");
+        var week = planner.Goals.Add(new GoalDraft("3 runs", GoalHorizon.Week, new DateOnly(2026, 9, 14), GoalRules.ModeTasks))!;
+        planner.Goals.Add(new GoalDraft("Last week", GoalHorizon.Week, new DateOnly(2026, 9, 7)));
+        var done = planner.Goals.Add(new GoalDraft("Book the race", GoalHorizon.Month, new DateOnly(2026, 9, 1)))!;
+        planner.Goals.SetStatus(done.Id, GoalRules.Done);
+        planner.Goals.Add(new GoalDraft("Half marathon", GoalHorizon.Year, new DateOnly(2026, 1, 1)));
+        var detail = Detail(task.Id);
+
+        Assert.Equal(["Task.NoGoal", "Half marathon · Goals.HorizonYear", "3 runs · Goals.HorizonWeek"], detail.GoalChoices.Select(choice => choice.Label));
+
+        detail.SelectedGoal = detail.GoalChoices.Single(choice => choice.Id == week.Id);
+        Assert.Equal(week.Id, planner.Tasks.Find(task.Id)!.GoalId);
+        detail.SelectedGoal = detail.GoalChoices[0];
+        Assert.Null(planner.Tasks.Find(task.Id)!.GoalId);
+    }
+
     private TaskDetailViewModel Detail(string id, AppPage from = AppPage.Today)
     {
-        var detail = new TaskDetailViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Steps, planner.Strings, planner.Time, action => action(), opened.Add);
+        var detail = new TaskDetailViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Steps, planner.Strings, planner.Time, action => action(), opened.Add, planner.Goals, planner.Settings);
         detail.Load(id, from);
         return detail;
     }

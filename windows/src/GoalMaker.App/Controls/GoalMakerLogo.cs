@@ -85,6 +85,12 @@ public sealed class GoalMakerLogo : FrameworkElement
         set => SetValue(ReduceMotionProperty, value);
     }
 
+    /// <summary>Hides the arrow until <see cref="PlayIntro"/> draws it (the launch moment).</summary>
+    public void PrepareIntro() => SetValue(DrawnProperty, 0.0);
+
+    /// <summary>Draws the arrow from nothing with the tile's bounce, as a theme change does.</summary>
+    public void PlayIntro() => Replay();
+
     /// <summary>The mark in <paramref name="colors"/> as a square bitmap <paramref name="pixels"/> wide.</summary>
     public static BitmapSource Render(LogoMark mark, LogoColors colors, int pixels)
     {

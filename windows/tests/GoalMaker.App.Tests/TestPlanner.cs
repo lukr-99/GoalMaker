@@ -35,6 +35,7 @@ internal sealed class TestPlanner : IDisposable
         Reminders = new ReminderList(replica, rows, () => { }, () => TimeZoneInfo.Utc);
         Steps = new StepList(replica, rows, () => { });
         Rituals = new RitualRunList(replica, rows, () => { });
+        Goals = new GoalList(replica, rows, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -56,6 +57,8 @@ internal sealed class TestPlanner : IDisposable
     public StepList Steps { get; }
 
     public RitualRunList Rituals { get; }
+
+    public GoalList Goals { get; }
 
     public TickSound Tick { get; } = new();
 

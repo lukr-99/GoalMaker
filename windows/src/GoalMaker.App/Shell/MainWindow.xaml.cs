@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using GoalMaker.App.Composition;
 using GoalMaker.App.Startup;
@@ -27,7 +28,6 @@ public partial class MainWindow
         plan = graph.Plan;
         graph.PageRequested += (_, page) => Open(page);
         DataContext = graph.Shell;
-        FilterPane.DataContext = graph.SidebarFilters;
         Navigation.SetPageProviderService(new PageProvider(new Dictionary<Type, Func<object>>
         {
             [typeof(TodayPage)] = () => new TodayPage(graph.Today),
@@ -36,6 +36,7 @@ public partial class MainWindow
             [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage, graph.Connector),
             [typeof(ActivityPage)] = () => new ActivityPage(graph.Activity),
+            [typeof(GoalsPage)] = () => new GoalsPage(graph.GoalsPage),
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
@@ -56,9 +57,30 @@ public partial class MainWindow
         LocationChanged += (_, _) => placementSaver.Start();
         SizeChanged += (_, _) => placementSaver.Start();
         StateChanged += (_, _) => placementSaver.Start();
+
+        // The launch moment, the first time the window shows (the owner's idea, 2026-09-19).
+        IntroLogo.PrepareIntro();
+        ContentRendered += (_, _) => PlayIntro(graph.Theme.MotionReduced);
     }
 
     public bool AllowClose { get; set; }
+
+    // The logo draws its arrow (two emphasized beats of 400 ms), holds a moment, and the app fades in
+    // under it. Reduce motion skips it; a click skips it too.
+    private void PlayIntro(bool reduced)
+    {
+        if (reduced || Intro.Visibility != Visibility.Visible)
+        {
+            Intro.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        IntroLogo.PlayIntro();
+        var fade = new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(250)) { BeginTime = TimeSpan.FromMilliseconds(1050) };
+        fade.Completed += (_, _) => Intro.Visibility = Visibility.Collapsed;
+        Intro.MouseDown += (_, _) => Intro.Visibility = Visibility.Collapsed;
+        Intro.BeginAnimation(OpacityProperty, fade);
+    }
 
     public void Open(AppPage page)
     {
@@ -76,6 +98,7 @@ public partial class MainWindow
             AppPage.Areas => typeof(AreasPage),
             AppPage.Archive => typeof(ArchivePage),
             AppPage.Activity => typeof(ActivityPage),
+            AppPage.Goals => typeof(GoalsPage),
             AppPage.Task => typeof(TaskPage),
             _ => typeof(TodayPage),
         };

@@ -53,7 +53,10 @@ only while its day falls inside the goal's period ([repeating](repeating.md)).
   amount on a numeric one, the box marks a done-or-not goal done, and the menu drops, reopens or
   deletes it. The tree button shows the same goals as the cascade. Hitting a goal throws confetti
   (skipped under reduce motion). Today ends with this week's goals, folded like the overdue tasks.
-- **Windows:** the same Goals page from the sidebar (M4-02, in progress).
+- **Windows:** Goals in the sidebar: the same periods and rings, a tree view, the editor and the log
+  panel over the page, a check for done-or-not goals and a right-click menu for the rest, and a
+  lighter confetti burst on a hit. Today ends with this week's goals folded, and a task's details
+  pick the goal it serves.
 
 ## Storage
 
