@@ -49,6 +49,7 @@ import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.ui.components.ChoiceChip
+import com.goalmaker.app.ui.components.EmojiField
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -96,12 +97,7 @@ internal fun HabitDialog(
                     isError = refused && name.isBlank(),
                     singleLine = true,
                 )
-                OutlinedTextField(
-                    value = emoji,
-                    onValueChange = { emoji = it.take(16) },
-                    label = { Text(stringResource(R.string.habits_emoji)) },
-                    singleLine = true,
-                )
+                EmojiField(emoji, onChange = { emoji = it })
                 Label(stringResource(R.string.habits_cadence))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(

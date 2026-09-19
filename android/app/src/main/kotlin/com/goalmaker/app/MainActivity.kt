@@ -34,6 +34,15 @@ class MainActivity : ComponentActivity() {
     private fun openedFromReminder(intent: Intent?) {
         if (intent == null) return
         val graph = (application as GoalMakerApplication).graph
+        val reviewKind = intent.getStringExtra(ReminderAlarm.EXTRA_REVIEW_KIND)
+        val reviewPeriod = intent.getStringExtra(ReminderAlarm.EXTRA_REVIEW_PERIOD)
+        if (reviewKind != null && reviewPeriod != null) {
+            runCatching { java.time.LocalDate.parse(reviewPeriod) }.getOrNull()?.let { start ->
+                graph.openedForReview(reviewKind, start)
+            }
+            intent.removeExtra(ReminderAlarm.EXTRA_REVIEW_KIND)
+            intent.removeExtra(ReminderAlarm.EXTRA_REVIEW_PERIOD)
+        }
         if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_PLAN, false)) {
             graph.openedForPlan()
             intent.removeExtra(ReminderAlarm.EXTRA_OPEN_PLAN)

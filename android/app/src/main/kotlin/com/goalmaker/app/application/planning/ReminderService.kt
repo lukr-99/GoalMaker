@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.planning.Snooze
 import java.time.LocalDate
@@ -27,6 +28,9 @@ class ReminderService(
     private val setRemindedUntil: (LocalDateTime) -> Unit,
     private val rituals: RitualRunList? = null,
     private val planTomorrowAt: () -> LocalTime? = { null },
+    private val weeklyReviewAt: () -> LocalTime? = { null },
+    private val weeklyReviewWeekday: () -> Int = { ReviewReminder.DEFAULT_WEEKDAY },
+    private val monthlyReviewAt: () -> LocalTime? = { null },
 ) {
     /**
      * What arrived since the last look, including anything missed while the device was off, with the
@@ -38,9 +42,11 @@ class ReminderService(
         val (all, byId) = read()
         val due = ReminderSchedule.due(all, byId, quietHours(), since, at)
         val planDay = rituals?.let { RitualReminder.due(planTomorrowAt(), dayStartHour(), ranPlanTomorrow(), since, at) }
+        val weekly = reviewDue(RitualRunList.WEEKLY_REVIEW, weeklyReviewAt(), since, at)
+        val monthly = reviewDue(RitualRunList.MONTHLY_REVIEW, monthlyReviewAt(), since, at)
         setRemindedUntil(at)
         arm(all, byId, at)
-        return ReminderLook(due, planDay)
+        return ReminderLook(due, planDay, weekly, monthly)
     }
 
     /** Which of the notifications on screen ([shown], by reminder id) have to go (docs/reminders.md). */
@@ -63,6 +69,16 @@ class ReminderService(
     /** "Not today" on the Plan tomorrow reminder: quiet for the rest of planning [day], on every device. */
     fun skipPlanTomorrow(day: LocalDate) {
         rituals?.record(RitualRunList.PLAN_TOMORROW, day, skipped = true)
+        rearm()
+    }
+
+    /** Whether the review reminder of [ritual] on screen for [day] has to go: the review ran, or the day moved on. */
+    fun reviewStale(ritual: String, day: LocalDate): Boolean =
+        ReviewReminder.stale(day, dayStartHour(), ran(ritual), now())
+
+    /** The review was written or put off on planning [day], so its reminder stays quiet that day everywhere. */
+    fun finishReview(ritual: String, day: LocalDate, skipped: Boolean = false) {
+        rituals?.record(ritual, day, skipped = skipped)
         rearm()
     }
 
@@ -114,13 +130,25 @@ class ReminderService(
     private fun read(): Pair<List<ReminderItem>, Map<String, TaskItem>> =
         reminders.all() to tasks.all().associateBy(TaskItem::id)
 
-    private fun ranPlanTomorrow(): Set<LocalDate> = rituals?.ran(RitualRunList.PLAN_TOMORROW).orEmpty()
+    private fun ranPlanTomorrow(): Set<LocalDate> = ran(RitualRunList.PLAN_TOMORROW)
+
+    private fun ran(ritual: String): Set<LocalDate> = rituals?.ran(ritual).orEmpty()
+
+    private fun reviewDue(ritual: String, time: LocalTime?, since: LocalDateTime, at: LocalDateTime): LocalDate? =
+        rituals?.let { ReviewReminder.due(kindOf(ritual), time, weeklyReviewWeekday(), dayStartHour(), ran(ritual), since, at) }
+
+    private fun reviewNext(ritual: String, time: LocalTime?, at: LocalDateTime): LocalDateTime? =
+        rituals?.let { ReviewReminder.next(kindOf(ritual), time, weeklyReviewWeekday(), dayStartHour(), ran(ritual), at) }
+
+    private fun kindOf(ritual: String) = if (ritual == RitualRunList.MONTHLY_REVIEW) "monthly" else "weekly"
 
     // One alarm for whichever comes first: a task's reminder or the evening Plan tomorrow reminder.
     private fun arm(all: List<ReminderItem>, byId: Map<String, TaskItem>, at: LocalDateTime) {
         val task = ReminderSchedule.next(all, byId, quietHours(), at)?.at
         val ritual = rituals?.let { RitualReminder.next(planTomorrowAt(), dayStartHour(), ranPlanTomorrow(), at) }
-        val next = listOfNotNull(task, ritual).minOrNull()
+        val weekly = reviewNext(RitualRunList.WEEKLY_REVIEW, weeklyReviewAt(), at)
+        val monthly = reviewNext(RitualRunList.MONTHLY_REVIEW, monthlyReviewAt(), at)
+        val next = listOfNotNull(task, ritual, weekly, monthly).minOrNull()
         if (next == null) scheduler.cancel() else scheduler.armAt(next)
     }
 }

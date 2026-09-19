@@ -27,6 +27,12 @@ public sealed record SettingsDocument
     /// <summary>The evening reminder's time; missing from older files reads as 20:00, null means off.</summary>
     public TimeOnly? PlanTomorrowReminder { get; init; } = RitualReminder.DefaultTime;
 
+    public TimeOnly? WeeklyReviewReminder { get; init; } = ReviewReminder.DefaultTime;
+
+    public int WeeklyReviewWeekday { get; init; } = ReviewReminder.DefaultWeekday;
+
+    public TimeOnly? MonthlyReviewReminder { get; init; } = ReviewReminder.DefaultTime;
+
     public DateTimeOffset? RemindedUntil { get; init; }
 
     public string? QuickAddHotkey { get; init; }

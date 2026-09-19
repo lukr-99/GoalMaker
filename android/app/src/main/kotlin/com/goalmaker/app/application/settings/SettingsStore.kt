@@ -31,6 +31,20 @@ interface SettingsStore {
 
     fun setPlanTomorrowReminder(time: LocalTime?)
 
+    /** When the weekly review reminder rings and on which weekday (1 Monday to 7 Sunday); null when off. */
+    val weeklyReviewReminder: StateFlow<LocalTime?>
+
+    val weeklyReviewWeekday: StateFlow<Int>
+
+    fun setWeeklyReviewReminder(time: LocalTime?)
+
+    fun setWeeklyReviewWeekday(weekday: Int)
+
+    /** When the monthly review reminder rings, on the first day of a month; null when off. */
+    val monthlyReviewReminder: StateFlow<LocalTime?>
+
+    fun setMonthlyReviewReminder(time: LocalTime?)
+
     /** When this device last looked at its reminders, so each one is shown once (docs/reminders.md). */
     fun remindedUntil(): Instant?
 

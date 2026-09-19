@@ -2,6 +2,7 @@ package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.contracts.ContractFiles
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.planning.Snooze
 import java.time.LocalDate
@@ -123,6 +124,32 @@ class ReminderRulesContractTest {
                 dateTime(case.getValue("now"))!!,
             )
             assertEquals(name(case), case.getValue("stale").jsonPrimitive.boolean, stale)
+        }
+    }
+
+    @Test
+    fun `every review reminder`() {
+        vectors.getValue("reviewReminders").jsonArray.map { it.jsonObject }.forEach { case ->
+            val kind = case.getValue("kind").jsonPrimitive.content
+            val time = case.getValue("time").let { if (it == JsonNull) null else LocalTime.parse(it.jsonPrimitive.content) }
+            val weekday = case.getValue("weekday").jsonPrimitive.int
+            val start = case.getValue("dayStartHour").jsonPrimitive.int
+            val ran = case.getValue("ran").jsonArray.map { LocalDate.parse(it.jsonPrimitive.content) }.toSet()
+            val now = dateTime(case.getValue("now"))!!
+            val due = ReviewReminder.due(kind, time, weekday, start, ran, dateTime(case.getValue("since"))!!, now)
+            val next = ReviewReminder.next(kind, time, weekday, start, ran, now)
+            assertEquals(name(case), date(case.getValue("due")) to dateTime(case.getValue("next")), due to next)
+        }
+    }
+
+    @Test
+    fun `every review period`() {
+        vectors.getValue("reviewPeriods").jsonArray.map { it.jsonObject }.forEach { case ->
+            assertEquals(
+                name(case),
+                date(case.getValue("start")),
+                ReviewReminder.periodStart(case.getValue("kind").jsonPrimitive.content, date(case.getValue("day"))!!),
+            )
         }
     }
 

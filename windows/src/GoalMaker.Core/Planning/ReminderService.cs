@@ -54,7 +54,9 @@ public sealed class ReminderService
         var planDay = rituals is null ? null : RitualReminder.Due(settings.PlanTomorrowReminder, settings.DayStartHour, RanPlanTomorrow(), since, now);
         settings.RemindedUntil = moment;
         Arm(all, byId, now);
-        return new ReminderLook(due, planDay);
+        var weekly = ReviewDue(RitualRunList.WeeklyReview, settings.WeeklyReviewReminder, since, now);
+        var monthly = ReviewDue(RitualRunList.MonthlyReview, settings.MonthlyReviewReminder, since, now);
+        return new ReminderLook(due, planDay, weekly, monthly);
     }
 
     /// <summary>Which of the notifications on screen (<paramref name="shown"/>, by reminder id) have to go.</summary>
@@ -71,6 +73,16 @@ public sealed class ReminderService
 
     /// <summary>Whether the Plan tomorrow reminder on screen for <paramref name="day"/> has to go: the ritual ran, or the day moved on.</summary>
     public bool PlanTomorrowStale(DateOnly day) => RitualReminder.Stale(day, settings.DayStartHour, RanPlanTomorrow(), Now);
+
+    /// <summary>Whether the review reminder of <paramref name="ritual"/> on screen for <paramref name="day"/> has to go.</summary>
+    public bool ReviewStale(string ritual, DateOnly day) => ReviewReminder.Stale(day, settings.DayStartHour, Ran(ritual), Now);
+
+    /// <summary>The review was written or put off on planning <paramref name="day"/>: its reminder stays quiet that day everywhere.</summary>
+    public void FinishReview(string ritual, DateOnly day, bool skipped = false)
+    {
+        rituals?.Record(ritual, day, skipped);
+        Rearm();
+    }
 
     /// <summary>The ritual ran to the end on planning <paramref name="day"/>, so its reminder stays quiet that day on every device.</summary>
     public void FinishPlanTomorrow(DateOnly day)
@@ -151,7 +163,19 @@ public sealed class ReminderService
     private (IReadOnlyList<ReminderItem> All, IReadOnlyDictionary<string, TaskItem> ById) Read() =>
         (reminders.All(), tasks.All().ToDictionary(task => task.Id));
 
-    private IReadOnlySet<DateOnly> RanPlanTomorrow() => rituals?.Ran(RitualRunList.PlanTomorrow) ?? new HashSet<DateOnly>();
+    private IReadOnlySet<DateOnly> RanPlanTomorrow() => Ran(RitualRunList.PlanTomorrow);
+
+    private IReadOnlySet<DateOnly> Ran(string ritual) => rituals?.Ran(ritual) ?? new HashSet<DateOnly>();
+
+    private static string KindOf(string ritual) => ritual == RitualRunList.MonthlyReview ? ReviewRules.Monthly : ReviewRules.Weekly;
+
+    private DateOnly? ReviewDue(string ritual, TimeOnly? time, DateTime since, DateTime now) => rituals is null
+        ? null
+        : ReviewReminder.Due(KindOf(ritual), time, settings.WeeklyReviewWeekday, settings.DayStartHour, Ran(ritual), since, now);
+
+    private DateTime? ReviewNext(string ritual, TimeOnly? time, DateTime now) => rituals is null
+        ? null
+        : ReviewReminder.Next(KindOf(ritual), time, settings.WeeklyReviewWeekday, settings.DayStartHour, Ran(ritual), now);
 
     // One timer for whichever comes first: a task's reminder or the evening Plan tomorrow reminder.
     private void Arm(IReadOnlyList<ReminderItem> all, IReadOnlyDictionary<string, TaskItem> byId, DateTime now)

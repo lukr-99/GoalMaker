@@ -1,6 +1,8 @@
 package com.goalmaker.app.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -47,6 +50,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
+import com.goalmaker.app.domain.planning.ReviewReminder
+import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.planning.PlanningDay
@@ -55,8 +60,10 @@ import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.ui.theme.AppTheme
+import java.time.DayOfWeek
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import kotlin.math.roundToInt
 
 @Composable
@@ -150,6 +157,22 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 PlanReminderRow(state.planTomorrowReminder, viewModel::setPlanTomorrowReminder)
+                ReviewReminderRow(
+                    title = stringResource(R.string.settings_weekly_review),
+                    hint = stringResource(R.string.settings_weekly_review_hint),
+                    time = state.weeklyReviewReminder,
+                    weekday = state.weeklyReviewWeekday,
+                    onTime = viewModel::setWeeklyReviewReminder,
+                    onWeekday = viewModel::setWeeklyReviewWeekday,
+                )
+                ReviewReminderRow(
+                    title = stringResource(R.string.settings_monthly_review),
+                    hint = stringResource(R.string.settings_monthly_review_hint),
+                    time = state.monthlyReviewReminder,
+                    weekday = null,
+                    onTime = viewModel::setMonthlyReviewReminder,
+                    onWeekday = {},
+                )
                 QuietHoursRow(state.quietHours, viewModel::setQuietHours)
                 OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
                 Text(
@@ -366,6 +389,50 @@ private fun PlanReminderRow(time: LocalTime?, onChange: (LocalTime?) -> Unit) {
             valueRange = 0f..47f,
             steps = 46,
         )
+    }
+}
+
+/**
+ * A review reminder (docs/reviews.md): on or off, the time in half hours, and for the weekly one the
+ * weekday it rings on. Switching it back on starts again at 18:00.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReviewReminderRow(
+    title: String,
+    hint: String,
+    time: LocalTime?,
+    weekday: Int?,
+    onTime: (LocalTime?) -> Unit,
+    onWeekday: (Int) -> Unit,
+) {
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    val locale = LocalConfiguration.current.locales[0]
+    SwitchRow(
+        title = title,
+        hint = if (time == null) hint else stringResource(R.string.settings_plan_reminder_on, formatter.format(time)),
+        checked = time != null,
+        onCheckedChange = { on -> onTime(if (on) ReviewReminder.DEFAULT_TIME else null) },
+    )
+    if (time != null) {
+        Slider(
+            value = (time.toSecondOfDay() / HALF_HOUR).toFloat(),
+            onValueChange = { onTime(LocalTime.ofSecondOfDay(it.roundToInt() * HALF_HOUR.toLong())) },
+            valueRange = 0f..47f,
+            steps = 46,
+        )
+        if (weekday != null) {
+            Label(stringResource(R.string.settings_weekly_review_day))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DayOfWeek.entries.forEach { day ->
+                    ChoiceChip(
+                        selected = weekday == day.value,
+                        onClick = { onWeekday(day.value) },
+                        label = day.getDisplayName(TextStyle.SHORT, locale),
+                    )
+                }
+            }
+        }
     }
 }
 

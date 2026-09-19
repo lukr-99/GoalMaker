@@ -6,6 +6,7 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.Appearance
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,7 +59,32 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
     }
 
     private val planTomorrow = MutableStateFlow(readPlanTomorrow())
+    private val weeklyReview = MutableStateFlow(readReviewTime(WEEKLY_REVIEW_AT))
+    private val weeklyReviewDay = MutableStateFlow(preferences.getInt(WEEKLY_REVIEW_DAY, ReviewReminder.DEFAULT_WEEKDAY))
+    private val monthlyReview = MutableStateFlow(readReviewTime(MONTHLY_REVIEW_AT))
     override val planTomorrowReminder: StateFlow<LocalTime?> = planTomorrow.asStateFlow()
+
+    override val weeklyReviewReminder: StateFlow<LocalTime?> = weeklyReview.asStateFlow()
+
+    override val weeklyReviewWeekday: StateFlow<Int> = weeklyReviewDay.asStateFlow()
+
+    override val monthlyReviewReminder: StateFlow<LocalTime?> = monthlyReview.asStateFlow()
+
+    override fun setWeeklyReviewReminder(time: LocalTime?) {
+        preferences.edit { putInt(WEEKLY_REVIEW_AT, time?.toSecondOfDay() ?: OFF) }
+        weeklyReview.value = time
+    }
+
+    override fun setWeeklyReviewWeekday(weekday: Int) {
+        val kept = weekday.coerceIn(1, 7)
+        preferences.edit { putInt(WEEKLY_REVIEW_DAY, kept) }
+        weeklyReviewDay.value = kept
+    }
+
+    override fun setMonthlyReviewReminder(time: LocalTime?) {
+        preferences.edit { putInt(MONTHLY_REVIEW_AT, time?.toSecondOfDay() ?: OFF) }
+        monthlyReview.value = time
+    }
 
     override fun setPlanTomorrowReminder(time: LocalTime?) {
         preferences.edit { putInt(PLAN_TOMORROW_AT, time?.toSecondOfDay() ?: OFF) }
@@ -96,6 +122,12 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         return QuietHours(LocalTime.ofSecondOfDay(start.toLong()), LocalTime.ofSecondOfDay(end.toLong()))
     }
 
+    private fun readReviewTime(key: String): LocalTime? {
+        if (!preferences.contains(key)) return ReviewReminder.DEFAULT_TIME
+        val seconds = preferences.getInt(key, OFF)
+        return if (seconds in 0 until SECONDS_PER_DAY) LocalTime.ofSecondOfDay(seconds.toLong()) else null
+    }
+
     private fun readPlanTomorrow(): LocalTime? {
         if (!preferences.contains(PLAN_TOMORROW_AT)) return RitualReminder.DEFAULT_TIME
         val seconds = preferences.getInt(PLAN_TOMORROW_AT, OFF)
@@ -121,6 +153,9 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val QUIET_END = "quiet_hours_end"
         const val REMINDED_UNTIL = "reminded_until"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
+        const val WEEKLY_REVIEW_AT = "weekly_review_reminder"
+        const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"
+        const val MONTHLY_REVIEW_AT = "monthly_review_reminder"
         const val OFF = -1
         const val SECONDS_PER_DAY = 86_400
         const val BACKEND_URL = "dev_backend_url"

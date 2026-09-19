@@ -54,6 +54,24 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { PlanTomorrowReminder = value });
     }
 
+    public TimeOnly? WeeklyReviewReminder
+    {
+        get => document.WeeklyReviewReminder;
+        set => Save(document with { WeeklyReviewReminder = value });
+    }
+
+    public int WeeklyReviewWeekday
+    {
+        get => document.WeeklyReviewWeekday;
+        set => Save(document with { WeeklyReviewWeekday = Math.Clamp(value, 1, 7) });
+    }
+
+    public TimeOnly? MonthlyReviewReminder
+    {
+        get => document.MonthlyReviewReminder;
+        set => Save(document with { MonthlyReviewReminder = value });
+    }
+
     public DateTimeOffset? RemindedUntil
     {
         get => document.RemindedUntil;

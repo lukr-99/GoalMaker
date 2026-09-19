@@ -21,6 +21,7 @@ public sealed class ToastReminderNotifications
 {
     private const string Group = "reminders";
     private const string PlanGroup = "plan";
+    private const string ReviewGroup = "review";
     private readonly string appId;
     private readonly IStrings strings;
 
@@ -75,6 +76,43 @@ public sealed class ToastReminderNotifications
             }
         };
         Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>
+    /// Shows the reminder to write a review, for the planning day it rang on. Clicking it or Review opens
+    /// the review; Not now keeps it quiet for the rest of the day on every device (docs/reviews.md).
+    /// </summary>
+    public void ShowReview(string ritual, DateOnly day, bool monthly)
+    {
+        var tag = ritual + "/" + day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var content = new WinRtXml.XmlDocument();
+        content.LoadXml(ReviewContent(tag, monthly).ToString(SaveOptions.DisableFormatting));
+        var toast = new ToastNotification(content) { Tag = tag, Group = ReviewGroup };
+        toast.Activated += (_, args) =>
+        {
+            if (ToastActivation.Parse((args as ToastActivatedEventArgs)?.Arguments) is { } activation)
+            {
+                Activated?.Invoke(this, activation);
+            }
+        };
+        Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>Takes a review reminder away.</summary>
+    public void ClearReview(string ritual, DateOnly day) =>
+        Try(() => ToastNotificationManager.History.Remove(ritual + "/" + day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), ReviewGroup, appId));
+
+    /// <summary>The review reminders on screen or in the notification centre, as their ritual and day.</summary>
+    public IReadOnlyList<(string Ritual, DateOnly Day)> ShownReviews()
+    {
+        IReadOnlyList<(string, DateOnly)> shown = [];
+        Try(() => shown = [.. ToastNotificationManager.History.GetHistory(appId)
+            .Where(toast => toast.Group == ReviewGroup)
+            .Select(toast => toast.Tag.Split('/'))
+            .Where(parts => parts.Length == 2
+                && DateOnly.TryParseExact(parts[1], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
+            .Select(parts => (parts[0], DateOnly.ParseExact(parts[1], "yyyy-MM-dd", CultureInfo.InvariantCulture)))]);
+        return shown;
     }
 
     /// <summary>Takes the evening reminder for <paramref name="day"/> away.</summary>
@@ -133,6 +171,27 @@ public sealed class ToastReminderNotifications
         Directory.CreateDirectory(Path.GetDirectoryName(iconPath)!);
         using var stream = File.Create(iconPath);
         encoder.Save(stream);
+    }
+
+    private XElement ReviewContent(string tag, bool monthly)
+    {
+        XElement Button(string label, ToastAction action) => new(
+            "action",
+            new XAttribute("content", strings.Get(label)),
+            new XAttribute("arguments", new ToastActivation(action, tag).Arguments),
+            new XAttribute("activationType", "foreground"));
+        return new XElement(
+            "toast",
+            new XAttribute("launch", new ToastActivation(ToastAction.Review, tag).Arguments),
+            new XAttribute("scenario", "reminder"),
+            new XElement(
+                "visual",
+                new XElement(
+                    "binding",
+                    new XAttribute("template", "ToastGeneric"),
+                    new XElement("text", strings.Get(monthly ? "Reviews.ReminderTitleMonthly" : "Reviews.ReminderTitleWeekly")),
+                    new XElement("text", strings.Get("Reviews.ReminderText")))),
+            new XElement("actions", Button("Reviews.ReminderStart", ToastAction.Review), Button("Reviews.ReminderSkip", ToastAction.SkipReview)));
     }
 
     private XElement PlanContent(string day)

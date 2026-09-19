@@ -537,6 +537,29 @@
 
     <!-- Reviews (docs/reviews.md) -->
     <string name="reviews_title">Reviews</string>
+    <string name="emoji_label">Emoji</string>
+    <string name="emoji_title">Pick an emoji</string>
+    <string name="emoji_pick">Pick an emoji</string>
+    <string name="emoji_change">Change it</string>
+    <string name="emoji_none">No emoji</string>
+    <string name="emoji_own">Or type your own</string>
+    <string name="emoji_use">Use it</string>
+    <string name="emoji_group_health">Body</string>
+    <string name="emoji_group_mind">Mind</string>
+    <string name="emoji_group_work">Work</string>
+    <string name="emoji_group_life">Life</string>
+    <string name="review_reminder_channel">Reviews</string>
+    <string name="review_reminder_channel_description">The weekly and monthly nudge to look back.</string>
+    <string name="review_reminder_title_weekly">Weekly review</string>
+    <string name="review_reminder_title_monthly">Monthly review</string>
+    <string name="review_reminder_text">A quarter of an hour to look back and set what comes next.</string>
+    <string name="review_reminder_start">Review</string>
+    <string name="review_reminder_skip">Not now</string>
+    <string name="settings_weekly_review">Weekly review reminder</string>
+    <string name="settings_weekly_review_hint">A nudge on the day you choose to look back on the week.</string>
+    <string name="settings_weekly_review_day">Day</string>
+    <string name="settings_monthly_review">Monthly review reminder</string>
+    <string name="settings_monthly_review_hint">A nudge on the first of the month to look back on the month just gone.</string>
     <string name="reviews_weekly">Weekly review</string>
     <string name="reviews_monthly">Monthly review</string>
     <string name="reviews_to_write">Write a review</string>

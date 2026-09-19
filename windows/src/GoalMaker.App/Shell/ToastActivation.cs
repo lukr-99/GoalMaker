@@ -17,6 +17,16 @@ public sealed record ToastActivation(ToastAction Action, string ReminderId, Snoo
             ? day
             : null;
 
+    /// <summary>A review reminder's click: its ritual, the planning day it rang on, and the period it reviews.</summary>
+    public (string Ritual, DateOnly Day) Review()
+    {
+        var parts = ReminderId.Split('/');
+        return parts.Length == 2
+            && DateOnly.TryParseExact(parts[1], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+                ? (parts[0], day)
+                : (string.Empty, DateOnly.MinValue);
+    }
+
     /// <summary>The arguments a toast or one of its buttons carries.</summary>
     public string Arguments => Snooze is { } option
         ? $"action={Action};reminder={ReminderId};snooze={option}"

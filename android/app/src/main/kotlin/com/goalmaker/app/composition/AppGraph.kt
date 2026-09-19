@@ -56,6 +56,7 @@ import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.planning.PromptLibrary
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.sync.SyncedTable
 import com.goalmaker.app.domain.sync.SyncedTableCatalog
 import com.goalmaker.app.domain.update.ReleasePlatform
@@ -209,12 +210,20 @@ class AppGraph(context: Context) {
         setRemindedUntil = { settings.setRemindedUntil(it.atZone(ZoneId.systemDefault()).toInstant()) },
         rituals = rituals,
         planTomorrowAt = { settings.planTomorrowReminder.value },
+        weeklyReviewAt = { settings.weeklyReviewReminder.value },
+        weeklyReviewWeekday = { settings.weeklyReviewWeekday.value },
+        monthlyReviewAt = { settings.monthlyReviewReminder.value },
     )
 
     private val planRequest = MutableStateFlow(false)
 
     /** True while the Plan tomorrow reminder asked for the ritual and it isn't on screen yet. */
     val planRequested: StateFlow<Boolean> = planRequest.asStateFlow()
+
+    private val reviewRequest = MutableStateFlow<Pair<String, LocalDate>?>(null)
+
+    /** The review a reminder asked for (its kind and period), until it is on screen (docs/reviews.md). */
+    val reviewRequested: StateFlow<Pair<String, LocalDate>?> = reviewRequest.asStateFlow()
 
     private val changeFeed = SupabaseChangeFeed(supabase, catalog, scope, sync::request)
     private val backgroundSync = WorkManagerSyncScheduler(appContext)
@@ -236,6 +245,9 @@ class AppGraph(context: Context) {
                 reminderNotifications.shownPlanTomorrow()
                     .filter(reminders::planTomorrowStale)
                     .forEach(reminderNotifications::clearPlanTomorrow)
+                reminderNotifications.shownReviews()
+                    .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
+                    .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
             }
         }
         scope.launch {
@@ -310,6 +322,26 @@ class AppGraph(context: Context) {
         planRequest.value = false
     }
 
+    /** The owner opened the app from a review reminder: the review opens and the reminders come down. */
+    fun openedForReview(kind: String, periodStart: LocalDate) {
+        reviewRequest.value = kind to periodStart
+        reminderNotifications.shownReviews().forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
+    }
+
+    /** The review is on screen, so the request is settled. */
+    fun reviewOpened() {
+        reviewRequest.value = null
+    }
+
+    /** A review was written on planning [day]: its reminder stays quiet that day on every device. */
+    fun reviewFinished(kind: String, day: LocalDate) {
+        val ritual = if (kind == "monthly") RitualRunList.MONTHLY_REVIEW else RitualRunList.WEEKLY_REVIEW
+        scope.launch(io) {
+            reminders.finishReview(ritual, day)
+            reminderNotifications.clearReview(ritual, day)
+        }
+    }
+
     /** The ritual ran to the end on planning [day]: its evening reminder stays quiet that day everywhere. */
     fun planTomorrowFinished(day: LocalDate) {
         scope.launch(io) {
@@ -328,6 +360,12 @@ class AppGraph(context: Context) {
             val look = reminders.catchUp()
             look.reminders.forEach(reminderNotifications::show)
             look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
+            look.weeklyReview?.let { day ->
+                reminderNotifications.showReview(RitualRunList.WEEKLY_REVIEW, day, "weekly", ReviewReminder.periodStart("weekly", day))
+            }
+            look.monthlyReview?.let { day ->
+                reminderNotifications.showReview(RitualRunList.MONTHLY_REVIEW, day, "monthly", ReviewReminder.periodStart("monthly", day))
+            }
         }
         if (visible) changeFeed.start()
         updateProfile()

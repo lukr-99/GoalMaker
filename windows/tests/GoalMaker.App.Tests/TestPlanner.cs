@@ -106,6 +106,12 @@ internal sealed class TestPlanner : IDisposable
 
         public TimeOnly? PlanTomorrowReminder { get; set; } = RitualReminder.DefaultTime;
 
+        public TimeOnly? WeeklyReviewReminder { get; set; } = ReviewReminder.DefaultTime;
+
+        public int WeeklyReviewWeekday { get; set; } = ReviewReminder.DefaultWeekday;
+
+        public TimeOnly? MonthlyReviewReminder { get; set; } = ReviewReminder.DefaultTime;
+
         public DateTimeOffset? RemindedUntil { get; set; }
 
         public string? QuickAddHotkey { get; set; }

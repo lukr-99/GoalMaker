@@ -47,7 +47,50 @@ class ReminderNotifications(private val context: Context) {
                 description = context.getString(R.string.plan_reminder_channel_description)
             },
         )
+        system.createNotificationChannel(
+            NotificationChannel(CHANNEL_REVIEW, context.getString(R.string.review_reminder_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = context.getString(R.string.review_reminder_channel_description)
+            },
+        )
     }
+
+    /**
+     * Shows the reminder to write the weekly or monthly review of the period [periodStart] begins.
+     * Tapping it or "Review" opens the review; "Not now" keeps it quiet for the rest of the day on
+     * every device (docs/reviews.md).
+     */
+    fun showReview(ritual: String, day: LocalDate, kind: String, periodStart: LocalDate) {
+        if (!manager.areNotificationsEnabled()) return
+        val monthly = kind == "monthly"
+        val notification = NotificationCompat.Builder(context, CHANNEL_REVIEW)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(context.getString(if (monthly) R.string.review_reminder_title_monthly else R.string.review_reminder_title_weekly))
+            .setContentText(context.getString(R.string.review_reminder_text))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(openReview(kind, periodStart))
+            .addAction(0, context.getString(R.string.review_reminder_start), openReview(kind, periodStart))
+            .addAction(0, context.getString(R.string.review_reminder_skip), skipReview(ritual, day))
+            .build()
+        try {
+            manager.notify(tagOf(ritual, day), REVIEW_ID, notification)
+        } catch (_: SecurityException) {
+            // Notifications aren't allowed yet; the review is still one tap away in the app.
+        }
+    }
+
+    /** Takes the review reminder of [ritual] for [day] away. */
+    fun clearReview(ritual: String, day: LocalDate) = manager.cancel(tagOf(ritual, day), REVIEW_ID)
+
+    /** The review reminders on screen now, as the ritual and the planning day they belong to. */
+    fun shownReviews(): List<Pair<String, LocalDate>> = manager.activeNotifications
+        .filter { it.id == REVIEW_ID }
+        .mapNotNull { notification ->
+            notification.tag?.split('/')?.takeIf { it.size == 2 }?.let { (ritual, day) ->
+                runCatching { ritual to LocalDate.parse(day) }.getOrNull()
+            }
+        }
 
     /**
      * Shows the evening reminder to plan tomorrow, for planning [day]. Tapping it or "Plan" opens the
@@ -139,6 +182,27 @@ class ReminderNotifications(private val context: Context) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
+    private fun openReview(kind: String, periodStart: LocalDate): PendingIntent = PendingIntent.getActivity(
+        context,
+        (REVIEW_ID.toString() + kind + periodStart).hashCode(),
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(ReminderAlarm.EXTRA_REVIEW_KIND, kind)
+            .putExtra(ReminderAlarm.EXTRA_REVIEW_PERIOD, periodStart.toString()),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    private fun skipReview(ritual: String, day: LocalDate): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        (ReminderAlarm.ACTION_SKIP_REVIEW + ritual + day).hashCode(),
+        ReminderAlarm.intent(context, ReminderAlarm.ACTION_SKIP_REVIEW)
+            .putExtra(ReminderAlarm.EXTRA_REVIEW_RITUAL, ritual)
+            .putExtra(ReminderAlarm.EXTRA_REVIEW_DAY, day.toString()),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    private fun tagOf(ritual: String, day: LocalDate) = "$ritual/$day"
+
     private fun skipPlan(day: LocalDate): PendingIntent = PendingIntent.getBroadcast(
         context,
         (ReminderAlarm.ACTION_SKIP_PLAN + day).hashCode(),
@@ -167,7 +231,9 @@ class ReminderNotifications(private val context: Context) {
         const val CHANNEL = "reminders"
         const val CHANNEL_IMPORTANT = "reminders_important"
         const val CHANNEL_PLAN = "plan_tomorrow"
+        const val CHANNEL_REVIEW = "reviews"
         const val ID = 4001
         const val PLAN_ID = 4002
+        const val REVIEW_ID = 4003
     }
 }

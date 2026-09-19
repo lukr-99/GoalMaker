@@ -477,6 +477,16 @@
     <!-- Reviews (docs/reviews.md) -->
     <sys:String x:Key="Nav.Reviews">Reviews</sys:String>
     <sys:String x:Key="Reviews.Title">Reviews</sys:String>
+    <sys:String x:Key="Reviews.ReminderTitleWeekly">Weekly review</sys:String>
+    <sys:String x:Key="Reviews.ReminderTitleMonthly">Monthly review</sys:String>
+    <sys:String x:Key="Reviews.ReminderText">A quarter of an hour to look back and set what comes next.</sys:String>
+    <sys:String x:Key="Reviews.ReminderStart">Review</sys:String>
+    <sys:String x:Key="Reviews.ReminderSkip">Not now</sys:String>
+    <sys:String x:Key="Settings.WeeklyReview">Weekly review reminder</sys:String>
+    <sys:String x:Key="Settings.WeeklyReviewHint">A nudge on the day you choose to look back on the week.</sys:String>
+    <sys:String x:Key="Settings.WeeklyReviewDay">Day</sys:String>
+    <sys:String x:Key="Settings.MonthlyReview">Monthly review reminder</sys:String>
+    <sys:String x:Key="Settings.MonthlyReviewHint">A nudge on the first of the month to look back on the month just gone.</sys:String>
     <sys:String x:Key="Reviews.Hint">A quarter of an hour at the end of a week or a month: what happened, what is left, and what comes next.</sys:String>
     <sys:String x:Key="Reviews.Weekly">Weekly review</sys:String>
     <sys:String x:Key="Reviews.Monthly">Monthly review</sys:String>

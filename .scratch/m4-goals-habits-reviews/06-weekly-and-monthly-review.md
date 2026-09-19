@@ -1,6 +1,6 @@
 # M4-06: The weekly and monthly review in both apps
 
-**Status:** in progress · **Milestone:** M4
+**Status:** done · **Milestone:** M4
 
 ## Scope
 - The guided review (spec, stories 59 to 61 and 64): look back (done tasks, the habit heatmap, goal
@@ -27,7 +27,13 @@
 - Tasks now count their moves (`tasks.moved_count`, Supabase 0012, replica 0007, PlanRules.moves pinned
   by the 'moves' section of vectors/plan.json), which is what the slipping-task prompt reads.
 
-## Still to do here
-- The weekly and monthly ritual reminders at times the owner chooses (story 55), like the evening one.
+## Notes (second half)
+- The review reminders ring on the weekday the owner picks (weekly) and on the first of a month
+  (monthly): `ReviewReminder` in Kotlin and C#, pinned by the 'reviewReminders' and 'reviewPeriods'
+  cases of vectors/reminders.json, with settings rows on both apps, a notification on Android and a
+  toast on Windows, each opening the review of the period just gone or keeping quiet for the day.
+- Habits and goals now pick their emoji from a palette instead of typing one (the owner asked).
+
+## Left for later
 - A nudge in January to set yearly goals (story 66).
-- Mood and energy charted over time (the review list shows the numbers today); M4-07 stats will carry it.
+- Mood and energy charted over time; M4-07 stats will carry it.

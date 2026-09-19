@@ -71,6 +71,7 @@ import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ConfettiBurst
+import com.goalmaker.app.ui.components.EmojiField
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.ScreenTitle
@@ -321,12 +322,7 @@ internal fun GoalDialog(
                     isError = refused && title.isBlank(),
                     singleLine = true,
                 )
-                OutlinedTextField(
-                    value = emoji,
-                    onValueChange = { emoji = it.take(16) },
-                    label = { Text(stringResource(R.string.goals_emoji)) },
-                    singleLine = true,
-                )
+                EmojiField(emoji, onChange = { emoji = it })
                 Label(stringResource(R.string.goals_horizon))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GoalHorizon.entries.forEach { choice ->

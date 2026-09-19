@@ -20,6 +20,14 @@ public interface ISettingsStore
     /// <summary>When the evening Plan tomorrow reminder rings (docs/reminders.md); 20:00 unless changed, null when off.</summary>
     TimeOnly? PlanTomorrowReminder { get; set; }
 
+    /// <summary>When the weekly review reminder rings and on which weekday (1 Monday to 7 Sunday); null when off.</summary>
+    TimeOnly? WeeklyReviewReminder { get; set; }
+
+    int WeeklyReviewWeekday { get; set; }
+
+    /// <summary>When the monthly review reminder rings, on the first day of a month; null when off.</summary>
+    TimeOnly? MonthlyReviewReminder { get; set; }
+
     /// <summary>When this device last looked at its reminders, so each one is shown once (docs/reminders.md).</summary>
     DateTimeOffset? RemindedUntil { get; set; }
 

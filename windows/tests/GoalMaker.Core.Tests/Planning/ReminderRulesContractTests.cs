@@ -155,6 +155,36 @@ public sealed class ReminderRulesContractTests
     }
 
     [Fact]
+    public void EveryReviewReminder()
+    {
+        foreach (var testCase in vectors.GetProperty("reviewReminders").EnumerateArray())
+        {
+            var kind = testCase.GetProperty("kind").GetString()!;
+            var time = Time(testCase.GetProperty("time"));
+            var weekday = testCase.GetProperty("weekday").GetInt32();
+            var start = testCase.GetProperty("dayStartHour").GetInt32();
+            var ran = Days(testCase.GetProperty("ran"));
+            var now = DateTimeOrNull(testCase.GetProperty("now"))!.Value;
+            var due = ReviewReminder.Due(kind, time, weekday, start, ran, DateTimeOrNull(testCase.GetProperty("since"))!.Value, now);
+            var next = ReviewReminder.Next(kind, time, weekday, start, ran, now);
+
+            Assert.True(
+                (Date(testCase.GetProperty("due")), DateTimeOrNull(testCase.GetProperty("next"))) == (due, next),
+                $"{Name(testCase)}: got {due} then {next}");
+        }
+    }
+
+    [Fact]
+    public void EveryReviewPeriod()
+    {
+        foreach (var testCase in vectors.GetProperty("reviewPeriods").EnumerateArray())
+        {
+            var start = ReviewReminder.PeriodStart(testCase.GetProperty("kind").GetString()!, Date(testCase.GetProperty("day"))!.Value);
+            Assert.True(Date(testCase.GetProperty("start")) == start, $"{Name(testCase)}: got {start}");
+        }
+    }
+
+    [Fact]
     public void EveryRitualRunId()
     {
         foreach (var testCase in vectors.GetProperty("ritualIds").EnumerateArray())

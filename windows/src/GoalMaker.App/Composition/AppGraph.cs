@@ -416,6 +416,16 @@ public sealed class AppGraph : IDisposable
             toasts.Show(reminder);
         }
 
+        if (look.WeeklyReview is { } weekly)
+        {
+            toasts.ShowReview(RitualRunList.WeeklyReview, weekly, monthly: false);
+        }
+
+        if (look.MonthlyReview is { } monthlyDay)
+        {
+            toasts.ShowReview(RitualRunList.MonthlyReview, monthlyDay, monthly: true);
+        }
+
         if (look.PlanTomorrow is { } day)
         {
             toasts.ShowPlanTomorrow(day);
@@ -428,6 +438,11 @@ public sealed class AppGraph : IDisposable
         foreach (var id in Reminders.Stale(toasts.Shown()))
         {
             toasts.Clear(id);
+        }
+
+        foreach (var (ritual, reviewDay) in toasts.ShownReviews().Where(shown => Reminders.ReviewStale(shown.Ritual, shown.Day)))
+        {
+            toasts.ClearReview(ritual, reviewDay);
         }
 
         foreach (var day in toasts.ShownPlanTomorrow().Where(Reminders.PlanTomorrowStale))
@@ -457,6 +472,28 @@ public sealed class AppGraph : IDisposable
             }
 
             toasts.ClearPlanTomorrow(planDay);
+            return;
+        }
+
+        if (activation.Action is ToastAction.Review or ToastAction.SkipReview)
+        {
+            var (ritual, day) = activation.Review();
+            if (ritual.Length > 0)
+            {
+                if (activation.Action == ToastAction.SkipReview)
+                {
+                    Reminders.FinishReview(ritual, day, skipped: true);
+                }
+                else
+                {
+                    var kind = ritual == RitualRunList.MonthlyReview ? ReviewRules.Monthly : ReviewRules.Weekly;
+                    OpenReview(kind, ReviewReminder.PeriodStart(kind, day));
+                    WindowRequested?.Invoke(this, AppPage.Review);
+                }
+
+                toasts.ClearReview(ritual, day);
+            }
+
             return;
         }
 

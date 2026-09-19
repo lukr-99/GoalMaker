@@ -222,6 +222,66 @@ public sealed partial class SettingsViewModel : ObservableObject
         ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
         : strings.Get("Settings.PlanReminderOff");
 
+    /// <summary>The weekdays the weekly review reminder can ring on, Monday first.</summary>
+    public IReadOnlyList<string> ReviewWeekdays { get; } =
+        [.. Enumerable.Range(0, 7).Select(day => CultureInfo.CurrentCulture.DateTimeFormat.DayNames[(day + 1) % 7])];
+
+    /// <summary>Whether the weekly review reminder rings (docs/reviews.md); switching it on again starts at 18:00.</summary>
+    public bool WeeklyReviewOn
+    {
+        get => settings.WeeklyReviewReminder is not null;
+        set => SetWeeklyReview(value ? settings.WeeklyReviewReminder ?? ReviewReminder.DefaultTime : null);
+    }
+
+    /// <summary>When it rings, as an index into <see cref="PlanReminderChoices"/>.</summary>
+    public int WeeklyReviewTime
+    {
+        get => settings.WeeklyReviewReminder is { } time ? (time.Hour * 2) + (time.Minute >= 30 ? 1 : 0) : ReviewReminder.DefaultTime.Hour * 2;
+        set
+        {
+            var half = Math.Clamp(value, 0, 47);
+            SetWeeklyReview(new TimeOnly(half / 2, half % 2 * 30));
+        }
+    }
+
+    /// <summary>The weekday it rings on, as an index into <see cref="ReviewWeekdays"/> (0 is Monday).</summary>
+    public int WeeklyReviewDay
+    {
+        get => Math.Clamp(settings.WeeklyReviewWeekday - 1, 0, 6);
+        set
+        {
+            settings.WeeklyReviewWeekday = Math.Clamp(value, 0, 6) + 1;
+            quietHoursChanged();
+            OnPropertyChanged(nameof(WeeklyReviewDay));
+            OnPropertyChanged(nameof(WeeklyReviewSummary));
+        }
+    }
+
+    public string WeeklyReviewSummary => settings.WeeklyReviewReminder is { } at
+        ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
+        : strings.Get("Settings.WeeklyReviewHint");
+
+    /// <summary>Whether the monthly review reminder rings, on the first day of a month.</summary>
+    public bool MonthlyReviewOn
+    {
+        get => settings.MonthlyReviewReminder is not null;
+        set => SetMonthlyReview(value ? settings.MonthlyReviewReminder ?? ReviewReminder.DefaultTime : null);
+    }
+
+    public int MonthlyReviewTime
+    {
+        get => settings.MonthlyReviewReminder is { } time ? (time.Hour * 2) + (time.Minute >= 30 ? 1 : 0) : ReviewReminder.DefaultTime.Hour * 2;
+        set
+        {
+            var half = Math.Clamp(value, 0, 47);
+            SetMonthlyReview(new TimeOnly(half / 2, half % 2 * 30));
+        }
+    }
+
+    public string MonthlyReviewSummary => settings.MonthlyReviewReminder is { } at
+        ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
+        : strings.Get("Settings.MonthlyReviewHint");
+
     /// <summary>What the quiet hours do, in words.</summary>
     public string QuietHoursSummary => settings.QuietHours.IsOff
         ? strings.Get("Settings.QuietHoursOff")
@@ -296,6 +356,35 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(PlanReminderOn));
         OnPropertyChanged(nameof(PlanReminderTime));
         OnPropertyChanged(nameof(PlanReminderSummary));
+        quietHoursChanged();
+    }
+
+    // The review reminders ring on their own days, so the timer is armed again.
+    private void SetWeeklyReview(TimeOnly? time)
+    {
+        if (time == settings.WeeklyReviewReminder)
+        {
+            return;
+        }
+
+        settings.WeeklyReviewReminder = time;
+        OnPropertyChanged(nameof(WeeklyReviewOn));
+        OnPropertyChanged(nameof(WeeklyReviewTime));
+        OnPropertyChanged(nameof(WeeklyReviewSummary));
+        quietHoursChanged();
+    }
+
+    private void SetMonthlyReview(TimeOnly? time)
+    {
+        if (time == settings.MonthlyReviewReminder)
+        {
+            return;
+        }
+
+        settings.MonthlyReviewReminder = time;
+        OnPropertyChanged(nameof(MonthlyReviewOn));
+        OnPropertyChanged(nameof(MonthlyReviewTime));
+        OnPropertyChanged(nameof(MonthlyReviewSummary));
         quietHoursChanged();
     }
 

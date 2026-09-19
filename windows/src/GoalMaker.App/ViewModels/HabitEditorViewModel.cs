@@ -87,9 +87,13 @@ public sealed partial class HabitEditorViewModel : ObservableObject
             day,
             CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7],
             () => Error = string.Empty))];
+        EmojiChoices = EmojiPalette.Choices(emoji => Emoji = Emoji == emoji ? string.Empty : emoji);
         Cadence = Cadences[0];
         Measure = Measures[0];
     }
+
+    /// <summary>The emoji to click instead of typing one (docs/habits.md).</summary>
+    public IReadOnlyList<EmojiChoiceViewModel> EmojiChoices { get; }
 
     public IReadOnlyList<ChoiceViewModel> Cadences { get; }
 

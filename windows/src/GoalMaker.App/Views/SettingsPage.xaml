@@ -150,6 +150,41 @@
                               SelectedIndex="{Binding PlanReminderTime}"
                               IsEnabled="{Binding PlanReminderOn}"
                               AutomationProperties.Name="{DynamicResource Settings.PlanReminderTime}" />
+                    <DockPanel Margin="0,20,0,8">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding WeeklyReviewOn}"
+                                         AutomationProperties.Name="{DynamicResource Settings.WeeklyReview}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings.WeeklyReview}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{Binding WeeklyReviewSummary}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <ComboBox MinWidth="140"
+                                  ItemsSource="{Binding PlanReminderChoices}"
+                                  SelectedIndex="{Binding WeeklyReviewTime}"
+                                  IsEnabled="{Binding WeeklyReviewOn}"
+                                  AutomationProperties.Name="{DynamicResource Settings.WeeklyReview}" />
+                        <ComboBox MinWidth="140"
+                                  Margin="12,0,0,0"
+                                  ItemsSource="{Binding ReviewWeekdays}"
+                                  SelectedIndex="{Binding WeeklyReviewDay}"
+                                  IsEnabled="{Binding WeeklyReviewOn}"
+                                  AutomationProperties.Name="{DynamicResource Settings.WeeklyReviewDay}" />
+                    </StackPanel>
+                    <DockPanel Margin="0,20,0,8">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding MonthlyReviewOn}"
+                                         AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings.MonthlyReview}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{Binding MonthlyReviewSummary}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <ComboBox MinWidth="140"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding PlanReminderChoices}"
+                              SelectedIndex="{Binding MonthlyReviewTime}"
+                              IsEnabled="{Binding MonthlyReviewOn}"
+                              AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
                     <StackPanel Orientation="Horizontal">
                         <ComboBox MinWidth="120"

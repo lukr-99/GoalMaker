@@ -16,6 +16,9 @@ data class SettingsUiState(
     val quietHours: QuietHours,
     /** When the evening Plan tomorrow reminder rings, or null when it's off. */
     val planTomorrowReminder: LocalTime?,
+    val weeklyReviewReminder: LocalTime?,
+    val weeklyReviewWeekday: Int,
+    val monthlyReviewReminder: LocalTime?,
     /** The theme in use: the chosen one, or the default when none is chosen or it's unknown. */
     val themeId: String,
     val themes: List<ThemeDefinition>,

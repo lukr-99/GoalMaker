@@ -1,101 +1,1304 @@
 {
   "schema": 1,
-  "description": "Reminders (docs/reminders.md). 'due': the local date and time a reminder fires, from the reminder ('fireAt', or 'offsetMinutes' before the task's planned time, plus its state and 'snoozedUntil') and its task; null means it never fires. 'quietHours': what the window [start, end) does to a reminder due at 'at'; a window whose start equals its end is off, and important reminders pass. 'snooze': where each snooze option lands, counted from 'now' with the day starting at 'dayStartHour'; 'tomorrowMorning' is 'morningHour' on the day after the current planning day. 'schedule': what a device does when it looks: 'due' lists the reminders that arrive after 'since' (the last look) up to and including 'now', soonest first; 'next' is the first one after 'now', the one the alarm is armed for. Reminders and tasks in 'schedule' and 'stale' leave out fields that keep their defaults (no offset, pending, not snoozed, not important; a task open with no day or time). 'stale': which of the notifications on screen ('shown', reminder ids) have to go at 'now' because their reminder was handled, snoozed, moved or deleted, or its task finished; sorted by id. 'ritual': the evening Plan tomorrow reminder at 'time' (null: off). For a planning day D it rings at the first moment of D whose clock reads 'time' (after midnight when 'time' is before the day's start), unless D is in 'ran' (done or skipped on any device); quiet hours don't move it. 'due' is today's planning day when its moment came after 'since' and up to 'now', never an earlier day; 'next' is the moment the alarm waits for. 'ritualStale': whether a reminder on screen for 'day' has to go, because it ran or the planning day moved on. 'ritualIds': a run's id is a UUID version 5 of '<owner, lower case>/<ritual>/<day>' in 'runNamespace'.",
+  "description": "Reminders (docs/reminders.md). 'due': the local date and time a reminder fires, from the reminder ('fireAt', or 'offsetMinutes' before the task's planned time, plus its state and 'snoozedUntil') and its task; null means it never fires. 'quietHours': what the window [start, end) does to a reminder due at 'at'; a window whose start equals its end is off, and important reminders pass. 'snooze': where each snooze option lands, counted from 'now' with the day starting at 'dayStartHour'; 'tomorrowMorning' is 'morningHour' on the day after the current planning day. 'schedule': what a device does when it looks: 'due' lists the reminders that arrive after 'since' (the last look) up to and including 'now', soonest first; 'next' is the first one after 'now', the one the alarm is armed for. Reminders and tasks in 'schedule' and 'stale' leave out fields that keep their defaults (no offset, pending, not snoozed, not important; a task open with no day or time). 'stale': which of the notifications on screen ('shown', reminder ids) have to go at 'now' because their reminder was handled, snoozed, moved or deleted, or its task finished; sorted by id. 'ritual': the evening Plan tomorrow reminder at 'time' (null: off). For a planning day D it rings at the first moment of D whose clock reads 'time' (after midnight when 'time' is before the day's start), unless D is in 'ran' (done or skipped on any device); quiet hours don't move it. 'due' is today's planning day when its moment came after 'since' and up to 'now', never an earlier day; 'next' is the moment the alarm waits for. 'ritualStale': whether a reminder on screen for 'day' has to go, because it ran or the planning day moved on. 'ritualIds': a run's id is a UUID version 5 of '<owner, lower case>/<ritual>/<day>' in 'runNamespace'. 'reviewReminders': the review reminders (docs/reviews.md): a weekly one rings on the owner's 'weekday' (1 Monday to 7 Sunday), a monthly one on the first day of a month, at 'time' on the planning day, once per day, and never on a day already in 'ran'; 'due' is the planning day to show now and 'next' the moment the alarm waits for, as in 'ritual'. 'reviewPeriods': the period a reminder on 'day' looks back on: the week that is ending when it falls on a Saturday or Sunday, the week just gone earlier in the week, and the month just gone for a monthly reminder.",
   "morningHour": 8,
   "runNamespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
   "due": [
-    { "name": "a fixed time on an open task", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T17:00" },
-    { "name": "fifteen minutes before the task", "fireAt": null, "offsetMinutes": -15, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T16:45" },
-    { "name": "no offset at all is the task's own time", "fireAt": null, "offsetMinutes": 0, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T17:00" },
-    { "name": "an offset that reaches the day before", "fireAt": null, "offsetMinutes": -30, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-19", "time": "00:10", "status": "open", "deleted": false }, "due": "2026-09-18T23:40" },
-    { "name": "an offset of a whole day", "fireAt": null, "offsetMinutes": -1440, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-19", "time": "09:00", "status": "open", "deleted": false }, "due": "2026-09-18T09:00" },
-    { "name": "an offset across the new year", "fireAt": null, "offsetMinutes": -30, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2027-01-01", "time": "00:15", "status": "open", "deleted": false }, "due": "2026-12-31T23:45" },
-    { "name": "a relative reminder needs the task's time", "fireAt": null, "offsetMinutes": -15, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": null, "status": "open", "deleted": false }, "due": null },
-    { "name": "a relative reminder needs the task's day", "fireAt": null, "offsetMinutes": -15, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": null, "time": "17:00", "status": "open", "deleted": false }, "due": null },
-    { "name": "a fixed reminder ignores the task's plan", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": null, "time": null, "status": "open", "deleted": false }, "due": "2026-09-18T17:00" },
-    { "name": "neither a time nor an offset", "fireAt": null, "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": null },
-    { "name": "a done task has nothing to remind about", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "done", "deleted": false }, "due": null },
-    { "name": "a dropped task", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "dropped", "deleted": false }, "due": null },
-    { "name": "a deleted task", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": true }, "due": null },
-    { "name": "a deleted reminder", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": true, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": null },
-    { "name": "dismissed from a notification", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "dismissed", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": null },
-    { "name": "handled from a notification", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "done", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": null },
-    { "name": "snoozed until later", "fireAt": null, "offsetMinutes": -15, "state": "snoozed", "snoozedUntil": "2026-09-18T18:00", "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T18:00" },
-    { "name": "a snooze beats the reminder's own time", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "snoozed", "snoozedUntil": "2026-09-18T18:30", "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T18:30" },
-    { "name": "snoozed without a time to come back at", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "snoozed", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": null }
+    {
+      "name": "a fixed time on an open task",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T17:00"
+    },
+    {
+      "name": "fifteen minutes before the task",
+      "fireAt": null,
+      "offsetMinutes": -15,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T16:45"
+    },
+    {
+      "name": "no offset at all is the task's own time",
+      "fireAt": null,
+      "offsetMinutes": 0,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T17:00"
+    },
+    {
+      "name": "an offset that reaches the day before",
+      "fireAt": null,
+      "offsetMinutes": -30,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-19",
+        "time": "00:10",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T23:40"
+    },
+    {
+      "name": "an offset of a whole day",
+      "fireAt": null,
+      "offsetMinutes": -1440,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-19",
+        "time": "09:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T09:00"
+    },
+    {
+      "name": "an offset across the new year",
+      "fireAt": null,
+      "offsetMinutes": -30,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2027-01-01",
+        "time": "00:15",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-12-31T23:45"
+    },
+    {
+      "name": "a relative reminder needs the task's time",
+      "fireAt": null,
+      "offsetMinutes": -15,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": null,
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "a relative reminder needs the task's day",
+      "fireAt": null,
+      "offsetMinutes": -15,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": null,
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "a fixed reminder ignores the task's plan",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": null,
+        "time": null,
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T17:00"
+    },
+    {
+      "name": "neither a time nor an offset",
+      "fireAt": null,
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "a done task has nothing to remind about",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "done",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "a dropped task",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "dropped",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "a deleted task",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": true
+      },
+      "due": null
+    },
+    {
+      "name": "a deleted reminder",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "pending",
+      "snoozedUntil": null,
+      "reminderDeleted": true,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "dismissed from a notification",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "dismissed",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "handled from a notification",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "done",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    },
+    {
+      "name": "snoozed until later",
+      "fireAt": null,
+      "offsetMinutes": -15,
+      "state": "snoozed",
+      "snoozedUntil": "2026-09-18T18:00",
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T18:00"
+    },
+    {
+      "name": "a snooze beats the reminder's own time",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "snoozed",
+      "snoozedUntil": "2026-09-18T18:30",
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": "2026-09-18T18:30"
+    },
+    {
+      "name": "snoozed without a time to come back at",
+      "fireAt": "2026-09-18T17:00",
+      "offsetMinutes": null,
+      "state": "snoozed",
+      "snoozedUntil": null,
+      "reminderDeleted": false,
+      "task": {
+        "planned": "2026-09-18",
+        "time": "17:00",
+        "status": "open",
+        "deleted": false
+      },
+      "due": null
+    }
   ],
   "quietHours": [
-    { "name": "the night holds a reminder to the morning", "start": "22:00", "end": "07:00", "at": "2026-09-18T23:30", "important": false, "fires": "2026-09-19T07:00" },
-    { "name": "before dawn, held to the end the same day", "start": "22:00", "end": "07:00", "at": "2026-09-18T06:00", "important": false, "fires": "2026-09-18T07:00" },
-    { "name": "a minute before quiet hours", "start": "22:00", "end": "07:00", "at": "2026-09-18T21:59", "important": false, "fires": "2026-09-18T21:59" },
-    { "name": "the start counts as inside", "start": "22:00", "end": "07:00", "at": "2026-09-18T22:00", "important": false, "fires": "2026-09-19T07:00" },
-    { "name": "the end counts as outside", "start": "22:00", "end": "07:00", "at": "2026-09-18T07:00", "important": false, "fires": "2026-09-18T07:00" },
-    { "name": "important reminders pass", "start": "22:00", "end": "07:00", "at": "2026-09-18T23:30", "important": true, "fires": "2026-09-18T23:30" },
-    { "name": "a window inside one day", "start": "13:00", "end": "14:00", "at": "2026-09-18T13:30", "important": false, "fires": "2026-09-18T14:00" },
-    { "name": "outside a window inside one day", "start": "13:00", "end": "14:00", "at": "2026-09-18T12:00", "important": false, "fires": "2026-09-18T12:00" },
-    { "name": "quiet hours switched off", "start": "00:00", "end": "00:00", "at": "2026-09-18T23:30", "important": false, "fires": "2026-09-18T23:30" },
-    { "name": "held across the end of a month", "start": "22:00", "end": "07:00", "at": "2026-09-30T23:30", "important": false, "fires": "2026-10-01T07:00" },
-    { "name": "held across the end of a year", "start": "22:00", "end": "07:00", "at": "2026-12-31T23:30", "important": false, "fires": "2027-01-01T07:00" }
+    {
+      "name": "the night holds a reminder to the morning",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-18T23:30",
+      "important": false,
+      "fires": "2026-09-19T07:00"
+    },
+    {
+      "name": "before dawn, held to the end the same day",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-18T06:00",
+      "important": false,
+      "fires": "2026-09-18T07:00"
+    },
+    {
+      "name": "a minute before quiet hours",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-18T21:59",
+      "important": false,
+      "fires": "2026-09-18T21:59"
+    },
+    {
+      "name": "the start counts as inside",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-18T22:00",
+      "important": false,
+      "fires": "2026-09-19T07:00"
+    },
+    {
+      "name": "the end counts as outside",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-18T07:00",
+      "important": false,
+      "fires": "2026-09-18T07:00"
+    },
+    {
+      "name": "important reminders pass",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-18T23:30",
+      "important": true,
+      "fires": "2026-09-18T23:30"
+    },
+    {
+      "name": "a window inside one day",
+      "start": "13:00",
+      "end": "14:00",
+      "at": "2026-09-18T13:30",
+      "important": false,
+      "fires": "2026-09-18T14:00"
+    },
+    {
+      "name": "outside a window inside one day",
+      "start": "13:00",
+      "end": "14:00",
+      "at": "2026-09-18T12:00",
+      "important": false,
+      "fires": "2026-09-18T12:00"
+    },
+    {
+      "name": "quiet hours switched off",
+      "start": "00:00",
+      "end": "00:00",
+      "at": "2026-09-18T23:30",
+      "important": false,
+      "fires": "2026-09-18T23:30"
+    },
+    {
+      "name": "held across the end of a month",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-09-30T23:30",
+      "important": false,
+      "fires": "2026-10-01T07:00"
+    },
+    {
+      "name": "held across the end of a year",
+      "start": "22:00",
+      "end": "07:00",
+      "at": "2026-12-31T23:30",
+      "important": false,
+      "fires": "2027-01-01T07:00"
+    }
   ],
   "snooze": [
-    { "name": "ten minutes", "now": "2026-09-18T10:00", "dayStartHour": 4, "option": "tenMinutes", "at": "2026-09-18T10:10" },
-    { "name": "an hour", "now": "2026-09-18T10:00", "dayStartHour": 4, "option": "oneHour", "at": "2026-09-18T11:00" },
-    { "name": "ten minutes across midnight", "now": "2026-09-18T23:55", "dayStartHour": 4, "option": "tenMinutes", "at": "2026-09-19T00:05" },
-    { "name": "an hour across midnight", "now": "2026-09-18T23:30", "dayStartHour": 4, "option": "oneHour", "at": "2026-09-19T00:30" },
-    { "name": "tomorrow morning", "now": "2026-09-18T10:00", "dayStartHour": 4, "option": "tomorrowMorning", "at": "2026-09-19T08:00" },
-    { "name": "after midnight, the planning day has not turned yet", "now": "2026-09-19T01:30", "dayStartHour": 4, "option": "tomorrowMorning", "at": "2026-09-19T08:00" },
-    { "name": "a minute before the day starts", "now": "2026-09-18T03:59", "dayStartHour": 4, "option": "tomorrowMorning", "at": "2026-09-18T08:00" },
-    { "name": "the minute the day starts", "now": "2026-09-18T04:00", "dayStartHour": 4, "option": "tomorrowMorning", "at": "2026-09-19T08:00" },
-    { "name": "a day start of midnight never shifts the day", "now": "2026-09-19T01:30", "dayStartHour": 0, "option": "tomorrowMorning", "at": "2026-09-20T08:00" },
-    { "name": "morning on the first of the next month", "now": "2026-09-30T10:00", "dayStartHour": 4, "option": "tomorrowMorning", "at": "2026-10-01T08:00" }
+    {
+      "name": "ten minutes",
+      "now": "2026-09-18T10:00",
+      "dayStartHour": 4,
+      "option": "tenMinutes",
+      "at": "2026-09-18T10:10"
+    },
+    {
+      "name": "an hour",
+      "now": "2026-09-18T10:00",
+      "dayStartHour": 4,
+      "option": "oneHour",
+      "at": "2026-09-18T11:00"
+    },
+    {
+      "name": "ten minutes across midnight",
+      "now": "2026-09-18T23:55",
+      "dayStartHour": 4,
+      "option": "tenMinutes",
+      "at": "2026-09-19T00:05"
+    },
+    {
+      "name": "an hour across midnight",
+      "now": "2026-09-18T23:30",
+      "dayStartHour": 4,
+      "option": "oneHour",
+      "at": "2026-09-19T00:30"
+    },
+    {
+      "name": "tomorrow morning",
+      "now": "2026-09-18T10:00",
+      "dayStartHour": 4,
+      "option": "tomorrowMorning",
+      "at": "2026-09-19T08:00"
+    },
+    {
+      "name": "after midnight, the planning day has not turned yet",
+      "now": "2026-09-19T01:30",
+      "dayStartHour": 4,
+      "option": "tomorrowMorning",
+      "at": "2026-09-19T08:00"
+    },
+    {
+      "name": "a minute before the day starts",
+      "now": "2026-09-18T03:59",
+      "dayStartHour": 4,
+      "option": "tomorrowMorning",
+      "at": "2026-09-18T08:00"
+    },
+    {
+      "name": "the minute the day starts",
+      "now": "2026-09-18T04:00",
+      "dayStartHour": 4,
+      "option": "tomorrowMorning",
+      "at": "2026-09-19T08:00"
+    },
+    {
+      "name": "a day start of midnight never shifts the day",
+      "now": "2026-09-19T01:30",
+      "dayStartHour": 0,
+      "option": "tomorrowMorning",
+      "at": "2026-09-20T08:00"
+    },
+    {
+      "name": "morning on the first of the next month",
+      "now": "2026-09-30T10:00",
+      "dayStartHour": 4,
+      "option": "tomorrowMorning",
+      "at": "2026-10-01T08:00"
+    }
   ],
   "schedule": [
-    { "name": "shows what came due since the last look and arms the next", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:30" }, { "id": "b", "task": "t", "fireAt": "2026-09-18T09:00" }, { "id": "c", "task": "t", "fireAt": "2026-09-18T10:00" }], "due": ["a", "b"], "next": { "id": "c", "at": "2026-09-18T10:00" } },
-    { "name": "a reminder shown at the last look is not shown again", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00" }], "due": [], "next": null },
-    { "name": "everything missed while the device was off", "quietHours": null, "since": "2026-09-17T18:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "b", "task": "t", "fireAt": "2026-09-18T07:00" }, { "id": "a", "task": "t", "fireAt": "2026-09-17T20:00" }], "due": ["a", "b"], "next": null },
-    { "name": "ties settle by id", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T08:30", "tasks": [{ "id": "t" }], "reminders": [{ "id": "b", "task": "t", "fireAt": "2026-09-18T09:00" }, { "id": "a", "task": "t", "fireAt": "2026-09-18T09:00" }], "due": [], "next": { "id": "a", "at": "2026-09-18T09:00" } },
-    { "name": "a reminder before the task's time", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t", "planned": "2026-09-18", "time": "10:00" }], "reminders": [{ "id": "a", "task": "t", "offsetMinutes": -15 }], "due": [], "next": { "id": "a", "at": "2026-09-18T09:45" } },
-    { "name": "quiet hours move the next alarm to the morning", "quietHours": { "start": "22:00", "end": "07:00" }, "since": "2026-09-18T20:00", "now": "2026-09-18T21:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T23:30" }], "due": [], "next": { "id": "a", "at": "2026-09-19T07:00" } },
-    { "name": "an important reminder keeps its place in the night", "quietHours": { "start": "22:00", "end": "07:00" }, "since": "2026-09-18T20:00", "now": "2026-09-18T21:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T23:30", "important": true }], "due": [], "next": { "id": "a", "at": "2026-09-18T23:30" } },
-    { "name": "holding one back can put another first", "quietHours": { "start": "22:00", "end": "07:00" }, "since": "2026-09-18T20:00", "now": "2026-09-18T21:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "night", "task": "t", "fireAt": "2026-09-18T23:30" }, { "id": "morning", "task": "t", "fireAt": "2026-09-19T06:00", "important": true }], "due": [], "next": { "id": "morning", "at": "2026-09-19T06:00" } },
-    { "name": "held back through the night, shown in the morning", "quietHours": { "start": "22:00", "end": "07:00" }, "since": "2026-09-18T21:00", "now": "2026-09-19T07:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T23:30" }], "due": ["a"], "next": null },
-    { "name": "a snoozed reminder comes back at its snooze", "quietHours": null, "since": "2026-09-18T08:10", "now": "2026-09-18T09:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00", "state": "snoozed", "snoozedUntil": "2026-09-18T09:30" }], "due": [], "next": { "id": "a", "at": "2026-09-18T09:30" } },
-    { "name": "a handled reminder is neither shown nor armed", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:30", "state": "done" }, { "id": "b", "task": "t", "fireAt": "2026-09-18T10:00", "state": "dismissed" }], "due": [], "next": null },
-    { "name": "a reminder whose task is gone is skipped", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "missing", "fireAt": "2026-09-18T08:30" }], "due": [], "next": null },
-    { "name": "a task finished elsewhere takes its reminders with it", "quietHours": null, "since": "2026-09-18T08:00", "now": "2026-09-18T09:00", "tasks": [{ "id": "t", "status": "done" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:30" }, { "id": "b", "task": "t", "fireAt": "2026-09-18T10:00" }], "due": [], "next": null }
+    {
+      "name": "shows what came due since the last look and arms the next",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:30"
+        },
+        {
+          "id": "b",
+          "task": "t",
+          "fireAt": "2026-09-18T09:00"
+        },
+        {
+          "id": "c",
+          "task": "t",
+          "fireAt": "2026-09-18T10:00"
+        }
+      ],
+      "due": [
+        "a",
+        "b"
+      ],
+      "next": {
+        "id": "c",
+        "at": "2026-09-18T10:00"
+      }
+    },
+    {
+      "name": "a reminder shown at the last look is not shown again",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00"
+        }
+      ],
+      "due": [],
+      "next": null
+    },
+    {
+      "name": "everything missed while the device was off",
+      "quietHours": null,
+      "since": "2026-09-17T18:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "b",
+          "task": "t",
+          "fireAt": "2026-09-18T07:00"
+        },
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-17T20:00"
+        }
+      ],
+      "due": [
+        "a",
+        "b"
+      ],
+      "next": null
+    },
+    {
+      "name": "ties settle by id",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T08:30",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "b",
+          "task": "t",
+          "fireAt": "2026-09-18T09:00"
+        },
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T09:00"
+        }
+      ],
+      "due": [],
+      "next": {
+        "id": "a",
+        "at": "2026-09-18T09:00"
+      }
+    },
+    {
+      "name": "a reminder before the task's time",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t",
+          "planned": "2026-09-18",
+          "time": "10:00"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "offsetMinutes": -15
+        }
+      ],
+      "due": [],
+      "next": {
+        "id": "a",
+        "at": "2026-09-18T09:45"
+      }
+    },
+    {
+      "name": "quiet hours move the next alarm to the morning",
+      "quietHours": {
+        "start": "22:00",
+        "end": "07:00"
+      },
+      "since": "2026-09-18T20:00",
+      "now": "2026-09-18T21:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T23:30"
+        }
+      ],
+      "due": [],
+      "next": {
+        "id": "a",
+        "at": "2026-09-19T07:00"
+      }
+    },
+    {
+      "name": "an important reminder keeps its place in the night",
+      "quietHours": {
+        "start": "22:00",
+        "end": "07:00"
+      },
+      "since": "2026-09-18T20:00",
+      "now": "2026-09-18T21:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T23:30",
+          "important": true
+        }
+      ],
+      "due": [],
+      "next": {
+        "id": "a",
+        "at": "2026-09-18T23:30"
+      }
+    },
+    {
+      "name": "holding one back can put another first",
+      "quietHours": {
+        "start": "22:00",
+        "end": "07:00"
+      },
+      "since": "2026-09-18T20:00",
+      "now": "2026-09-18T21:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "night",
+          "task": "t",
+          "fireAt": "2026-09-18T23:30"
+        },
+        {
+          "id": "morning",
+          "task": "t",
+          "fireAt": "2026-09-19T06:00",
+          "important": true
+        }
+      ],
+      "due": [],
+      "next": {
+        "id": "morning",
+        "at": "2026-09-19T06:00"
+      }
+    },
+    {
+      "name": "held back through the night, shown in the morning",
+      "quietHours": {
+        "start": "22:00",
+        "end": "07:00"
+      },
+      "since": "2026-09-18T21:00",
+      "now": "2026-09-19T07:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T23:30"
+        }
+      ],
+      "due": [
+        "a"
+      ],
+      "next": null
+    },
+    {
+      "name": "a snoozed reminder comes back at its snooze",
+      "quietHours": null,
+      "since": "2026-09-18T08:10",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00",
+          "state": "snoozed",
+          "snoozedUntil": "2026-09-18T09:30"
+        }
+      ],
+      "due": [],
+      "next": {
+        "id": "a",
+        "at": "2026-09-18T09:30"
+      }
+    },
+    {
+      "name": "a handled reminder is neither shown nor armed",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:30",
+          "state": "done"
+        },
+        {
+          "id": "b",
+          "task": "t",
+          "fireAt": "2026-09-18T10:00",
+          "state": "dismissed"
+        }
+      ],
+      "due": [],
+      "next": null
+    },
+    {
+      "name": "a reminder whose task is gone is skipped",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "missing",
+          "fireAt": "2026-09-18T08:30"
+        }
+      ],
+      "due": [],
+      "next": null
+    },
+    {
+      "name": "a task finished elsewhere takes its reminders with it",
+      "quietHours": null,
+      "since": "2026-09-18T08:00",
+      "now": "2026-09-18T09:00",
+      "tasks": [
+        {
+          "id": "t",
+          "status": "done"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:30"
+        },
+        {
+          "id": "b",
+          "task": "t",
+          "fireAt": "2026-09-18T10:00"
+        }
+      ],
+      "due": [],
+      "next": null
+    }
   ],
   "stale": [
-    { "name": "still due: it stays", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00" }], "clear": [] },
-    { "name": "done on the other device", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00", "state": "done" }], "clear": ["a"] },
-    { "name": "dismissed on the other device", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00", "state": "dismissed" }], "clear": ["a"] },
-    { "name": "snoozed on the other device", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00", "state": "snoozed", "snoozedUntil": "2026-09-18T10:00" }], "clear": ["a"] },
-    { "name": "a snooze that came round again stays", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00", "state": "snoozed", "snoozedUntil": "2026-09-18T08:30" }], "clear": [] },
-    { "name": "its task was finished", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t", "status": "done" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00" }], "clear": ["a"] },
-    { "name": "the task moved later, so the reminder did too", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t", "planned": "2026-09-18", "time": "12:00" }], "reminders": [{ "id": "a", "task": "t", "offsetMinutes": -15 }], "clear": ["a"] },
-    { "name": "a reminder deleted or never known", "now": "2026-09-18T09:00", "shown": ["z", "a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00" }], "clear": ["z"] }
+    {
+      "name": "still due: it stays",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00"
+        }
+      ],
+      "clear": []
+    },
+    {
+      "name": "done on the other device",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00",
+          "state": "done"
+        }
+      ],
+      "clear": [
+        "a"
+      ]
+    },
+    {
+      "name": "dismissed on the other device",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00",
+          "state": "dismissed"
+        }
+      ],
+      "clear": [
+        "a"
+      ]
+    },
+    {
+      "name": "snoozed on the other device",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00",
+          "state": "snoozed",
+          "snoozedUntil": "2026-09-18T10:00"
+        }
+      ],
+      "clear": [
+        "a"
+      ]
+    },
+    {
+      "name": "a snooze that came round again stays",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00",
+          "state": "snoozed",
+          "snoozedUntil": "2026-09-18T08:30"
+        }
+      ],
+      "clear": []
+    },
+    {
+      "name": "its task was finished",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t",
+          "status": "done"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00"
+        }
+      ],
+      "clear": [
+        "a"
+      ]
+    },
+    {
+      "name": "the task moved later, so the reminder did too",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t",
+          "planned": "2026-09-18",
+          "time": "12:00"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "offsetMinutes": -15
+        }
+      ],
+      "clear": [
+        "a"
+      ]
+    },
+    {
+      "name": "a reminder deleted or never known",
+      "now": "2026-09-18T09:00",
+      "shown": [
+        "z",
+        "a"
+      ],
+      "tasks": [
+        {
+          "id": "t"
+        }
+      ],
+      "reminders": [
+        {
+          "id": "a",
+          "task": "t",
+          "fireAt": "2026-09-18T08:00"
+        }
+      ],
+      "clear": [
+        "z"
+      ]
+    }
   ],
   "ritual": [
-    {"name": "before its time, the alarm waits for it", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-18T10:00", "now": "2026-09-18T12:00", "due": null, "next": "2026-09-18T20:00"},
-    {"name": "at its time it rings, and tomorrow's is next", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-18T19:00", "now": "2026-09-18T20:00", "due": "2026-09-18", "next": "2026-09-19T20:00"},
-    {"name": "already done today, so quiet until tomorrow", "time": "20:00", "dayStartHour": 4, "ran": ["2026-09-18"], "since": "2026-09-18T19:00", "now": "2026-09-18T20:05", "due": null, "next": "2026-09-19T20:00"},
-    {"name": "done on the other device before its time", "time": "20:00", "dayStartHour": 4, "ran": ["2026-09-18"], "since": "2026-09-18T10:00", "now": "2026-09-18T12:00", "due": null, "next": "2026-09-19T20:00"},
-    {"name": "after days away, only today's counts", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-15T12:00", "now": "2026-09-18T21:00", "due": "2026-09-18", "next": "2026-09-19T20:00"},
-    {"name": "missed yesterday's, and the day has moved on", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-17T12:00", "now": "2026-09-18T10:00", "due": null, "next": "2026-09-18T20:00"},
-    {"name": "a time after midnight belongs to the planning day before", "time": "00:30", "dayStartHour": 4, "ran": [], "since": "2026-09-18T22:00", "now": "2026-09-18T23:00", "due": null, "next": "2026-09-19T00:30"},
-    {"name": "after midnight, before the day starts", "time": "00:30", "dayStartHour": 4, "ran": [], "since": "2026-09-19T00:00", "now": "2026-09-19T00:45", "due": "2026-09-18", "next": "2026-09-20T00:30"},
-    {"name": "a day that starts at midnight", "time": "20:00", "dayStartHour": 0, "ran": [], "since": "2026-09-18T10:00", "now": "2026-09-18T12:00", "due": null, "next": "2026-09-18T20:00"},
-    {"name": "switched off", "time": null, "dayStartHour": 4, "ran": [], "since": "2026-09-18T19:00", "now": "2026-09-18T21:00", "due": null, "next": null}
+    {
+      "name": "before its time, the alarm waits for it",
+      "time": "20:00",
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-18T10:00",
+      "now": "2026-09-18T12:00",
+      "due": null,
+      "next": "2026-09-18T20:00"
+    },
+    {
+      "name": "at its time it rings, and tomorrow's is next",
+      "time": "20:00",
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:00",
+      "due": "2026-09-18",
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "already done today, so quiet until tomorrow",
+      "time": "20:00",
+      "dayStartHour": 4,
+      "ran": [
+        "2026-09-18"
+      ],
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:05",
+      "due": null,
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "done on the other device before its time",
+      "time": "20:00",
+      "dayStartHour": 4,
+      "ran": [
+        "2026-09-18"
+      ],
+      "since": "2026-09-18T10:00",
+      "now": "2026-09-18T12:00",
+      "due": null,
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "after days away, only today's counts",
+      "time": "20:00",
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-15T12:00",
+      "now": "2026-09-18T21:00",
+      "due": "2026-09-18",
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "missed yesterday's, and the day has moved on",
+      "time": "20:00",
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-17T12:00",
+      "now": "2026-09-18T10:00",
+      "due": null,
+      "next": "2026-09-18T20:00"
+    },
+    {
+      "name": "a time after midnight belongs to the planning day before",
+      "time": "00:30",
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-18T22:00",
+      "now": "2026-09-18T23:00",
+      "due": null,
+      "next": "2026-09-19T00:30"
+    },
+    {
+      "name": "after midnight, before the day starts",
+      "time": "00:30",
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-19T00:00",
+      "now": "2026-09-19T00:45",
+      "due": "2026-09-18",
+      "next": "2026-09-20T00:30"
+    },
+    {
+      "name": "a day that starts at midnight",
+      "time": "20:00",
+      "dayStartHour": 0,
+      "ran": [],
+      "since": "2026-09-18T10:00",
+      "now": "2026-09-18T12:00",
+      "due": null,
+      "next": "2026-09-18T20:00"
+    },
+    {
+      "name": "switched off",
+      "time": null,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T21:00",
+      "due": null,
+      "next": null
+    }
   ],
   "ritualStale": [
-    {"name": "still today and not done", "day": "2026-09-18", "dayStartHour": 4, "ran": [], "now": "2026-09-18T21:00", "stale": false},
-    {"name": "done on the other device", "day": "2026-09-18", "dayStartHour": 4, "ran": ["2026-09-18"], "now": "2026-09-18T21:00", "stale": true},
-    {"name": "the day has moved on", "day": "2026-09-17", "dayStartHour": 4, "ran": [], "now": "2026-09-18T10:00", "stale": true},
-    {"name": "after midnight it is still the same planning day", "day": "2026-09-18", "dayStartHour": 4, "ran": [], "now": "2026-09-19T01:00", "stale": false}
+    {
+      "name": "still today and not done",
+      "day": "2026-09-18",
+      "dayStartHour": 4,
+      "ran": [],
+      "now": "2026-09-18T21:00",
+      "stale": false
+    },
+    {
+      "name": "done on the other device",
+      "day": "2026-09-18",
+      "dayStartHour": 4,
+      "ran": [
+        "2026-09-18"
+      ],
+      "now": "2026-09-18T21:00",
+      "stale": true
+    },
+    {
+      "name": "the day has moved on",
+      "day": "2026-09-17",
+      "dayStartHour": 4,
+      "ran": [],
+      "now": "2026-09-18T10:00",
+      "stale": true
+    },
+    {
+      "name": "after midnight it is still the same planning day",
+      "day": "2026-09-18",
+      "dayStartHour": 4,
+      "ran": [],
+      "now": "2026-09-19T01:00",
+      "stale": false
+    }
   ],
   "ritualIds": [
-    {"owner": "11111111-2222-4333-8444-555555555555", "ritual": "plan_tomorrow", "day": "2026-09-18", "id": "42d7b4f9-ce2b-5c1c-a83a-767e82139116"},
-    {"owner": "11111111-2222-4333-8444-555555555555", "ritual": "plan_tomorrow", "day": "2026-09-19", "id": "0bdc6d85-0f0f-5942-b4e8-109cdfe5ef72"},
-    {"owner": "0B7E9F4C-2D6A-4E8B-A1C3-5F7D9E1B3A2C", "ritual": "plan_tomorrow", "day": "2026-09-18", "id": "39433440-5975-54c1-9414-8d6c5a31f578"},
-    {"owner": "11111111-2222-4333-8444-555555555555", "ritual": "weekly_review", "day": "2026-09-20", "id": "63405079-9958-5cbf-a60a-c30843b6b259"}
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "ritual": "plan_tomorrow",
+      "day": "2026-09-18",
+      "id": "42d7b4f9-ce2b-5c1c-a83a-767e82139116"
+    },
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "ritual": "plan_tomorrow",
+      "day": "2026-09-19",
+      "id": "0bdc6d85-0f0f-5942-b4e8-109cdfe5ef72"
+    },
+    {
+      "owner": "0B7E9F4C-2D6A-4E8B-A1C3-5F7D9E1B3A2C",
+      "ritual": "plan_tomorrow",
+      "day": "2026-09-18",
+      "id": "39433440-5975-54c1-9414-8d6c5a31f578"
+    },
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "ritual": "weekly_review",
+      "day": "2026-09-20",
+      "id": "63405079-9958-5cbf-a60a-c30843b6b259"
+    }
+  ],
+  "reviewReminders": [
+    {
+      "name": "the weekly reminder waits for its evening",
+      "kind": "weekly",
+      "time": "18:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-20T10:00",
+      "now": "2026-09-20T12:00",
+      "due": null,
+      "next": "2026-09-20T18:00"
+    },
+    {
+      "name": "on its evening it is due",
+      "kind": "weekly",
+      "time": "18:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-20T17:00",
+      "now": "2026-09-20T18:30",
+      "due": "2026-09-20",
+      "next": "2026-09-27T18:00"
+    },
+    {
+      "name": "another weekday keeps it quiet",
+      "kind": "weekly",
+      "time": "18:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-19T10:00",
+      "now": "2026-09-19T19:00",
+      "due": null,
+      "next": "2026-09-20T18:00"
+    },
+    {
+      "name": "a review already written keeps it quiet",
+      "kind": "weekly",
+      "time": "18:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [
+        "2026-09-20"
+      ],
+      "since": "2026-09-20T17:00",
+      "now": "2026-09-20T18:30",
+      "due": null,
+      "next": "2026-09-27T18:00"
+    },
+    {
+      "name": "a reminder switched off never rings",
+      "kind": "weekly",
+      "time": null,
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-20T17:00",
+      "now": "2026-09-20T18:30",
+      "due": null,
+      "next": null
+    },
+    {
+      "name": "the owner's own weekday",
+      "kind": "weekly",
+      "time": "09:00",
+      "weekday": 1,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-21T08:00",
+      "now": "2026-09-21T09:30",
+      "due": "2026-09-21",
+      "next": "2026-09-28T09:00"
+    },
+    {
+      "name": "the monthly reminder rings on the first of a month",
+      "kind": "monthly",
+      "time": "18:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-10-01T17:00",
+      "now": "2026-10-01T18:30",
+      "due": "2026-10-01",
+      "next": "2026-11-01T18:00"
+    },
+    {
+      "name": "the rest of the month is quiet",
+      "kind": "monthly",
+      "time": "18:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-20T10:00",
+      "now": "2026-09-20T19:00",
+      "due": null,
+      "next": "2026-10-01T18:00"
+    },
+    {
+      "name": "a time before the day's start belongs to the night after it",
+      "kind": "weekly",
+      "time": "01:00",
+      "weekday": 7,
+      "dayStartHour": 4,
+      "ran": [],
+      "since": "2026-09-21T00:30",
+      "now": "2026-09-21T01:30",
+      "due": "2026-09-20",
+      "next": "2026-09-28T01:00"
+    }
+  ],
+  "reviewPeriods": [
+    {
+      "name": "a Sunday reminder looks back on the week that is ending",
+      "kind": "weekly",
+      "day": "2026-09-20",
+      "start": "2026-09-14"
+    },
+    {
+      "name": "a Saturday reminder does the same",
+      "kind": "weekly",
+      "day": "2026-09-19",
+      "start": "2026-09-14"
+    },
+    {
+      "name": "earlier in the week it looks back on the week just gone",
+      "kind": "weekly",
+      "day": "2026-09-21",
+      "start": "2026-09-14"
+    },
+    {
+      "name": "a Friday reminder looks back on the week before",
+      "kind": "weekly",
+      "day": "2026-09-18",
+      "start": "2026-09-07"
+    },
+    {
+      "name": "the first of a month looks back on the month just gone",
+      "kind": "monthly",
+      "day": "2026-10-01",
+      "start": "2026-09-01"
+    },
+    {
+      "name": "and in January on December",
+      "kind": "monthly",
+      "day": "2027-01-01",
+      "start": "2026-12-01"
+    }
   ]
 }

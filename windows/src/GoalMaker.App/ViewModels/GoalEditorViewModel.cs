@@ -72,6 +72,7 @@ public sealed partial class GoalEditorViewModel : ObservableObject
         this.today = today;
         Horizons = [.. new[] { GoalHorizon.Year, GoalHorizon.Month, GoalHorizon.Week, GoalHorizon.Day }
             .Select(choice => new ChoiceViewModel(GoalRules.Id(choice), strings.Get("Goals.Horizon" + choice)))];
+        EmojiChoices = EmojiPalette.Choices(emoji => Emoji = Emoji == emoji ? string.Empty : emoji);
         Modes =
         [
             new ChoiceViewModel(GoalRules.ModeDone, strings.Get("Goals.ModeDone")),
@@ -79,6 +80,9 @@ public sealed partial class GoalEditorViewModel : ObservableObject
             new ChoiceViewModel(GoalRules.ModeNumber, strings.Get("Goals.ModeNumber")),
         ];
     }
+
+    /// <summary>The emoji to click instead of typing one (docs/goals.md).</summary>
+    public IReadOnlyList<EmojiChoiceViewModel> EmojiChoices { get; }
 
     public IReadOnlyList<ChoiceViewModel> Horizons { get; }
 

@@ -18,4 +18,10 @@ public enum ToastAction
 
     /// <summary>The evening reminder's "Not today": quiet for the rest of the planning day.</summary>
     SkipPlan,
+
+    /// <summary>A review reminder's Review button or body: opens the review of that period.</summary>
+    Review,
+
+    /// <summary>A review reminder's "Not now": quiet for the rest of the planning day.</summary>
+    SkipReview,
 }

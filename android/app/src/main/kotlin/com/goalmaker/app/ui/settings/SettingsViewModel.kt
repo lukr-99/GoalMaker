@@ -43,6 +43,9 @@ class SettingsViewModel(
             dayStartHour = settings.dayStartHour.value,
             quietHours = settings.quietHours.value,
             planTomorrowReminder = settings.planTomorrowReminder.value,
+            weeklyReviewReminder = settings.weeklyReviewReminder.value,
+            weeklyReviewWeekday = settings.weeklyReviewWeekday.value,
+            monthlyReviewReminder = settings.monthlyReviewReminder.value,
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
@@ -67,6 +70,15 @@ class SettingsViewModel(
             settings.planTomorrowReminder.collect { time -> state.update { it.copy(planTomorrowReminder = time) } }
         }
         viewModelScope.launch {
+            settings.weeklyReviewReminder.collect { time -> state.update { it.copy(weeklyReviewReminder = time) } }
+        }
+        viewModelScope.launch {
+            settings.weeklyReviewWeekday.collect { day -> state.update { it.copy(weeklyReviewWeekday = day) } }
+        }
+        viewModelScope.launch {
+            settings.monthlyReviewReminder.collect { time -> state.update { it.copy(monthlyReviewReminder = time) } }
+        }
+        viewModelScope.launch {
             combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
                 .collect { (appearance, session) ->
                     state.update {
@@ -88,6 +100,23 @@ class SettingsViewModel(
     fun setQuietHours(window: QuietHours) {
         settings.setQuietHours(window)
         viewModelScope.launch(io) { reminders.rearm() }
+    }
+
+    /** When the weekly review reminder rings, and on which weekday (docs/reviews.md). */
+    fun setWeeklyReviewReminder(time: LocalTime?) {
+        settings.setWeeklyReviewReminder(time)
+        rearm()
+    }
+
+    fun setWeeklyReviewWeekday(weekday: Int) {
+        settings.setWeeklyReviewWeekday(weekday)
+        rearm()
+    }
+
+    /** When the monthly review reminder rings, on the first day of a month. */
+    fun setMonthlyReviewReminder(time: LocalTime?) {
+        settings.setMonthlyReviewReminder(time)
+        rearm()
     }
 
     /** Moves or switches off the evening Plan tomorrow reminder; the alarm is armed again. */
@@ -158,5 +187,10 @@ class SettingsViewModel(
         if (!appInfo.isDevBuild) return
         settings.setBackendOverride(null)
         restartApp()
+    }
+
+    // Every reminder setting ends the same way: the one alarm is armed for whatever comes first.
+    private fun rearm() {
+        viewModelScope.launch(io) { reminders.rearm() }
     }
 }

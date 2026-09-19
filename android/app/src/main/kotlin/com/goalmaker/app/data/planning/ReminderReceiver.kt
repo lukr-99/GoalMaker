@@ -46,6 +46,16 @@ class ReminderReceiver : BroadcastReceiver() {
                         notifications.clear(it)
                     }
 
+                    ReminderAlarm.ACTION_SKIP_REVIEW -> {
+                        val ritual = intent.getStringExtra(ReminderAlarm.EXTRA_REVIEW_RITUAL)
+                        val day = intent.getStringExtra(ReminderAlarm.EXTRA_REVIEW_DAY)
+                            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                        if (ritual != null && day != null) {
+                            reminders.finishReview(ritual, day, skipped = true)
+                            notifications.clearReview(ritual, day)
+                        }
+                    }
+
                     ReminderAlarm.ACTION_SKIP_PLAN -> planDay?.let {
                         reminders.skipPlanTomorrow(it)
                         notifications.clearPlanTomorrow(it)

@@ -68,6 +68,15 @@ fun SignedInNavigation(graph: AppGraph) {
             graph.planOpened()
         }
     }
+    // A review reminder opens the review it asked for, on top of whatever was open.
+    val reviewRequested by graph.reviewRequested.collectAsState()
+    LaunchedEffect(reviewRequested) {
+        reviewRequested?.let { (kind, start) ->
+            val key = ReviewKey(kind, start.toString())
+            if (backStack.lastOrNull() != key) backStack.add(key)
+            graph.reviewOpened()
+        }
+    }
     val motion = AppTheme.motion
     val reduced = AppTheme.reduceMotion
     val transitions = remember(motion, reduced) { NavTransitions(motion, reduced) }
