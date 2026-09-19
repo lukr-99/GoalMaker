@@ -56,8 +56,8 @@ import kotlinx.coroutines.launch
 /**
  * A task in a list: the theme's checkbox, the title, and what else it says (time, area, repeat,
  * top priority, a waiting reminder). Checking it plays the check, a haptic and the optional tick,
- * then the row leaves. Swiping it away deletes it; both offer undo. A long press opens its
- * reminders (docs/reminders.md). TalkBack gets both as actions.
+ * then the row leaves. Swiping it away deletes it; both offer undo. A tap opens the task's details,
+ * a long press its reminders (docs/reminders.md). TalkBack gets delete and remind as actions.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -68,6 +68,7 @@ fun TaskRow(
     onComplete: () -> Unit,
     onDelete: () -> Unit,
     onRemind: () -> Unit,
+    onOpen: () -> Unit,
     reminded: Boolean,
     tick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -106,7 +107,7 @@ fun TaskRow(
         Surface(
             color = AppTheme.colors.surface,
             shape = AppTheme.shapes.row,
-            modifier = Modifier.fillMaxWidth().combinedClickable(onLongClick = onRemind, onClick = {}),
+            modifier = Modifier.fillMaxWidth().combinedClickable(onLongClick = onRemind, onClick = onOpen),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,

@@ -15,6 +15,7 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderService
+import com.goalmaker.app.application.planning.StepList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
@@ -145,6 +146,7 @@ class AppGraph(context: Context) {
     )
     val areas = AreaList(replica, newRows, design.areaColors.map { it.id }, sync::request)
     val tags = TagList(replica, newRows, sync::request)
+    val steps = StepList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, sync::request) {
         PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)
     }

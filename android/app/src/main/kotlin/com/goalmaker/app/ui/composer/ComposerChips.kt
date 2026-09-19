@@ -85,8 +85,9 @@ fun removeParts(line: String, spans: List<ComposerSpan>): String {
 
 private val WHITESPACE = Regex("\\s+")
 
+/** A repeat rule in words, for the composer's chip and the task's detail view. */
 @Composable
-private fun describeRepeat(rule: String, locale: Locale): String {
+internal fun describeRepeat(rule: String, locale: Locale): String {
     val parts = rule.split(';').associate { it.substringBefore('=') to it.substringAfter('=') }
     val interval = parts["INTERVAL"]?.toIntOrNull() ?: 1
     return when (parts["FREQ"]) {

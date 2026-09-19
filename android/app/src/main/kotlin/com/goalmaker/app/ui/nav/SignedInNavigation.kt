@@ -11,6 +11,9 @@ import java.time.LocalDateTime
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
+import com.goalmaker.app.ui.archive.ArchiveKey
+import com.goalmaker.app.ui.archive.ArchiveScreen
+import com.goalmaker.app.ui.archive.ArchiveViewModel
 import com.goalmaker.app.ui.areas.AreasKey
 import com.goalmaker.app.ui.areas.AreasScreen
 import com.goalmaker.app.ui.areas.AreasViewModel
@@ -18,6 +21,9 @@ import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
 import com.goalmaker.app.ui.plan.PlanViewModel
+import com.goalmaker.app.ui.task.TaskKey
+import com.goalmaker.app.ui.task.TaskScreen
+import com.goalmaker.app.ui.task.TaskViewModel
 
 /** The signed-in part of the app: a Navigation 3 back stack starting at Today. */
 @Composable
@@ -48,6 +54,8 @@ fun SignedInNavigation(graph: AppGraph) {
                     viewModel = listsViewModel,
                     onOpenPlan = { backStack.add(PlanKey) },
                     onOpenSettings = { backStack.add(SettingsKey) },
+                    onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                    onOpenArchive = { backStack.add(ArchiveKey) },
                 )
             }
             entry<PlanKey> {
@@ -81,6 +89,18 @@ fun SignedInNavigation(graph: AppGraph) {
                     viewModel = settingsViewModel,
                     onBack = { backStack.removeLastOrNull() },
                     onOpenAreas = { backStack.add(AreasKey) },
+                )
+            }
+            entry<TaskKey> { key ->
+                val taskViewModel = viewModel(key = key.id) { TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.io) }
+                TaskScreen(viewModel = taskViewModel, onBack = { backStack.removeLastOrNull() })
+            }
+            entry<ArchiveKey> {
+                val archiveViewModel = viewModel { ArchiveViewModel(graph.tasks, graph.io) }
+                ArchiveScreen(
+                    viewModel = archiveViewModel,
+                    onBack = { backStack.removeLastOrNull() },
+                    onOpenTask = { id -> backStack.add(TaskKey(id)) },
                 )
             }
             entry<AreasKey> {

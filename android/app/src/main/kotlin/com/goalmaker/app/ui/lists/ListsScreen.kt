@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.EditCalendar
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inbox
@@ -81,7 +82,13 @@ import java.time.format.DateTimeFormatter
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSettings: () -> Unit) {
+fun ListsScreen(
+    viewModel: ListsViewModel,
+    onOpenPlan: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onOpenTask: (String) -> Unit,
+    onOpenArchive: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -130,6 +137,9 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSetting
                 subtitle = { state.lists?.let { Text(subtitle(tab, it)) } },
                 actions = {
                     SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
+                    IconButton(onClick = onOpenArchive) {
+                        Icon(Icons.Outlined.Inventory2, contentDescription = stringResource(R.string.archive_title))
+                    }
                     IconButton(onClick = onOpenPlan) {
                         Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
                     }
@@ -195,7 +205,7 @@ fun ListsScreen(viewModel: ListsViewModel, onOpenPlan: () -> Unit, onOpenSetting
                         onTag = viewModel::filterByTag,
                         modifier = Modifier.padding(top = 4.dp),
                     )
-                    ListContent(tab, lists, state, viewModel, tick) { remindFor = it }
+                    ListContent(tab, lists, state, viewModel, tick, onOpenTask) { remindFor = it }
                 }
             }
         }
@@ -209,6 +219,7 @@ private fun ListContent(
     state: ListsUiState,
     viewModel: ListsViewModel,
     tick: () -> Unit,
+    onOpenTask: (String) -> Unit,
     onRemind: (TaskItem) -> Unit,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
@@ -227,6 +238,7 @@ private fun ListContent(
                     onComplete = { viewModel.complete(task) },
                     onDelete = { viewModel.delete(task) },
                     onRemind = { onRemind(task) },
+                    onOpen = { onOpenTask(task.id) },
                     reminded = task.id in state.reminded,
                     tick = tick,
                     modifier = Modifier.animateItem(),
