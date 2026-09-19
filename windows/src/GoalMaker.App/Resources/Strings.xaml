@@ -90,6 +90,45 @@
     <sys:String x:Key="Lists.ClearFilter">Show everything</sys:String>
     <sys:String x:Key="Nav.Filters">Filter</sys:String>
     <sys:String x:Key="Nav.AreasAndTags">Areas and tags</sys:String>
+    <sys:String x:Key="Nav.Archive">Archive</sys:String>
+    <sys:String x:Key="Lists.OpenTask">Open the task</sys:String>
+
+    <sys:String x:Key="Task.Title">Task</sys:String>
+    <sys:String x:Key="Task.Back">Back</sys:String>
+    <sys:String x:Key="Task.Delete">Delete the task</sys:String>
+    <sys:String x:Key="Task.Gone">This task was deleted.</sys:String>
+    <sys:String x:Key="Task.Done">Done</sys:String>
+    <sys:String x:Key="Task.TitleLabel">Title</sys:String>
+    <sys:String x:Key="Task.Notes">Notes</sys:String>
+    <sys:String x:Key="Task.NotesEdit">Edit the notes</sys:String>
+    <sys:String x:Key="Task.NotesSave">Save the notes</sys:String>
+    <sys:String x:Key="Task.NotesHint">**bold**, *italic*, a dash at the start of a line for a list, and links.</sys:String>
+    <sys:String x:Key="Task.Day">Day</sys:String>
+    <sys:String x:Key="Task.Time">Time</sys:String>
+    <sys:String x:Key="Task.TimeHint">Like 9:30. A time needs a day; leave it empty for none.</sys:String>
+    <sys:String x:Key="Task.Deadline">Deadline</sys:String>
+    <sys:String x:Key="Task.Clear">Clear</sys:String>
+    <sys:String x:Key="Task.Area">Area</sys:String>
+    <sys:String x:Key="Task.NoArea">No area</sys:String>
+    <sys:String x:Key="Task.Repeat">Repeat</sys:String>
+    <sys:String x:Key="Task.NoRepeat">Doesn't repeat</sys:String>
+    <sys:String x:Key="Task.Tags">Tags</sys:String>
+    <sys:String x:Key="Task.NewTag">New tag</sys:String>
+    <sys:String x:Key="Task.AddTag">Add tag</sys:String>
+    <sys:String x:Key="Task.Steps">Steps</sys:String>
+    <sys:String x:Key="Task.StepTitle">Step</sys:String>
+    <sys:String x:Key="Task.NewStep">New step</sys:String>
+    <sys:String x:Key="Task.AddStep">Add step</sys:String>
+    <sys:String x:Key="Task.StepUp">Move up</sys:String>
+    <sys:String x:Key="Task.StepDown">Move down</sys:String>
+    <sys:String x:Key="Task.StepDelete">Delete the step</sys:String>
+
+    <sys:String x:Key="Archive.Title">Archive</sys:String>
+    <sys:String x:Key="Archive.Search">Search done tasks</sys:String>
+    <sys:String x:Key="Archive.Empty">Nothing done yet.</sys:String>
+    <sys:String x:Key="Archive.NoMatch">No done task matches.</sys:String>
+    <sys:String x:Key="Archive.DoneOn">Done {0}</sys:String>
+    <sys:String x:Key="Archive.Reopen">Reopen</sys:String>
 
     <sys:String x:Key="Areas.Title">Areas and tags</sys:String>
     <sys:String x:Key="Areas.Hint">Areas color your tasks and filter the lists; tags group across areas. Changes save when you leave a field.</sys:String>

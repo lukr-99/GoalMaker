@@ -26,8 +26,10 @@ public sealed partial class TaskRowViewModel : ObservableObject
         Action<TaskRowViewModel> complete,
         Action<TaskRowViewModel> delete,
         bool hasReminder = false,
-        IReadOnlyList<ReminderChoice>? reminderChoices = null)
+        IReadOnlyList<ReminderChoice>? reminderChoices = null,
+        Action<TaskRowViewModel>? open = null)
     {
+        OpenCommand = new RelayCommand(() => open?.Invoke(this), () => open is not null);
         HasReminder = hasReminder;
         ReminderChoices = reminderChoices ?? [];
         this.complete = complete;
@@ -62,6 +64,9 @@ public sealed partial class TaskRowViewModel : ObservableObject
     public bool TopPriority => Item.TopPriority;
 
     public IRelayCommand DeleteCommand { get; }
+
+    /// <summary>Opens the task's detail page (M2-12).</summary>
+    public IRelayCommand OpenCommand { get; }
 
     /// <summary>Whether a reminder is still waiting for this task.</summary>
     public bool HasReminder { get; }

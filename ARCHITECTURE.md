@@ -34,12 +34,13 @@ composition root creates everything
 ### Android (`android/app`, package `com.goalmaker.app`)
 
 - `domain/`: `version/SemanticVersion`, `update/` (manifest, parser, update policy),
+  `notes/LightMarkdown`,
   `account/` (email, sign-in code), `settings/ThemeMode`, `sync/` (`SyncRules`, the synced-table
   catalog, outbox entries, cursors). Pure Kotlin.
 - `application/`: ports and use cases: `auth/AuthGateway`, `update/UpdateService` with the
   `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
   `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
-  `planning/` (`TaskList`, the list and ritual rules, `ReminderRules`).
+  `planning/` (`TaskList`, `StepList`, the list, filter, archive and ritual rules, `ReminderRules`).
 - `data/`: `SupabaseAuthGateway`, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`,
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
@@ -54,7 +55,8 @@ composition root creates everything
 ### Windows (`windows/`)
 
 - `GoalMaker.Core` (net10.0): the same domain and application code as Android's, in C#
-  (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`).
+  (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`,
+  `Notes`).
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
   `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
@@ -62,7 +64,7 @@ composition root creates everything
 - `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
   `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon with the Today
   flyout, page provider, reminder toasts, the quick-add box and its global shortcut through NHotkey,
-  the sidebar's area and tag filters), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
+  the sidebar's area and tag filters), `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
   (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`.
 - `dotnetlib` was evaluated and is not referenced yet (ADR 0006).
@@ -72,7 +74,7 @@ composition root creates everything
 Rules that must match across Kotlin and C# live as vector files, one per rule, listed in
 [contracts/README.md](contracts/README.md): versions and the update offer policy, release manifest
 verification, the sync rules, the composer grammar, the lists and their filter, Plan tomorrow,
-repeating tasks, reminder times, and the archive. Both test suites read the same files. `contracts/schemas/synced-tables.json`
+repeating tasks, reminder times, the archive, and the light Markdown in notes. Both test suites read the same files. `contracts/schemas/synced-tables.json`
 describes every synced column once; both apps build their replica SQL and JSON mapping from it, and
 `tools/check_synced_tables.py` keeps it equal to the replica and server schemas.
 

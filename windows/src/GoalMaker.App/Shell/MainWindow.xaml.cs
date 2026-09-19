@@ -36,6 +36,8 @@ public partial class MainWindow
             [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage),
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
+            [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
+            [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
         }));
         Navigation.IsPaneOpen = !settings.NavigationCollapsed;
         Navigation.PaneOpened += (_, _) => settings.NavigationCollapsed = false;
@@ -71,6 +73,8 @@ public partial class MainWindow
             AppPage.Inbox => typeof(InboxPage),
             AppPage.Settings => typeof(SettingsPage),
             AppPage.Areas => typeof(AreasPage),
+            AppPage.Archive => typeof(ArchivePage),
+            AppPage.Task => typeof(TaskPage),
             _ => typeof(TodayPage),
         };
         NavigateWhenReady();

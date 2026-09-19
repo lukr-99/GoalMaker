@@ -106,6 +106,15 @@
                                                                    Appearance="Transparent"
                                                                    BorderThickness="0"
                                                                    Padding="6"
+                                                                   Command="{Binding OpenCommand}"
+                                                                   ToolTip="{DynamicResource Lists.OpenTask}"
+                                                                   AutomationProperties.Name="{DynamicResource Lists.OpenTask}">
+                                                            <ui:SymbolIcon Symbol="Open24" />
+                                                        </ui:Button>
+                                                        <ui:Button DockPanel.Dock="Right"
+                                                                   Appearance="Transparent"
+                                                                   BorderThickness="0"
+                                                                   Padding="6"
                                                                    Command="{Binding DeleteCommand}"
                                                                    ToolTip="{DynamicResource Lists.Delete}"
                                                                    AutomationProperties.Name="{DynamicResource Lists.Delete}">

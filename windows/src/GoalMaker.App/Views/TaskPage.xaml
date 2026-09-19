@@ -1,0 +1,174 @@
+<Page x:Class="GoalMaker.App.Views.TaskPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource Task.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Page.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+    </Page.Resources>
+
+    <!-- One task's details (M2-12). Fields save when they lose the keyboard or change. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+            <DockPanel Margin="0,0,0,16">
+                <ui:Button DockPanel.Dock="Left" Margin="0,0,12,0" Padding="8" Appearance="Transparent" Command="{Binding BackCommand}"
+                           ToolTip="{DynamicResource Task.Back}" AutomationProperties.Name="{DynamicResource Task.Back}">
+                    <ui:SymbolIcon Symbol="ArrowLeft24" />
+                </ui:Button>
+                <ui:Button DockPanel.Dock="Right" Padding="8" Appearance="Transparent" Command="{Binding DeleteCommand}"
+                           ToolTip="{DynamicResource Task.Delete}" AutomationProperties.Name="{DynamicResource Task.Delete}"
+                           Visibility="{Binding HasTask, Converter={StaticResource BoolToVisibility}}">
+                    <ui:SymbolIcon Symbol="Delete24" />
+                </ui:Button>
+                <controls:HeadlineText Title="{DynamicResource Task.Title}" FontSize="40" />
+            </DockPanel>
+
+            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Task.Gone}" x:Name="GoneText" />
+
+            <StackPanel Visibility="{Binding HasTask, Converter={StaticResource BoolToVisibility}}">
+                <ui:Card Margin="0,0,0,12" Padding="20">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" IsChecked="{Binding IsDone}" AutomationProperties.Name="{DynamicResource Task.Done}" />
+                        <TextBox FontSize="18" MaxLength="500" Text="{Binding Title}" AutomationProperties.Name="{DynamicResource Task.TitleLabel}" />
+                    </DockPanel>
+                </ui:Card>
+
+                <ui:Card Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Task.Notes}" />
+                        <StackPanel Visibility="{Binding IsEditingNotes, Converter={StaticResource BoolToVisibility}}">
+                            <TextBox MinHeight="120" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="20000" VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding NotesDraft, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Task.Notes}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Task.NotesHint}" />
+                            <ui:Button Margin="0,8,0,0" Appearance="Primary" Content="{DynamicResource Task.NotesSave}" Command="{Binding SaveNotesCommand}" />
+                        </StackPanel>
+                        <StackPanel x:Name="NotesView">
+                            <controls:MarkdownView Markdown="{Binding Notes}" />
+                            <ui:Button Margin="0,8,0,0" Content="{DynamicResource Task.NotesEdit}" Command="{Binding EditNotesCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="0,0,0,12" Padding="20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Day}" />
+                        <DatePicker Grid.Row="0" Grid.Column="1" Margin="0,0,0,8" SelectedDate="{Binding PlannedDate}" AutomationProperties.Name="{DynamicResource Task.Day}" />
+                        <ui:Button Grid.Row="0" Grid.Column="2" Margin="8,0,0,8" Content="{DynamicResource Task.Clear}" Command="{Binding ClearDayCommand}" />
+                        <TextBlock Grid.Row="1" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Time}" />
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,0,0,8">
+                            <TextBox Text="{Binding PlannedTimeText}" IsEnabled="{Binding HasPlannedDate}" AutomationProperties.Name="{DynamicResource Task.Time}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Task.TimeHint}" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="2" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Deadline}" />
+                        <DatePicker Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" SelectedDate="{Binding Deadline}" AutomationProperties.Name="{DynamicResource Task.Deadline}" />
+                        <ui:Button Grid.Row="2" Grid.Column="2" Margin="8,0,0,8" Content="{DynamicResource Task.Clear}" Command="{Binding ClearDeadlineCommand}" />
+                        <TextBlock Grid.Row="3" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Area}" />
+                        <ComboBox Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" ItemsSource="{Binding AreaChoices}" SelectedItem="{Binding SelectedArea}"
+                                  DisplayMemberPath="Label" AutomationProperties.Name="{DynamicResource Task.Area}" />
+                        <TextBlock Grid.Row="4" Style="{StaticResource FieldLabel}" Text="{DynamicResource Task.Repeat}" />
+                        <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding RepeatChoices}" SelectedItem="{Binding SelectedRepeat}"
+                                  DisplayMemberPath="Label" AutomationProperties.Name="{DynamicResource Task.Repeat}" />
+                    </Grid>
+                </ui:Card>
+
+                <ui:Card Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Task.Tags}" />
+                        <ItemsControl ItemsSource="{Binding Tags}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:FilterOptionViewModel}">
+                                    <ToggleButton Margin="0,0,6,6" Padding="10,4" Content="{Binding Label}" IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                  Command="{Binding Command}" AutomationProperties.Name="{Binding Label}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <DockPanel Margin="0,4,0,0">
+                            <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Task.AddTag}" Command="{Binding AddTagCommand}" />
+                            <ui:TextBox PlaceholderText="{DynamicResource Task.NewTag}" MaxLength="41" Text="{Binding NewTagName, UpdateSourceTrigger=PropertyChanged}"
+                                        AutomationProperties.Name="{DynamicResource Task.NewTag}">
+                                <ui:TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding AddTagCommand}" />
+                                </ui:TextBox.InputBindings>
+                            </ui:TextBox>
+                        </DockPanel>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Task.Steps}" />
+                        <ItemsControl ItemsSource="{Binding Steps}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:StepRowViewModel}">
+                                    <DockPanel Margin="0,0,0,6">
+                                        <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" IsChecked="{Binding Done}" AutomationProperties.Name="{Binding Title}" />
+                                        <StackPanel DockPanel.Dock="Right" Margin="8,0,0,0" Orientation="Horizontal">
+                                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}"
+                                                       ToolTip="{DynamicResource Task.StepUp}" AutomationProperties.Name="{DynamicResource Task.StepUp}">
+                                                <ui:SymbolIcon Symbol="ArrowUp24" />
+                                            </ui:Button>
+                                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}"
+                                                       ToolTip="{DynamicResource Task.StepDown}" AutomationProperties.Name="{DynamicResource Task.StepDown}">
+                                                <ui:SymbolIcon Symbol="ArrowDown24" />
+                                            </ui:Button>
+                                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
+                                                       ToolTip="{DynamicResource Task.StepDelete}" AutomationProperties.Name="{DynamicResource Task.StepDelete}">
+                                                <ui:SymbolIcon Symbol="Delete24" />
+                                            </ui:Button>
+                                        </StackPanel>
+                                        <TextBox MaxLength="300" Text="{Binding Title}" AutomationProperties.Name="{DynamicResource Task.StepTitle}" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <DockPanel Margin="0,4,0,0">
+                            <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Task.AddStep}" Command="{Binding AddStepCommand}" />
+                            <ui:TextBox PlaceholderText="{DynamicResource Task.NewStep}" MaxLength="300" Text="{Binding NewStepTitle, UpdateSourceTrigger=PropertyChanged}"
+                                        AutomationProperties.Name="{DynamicResource Task.NewStep}">
+                                <ui:TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding AddStepCommand}" />
+                                </ui:TextBox.InputBindings>
+                            </ui:TextBox>
+                        </DockPanel>
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

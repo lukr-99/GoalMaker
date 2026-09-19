@@ -22,8 +22,9 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 - Planning (M2, in progress): four switchable themes, Today, Tomorrow and Inbox, the composer with
   shortcuts and a live preview, Plan tomorrow, repeating tasks, reminders with quiet hours and
   snooze on both apps ([docs/reminders.md](docs/reminders.md)), and on Windows the tray's Today
-  flyout and a global quick-add shortcut. Areas and tags management, task details and the archive
-  are next.
+  flyout and a global quick-add shortcut, areas and tags with filters on every list, a task's detail
+  view with notes in light Markdown and a checklist, and the searchable archive of done tasks
+  ([docs/archive.md](docs/archive.md)).
 
 The Claude connector comes in M3, goals and habits in M4. No release has been published yet; the cloud project and the signing keys still need the one-time setup in
 [docs/setup/](docs/setup/).

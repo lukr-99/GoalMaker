@@ -114,6 +114,11 @@
                 </ScrollViewer>
             </ui:NavigationView.PaneFooter>
             <ui:NavigationView.FooterMenuItems>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Archive}" TargetPageType="{x:Type views:ArchivePage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Archive24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.AreasAndTags}" TargetPageType="{x:Type views:AreasPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Tag24" />

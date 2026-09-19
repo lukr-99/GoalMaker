@@ -31,6 +31,7 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly ReminderService? reminders;
     private readonly TagList? tags;
     private readonly ListFilterState? filter;
+    private readonly Action<string>? openTask;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -72,8 +73,10 @@ public sealed partial class ListViewModel : ObservableObject
         Action? openPlan = null,
         ReminderService? reminders = null,
         TagList? tags = null,
-        ListFilterState? filter = null)
+        ListFilterState? filter = null,
+        Action<string>? openTask = null)
     {
+        this.openTask = openTask;
         this.openPlan = openPlan;
         this.reminders = reminders;
         this.tags = tags;
@@ -215,7 +218,8 @@ public sealed partial class ListViewModel : ObservableObject
                     Complete,
                     Delete,
                     own.Any(reminder => reminder.State is ReminderState.Pending or ReminderState.Snoozed),
-                    ReminderChoices(item, own));
+                    ReminderChoices(item, own),
+                    openTask is null ? null : row => openTask(row.Item.Id));
             })];
 
         Sections.Clear();

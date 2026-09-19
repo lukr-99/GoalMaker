@@ -153,9 +153,18 @@ public sealed class AppGraph : IDisposable
             OpenPlan,
             Reminders,
             Tags,
-            Filter);
+            Filter,
+            id => OpenTask(id, kind switch
+            {
+                ListKind.Tomorrow => AppPage.Tomorrow,
+                ListKind.Inbox => AppPage.Inbox,
+                _ => AppPage.Today,
+            }));
         SidebarFilters = new SidebarFiltersViewModel(Areas, Tags, Filter, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
+        Steps = new StepList(replica, newRows, Sync.Request);
+        TaskDetail = new TaskDetailViewModel(Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page));
+        Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,
@@ -217,6 +226,14 @@ public sealed class AppGraph : IDisposable
     /// <summary>The areas and tags manager.</summary>
     public AreasViewModel AreasPage { get; private set; } = null!;
 
+    /// <summary>A task's details, loaded with the task a list opened.</summary>
+    public TaskDetailViewModel TaskDetail { get; private set; } = null!;
+
+    /// <summary>The archive of done tasks.</summary>
+    public ArchiveViewModel Archive { get; private set; } = null!;
+
+    public StepList Steps { get; private set; } = null!;
+
     public ReminderService Reminders { get; }
 
     /// <summary>The composer behind the global quick-add box; its lines land in the Inbox unless they name a day.</summary>
@@ -250,6 +267,13 @@ public sealed class AppGraph : IDisposable
     public PlanViewModel Plan { get; }
 
     public SettingsViewModel SettingsPage { get; }
+
+    /// <summary>Shows a task's detail page; Back returns to <paramref name="from"/>.</summary>
+    public void OpenTask(string id, AppPage from)
+    {
+        TaskDetail.Load(id, from);
+        PageRequested?.Invoke(this, AppPage.Task);
+    }
 
     public void Dispose()
     {

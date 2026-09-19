@@ -110,7 +110,8 @@ public static partial class ComposerChips
 
     private static string Key(string name) => name.Trim().ToLowerInvariant();
 
-    private static string DescribeRepeat(string rule, IStrings strings)
+    /// <summary>A repeat rule in words, for the composer's chip and the task's detail page.</summary>
+    internal static string DescribeRepeat(string rule, IStrings strings)
     {
         var parts = rule.Split(';').Select(part => part.Split('=', 2)).ToDictionary(pair => pair[0], pair => pair.Length > 1 ? pair[1] : string.Empty, StringComparer.Ordinal);
         var interval = parts.TryGetValue("INTERVAL", out var text) && int.TryParse(text, CultureInfo.InvariantCulture, out var n) ? n : 1;

@@ -152,6 +152,34 @@ public sealed class PageSnapshots
         Save(new TodayPage(today), folder, "today-filtered");
     });
 
+    [Fact(Explicit = true)]
+    public void TaskDetailsAndTheArchive() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.Appearance = Appearance.Default with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark };
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Book the train to Brno 18:00 @Home #travel", Today.AddDays(2));
+        var task = planner.Task("Book the train to Brno");
+        planner.Tasks.SetNotes(task.Id, "Check the **passport** first.\n- Window seat\n- *Quiet* coach\nTimes at https://www.cd.cz/en/.");
+        planner.Tasks.SetDeadline(task.Id, Today.AddDays(5));
+        planner.Tasks.SetRecurrence(task.Id, "FREQ=WEEKLY;BYDAY=SU");
+        planner.Tags.FindOrCreate("weekend");
+        planner.Steps.Add(task.Id, "Compare prices");
+        planner.Steps.SetDone(planner.Steps.Add(task.Id, "Pick a seat")!.Id, true);
+        using var theme = Theme(planner);
+        var detail = new TaskDetailViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Steps, strings, planner.Time, action => action(), _ => { });
+        detail.Load(task.Id, Startup.AppPage.Today);
+        Save(new TaskPage(detail), folder, "task-details", new Size(852, 1400));
+
+        Add(planner, "Call the bank", Today);
+        Add(planner, "Buy milk", Today);
+        planner.Tasks.SetDone(planner.Task("Call the bank").Id, true);
+        planner.Time.Advance(TimeSpan.FromHours(2));
+        planner.Tasks.SetDone(planner.Task("Buy milk").Id, true);
+        var archive = new ArchiveViewModel(planner.Tasks, strings, action => action(), _ => { });
+        Save(new ArchivePage(archive), folder, "archive");
+    });
+
     private static void Add(TestPlanner planner, string line, DateOnly? day)
     {
         var draft = ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime) with { PlannedDate = day };
