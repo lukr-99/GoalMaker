@@ -69,12 +69,12 @@ public sealed class ReviewViewModelTests : IDisposable
     {
         var page = Page();
 
-        page.SetMoodCommand.Execute(4);
-        page.SetEnergyCommand.Execute(2);
+        page.SetMood(4);
+        page.SetEnergy(2);
         Assert.Equal((4, 2), (page.Mood, page.Energy));
         Assert.Equal(4, planner.Reviews.Find(ReviewRules.Weekly, WeekStart)!.Mood);
 
-        page.SetMoodCommand.Execute(4);
+        page.SetMood(4);
         Assert.Null(page.Mood);
         Assert.Null(planner.Reviews.Find(ReviewRules.Weekly, WeekStart)!.Mood);
     }
@@ -155,7 +155,7 @@ public sealed class ReviewViewModelTests : IDisposable
         Assert.True(list.IsEmpty);
 
         var page = Page();
-        page.SetMoodCommand.Execute(5);
+        page.SetMood(5);
         list.Refresh();
 
         Assert.False(list.IsEmpty);

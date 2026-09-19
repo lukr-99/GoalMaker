@@ -306,6 +306,74 @@ public sealed class PageSnapshots
         Save(page, folder, "habits-editor", new Size(852, 1000));
     });
 
+    [Fact(Explicit = true)]
+    public void ReviewPages() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Time.SetUtcNow(new DateTimeOffset(2026, 9, 21, 9, 0, 0, TimeSpan.Zero));
+        var strings = new ResourceStrings(Application.Current);
+        var weekStart = new DateOnly(2026, 9, 14);
+        var area = planner.Areas.FindOrCreate("Work")!;
+        for (var back = 0; back < 7; back++)
+        {
+            var day = weekStart.AddDays(back);
+            for (var count = 0; count < (back % 3) + 1; count++)
+            {
+                var task = planner.Tasks.Add(ComposerParser.Parse($"Task {back}-{count}", planner.Time.GetLocalNow().DateTime))!;
+                planner.Tasks.SetArea(task.Id, area.Id);
+                planner.Tasks.SetDone(task.Id, true);
+                if (planner.Replica.Get("tasks", task.Id) is { } row)
+                {
+                    row["completed_at"] = JsonValue.Create($"{day:yyyy-MM-dd}T18:00:00.000000Z");
+                    planner.Replica.Queue("tasks", row);
+                }
+
+                planner.Time.Advance(TimeSpan.FromSeconds(1));
+            }
+        }
+
+        var goal = planner.Goals.Add(new GoalDraft("Run 20 km", GoalHorizon.Week, weekStart, GoalRules.ModeNumber, Target: 20, Unit: "km"))!;
+        planner.Goals.LogAmount(goal.Id, weekStart.AddDays(2), 12);
+        var habit = planner.Habits.Add(new HabitDraft("Read before bed", weekStart.AddDays(-60)) { Emoji = "📖" })!;
+        for (var back = 0; back < 20; back++)
+        {
+            planner.Habits.CheckIn(habit.Id, new DateOnly(2026, 9, 20).AddDays(-back));
+        }
+
+        var left = planner.Tasks.Add(ComposerParser.Parse("Call the bank", planner.Time.GetLocalNow().DateTime))!;
+        planner.Tasks.Plan(left.Id, weekStart.AddDays(3));
+        using var theme = Theme(planner);
+        var prompts = ContractResources.Prompts();
+        var review = new ReviewViewModel(
+            ReviewRules.Weekly,
+            weekStart,
+            planner.Reviews,
+            planner.Tasks,
+            planner.Areas,
+            planner.Goals,
+            planner.Habits,
+            prompts,
+            planner.Rituals,
+            planner.Settings,
+            strings,
+            planner.Time,
+            action => action());
+        var page = new ReviewPage(review);
+        Save(page, folder, "review-look-back", new Size(900, 900));
+
+        review.NextCommand.Execute(null);
+        Save(page, folder, "review-open-tasks", new Size(900, 520));
+        review.NextCommand.Execute(null);
+        Save(page, folder, "review-reflect", new Size(900, 760));
+        review.NextCommand.Execute(null);
+        review.SetMood(4);
+        review.SetEnergy(3);
+        Save(page, folder, "review-rate", new Size(900, 480));
+
+        var list = new ReviewsViewModel(planner.Reviews, planner.Settings, strings, planner.Time, (_, _) => { }, action => action());
+        Save(new ReviewsPage(list), folder, "reviews", new Size(900, 700));
+    });
+
     // Controls made under one theme take the next theme's accent (in a window, where resource changes
     // reach them): Electric's toggles once stayed Track's lime.
     [Fact(Explicit = true)]

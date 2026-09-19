@@ -112,6 +112,11 @@ public sealed partial class ReviewViewModel : ObservableObject
 
     public ObservableCollection<ReviewDigest.Habit> PeriodHabits { get; } = [];
 
+    /// <summary>1 to 5 for mood and for energy; the chosen one carries the accent.</summary>
+    public IReadOnlyList<RatingViewModel> MoodRatings { get; private set; } = [];
+
+    public IReadOnlyList<RatingViewModel> EnergyRatings { get; private set; } = [];
+
     public bool IsLookBack => Step == ReviewStep.LookBack;
 
     public bool IsTasks => Step == ReviewStep.Tasks;
@@ -279,8 +284,8 @@ public sealed partial class ReviewViewModel : ObservableObject
         Step = (ReviewStep)((int)Step - 1);
     }
 
-    [RelayCommand]
-    private void SetMood(int value)
+    /// <summary>How the period felt, 1 to 5; the same number again clears it.</summary>
+    public void SetMood(int value)
     {
         if (review is null)
         {
@@ -289,10 +294,10 @@ public sealed partial class ReviewViewModel : ObservableObject
 
         Mood = Mood == value ? null : value;
         reviews.SetMood(review.Id, Mood);
+        ShowRatings();
     }
 
-    [RelayCommand]
-    private void SetEnergy(int value)
+    public void SetEnergy(int value)
     {
         if (review is null)
         {
@@ -301,6 +306,15 @@ public sealed partial class ReviewViewModel : ObservableObject
 
         Energy = Energy == value ? null : value;
         reviews.SetEnergy(review.Id, Energy);
+        ShowRatings();
+    }
+
+    private void ShowRatings()
+    {
+        MoodRatings = [.. Enumerable.Range(1, 5).Select(value => new RatingViewModel(value, Mood == value, SetMood))];
+        EnergyRatings = [.. Enumerable.Range(1, 5).Select(value => new RatingViewModel(value, Energy == value, SetEnergy))];
+        OnPropertyChanged(nameof(MoodRatings));
+        OnPropertyChanged(nameof(EnergyRatings));
     }
 
     [RelayCommand]
@@ -321,6 +335,7 @@ public sealed partial class ReviewViewModel : ObservableObject
             SummaryText = review?.Summary ?? string.Empty;
             Refresh();
             ShowQuestions();
+            ShowRatings();
         }
         finally
         {

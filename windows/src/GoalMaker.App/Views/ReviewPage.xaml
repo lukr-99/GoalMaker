@@ -20,6 +20,37 @@
             <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
             <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
         </Style>
+        <!-- One number of a rating: the chosen one carries the accent. -->
+        <DataTemplate x:Key="Rating" DataType="{x:Type vm:RatingViewModel}">
+            <Button Width="44" Height="44" Margin="0,0,8,0" Padding="0" Cursor="Hand" BorderThickness="0"
+                    Command="{Binding ChooseCommand}"
+                    Content="{Binding Label}"
+                    FontSize="15"
+                    AutomationProperties.Name="{Binding Label}">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                        <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" CornerRadius="22">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsChosen}" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </DataTemplate>
+
         <Style x:Key="Card" TargetType="Border">
             <Setter Property="Margin" Value="0,0,0,6" />
             <Setter Property="Padding" Value="12,8" />
@@ -162,25 +193,21 @@
                 <StackPanel Visibility="{Binding IsRate, Converter={StaticResource BoolToVisibility}}">
                     <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Rate}" />
                     <TextBlock Text="{DynamicResource Reviews.Mood}" FontSize="14" />
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,12">
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="1" Command="{Binding SetMoodCommand}" CommandParameter="1" />
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="2" Command="{Binding SetMoodCommand}" CommandParameter="2" />
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="3" Command="{Binding SetMoodCommand}" CommandParameter="3" />
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="4" Command="{Binding SetMoodCommand}" CommandParameter="4" />
-                        <ui:Button Width="44" Height="44" Content="5" Command="{Binding SetMoodCommand}" CommandParameter="5" />
-                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding Mood}" FontSize="14"
-                                   Foreground="{DynamicResource GM.AccentBrush}" />
-                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding MoodRatings}" ItemTemplate="{StaticResource Rating}" Focusable="False" Margin="0,6,0,14">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
                     <TextBlock Text="{DynamicResource Reviews.Energy}" FontSize="14" />
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="1" Command="{Binding SetEnergyCommand}" CommandParameter="1" />
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="2" Command="{Binding SetEnergyCommand}" CommandParameter="2" />
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="3" Command="{Binding SetEnergyCommand}" CommandParameter="3" />
-                        <ui:Button Width="44" Height="44" Margin="0,0,8,0" Content="4" Command="{Binding SetEnergyCommand}" CommandParameter="4" />
-                        <ui:Button Width="44" Height="44" Content="5" Command="{Binding SetEnergyCommand}" CommandParameter="5" />
-                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding Energy}" FontSize="14"
-                                   Foreground="{DynamicResource GM.AccentBrush}" />
-                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding EnergyRatings}" ItemTemplate="{StaticResource Rating}" Focusable="False" Margin="0,6,0,0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
                 </StackPanel>
 
                 <!-- The period ahead. -->
