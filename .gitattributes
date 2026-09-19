@@ -26,4 +26,5 @@ gradlew text eol=lf
 *.toml text eol=lf
 *.cs text eol=lf
 *.xaml text eol=lf
+*.ts text eol=lf
 *.iss text eol=crlf
