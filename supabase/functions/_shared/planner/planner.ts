@@ -6,6 +6,7 @@ import { DEFAULT_START_HOUR, planningDay } from "../rules/planningDay.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { periodStart, reviewId, type ReviewKind } from "../rules/reviews.ts";
 import { compareText, type TaskItem, type TaskState } from "../rules/task.ts";
+import { type GoalHorizon, periodEnd } from "../rules/goals.ts";
 import { colorForNewArea } from "./palette.ts";
 
 export interface Area {
@@ -402,7 +403,8 @@ export class Planner {
     return this.db`
       select id::text, title, notes, status, top_priority, planned_date::text,
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
-             series_id::text, to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
+             series_id::text, goal_id::text,
+             to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
       from public.tasks`;
@@ -430,6 +432,16 @@ export class Planner {
       on conflict (id) do update set deleted_at = null`;
   }
 
+  // The goal a next occurrence on day still serves: the current one's, while its period lasts (docs/repeating.md).
+  private async goalFor(goalId: string | null, day: Day): Promise<string | null> {
+    if (goalId === null) return null;
+    const [goal] = await this.db`
+      select horizon, period_start::text from public.goals where id = ${goalId} and deleted_at is null`;
+    if (!goal) return null;
+    const start = goal.period_start as Day;
+    return day >= start && day <= periodEnd(goal.horizon as GoalHorizon, start) ? goalId : null;
+  }
+
   // The next occurrence copies this one's plan onto the rule's next day, with its tags; nothing when
   // the task doesn't repeat, the rule can't be followed, or the next occurrence is already there.
   private async moveOn(current: TaskItem): Promise<TaskItem | null> {
@@ -440,16 +452,18 @@ export class Planner {
     const nextId = await successorId(current.id);
     const existing = await this.task(nextId);
     if (existing !== null && !existing.deleted) return null;
+    const goalId = await this.goalFor(current.goalId ?? null, day);
     await this.db`
       insert into public.tasks
-        (id, title, notes, top_priority, status, position, planned_date, planned_time, area_id, recurrence, series_id)
+        (id, title, notes, top_priority, status, position, planned_date, planned_time, area_id, recurrence, series_id, goal_id)
       values
         (${nextId}, ${current.title}, ${current.notes}, ${current.topPriority}, 'open', 0, ${day}, ${current.plannedTime},
-         ${current.areaId}, ${current.recurrence}, ${seriesOf(current)})
+         ${current.areaId}, ${current.recurrence}, ${seriesOf(current)}, ${goalId})
       on conflict (id) do update set
         title = excluded.title, notes = excluded.notes, top_priority = excluded.top_priority, status = 'open',
         completed_at = null, planned_date = excluded.planned_date, planned_time = excluded.planned_time,
-        area_id = excluded.area_id, recurrence = excluded.recurrence, series_id = excluded.series_id, deleted_at = null`;
+        area_id = excluded.area_id, recurrence = excluded.recurrence, series_id = excluded.series_id,
+        goal_id = excluded.goal_id, deleted_at = null`;
     for (const tagId of (await this.tagLinks()).get(current.id) ?? []) {
       await this.link(nextId, tagId, await tagLinkId(nextId, tagId));
     }
@@ -474,6 +488,7 @@ function toTask(row: any): TaskItem {
     notes: row.notes,
     deadline: row.deadline,
     completedAt: row.completed_at,
+    goalId: row.goal_id,
   };
 }
 

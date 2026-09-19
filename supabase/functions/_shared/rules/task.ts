@@ -21,6 +21,8 @@ export interface TaskItem {
   notes: string;
   deadline: Day | null;
   completedAt: string | null;
+  /** The goal the task serves (docs/goals.md); left out where it doesn't matter. */
+  goalId?: string | null;
 }
 
 /** Text order, the way Kotlin and C# compare strings (UTF-16 code units). */
