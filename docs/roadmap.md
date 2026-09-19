@@ -12,8 +12,11 @@ and each has markdown issues under `.scratch/<milestone>/`.
    [docs/design/spec.md](design/spec.md), ADR 0008)
 5. **M1: data and sync** (built 2026-09-18)
 6. **M2: tasks everywhere** (built 2026-09-19, checked on both apps against the local stack)
-7. M3 to M6, then v1.0
-8. M7 and the post-v1 list
+7. **M3: connector** (built 2026-09-19: the MCP Edge Function with tools and ritual prompts, links
+   and the activity log with undo in both apps, weekly summaries; checked on both apps and through
+   the endpoint against the local stack)
+8. M4 to M6, then v1.0
+9. M7 and the post-v1 list
 
 ## Milestones
 

@@ -26,7 +26,8 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   view with notes in light Markdown and a checklist, and the searchable archive of done tasks
   ([docs/archive.md](docs/archive.md)).
 
-The Claude connector comes in M3, goals and habits in M4. No release has been published yet; the cloud project and the signing keys still need the one-time setup in
+The Claude connector ([docs/connector.md](docs/connector.md)) arrived with M3; goals and habits come
+in M4. No release has been published yet; the cloud project and the signing keys still need the one-time setup in
 [docs/setup/](docs/setup/).
 
 ## Parts

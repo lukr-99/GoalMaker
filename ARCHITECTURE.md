@@ -3,15 +3,17 @@
 ## Context
 
 One owner uses GoalMaker on an Android phone and a Windows PC. Supabase (Postgres, Auth, Storage,
-Realtime, later Edge Functions) is the source of truth; each app keeps a SQLite replica with an
-outbox, so it works offline and syncs when it can (ADR 0002, ADR 0007, [docs/sync.md](docs/sync.md)). Claude reaches the data through a connector in M3 (ADR 0003). Releases reach both
-apps through a signed update channel in Supabase Storage (ADR 0004).
+Realtime, Edge Functions) is the source of truth; each app keeps a SQLite replica with an outbox, so
+it works offline and syncs when it can (ADR 0002, ADR 0007, [docs/sync.md](docs/sync.md)). Claude
+reaches the data through the connector, an MCP Edge Function that acts as the owner under row
+security (ADR 0003, [docs/connector.md](docs/connector.md)). Releases reach both apps through a
+signed update channel in Supabase Storage (ADR 0004).
 
 ```text
-  Android app  ──┐                           ┌── Claude apps (M3, connector)
+  Android app  ──┐                           ┌── Claude apps (MCP, the connector's secret link)
   (Kotlin)       │  HTTPS, user session      │
                  ├──────────► Supabase ◄─────┘
-  Windows app  ──┘   Auth · Postgres (RLS) · Realtime · Storage (releases) · Edge Functions (M3)
+  Windows app  ──┘   Auth · Postgres (RLS) · Realtime · Storage (releases) · Edge Functions (connector)
   (.NET/WPF)                    ▲
                                 │ migrations, deploys (CLI)      release workflow (CI)
                          supabase/ folder  ◄─────────────────────  uploads + signed manifest
@@ -97,6 +99,16 @@ them as assets at build time, Windows embeds them. Both record each file's SHA-2
 `config.toml` for the local stack (ports 553xx so it can run beside other projects), immutable
 migrations locked by checksum, pgTAP tests, isolated-migration fixtures, the sign-in code email
 template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated N-1 → N steps.
+
+`functions/` holds the Edge Functions (TypeScript on Deno 2.1, pinned through npm):
+
+- `connector/`: the Claude connector, a stateless MCP server (docs/connector.md). It resolves the
+  secret in its URL to the owner and runs every call in one transaction as that owner.
+- `_shared/`: what the connector (and the M7 quick chat) share: `owner.ts` (the owner-scoped
+  transaction), `planner/` (data access that does what the apps' lists do), `tools/` and
+  `prompts/`, and `rules/`, the planning rules ported from Kotlin and C#, which run the same vectors
+  in `contracts/vectors/`. `deno task test` runs them; `connector/endpoint_test.ts` drives the
+  running function on the local stack.
 
 ## Data flow
 
