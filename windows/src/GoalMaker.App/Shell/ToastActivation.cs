@@ -1,13 +1,22 @@
+using System.Globalization;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.Shell;
 
 /// <summary>
 /// A click on a reminder toast, carried in the toast's arguments as
-/// <c>action=snooze;reminder=&lt;id&gt;;snooze=TenMinutes</c>.
+/// <c>action=snooze;reminder=&lt;id&gt;;snooze=TenMinutes</c>. For the evening Plan tomorrow
+/// reminder the id is its planning day, <c>action=SkipPlan;reminder=2026-09-18</c>.
 /// </summary>
 public sealed record ToastActivation(ToastAction Action, string ReminderId, Snooze? Snooze = null)
 {
+    /// <summary>The planning day of an evening reminder's click, or null for a task reminder's.</summary>
+    public DateOnly? PlanDay =>
+        Action is ToastAction.Plan or ToastAction.SkipPlan
+        && DateOnly.TryParseExact(ReminderId, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day
+            : null;
+
     /// <summary>The arguments a toast or one of its buttons carries.</summary>
     public string Arguments => Snooze is { } option
         ? $"action={Action};reminder={ReminderId};snooze={option}"

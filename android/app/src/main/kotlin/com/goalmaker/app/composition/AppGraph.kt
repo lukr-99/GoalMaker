@@ -15,6 +15,7 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderService
+import com.goalmaker.app.application.planning.RitualRunList
 import com.goalmaker.app.application.planning.StepList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
@@ -50,6 +51,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import java.io.File
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlin.system.exitProcess
@@ -58,6 +60,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -154,6 +159,7 @@ class AppGraph(context: Context) {
     // Reminders (docs/reminders.md): the replica decides, AlarmManager carries the one armed alarm.
     val reminderNotifications = ReminderNotifications(appContext)
     private val reminderList = ReminderList(replica, newRows, sync::request)
+    private val rituals = RitualRunList(replica, newRows, sync::request)
     val reminders = ReminderService(
         reminders = reminderList,
         tasks = tasks,
@@ -163,7 +169,14 @@ class AppGraph(context: Context) {
         now = LocalDateTime::now,
         remindedUntil = { settings.remindedUntil()?.atZone(ZoneId.systemDefault())?.toLocalDateTime() },
         setRemindedUntil = { settings.setRemindedUntil(it.atZone(ZoneId.systemDefault()).toInstant()) },
+        rituals = rituals,
+        planTomorrowAt = { settings.planTomorrowReminder.value },
     )
+
+    private val planRequest = MutableStateFlow(false)
+
+    /** True while the Plan tomorrow reminder asked for the ritual and it isn't on screen yet. */
+    val planRequested: StateFlow<Boolean> = planRequest.asStateFlow()
 
     private val changeFeed = SupabaseChangeFeed(supabase, catalog, scope, sync::request)
     private val backgroundSync = WorkManagerSyncScheduler(appContext)
@@ -182,6 +195,9 @@ class AppGraph(context: Context) {
             if (report.pulled > 0 || report.pushed > 0) {
                 reminders.rearm()
                 reminders.stale(reminderNotifications.shown()).forEach(reminderNotifications::clear)
+                reminderNotifications.shownPlanTomorrow()
+                    .filter(reminders::planTomorrowStale)
+                    .forEach(reminderNotifications::clearPlanTomorrow)
             }
         }
         scope.launch {
@@ -239,13 +255,39 @@ class AppGraph(context: Context) {
         scope.launch(io) { reminders.dismiss(reminderId) }
     }
 
+    /**
+     * The owner opened the app from the Plan tomorrow reminder, so the ritual opens and the reminder
+     * goes (Android only takes a notification down by itself when its body is tapped, not a button).
+     */
+    fun openedForPlan() {
+        planRequest.value = true
+        reminderNotifications.shownPlanTomorrow().forEach(reminderNotifications::clearPlanTomorrow)
+    }
+
+    /** The ritual is on screen, so the request is settled. */
+    fun planOpened() {
+        planRequest.value = false
+    }
+
+    /** The ritual ran to the end on planning [day]: its evening reminder stays quiet that day everywhere. */
+    fun planTomorrowFinished(day: LocalDate) {
+        scope.launch(io) {
+            reminders.finishPlanTomorrow(day)
+            reminderNotifications.clearPlanTomorrow(day)
+        }
+    }
+
     private suspend fun onSignedIn(session: AuthSession.SignedIn) {
         signedIn = true
         withContext(io) { forgetOtherAccounts(session.userId) }
         sync.request()
         backgroundSync.keepSyncing()
         // Anything that was due while the app was away, and the alarm for what comes next.
-        withContext(io) { reminders.catchUp().forEach(reminderNotifications::show) }
+        withContext(io) {
+            val look = reminders.catchUp()
+            look.reminders.forEach(reminderNotifications::show)
+            look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
+        }
         if (visible) changeFeed.start()
     }
 

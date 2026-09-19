@@ -65,5 +65,6 @@ today's tasks were decided. Back to Today from there.
 
 - **Repeating tasks** are decided like the others; Done and Drop move the series on to its next
   occurrence, and changing the decision back takes that occurrence back ([repeating](repeating.md)).
-- The evening reminder (M2-09) needs to know whether today's ritual already happened on either
-  device, which takes a synced record of it; that arrives with the reminder.
+- Reaching the summary card records today's run in the synced `ritual_runs` table, which keeps the
+  evening reminder quiet for the rest of the planning day on both devices
+  ([reminders](reminders.md#the-evening-plan-tomorrow-reminder)).

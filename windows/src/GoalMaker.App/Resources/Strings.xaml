@@ -212,6 +212,14 @@
     <sys:String x:Key="Settings.Planning">Planning</sys:String>
     <sys:String x:Key="Settings.DayStart">The day starts at</sys:String>
     <sys:String x:Key="Settings.DayStartHint">Until then it's still yesterday, so planning after midnight lands on the right tomorrow.</sys:String>
+    <sys:String x:Key="Settings.PlanReminder">Evening reminder to plan tomorrow</sys:String>
+    <sys:String x:Key="Settings.PlanReminderTime">Evening reminder time</sys:String>
+    <sys:String x:Key="Settings.PlanReminderOn">At {0}, unless you already planned or said not today.</sys:String>
+    <sys:String x:Key="Settings.PlanReminderOff">Off.</sys:String>
+    <sys:String x:Key="PlanReminder.Title">Plan tomorrow</sys:String>
+    <sys:String x:Key="PlanReminder.Text">Settle what's left from today and pick tomorrow's top priorities.</sys:String>
+    <sys:String x:Key="PlanReminder.Start">Plan</sys:String>
+    <sys:String x:Key="PlanReminder.Skip">Not today</sys:String>
     <sys:String x:Key="Settings.QuietHours">Quiet hours</sys:String>
     <sys:String x:Key="Settings.QuietHoursStart">Quiet hours start</sys:String>
     <sys:String x:Key="Settings.QuietHoursEnd">Quiet hours end</sys:String>

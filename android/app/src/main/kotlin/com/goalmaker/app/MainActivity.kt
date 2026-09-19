@@ -32,8 +32,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openedFromReminder(intent: Intent?) {
-        val reminderId = intent?.getStringExtra(ReminderAlarm.EXTRA_REMINDER_ID) ?: return
-        (application as GoalMakerApplication).graph.openedFromReminder(reminderId)
+        if (intent == null) return
+        val graph = (application as GoalMakerApplication).graph
+        if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_PLAN, false)) {
+            graph.openedForPlan()
+            intent.removeExtra(ReminderAlarm.EXTRA_OPEN_PLAN)
+        }
+        val reminderId = intent.getStringExtra(ReminderAlarm.EXTRA_REMINDER_ID) ?: return
+        graph.openedFromReminder(reminderId)
         intent.removeExtra(ReminderAlarm.EXTRA_REMINDER_ID)
     }
 

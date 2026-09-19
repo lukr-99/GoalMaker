@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import java.time.LocalTime
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -62,5 +63,17 @@ class SharedPreferencesSettingsStoreTest {
 
         assertEquals(ThemeMode.SYSTEM, appearance.mode)
         assertEquals(ReduceMotion.SYSTEM, appearance.reduceMotion)
+    }
+
+    @Test
+    fun `the evening reminder is at 20 00 until moved or switched off`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(LocalTime.of(20, 0), store.planTomorrowReminder.value)
+
+        store.setPlanTomorrowReminder(LocalTime.of(21, 30))
+        assertEquals(LocalTime.of(21, 30), SharedPreferencesSettingsStore(preferences).planTomorrowReminder.value)
+
+        store.setPlanTomorrowReminder(null)
+        assertEquals(null, SharedPreferencesSettingsStore(preferences).planTomorrowReminder.value)
     }
 }

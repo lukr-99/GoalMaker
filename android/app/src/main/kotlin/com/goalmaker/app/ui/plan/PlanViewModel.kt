@@ -36,6 +36,8 @@ class PlanViewModel(
     private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
+    /** Called once when the ritual reaches its end, with the planning day it ran on. */
+    private val onFinished: (LocalDate) -> Unit = {},
 ) : ViewModel() {
 
     /** The planning day, read once so the ritual's today and tomorrow stay put. */
@@ -110,10 +112,13 @@ class PlanViewModel(
     }
 
     fun next() {
-        step.value = when (step.value) {
+        val before = step.value
+        step.value = when (before) {
             PlanStep.TODAY -> if (uiState.value.undecided == 0) PlanStep.TOMORROW else PlanStep.TODAY
             PlanStep.TOMORROW, PlanStep.DONE -> PlanStep.DONE
         }
+        // Reaching the end counts as the day's run, which quiets the evening reminder everywhere.
+        if (before == PlanStep.TOMORROW) onFinished(today)
     }
 
     /** Back from step 2 goes to step 1; false where back should leave the ritual. */

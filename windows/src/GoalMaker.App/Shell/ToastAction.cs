@@ -12,4 +12,10 @@ public enum ToastAction
 
     /// <summary>Closed the toast.</summary>
     Dismiss,
+
+    /// <summary>The evening reminder's Plan button or body: opens the Plan tomorrow ritual.</summary>
+    Plan,
+
+    /// <summary>The evening reminder's "Not today": quiet for the rest of the planning day.</summary>
+    SkipPlan,
 }

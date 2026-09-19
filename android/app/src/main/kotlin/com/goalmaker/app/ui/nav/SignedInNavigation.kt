@@ -1,6 +1,9 @@
 package com.goalmaker.app.ui.nav
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -29,6 +32,14 @@ import com.goalmaker.app.ui.task.TaskViewModel
 @Composable
 fun SignedInNavigation(graph: AppGraph) {
     val backStack = rememberNavBackStack(TodayKey)
+    // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
+    val planRequested by graph.planRequested.collectAsState()
+    LaunchedEffect(planRequested) {
+        if (planRequested) {
+            if (backStack.lastOrNull() != PlanKey) backStack.add(PlanKey)
+            graph.planOpened()
+        }
+    }
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
@@ -67,6 +78,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         settings = graph.settings,
                         io = graph.io,
                         clock = LocalDateTime::now,
+                        onFinished = graph::planTomorrowFinished,
                     )
                 }
                 PlanScreen(viewModel = planViewModel, onClose = { backStack.removeLastOrNull() })

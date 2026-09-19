@@ -41,13 +41,13 @@ public sealed class ReminderServiceTests : IDisposable
     public void CatchingUpShowsEachReminderOnce()
     {
         var task = Add("Take the bread out");
-        Assert.Empty(reminders.CatchUp());
+        Assert.Empty(reminders.CatchUp().Reminders);
         reminders.AddAt(task.Id, new DateTime(2026, 9, 18, 14, 30, 0));
 
         planner.Time.Advance(TimeSpan.FromMinutes(31));
 
-        Assert.Equal("Take the bread out", reminders.CatchUp().Single().TaskTitle);
-        Assert.Empty(reminders.CatchUp());
+        Assert.Equal("Take the bread out", reminders.CatchUp().Reminders.Single().TaskTitle);
+        Assert.Empty(reminders.CatchUp().Reminders);
         Assert.Null(scheduler.ArmedAt);
     }
 
@@ -57,7 +57,7 @@ public sealed class ReminderServiceTests : IDisposable
         var task = Add("Take the bread out");
         reminders.AddAt(task.Id, new DateTime(2026, 9, 18, 9, 0, 0));
 
-        Assert.Empty(reminders.CatchUp());
+        Assert.Empty(reminders.CatchUp().Reminders);
     }
 
     [Fact]
@@ -107,6 +107,58 @@ public sealed class ReminderServiceTests : IDisposable
         Assert.Empty(reminders.On(task.Id));
         Assert.Null(scheduler.ArmedAt);
     }
+
+    [Fact]
+    public void TheEveningReminderSharesTheTimerAndShowsOnceAtItsTime()
+    {
+        var withRitual = WithRitual();
+        withRitual.Rearm();
+        Assert.Equal(new DateTime(2026, 9, 18, 20, 0, 0), scheduler.ArmedAt);
+
+        var task = Add("Take the bread out");
+        withRitual.AddAt(task.Id, new DateTime(2026, 9, 18, 17, 30, 0));
+        Assert.Equal(new DateTime(2026, 9, 18, 17, 30, 0), scheduler.ArmedAt);
+
+        Assert.Null(withRitual.CatchUp().PlanTomorrow);
+        planner.Time.Advance(TimeSpan.FromHours(6) + TimeSpan.FromSeconds(1));
+        var look = withRitual.CatchUp();
+
+        Assert.Equal(new DateOnly(2026, 9, 18), look.PlanTomorrow);
+        Assert.Equal("Take the bread out", look.Reminders.Single().TaskTitle);
+        Assert.Equal(new DateTime(2026, 9, 19, 20, 0, 0), scheduler.ArmedAt);
+        Assert.Null(withRitual.CatchUp().PlanTomorrow);
+    }
+
+    [Fact]
+    public void FinishingOrSkippingTheRitualQuietsTheDay()
+    {
+        var withRitual = WithRitual();
+        var today = new DateOnly(2026, 9, 18);
+        Assert.False(withRitual.PlanTomorrowStale(today));
+
+        withRitual.SkipPlanTomorrow(today);
+
+        Assert.True(withRitual.PlanTomorrowStale(today));
+        Assert.Equal(new DateTime(2026, 9, 19, 20, 0, 0), scheduler.ArmedAt);
+        Assert.Equal([today], planner.Rituals.Ran(RitualRunList.PlanTomorrow));
+
+        withRitual.FinishPlanTomorrow(today);
+        Assert.Equal([today], planner.Rituals.Ran(RitualRunList.PlanTomorrow));
+    }
+
+    [Fact]
+    public void SwitchedOffTheEveningArmsNothing()
+    {
+        planner.Settings.PlanTomorrowReminder = null;
+        var withRitual = WithRitual();
+
+        withRitual.Rearm();
+
+        Assert.Null(scheduler.ArmedAt);
+    }
+
+    private ReminderService WithRitual() =>
+        new(planner.Reminders, planner.Tasks, scheduler, planner.Settings, planner.Time, planner.Rituals);
 
     private TaskItem Add(string line)
     {

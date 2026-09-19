@@ -285,4 +285,13 @@
     <string name="settings_quiet_hours_start">Start</string>
     <string name="settings_quiet_hours_end">End</string>
     <string name="settings_quiet_hours_clear">Switch off</string>
+    <string name="settings_plan_reminder">Evening reminder to plan tomorrow</string>
+    <string name="settings_plan_reminder_on">At %1$s, unless you already planned or said not today.</string>
+    <string name="settings_plan_reminder_off">Off.</string>
+    <string name="plan_reminder_channel">Plan tomorrow</string>
+    <string name="plan_reminder_channel_description">The evening reminder to plan tomorrow.</string>
+    <string name="plan_reminder_title">Plan tomorrow</string>
+    <string name="plan_reminder_text">Settle what\'s left from today and pick tomorrow\'s top priorities.</string>
+    <string name="plan_reminder_start">Plan</string>
+    <string name="plan_reminder_skip">Not today</string>
 </resources>

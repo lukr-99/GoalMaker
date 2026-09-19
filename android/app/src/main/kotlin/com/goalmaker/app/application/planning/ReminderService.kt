@@ -1,15 +1,20 @@
 package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.planning.Snooze
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 
 /**
  * Keeps the device's reminders in step with the replica (docs/reminders.md): says what to show now,
  * arms the alarm for the next one, says which notifications on screen went stale, and settles a
  * reminder the owner handled. [remindedUntil] is the device's last look, kept on the device so each
- * reminder is shown once. Every method blocks on disk, so callers run them off the main thread.
+ * reminder is shown once. The evening Plan tomorrow reminder shares the one alarm: it rings at
+ * [planTomorrowAt] unless [rituals] says the ritual already ran that planning day. Every method
+ * blocks on disk, so callers run them off the main thread.
  */
 class ReminderService(
     private val reminders: ReminderList,
@@ -20,18 +25,22 @@ class ReminderService(
     private val now: () -> LocalDateTime,
     private val remindedUntil: () -> LocalDateTime?,
     private val setRemindedUntil: (LocalDateTime) -> Unit,
+    private val rituals: RitualRunList? = null,
+    private val planTomorrowAt: () -> LocalTime? = { null },
 ) {
     /**
      * What arrived since the last look, including anything missed while the device was off, with the
      * alarm armed for whatever comes next. A device that never looked starts from now.
      */
-    fun catchUp(): List<ScheduledReminder> {
+    fun catchUp(): ReminderLook {
         val at = now()
+        val since = remindedUntil() ?: at
         val (all, byId) = read()
-        val due = ReminderSchedule.due(all, byId, quietHours(), remindedUntil() ?: at, at)
+        val due = ReminderSchedule.due(all, byId, quietHours(), since, at)
+        val planDay = rituals?.let { RitualReminder.due(planTomorrowAt(), dayStartHour(), ranPlanTomorrow(), since, at) }
         setRemindedUntil(at)
-        arm(ReminderSchedule.next(all, byId, quietHours(), at))
-        return due
+        arm(all, byId, at)
+        return ReminderLook(due, planDay)
     }
 
     /** Which of the notifications on screen ([shown], by reminder id) have to go (docs/reminders.md). */
@@ -39,6 +48,22 @@ class ReminderService(
         if (shown.isEmpty()) return emptyList()
         val (all, byId) = read()
         return ReminderSchedule.stale(shown, all, byId, now())
+    }
+
+    /** Whether the Plan tomorrow reminder on screen for [day] has to go: the ritual ran, or the day moved on. */
+    fun planTomorrowStale(day: LocalDate): Boolean =
+        RitualReminder.stale(day, dayStartHour(), ranPlanTomorrow(), now())
+
+    /** The ritual ran to the end on planning [day], so its reminder stays quiet that day on every device. */
+    fun finishPlanTomorrow(day: LocalDate) {
+        rituals?.record(RitualRunList.PLAN_TOMORROW, day)
+        rearm()
+    }
+
+    /** "Not today" on the Plan tomorrow reminder: quiet for the rest of planning [day], on every device. */
+    fun skipPlanTomorrow(day: LocalDate) {
+        rituals?.record(RitualRunList.PLAN_TOMORROW, day, skipped = true)
+        rearm()
     }
 
     /** Done from a notification: the task is finished and the reminder never comes back. */
@@ -83,13 +108,19 @@ class ReminderService(
     /** Arms the alarm for the next reminder, after a sync, a settings change or a reboot. */
     fun rearm() {
         val (all, byId) = read()
-        arm(ReminderSchedule.next(all, byId, quietHours(), now()))
+        arm(all, byId, now())
     }
 
     private fun read(): Pair<List<ReminderItem>, Map<String, TaskItem>> =
         reminders.all() to tasks.all().associateBy(TaskItem::id)
 
-    private fun arm(next: ScheduledReminder?) {
-        if (next == null) scheduler.cancel() else scheduler.armAt(next.at)
+    private fun ranPlanTomorrow(): Set<LocalDate> = rituals?.ran(RitualRunList.PLAN_TOMORROW).orEmpty()
+
+    // One alarm for whichever comes first: a task's reminder or the evening Plan tomorrow reminder.
+    private fun arm(all: List<ReminderItem>, byId: Map<String, TaskItem>, at: LocalDateTime) {
+        val task = ReminderSchedule.next(all, byId, quietHours(), at)?.at
+        val ritual = rituals?.let { RitualReminder.next(planTomorrowAt(), dayStartHour(), ranPlanTomorrow(), at) }
+        val next = listOfNotNull(task, ritual).minOrNull()
+        if (next == null) scheduler.cancel() else scheduler.armAt(next)
     }
 }

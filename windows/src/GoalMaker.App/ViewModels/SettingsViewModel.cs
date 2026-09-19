@@ -195,6 +195,33 @@ public sealed partial class SettingsViewModel : ObservableObject
         set => SetQuietHours(settings.QuietHours with { End = new TimeOnly(Math.Clamp(value, 0, 23), 0) });
     }
 
+    /// <summary>The times the evening reminder can ring at, every half hour; the index is the half hour of the day.</summary>
+    public IReadOnlyList<string> PlanReminderChoices { get; } =
+        [.. Enumerable.Range(0, 48).Select(half => new TimeOnly(half / 2, half % 2 * 30).ToString("t", CultureInfo.CurrentCulture))];
+
+    /// <summary>Whether the evening Plan tomorrow reminder rings (docs/reminders.md); switching it on again starts at 20:00.</summary>
+    public bool PlanReminderOn
+    {
+        get => settings.PlanTomorrowReminder is not null;
+        set => SetPlanReminder(value ? settings.PlanTomorrowReminder ?? RitualReminder.DefaultTime : null);
+    }
+
+    /// <summary>When the evening reminder rings, as an index into <see cref="PlanReminderChoices"/>.</summary>
+    public int PlanReminderTime
+    {
+        get => settings.PlanTomorrowReminder is { } time ? (time.Hour * 2) + (time.Minute >= 30 ? 1 : 0) : (RitualReminder.DefaultTime.Hour * 2);
+        set
+        {
+            var half = Math.Clamp(value, 0, 47);
+            SetPlanReminder(new TimeOnly(half / 2, half % 2 * 30));
+        }
+    }
+
+    /// <summary>What the evening reminder does, in words.</summary>
+    public string PlanReminderSummary => settings.PlanTomorrowReminder is { } at
+        ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
+        : strings.Get("Settings.PlanReminderOff");
+
     /// <summary>What the quiet hours do, in words.</summary>
     public string QuietHoursSummary => settings.QuietHours.IsOff
         ? strings.Get("Settings.QuietHoursOff")
@@ -255,6 +282,21 @@ public sealed partial class SettingsViewModel : ObservableObject
             : strings.Get(accepted ? "Settings.QuickAddOn" : "Settings.QuickAddTaken", gesture.ToString());
         OnPropertyChanged(nameof(QuickAddHotkeyText));
         OnPropertyChanged(nameof(QuickAddHotkeyStatus));
+    }
+
+    // The evening reminder shares the reminder timer, so it is armed again.
+    private void SetPlanReminder(TimeOnly? time)
+    {
+        if (time == settings.PlanTomorrowReminder)
+        {
+            return;
+        }
+
+        settings.PlanTomorrowReminder = time;
+        OnPropertyChanged(nameof(PlanReminderOn));
+        OnPropertyChanged(nameof(PlanReminderTime));
+        OnPropertyChanged(nameof(PlanReminderSummary));
+        quietHoursChanged();
     }
 
     // Quiet hours move ordinary reminders, so the reminder timer is armed again.

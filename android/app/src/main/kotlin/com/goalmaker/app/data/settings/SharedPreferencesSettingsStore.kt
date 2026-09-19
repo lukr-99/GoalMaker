@@ -6,6 +6,7 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.Appearance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +57,14 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         quiet.value = window
     }
 
+    private val planTomorrow = MutableStateFlow(readPlanTomorrow())
+    override val planTomorrowReminder: StateFlow<LocalTime?> = planTomorrow.asStateFlow()
+
+    override fun setPlanTomorrowReminder(time: LocalTime?) {
+        preferences.edit { putInt(PLAN_TOMORROW_AT, time?.toSecondOfDay() ?: OFF) }
+        planTomorrow.value = time
+    }
+
     override fun remindedUntil(): Instant? =
         preferences.getLong(REMINDED_UNTIL, -1L).takeIf { it >= 0 }?.let(Instant::ofEpochMilli)
 
@@ -87,6 +96,12 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         return QuietHours(LocalTime.ofSecondOfDay(start.toLong()), LocalTime.ofSecondOfDay(end.toLong()))
     }
 
+    private fun readPlanTomorrow(): LocalTime? {
+        if (!preferences.contains(PLAN_TOMORROW_AT)) return RitualReminder.DEFAULT_TIME
+        val seconds = preferences.getInt(PLAN_TOMORROW_AT, OFF)
+        return if (seconds in 0 until SECONDS_PER_DAY) LocalTime.ofSecondOfDay(seconds.toLong()) else null
+    }
+
     private fun readAppearance() = Appearance(
         themeId = preferences.getString(THEME, null),
         mode = enumOrDefault(preferences.getString(THEME_MODE, null), Appearance.DEFAULT.mode),
@@ -105,6 +120,9 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val QUIET_START = "quiet_hours_start"
         const val QUIET_END = "quiet_hours_end"
         const val REMINDED_UNTIL = "reminded_until"
+        const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
+        const val OFF = -1
+        const val SECONDS_PER_DAY = 86_400
         const val BACKEND_URL = "dev_backend_url"
         const val BACKEND_KEY = "dev_backend_key"
 

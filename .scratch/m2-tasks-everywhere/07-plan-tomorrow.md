@@ -25,5 +25,5 @@
   an Inbox task, a composer line, the summary), and the phone's results showed on the PC's Tomorrow.
   On Windows by headless view-model tests (8) and offscreen renders of all three steps
   (`PageSnapshots`, an explicit test that draws pages to PNG without a window).
-- Open for later: the evening reminder and "already planned today" (M2-09); Done and Drop on
-  repeating tasks moving the series on (M2-08).
+- Later: the evening reminder and "already planned today" arrived with M2-09 (2026-09-19); Done and
+  Drop on repeating tasks moving the series on arrived with M2-08.

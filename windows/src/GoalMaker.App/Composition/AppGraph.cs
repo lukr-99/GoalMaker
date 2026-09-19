@@ -93,7 +93,13 @@ public sealed class AppGraph : IDisposable
         // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
         // carries the next one, and toasts show them with the same buttons as the phone.
         reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
-        Reminders = new ReminderService(new ReminderList(replica, newRows, Sync.Request), Tasks, reminderTimer, Settings, TimeProvider.System);
+        Reminders = new ReminderService(
+            new ReminderList(replica, newRows, Sync.Request),
+            Tasks,
+            reminderTimer,
+            Settings,
+            TimeProvider.System,
+            new RitualRunList(replica, newRows, Sync.Request));
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -189,7 +195,8 @@ public sealed class AppGraph : IDisposable
             Theme.AreaBrush,
             tick,
             page => PageRequested?.Invoke(this, page),
-            runOnUi);
+            runOnUi,
+            PlanTomorrowFinished);
         shownDay = PlanningDay.Of(DateTime.Now, Settings.DayStartHour);
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
@@ -332,9 +339,15 @@ public sealed class AppGraph : IDisposable
             return;
         }
 
-        foreach (var reminder in Reminders.CatchUp())
+        var look = Reminders.CatchUp();
+        foreach (var reminder in look.Reminders)
         {
             toasts.Show(reminder);
+        }
+
+        if (look.PlanTomorrow is { } day)
+        {
+            toasts.ShowPlanTomorrow(day);
         }
     }
 
@@ -345,10 +358,37 @@ public sealed class AppGraph : IDisposable
         {
             toasts.Clear(id);
         }
+
+        foreach (var day in toasts.ShownPlanTomorrow().Where(Reminders.PlanTomorrowStale))
+        {
+            toasts.ClearPlanTomorrow(day);
+        }
+    }
+
+    // The ritual ran to the end: its evening reminder stays quiet that day on every device.
+    private void PlanTomorrowFinished(DateOnly day)
+    {
+        Reminders.FinishPlanTomorrow(day);
+        toasts.ClearPlanTomorrow(day);
     }
 
     private void OnToast(ToastActivation activation)
     {
+        if (activation.PlanDay is { } planDay)
+        {
+            if (activation.Action == ToastAction.SkipPlan)
+            {
+                Reminders.SkipPlanTomorrow(planDay);
+            }
+            else
+            {
+                WindowRequested?.Invoke(this, AppPage.Plan);
+            }
+
+            toasts.ClearPlanTomorrow(planDay);
+            return;
+        }
+
         switch (activation.Action)
         {
             case ToastAction.Done:

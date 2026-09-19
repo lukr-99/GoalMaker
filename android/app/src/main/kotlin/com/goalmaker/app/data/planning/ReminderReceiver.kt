@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import com.goalmaker.app.GoalMakerApplication
 import com.goalmaker.app.domain.planning.Snooze
+import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,6 +24,8 @@ class ReminderReceiver : BroadcastReceiver() {
         val reminderId = intent.getStringExtra(ReminderAlarm.EXTRA_REMINDER_ID)
         val snooze = intent.getStringExtra(ReminderAlarm.EXTRA_SNOOZE)
             ?.let { name -> Snooze.entries.firstOrNull { it.name == name } }
+        val planDay = intent.getStringExtra(ReminderAlarm.EXTRA_PLAN_DAY)
+            ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
         val finish = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
@@ -43,8 +46,17 @@ class ReminderReceiver : BroadcastReceiver() {
                         notifications.clear(it)
                     }
 
+                    ReminderAlarm.ACTION_SKIP_PLAN -> planDay?.let {
+                        reminders.skipPlanTomorrow(it)
+                        notifications.clearPlanTomorrow(it)
+                    }
+
                     // The alarm, a reboot, a changed clock: show what is due and arm what follows.
-                    else -> reminders.catchUp().forEach(notifications::show)
+                    else -> {
+                        val look = reminders.catchUp()
+                        look.reminders.forEach(notifications::show)
+                        look.planTomorrow?.let(notifications::showPlanTomorrow)
+                    }
                 }
             } finally {
                 finish.finish()

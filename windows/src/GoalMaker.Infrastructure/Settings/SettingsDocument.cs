@@ -24,6 +24,9 @@ public sealed record SettingsDocument
 
     public TimeOnly QuietHoursEnd { get; init; }
 
+    /// <summary>The evening reminder's time; missing from older files reads as 20:00, null means off.</summary>
+    public TimeOnly? PlanTomorrowReminder { get; init; } = RitualReminder.DefaultTime;
+
     public DateTimeOffset? RemindedUntil { get; init; }
 
     public string? QuickAddHotkey { get; init; }

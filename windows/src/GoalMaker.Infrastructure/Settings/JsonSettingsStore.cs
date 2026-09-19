@@ -48,6 +48,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { QuietHoursStart = value.Start, QuietHoursEnd = value.End });
     }
 
+    public TimeOnly? PlanTomorrowReminder
+    {
+        get => document.PlanTomorrowReminder;
+        set => Save(document with { PlanTomorrowReminder = value });
+    }
+
     public DateTimeOffset? RemindedUntil
     {
         get => document.RemindedUntil;

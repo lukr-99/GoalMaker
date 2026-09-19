@@ -55,4 +55,19 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.Equal(new WindowPlacement(10, 20, 800, 600, false), new JsonSettingsStore(SettingsFile).MainWindowPlacement);
     }
+
+    [Fact]
+    public void TheEveningReminderIsAt2000UntilMovedOrSwitchedOff()
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(SettingsFile, """{ "Version": 1 }""");
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Equal(new TimeOnly(20, 0), store.PlanTomorrowReminder);
+
+        store.PlanTomorrowReminder = new TimeOnly(21, 30);
+        Assert.Equal(new TimeOnly(21, 30), new JsonSettingsStore(SettingsFile).PlanTomorrowReminder);
+
+        store.PlanTomorrowReminder = null;
+        Assert.Null(new JsonSettingsStore(SettingsFile).PlanTomorrowReminder);
+    }
 }

@@ -6,7 +6,8 @@ namespace GoalMaker.Core.Planning;
 /// Keeps the device's reminders in step with the replica (docs/reminders.md): says what to show now,
 /// arms the timer for the next one, says which notifications on screen went stale, and settles a
 /// reminder the owner handled. The time of the last look stays in the settings, so each reminder is
-/// shown once.
+/// shown once. The evening Plan tomorrow reminder shares the one timer: it rings at the time in the
+/// settings unless the ritual already ran that planning day.
 /// </summary>
 public sealed class ReminderService
 {
@@ -15,14 +16,22 @@ public sealed class ReminderService
     private readonly IReminderScheduler scheduler;
     private readonly ISettingsStore settings;
     private readonly TimeProvider time;
+    private readonly RitualRunList? rituals;
 
-    public ReminderService(ReminderList reminders, TaskList tasks, IReminderScheduler scheduler, ISettingsStore settings, TimeProvider time)
+    public ReminderService(
+        ReminderList reminders,
+        TaskList tasks,
+        IReminderScheduler scheduler,
+        ISettingsStore settings,
+        TimeProvider time,
+        RitualRunList? rituals = null)
     {
         this.reminders = reminders;
         this.tasks = tasks;
         this.scheduler = scheduler;
         this.settings = settings;
         this.time = time;
+        this.rituals = rituals;
         reminders.Changed += (_, _) => Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -35,16 +44,17 @@ public sealed class ReminderService
     /// What arrived since the last look, including anything missed while the PC slept, with the timer
     /// armed for whatever comes next. A device that never looked starts from now.
     /// </summary>
-    public IReadOnlyList<ScheduledReminder> CatchUp()
+    public ReminderLook CatchUp()
     {
         var moment = time.GetLocalNow();
         var now = moment.DateTime;
         var (all, byId) = Read();
         var since = settings.RemindedUntil is { } last ? TimeZoneInfo.ConvertTime(last, time.LocalTimeZone).DateTime : now;
         var due = ReminderSchedule.Due(all, byId, settings.QuietHours, since, now);
+        var planDay = rituals is null ? null : RitualReminder.Due(settings.PlanTomorrowReminder, settings.DayStartHour, RanPlanTomorrow(), since, now);
         settings.RemindedUntil = moment;
-        Arm(ReminderSchedule.Next(all, byId, settings.QuietHours, now));
-        return due;
+        Arm(all, byId, now);
+        return new ReminderLook(due, planDay);
     }
 
     /// <summary>Which of the notifications on screen (<paramref name="shown"/>, by reminder id) have to go.</summary>
@@ -57,6 +67,23 @@ public sealed class ReminderService
 
         var (all, byId) = Read();
         return ReminderSchedule.Stale(shown, all, byId, Now);
+    }
+
+    /// <summary>Whether the Plan tomorrow reminder on screen for <paramref name="day"/> has to go: the ritual ran, or the day moved on.</summary>
+    public bool PlanTomorrowStale(DateOnly day) => RitualReminder.Stale(day, settings.DayStartHour, RanPlanTomorrow(), Now);
+
+    /// <summary>The ritual ran to the end on planning <paramref name="day"/>, so its reminder stays quiet that day on every device.</summary>
+    public void FinishPlanTomorrow(DateOnly day)
+    {
+        rituals?.Record(RitualRunList.PlanTomorrow, day);
+        Rearm();
+    }
+
+    /// <summary>"Not today" on the Plan tomorrow reminder: quiet for the rest of planning <paramref name="day"/>, on every device.</summary>
+    public void SkipPlanTomorrow(DateOnly day)
+    {
+        rituals?.Record(RitualRunList.PlanTomorrow, day, skipped: true);
+        Rearm();
     }
 
     /// <summary>Every reminder that isn't deleted, for the lists that mark waiting ones.</summary>
@@ -118,21 +145,27 @@ public sealed class ReminderService
     public void Rearm()
     {
         var (all, byId) = Read();
-        Arm(ReminderSchedule.Next(all, byId, settings.QuietHours, Now));
+        Arm(all, byId, Now);
     }
 
     private (IReadOnlyList<ReminderItem> All, IReadOnlyDictionary<string, TaskItem> ById) Read() =>
         (reminders.All(), tasks.All().ToDictionary(task => task.Id));
 
-    private void Arm(ScheduledReminder? next)
+    private IReadOnlySet<DateOnly> RanPlanTomorrow() => rituals?.Ran(RitualRunList.PlanTomorrow) ?? new HashSet<DateOnly>();
+
+    // One timer for whichever comes first: a task's reminder or the evening Plan tomorrow reminder.
+    private void Arm(IReadOnlyList<ReminderItem> all, IReadOnlyDictionary<string, TaskItem> byId, DateTime now)
     {
-        if (next is null)
+        var task = ReminderSchedule.Next(all, byId, settings.QuietHours, now)?.At;
+        var ritual = rituals is null ? null : RitualReminder.Next(settings.PlanTomorrowReminder, settings.DayStartHour, RanPlanTomorrow(), now);
+        DateTime? next = task is { } a && ritual is { } b ? (a <= b ? a : b) : task ?? ritual;
+        if (next is { } at)
         {
-            scheduler.Cancel();
+            scheduler.ArmAt(at);
         }
         else
         {
-            scheduler.ArmAt(next.At);
+            scheduler.Cancel();
         }
     }
 }

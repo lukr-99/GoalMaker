@@ -115,6 +115,14 @@
                               SelectedIndex="{Binding DayStartHour}"
                               AutomationProperties.Name="{DynamicResource Settings.DayStart}" />
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.DayStartHint}" />
+                    <ui:ToggleSwitch Margin="0,20,0,8" Content="{DynamicResource Settings.PlanReminder}" IsChecked="{Binding PlanReminderOn}" />
+                    <ComboBox MinWidth="140"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding PlanReminderChoices}"
+                              SelectedIndex="{Binding PlanReminderTime}"
+                              IsEnabled="{Binding PlanReminderOn}"
+                              AutomationProperties.Name="{DynamicResource Settings.PlanReminderTime}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding PlanReminderSummary}" />
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
                     <StackPanel Orientation="Horizontal">
                         <ComboBox MinWidth="120"

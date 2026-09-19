@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Media.Imaging;
@@ -19,6 +20,7 @@ namespace GoalMaker.App.Shell;
 public sealed class ToastReminderNotifications
 {
     private const string Group = "reminders";
+    private const string PlanGroup = "plan";
     private readonly string appId;
     private readonly IStrings strings;
 
@@ -53,6 +55,41 @@ public sealed class ToastReminderNotifications
             }
         };
         Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>
+    /// Shows the evening reminder to plan tomorrow, for planning <paramref name="day"/>. Clicking it or
+    /// Plan opens the ritual; Not today keeps it quiet for the rest of the day on every device.
+    /// </summary>
+    public void ShowPlanTomorrow(DateOnly day)
+    {
+        var tag = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var content = new WinRtXml.XmlDocument();
+        content.LoadXml(PlanContent(tag).ToString(SaveOptions.DisableFormatting));
+        var toast = new ToastNotification(content) { Tag = tag, Group = PlanGroup };
+        toast.Activated += (_, args) =>
+        {
+            if (ToastActivation.Parse((args as ToastActivatedEventArgs)?.Arguments) is { } activation)
+            {
+                Activated?.Invoke(this, activation);
+            }
+        };
+        Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>Takes the evening reminder for <paramref name="day"/> away.</summary>
+    public void ClearPlanTomorrow(DateOnly day) =>
+        Try(() => ToastNotificationManager.History.Remove(day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), PlanGroup, appId));
+
+    /// <summary>The planning days whose evening reminder is on screen or in the notification centre.</summary>
+    public IReadOnlyList<DateOnly> ShownPlanTomorrow()
+    {
+        IReadOnlyList<DateOnly> shown = [];
+        Try(() => shown = [.. ToastNotificationManager.History.GetHistory(appId)
+            .Where(toast => toast.Group == PlanGroup)
+            .Select(toast => DateOnly.TryParseExact(toast.Tag, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : (DateOnly?)null)
+            .OfType<DateOnly>()]);
+        return shown;
     }
 
     /// <summary>Takes a reminder's toast away, because it was handled here or on the other device.</summary>
@@ -96,6 +133,27 @@ public sealed class ToastReminderNotifications
         Directory.CreateDirectory(Path.GetDirectoryName(iconPath)!);
         using var stream = File.Create(iconPath);
         encoder.Save(stream);
+    }
+
+    private XElement PlanContent(string day)
+    {
+        XElement Button(string label, ToastAction action) => new(
+            "action",
+            new XAttribute("content", strings.Get(label)),
+            new XAttribute("arguments", new ToastActivation(action, day).Arguments),
+            new XAttribute("activationType", "foreground"));
+
+        return new XElement(
+            "toast",
+            new XAttribute("launch", new ToastActivation(ToastAction.Plan, day).Arguments),
+            new XElement(
+                "visual",
+                new XElement(
+                    "binding",
+                    new XAttribute("template", "ToastGeneric"),
+                    new XElement("text", strings.Get("PlanReminder.Title")),
+                    new XElement("text", strings.Get("PlanReminder.Text")))),
+            new XElement("actions", Button("PlanReminder.Start", ToastAction.Plan), Button("PlanReminder.Skip", ToastAction.SkipPlan)));
     }
 
     private XElement Content(ScheduledReminder reminder)

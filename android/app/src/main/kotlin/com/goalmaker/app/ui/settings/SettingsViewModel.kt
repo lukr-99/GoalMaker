@@ -15,6 +15,7 @@ import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import java.time.LocalTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,7 @@ class SettingsViewModel(
             appearance = settings.appearance.value,
             dayStartHour = settings.dayStartHour.value,
             quietHours = settings.quietHours.value,
+            planTomorrowReminder = settings.planTomorrowReminder.value,
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
@@ -60,6 +62,9 @@ class SettingsViewModel(
         }
         viewModelScope.launch {
             settings.quietHours.collect { window -> state.update { it.copy(quietHours = window) } }
+        }
+        viewModelScope.launch {
+            settings.planTomorrowReminder.collect { time -> state.update { it.copy(planTomorrowReminder = time) } }
         }
         viewModelScope.launch {
             combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
@@ -82,6 +87,12 @@ class SettingsViewModel(
     /** Quiet hours hold ordinary reminders back (docs/reminders.md); the alarm is armed again. */
     fun setQuietHours(window: QuietHours) {
         settings.setQuietHours(window)
+        viewModelScope.launch(io) { reminders.rearm() }
+    }
+
+    /** Moves or switches off the evening Plan tomorrow reminder; the alarm is armed again. */
+    fun setPlanTomorrowReminder(time: LocalTime?) {
+        settings.setPlanTomorrowReminder(time)
         viewModelScope.launch(io) { reminders.rearm() }
     }
 

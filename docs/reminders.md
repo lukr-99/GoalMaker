@@ -82,6 +82,12 @@ A device that was away shows only today's reminder, never an earlier day's, and 
 the ritual runs elsewhere or the planning day moves on. Pinned by the `ritual`, `ritualStale` and
 `ritualIds` cases in [`contracts/vectors/reminders.json`](../contracts/vectors/reminders.json).
 
+The time is a device setting (Settings, Planning), in half hours. The reminder shares the device's
+one alarm with task reminders, so whichever comes first is armed. It offers **Plan**, which opens the
+ritual, and **Not today**, which records the day as skipped. Reaching the ritual's summary card
+records it as done. On Android it has its own notification channel, so the owner can silence it
+apart from task reminders.
+
 ## Two devices
 
 Handling a reminder writes its state (`dismissed`, `done`, or `snoozed` with a time), which syncs

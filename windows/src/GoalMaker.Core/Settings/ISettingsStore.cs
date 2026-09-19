@@ -5,7 +5,7 @@ namespace GoalMaker.Core.Settings;
 
 /// <summary>
 /// Device-local settings that are not synced: the appearance, when the planning day starts, quiet
-/// hours, the sidebar and, in dev builds, a backend override.
+/// hours, the evening reminder, the sidebar and, in dev builds, a backend override.
 /// </summary>
 public interface ISettingsStore
 {
@@ -16,6 +16,9 @@ public interface ISettingsStore
 
     /// <summary>The window that holds ordinary reminders back (docs/reminders.md); off unless set.</summary>
     QuietHours QuietHours { get; set; }
+
+    /// <summary>When the evening Plan tomorrow reminder rings (docs/reminders.md); 20:00 unless changed, null when off.</summary>
+    TimeOnly? PlanTomorrowReminder { get; set; }
 
     /// <summary>When this device last looked at its reminders, so each one is shown once (docs/reminders.md).</summary>
     DateTimeOffset? RemindedUntil { get; set; }

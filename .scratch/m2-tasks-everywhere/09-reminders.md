@@ -1,6 +1,6 @@
 # M2-09: Reminders and notifications
 
-**Status:** both apps done 2026-09-18; the evening ritual reminder left · **Milestone:** M2
+**Status:** done 2026-09-19 (the evening reminder and a two-device check added) · **Milestone:** M2
 
 ## Scope
 - Several reminders per task (fixed or relative), scheduled locally from the replica: Android exact
@@ -32,8 +32,13 @@
   timer in the tray app via `TimerReminderScheduler`, a look again after sleep and clock changes,
   quiet hours in Settings, and a right-click menu on a task that sets or removes its reminders.
 
-## Left
-- The evening Plan tomorrow reminder, skipped when the ritual already ran on either device. It needs
-  a synced record of the ritual (a server and a replica migration with pgTAP tests), which waits for
-  Docker so the migration harness can run.
-- Verifying a reminder on two devices at once, which needs the cloud project or the local stack.
+- The evening Plan tomorrow reminder on both apps: migration 0006 adds the synced `ritual_runs`
+  table; the reminder shares the one alarm, offers Plan and Not today, is a Settings value (20:00,
+  half hours, or off), and finishing the ritual records the day. Pinned by the `ritual*` vectors.
+- Android notifications show three buttons (Done, 10 min, Tomorrow), the most Android allows;
+  Windows shows all three snoozes.
+- Verified 2026-09-19 against the local stack with the emulator and the Windows dev build: a
+  reminder fired on both; Done on the phone took the PC's toast down within seconds, and so did a
+  change made through the API; tasks synced both ways. The evening reminder fired on both, opened
+  the ritual, and finishing it on the phone took the PC's toast down. Steps in
+  docs/setup/local-development.md.

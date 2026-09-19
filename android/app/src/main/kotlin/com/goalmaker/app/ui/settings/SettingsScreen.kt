@@ -48,6 +48,7 @@ import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.ui.theme.AppTheme
@@ -135,6 +136,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, onBack: () -> Unit, onOpenAreas
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                PlanReminderRow(state.planTomorrowReminder, viewModel::setPlanTomorrowReminder)
                 QuietHoursRow(state.quietHours, viewModel::setQuietHours)
                 OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
                 Text(
@@ -312,6 +314,35 @@ private fun CheckResult(result: UpdateCheckResult, viewModel: SettingsViewModel)
         }
     }
 }
+
+/**
+ * The evening Plan tomorrow reminder (docs/reminders.md): on or off, and the time in half hours.
+ * Switching it back on starts again at 20:00.
+ */
+@Composable
+private fun PlanReminderRow(time: LocalTime?, onChange: (LocalTime?) -> Unit) {
+    val formatter = DateTimeFormatter.ofPattern("HH:mm")
+    SwitchRow(
+        title = stringResource(R.string.settings_plan_reminder),
+        hint = if (time == null) {
+            stringResource(R.string.settings_plan_reminder_off)
+        } else {
+            stringResource(R.string.settings_plan_reminder_on, formatter.format(time))
+        },
+        checked = time != null,
+        onCheckedChange = { on -> onChange(if (on) RitualReminder.DEFAULT_TIME else null) },
+    )
+    if (time != null) {
+        Slider(
+            value = (time.toSecondOfDay() / HALF_HOUR).toFloat(),
+            onValueChange = { onChange(LocalTime.ofSecondOfDay(it.roundToInt() * HALF_HOUR.toLong())) },
+            valueRange = 0f..47f,
+            steps = 46,
+        )
+    }
+}
+
+private const val HALF_HOUR = 1_800
 
 /**
  * Quiet hours (docs/reminders.md): an hour to start and an hour to end, and a way to switch them

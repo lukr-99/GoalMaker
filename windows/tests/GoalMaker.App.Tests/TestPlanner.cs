@@ -34,6 +34,7 @@ internal sealed class TestPlanner : IDisposable
         Tasks = new TaskList(replica, rows, Areas, Tags, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
         Reminders = new ReminderList(replica, rows, () => { }, () => TimeZoneInfo.Utc);
         Steps = new StepList(replica, rows, () => { });
+        Rituals = new RitualRunList(replica, rows, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -53,6 +54,8 @@ internal sealed class TestPlanner : IDisposable
     public ReminderList Reminders { get; }
 
     public StepList Steps { get; }
+
+    public RitualRunList Rituals { get; }
 
     public TickSound Tick { get; } = new();
 
@@ -88,6 +91,8 @@ internal sealed class TestPlanner : IDisposable
         public int DayStartHour { get; set; } = PlanningDay.DefaultStartHour;
 
         public QuietHours QuietHours { get; set; } = QuietHours.Off;
+
+        public TimeOnly? PlanTomorrowReminder { get; set; } = RitualReminder.DefaultTime;
 
         public DateTimeOffset? RemindedUntil { get; set; }
 

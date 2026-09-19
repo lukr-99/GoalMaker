@@ -25,6 +25,7 @@ public sealed partial class PlanViewModel : ObservableObject
     private readonly Func<string, Brush?> areaBrush;
     private readonly TickSound tick;
     private readonly Action<AppPage> openPage;
+    private readonly Action<DateOnly>? finished;
 
     // Every task step 1 has asked about, in the order it first appeared, so decided rows stay put.
     private readonly List<string> reviewed = [];
@@ -81,7 +82,8 @@ public sealed partial class PlanViewModel : ObservableObject
         Func<string, Brush?> areaBrush,
         TickSound tick,
         Action<AppPage> openPage,
-        Action<Action> runOnUi)
+        Action<Action> runOnUi,
+        Action<DateOnly>? finished = null)
     {
         this.tasks = tasks;
         this.areas = areas;
@@ -91,6 +93,7 @@ public sealed partial class PlanViewModel : ObservableObject
         this.areaBrush = areaBrush;
         this.tick = tick;
         this.openPage = openPage;
+        this.finished = finished;
         Composer = composer;
         tasks.Changed += (_, _) => runOnUi(Refresh);
         areas.Changed += (_, _) => runOnUi(Refresh);
@@ -173,7 +176,17 @@ public sealed partial class PlanViewModel : ObservableObject
     private bool CanGoNext() => Step == PlanStep.Tomorrow || (Step == PlanStep.Today && Undecided == 0);
 
     [RelayCommand(CanExecute = nameof(CanGoNext))]
-    private void Next() => Step = Step == PlanStep.Today ? PlanStep.Tomorrow : PlanStep.Done;
+    private void Next()
+    {
+        var before = Step;
+        Step = before == PlanStep.Today ? PlanStep.Tomorrow : PlanStep.Done;
+
+        // Reaching the end counts as the day's run, which quiets the evening reminder everywhere.
+        if (before == PlanStep.Tomorrow)
+        {
+            finished?.Invoke(today);
+        }
+    }
 
     private bool CanGoBack() => Step == PlanStep.Tomorrow;
 
