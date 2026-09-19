@@ -1,0 +1,1261 @@
+{
+  "schema": 1,
+  "description": "Habits (docs/habits.md, supabase/migrations/0010_habits.sql). A habit has a cadence (daily; weekdays, with 'weekdays' a bitmask Monday 1, Tuesday 2, Wednesday 4 ... Sunday 64; per_week or per_month, with 'times' N), a measure (check: a day is met by a check-in of value 1 or more; count and amount: by a day's value reaching 'target') and 'startsOn'. 'due': whether the habit is due on 'day' (weekly and monthly habits are due any day). 'periods': the first and last day of the habit's period holding 'day' (the day; the week from its Monday; the month). 'states': the state of the period starting on 'period', the first that applies of: none (it ends before startsOn, or a day that isn't due), met (days met in it, not skipped, reach 1, or N for a week or month), paused (a pause overlaps it; 'until' null is open-ended), skipped (a check-in in it is skipped), open (it ends on or after 'today'), missed. 'streaks': met periods counted back from the one holding 'today'; open, paused, skipped and none periods are passed over, the first missed one ends it, and it stops before startsOn. 'heat': a day's heatmap value: null before startsOn or when not due, 'paused' in a pause, 'skipped' for a skipped check-in, else the day's value against its target from 0 to 1 (a check is 0 or 1). 'rings': today's ring: the day's value against the target for daily and weekday habits (null when today isn't due), days met so far against N for weekly and monthly ones, at most 1. 'checkinIds': the name-based UUID of 'checkin/<habit id, lowercase>/<day>' in namespace b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91 (a day's one check-in). 'goalAmounts': the check-in values that count toward a numeric goal: habits serving the goal, measured by count or amount, whose unit is the goal's once both are lowercased without spaces, check-ins not skipped, on a day in the goal's period, in input order. 2026-09-18 is a Friday.",
+  "due": [
+    {
+      "name": "a daily habit is due every day",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-19",
+      "expect": true
+    },
+    {
+      "name": "Monday, Wednesday and Friday: a Friday is due",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-18",
+      "expect": true
+    },
+    {
+      "name": "Monday, Wednesday and Friday: a Thursday isn't",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "expect": false
+    },
+    {
+      "name": "Sunday is the last bit",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 64,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-20",
+      "expect": true
+    },
+    {
+      "name": "a weekly habit is due any day",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "expect": true
+    }
+  ],
+  "periods": [
+    {
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-18",
+      "start": "2026-09-18",
+      "end": "2026-09-18"
+    },
+    {
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "start": "2026-09-16",
+      "end": "2026-09-16"
+    },
+    {
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-18",
+      "start": "2026-09-14",
+      "end": "2026-09-20"
+    },
+    {
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-14",
+      "start": "2026-09-14",
+      "end": "2026-09-20"
+    },
+    {
+      "habit": {
+        "cadence": "per_month",
+        "weekdays": null,
+        "times": 10,
+        "measure": "amount",
+        "target": 30,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-02-10",
+      "start": "2026-02-01",
+      "end": "2026-02-28"
+    }
+  ],
+  "states": [
+    {
+      "name": "a checked day is met",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-17",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "met"
+    },
+    {
+      "name": "an unchecked past day is missed",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
+    },
+    {
+      "name": "today isn't missed yet",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-18",
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [],
+      "expect": "open"
+    },
+    {
+      "name": "a day before the habit starts is none",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-08-31",
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [],
+      "expect": "none"
+    },
+    {
+      "name": "a weekday outside the mask is none",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-17",
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [],
+      "expect": "none"
+    },
+    {
+      "name": "6 of 8 glasses is not met",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 8,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-17",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 6,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
+    },
+    {
+      "name": "8 of 8 glasses is met",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 8,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-17",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 8,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "met"
+    },
+    {
+      "name": "three days in a week meet a 3-a-week habit",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-07",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-07",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-09",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-13",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "met"
+    },
+    {
+      "name": "two days of three in a past week are missed",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-07",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-07",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-09",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
+    },
+    {
+      "name": "the current week is open until it's met",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-14",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "open"
+    },
+    {
+      "name": "a skipped day is skipped",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-16",
+          "value": 0,
+          "skipped": true
+        }
+      ],
+      "pauses": [],
+      "expect": "skipped"
+    },
+    {
+      "name": "a skipped check-in skips its whole week",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-07",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-08",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-10",
+          "value": 0,
+          "skipped": true
+        }
+      ],
+      "pauses": [],
+      "expect": "skipped"
+    },
+    {
+      "name": "a pause covering the week pauses it",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-07",
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [
+        {
+          "from": "2026-09-05",
+          "until": "2026-09-08"
+        }
+      ],
+      "expect": "paused"
+    },
+    {
+      "name": "an open-ended pause covers today",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [
+        {
+          "from": "2026-09-15",
+          "until": null
+        }
+      ],
+      "expect": "paused"
+    },
+    {
+      "name": "a pause that ended doesn't cover later days",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [
+        {
+          "from": "2026-09-10",
+          "until": "2026-09-15"
+        }
+      ],
+      "expect": "missed"
+    },
+    {
+      "name": "doing it on a paused day still counts",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [
+        {
+          "from": "2026-09-15",
+          "until": "2026-09-17"
+        }
+      ],
+      "expect": "met"
+    },
+    {
+      "name": "a skipped check-in doesn't meet the day",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": true
+        }
+      ],
+      "pauses": [],
+      "expect": "skipped"
+    }
+  ],
+  "streaks": [
+    {
+      "name": "three days in a row, today still open",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 3
+    },
+    {
+      "name": "today checked counts too",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 3
+    },
+    {
+      "name": "a missed day ends it",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-13",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 2
+    },
+    {
+      "name": "a skipped day neither breaks nor counts",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 0,
+          "skipped": true
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 2
+    },
+    {
+      "name": "a holiday pause neither breaks nor counts",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-10",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-11",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [
+        {
+          "from": "2026-09-12",
+          "until": "2026-09-16"
+        }
+      ],
+      "expect": 3
+    },
+    {
+      "name": "days outside the mask are passed over",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-09",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-11",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 4
+    },
+    {
+      "name": "weekly habits count weeks",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-08-31",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-01",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-02",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-07",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-08",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-12",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 2
+    },
+    {
+      "name": "it stops at the habit's start",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-16"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 2
+    },
+    {
+      "name": "nothing checked yet",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [],
+      "pauses": [],
+      "expect": 0
+    }
+  ],
+  "heat": [
+    {
+      "name": "a checked day is full",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 1
+    },
+    {
+      "name": "an unchecked day is empty",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "checkins": [],
+      "pauses": [],
+      "expect": 0
+    },
+    {
+      "name": "6 of 8 glasses",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 8,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 6,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 0.75
+    },
+    {
+      "name": "more than the target stays full",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 8,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 10,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 1
+    },
+    {
+      "name": "before the start there is nothing",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-08-20",
+      "checkins": [],
+      "pauses": [],
+      "expect": null
+    },
+    {
+      "name": "a day not due shows nothing",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "checkins": [],
+      "pauses": [],
+      "expect": null
+    },
+    {
+      "name": "a paused day",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "checkins": [],
+      "pauses": [
+        {
+          "from": "2026-09-15",
+          "until": "2026-09-17"
+        }
+      ],
+      "expect": "paused"
+    },
+    {
+      "name": "a skipped day",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "checkins": [
+        {
+          "day": "2026-09-16",
+          "value": 0,
+          "skipped": true
+        }
+      ],
+      "pauses": [],
+      "expect": "skipped"
+    }
+  ],
+  "rings": [
+    {
+      "name": "half of today's glasses",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 8,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 4,
+          "skipped": false
+        }
+      ],
+      "expect": 0.5
+    },
+    {
+      "name": "a check habit done today",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": 1
+    },
+    {
+      "name": "a weekday habit on a day off has no ring",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-17",
+      "checkins": [],
+      "expect": null
+    },
+    {
+      "name": "two of three this week",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 3,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-12",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": 0.6666666666666666
+    },
+    {
+      "name": "a month's amounts count the days met",
+      "habit": {
+        "cadence": "per_month",
+        "weekdays": null,
+        "times": 10,
+        "measure": "amount",
+        "target": 30,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-02",
+          "value": 30,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-05",
+          "value": 45,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-09",
+          "value": 10,
+          "skipped": false
+        }
+      ],
+      "expect": 0.2
+    },
+    {
+      "name": "the ring stops at full",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": 1
+    }
+  ],
+  "checkinIds": [
+    {
+      "habitId": "7f5a9c1e-2b3d-4e5f-8a9b-0c1d2e3f4a5b",
+      "day": "2026-09-18",
+      "expect": "d45b93cc-5b4a-5375-b9a7-4293acc9619b"
+    },
+    {
+      "habitId": "7F5A9C1E-2B3D-4E5F-8A9B-0C1D2E3F4A5B",
+      "day": "2026-09-18",
+      "expect": "d45b93cc-5b4a-5375-b9a7-4293acc9619b"
+    },
+    {
+      "habitId": "0e0b1f7a-9c44-4f06-b0a5-4d3f2a1c9e88",
+      "day": "2026-01-01",
+      "expect": "1dd76141-896d-5da7-92ef-6bb6305f9e76"
+    }
+  ],
+  "goalAmounts": [
+    {
+      "name": "a running habit in km feeds a km goal this month",
+      "goal": {
+        "id": "g1",
+        "unit": "km",
+        "horizon": "month",
+        "start": "2026-09-01"
+      },
+      "habits": [
+        {
+          "id": "h1",
+          "goalId": "g1",
+          "measure": "amount",
+          "unit": "KM "
+        }
+      ],
+      "checkins": [
+        {
+          "habitId": "h1",
+          "day": "2026-08-31",
+          "value": 5,
+          "skipped": false
+        },
+        {
+          "habitId": "h1",
+          "day": "2026-09-02",
+          "value": 6.5,
+          "skipped": false
+        },
+        {
+          "habitId": "h1",
+          "day": "2026-09-05",
+          "value": 0,
+          "skipped": true
+        },
+        {
+          "habitId": "h1",
+          "day": "2026-09-30",
+          "value": 10,
+          "skipped": false
+        }
+      ],
+      "expect": [
+        6.5,
+        10
+      ]
+    },
+    {
+      "name": "another unit, another goal or a check habit doesn't count",
+      "goal": {
+        "id": "g1",
+        "unit": "km",
+        "horizon": "week",
+        "start": "2026-09-14"
+      },
+      "habits": [
+        {
+          "id": "h1",
+          "goalId": "g1",
+          "measure": "amount",
+          "unit": "minutes"
+        },
+        {
+          "id": "h2",
+          "goalId": "g2",
+          "measure": "amount",
+          "unit": "km"
+        },
+        {
+          "id": "h3",
+          "goalId": "g1",
+          "measure": "check",
+          "unit": null
+        },
+        {
+          "id": "h4",
+          "goalId": "g1",
+          "measure": "count",
+          "unit": "k m"
+        }
+      ],
+      "checkins": [
+        {
+          "habitId": "h1",
+          "day": "2026-09-15",
+          "value": 30,
+          "skipped": false
+        },
+        {
+          "habitId": "h2",
+          "day": "2026-09-15",
+          "value": 5,
+          "skipped": false
+        },
+        {
+          "habitId": "h3",
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "habitId": "h4",
+          "day": "2026-09-16",
+          "value": 3,
+          "skipped": false
+        }
+      ],
+      "expect": [
+        3
+      ]
+    },
+    {
+      "name": "a goal without a unit takes no check-ins",
+      "goal": {
+        "id": "g1",
+        "unit": null,
+        "horizon": "week",
+        "start": "2026-09-14"
+      },
+      "habits": [
+        {
+          "id": "h1",
+          "goalId": "g1",
+          "measure": "count",
+          "unit": null
+        }
+      ],
+      "checkins": [
+        {
+          "habitId": "h1",
+          "day": "2026-09-15",
+          "value": 8,
+          "skipped": false
+        }
+      ],
+      "expect": []
+    }
+  ]
+}

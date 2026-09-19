@@ -31,8 +31,8 @@ Each goal measures its progress one way:
 
 The fraction (for the ring or bar) is the value over the target, from 0 to 1, and 0 when there is
 nothing to count. A goal is **hit** when the fraction reaches 1, or when it was marked done; a dropped
-goal is never hit. With habits (M4-03), check-ins of a habit linked to a numeric goal with the same
-unit count toward it too.
+goal is never hit. Check-ins of a habit linked to a numeric goal with the same unit (ignoring case
+and spaces) count toward it too, like logged amounts ([habits](habits.md)).
 
 ## Copying last period's goals
 

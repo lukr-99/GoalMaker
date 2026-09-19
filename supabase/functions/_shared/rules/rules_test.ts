@@ -10,6 +10,18 @@ import {
   periodEnd,
   periodStart as goalPeriodStart,
 } from "./goals.ts";
+import {
+  checkinId,
+  goalAmounts,
+  type HabitItem,
+  habitPeriodEnd,
+  habitPeriodStart,
+  habitState,
+  heat,
+  isDue,
+  ring,
+  streak,
+} from "./habits.ts";
 import { lists } from "./listRules.ts";
 import { nameBasedUuid } from "./nameBasedUuid.ts";
 import { successorId, tagLinkId, toDrop } from "./occurrences.ts";
@@ -191,6 +203,63 @@ Deno.test("goals.json: periods, parents, progress and copies", async () => {
       vector.expect,
       vector.name,
     );
+  }
+});
+
+Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids and goal amounts", async () => {
+  const file = await vectors("habits.json");
+  const habit = (fields: Json): HabitItem => ({
+    id: "h",
+    unit: null,
+    goalId: null,
+    deleted: false,
+    ...fields,
+  });
+  const checkins = (vector: Json) =>
+    vector.checkins.map((fields: Json) => ({ habitId: "h", deleted: false, ...fields }));
+  const pauses = (vector: Json) => vector.pauses.map((fields: Json) => ({ deleted: false, ...fields }));
+  for (const vector of file.due) {
+    assertEquals(isDue(habit(vector.habit), vector.day), vector.expect, vector.name);
+  }
+  for (const vector of file.periods) {
+    const start = habitPeriodStart(habit(vector.habit), vector.day);
+    assertEquals(start, vector.start, `${vector.habit.cadence} ${vector.day}`);
+    assertEquals(habitPeriodEnd(habit(vector.habit), start), vector.end, `${vector.habit.cadence} ${vector.day} end`);
+  }
+  for (const vector of file.states) {
+    const state = habitState(habit(vector.habit), vector.period, vector.today, checkins(vector), pauses(vector));
+    assertEquals(state, vector.expect, vector.name);
+  }
+  for (const vector of file.streaks) {
+    assertEquals(
+      streak(habit(vector.habit), vector.today, checkins(vector), pauses(vector)),
+      vector.expect,
+      vector.name,
+    );
+  }
+  for (const vector of file.heat) {
+    const value = heat(habit(vector.habit), vector.day, checkins(vector), pauses(vector));
+    if (typeof vector.expect === "number") {
+      assert(typeof value === "number" && Math.abs(value - vector.expect) < 1e-9, `${vector.name}: ${value}`);
+    } else {
+      assertEquals(value, vector.expect, vector.name);
+    }
+  }
+  for (const vector of file.rings) {
+    const value = ring(habit(vector.habit), vector.today, checkins(vector));
+    if (vector.expect === null) {
+      assertEquals(value, null, vector.name);
+    } else {
+      assert(value !== null && Math.abs(value - vector.expect) < 1e-9, `${vector.name}: ${value}`);
+    }
+  }
+  for (const vector of file.checkinIds) {
+    assertEquals(await checkinId(vector.habitId, vector.day), vector.expect, vector.habitId);
+  }
+  for (const vector of file.goalAmounts) {
+    const goal = { ...vector.goal, periodStart: vector.goal.start };
+    const habits = vector.habits.map((fields: Json) => ({ deleted: false, ...fields }));
+    assertEquals(goalAmounts(goal, habits, checkins(vector)), vector.expect, vector.name);
   }
 });
 

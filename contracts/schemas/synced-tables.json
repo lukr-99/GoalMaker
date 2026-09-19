@@ -63,6 +63,55 @@
       ]
     },
     {
+      "name": "habits",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "name", "kind": "text" },
+        { "name": "emoji", "kind": "text" },
+        { "name": "cadence", "kind": "text" },
+        { "name": "weekdays", "kind": "integer" },
+        { "name": "times", "kind": "integer" },
+        { "name": "measure", "kind": "text" },
+        { "name": "target", "kind": "real" },
+        { "name": "unit", "kind": "text" },
+        { "name": "goal_id", "kind": "text" },
+        { "name": "starts_on", "kind": "date" },
+        { "name": "archived_at", "kind": "timestamp" },
+        { "name": "position", "kind": "real" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "habit_checkins",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "habit_id", "kind": "text" },
+        { "name": "day", "kind": "date" },
+        { "name": "value", "kind": "real" },
+        { "name": "skipped", "kind": "boolean" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "habit_pauses",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "habit_id", "kind": "text" },
+        { "name": "starts_on", "kind": "date" },
+        { "name": "ends_on", "kind": "date" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
       "name": "tasks",
       "columns": [
         { "name": "id", "kind": "text" },

@@ -9,6 +9,8 @@
   and resume (stories 40 and 41).
 - Today shows today's habits as a compact row of rings (design spec, Today); a ring fills with a
   spring and a small burst, and a streak milestone gets confetti, both skipped under reduce motion.
+- Goal progress adds `HabitRules.goalAmounts` (check-ins of habits serving a numeric goal in its unit)
+  to the logged amounts, on both apps' goal rings and the Lists week section.
 - Habit reminders and checking in from a notification or a widget wait for M5 (widgets) and a
   reminder design for habits.
 

@@ -1,6 +1,6 @@
 # M4-03: Habits: data, cadences and streaks
 
-**Status:** todo · **Milestone:** M4
+**Status:** done · **Milestone:** M4
 
 ## Scope
 - Migration and replica migration: `habits` (name, emoji, cadence daily, weekdays, per week or per
@@ -16,3 +16,11 @@
 
 ## Acceptance criteria
 - pgTAP for both tables; every vector case passes in all three implementations.
+
+## Notes
+- The rules are `HabitRules` in Kotlin and C# and `rules/habits.ts` in the connector; docs/habits.md.
+- Check-ins toward a goal are pinned as `goalAmounts` in `contracts/vectors/habits.json` rather than in
+  goals.json, next to the other habit rules. Feeding them into the goal rings waits for 04, when the
+  apps first load habits.
+- Migration 0010 was applied to the local stack with `supabase migration up`; the resetting harness
+  (`tools/supabase_migrations.py test`) still has to run once the owner's local test data can go.
