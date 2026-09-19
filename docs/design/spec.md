@@ -41,12 +41,15 @@ card, the send button's icon, checked boxes' marks.
 
 ### Area colors
 
-Twelve colors that work in every theme: violet, blue, cyan, teal, green, lime, yellow, orange, red,
-pink, magenta, slate. Each has a `swatch` (dots, the picker) and a chip pair (`container`,
-`content`) for light and dark. A **custom color** derives its chip pair at run time: the container
-mixes 20% of the color into the surface, and the content is the color darkened (light mode) or
-lightened (dark mode) until it reaches 4.5:1 on that container. Color is never the only signal:
-chips always show the area's name (and emoji, if any).
+Twenty colors that work in every theme: violet, blue, cyan, teal, green, lime, yellow, orange, red,
+pink, magenta, slate, then indigo, sky, emerald, amber, coral, rose, purple and stone. Each has a
+`swatch` (dots, the picker) and a chip pair (`container`, `content`) for light and dark, with chip
+text at 4.5:1 or better. A new area takes the first color no area uses yet, which is why the first
+twelve are spread around the color wheel. Color is never the only signal: chips always show the
+area's name (and emoji, if any).
+
+The owner chose more palette colors over a custom color picker (2026-09-19): every color stays
+designed and checked for light and dark, and `areas.color` stays a palette id.
 
 ## Type
 

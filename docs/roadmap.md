@@ -11,8 +11,7 @@ and each has markdown issues under `.scratch/<milestone>/`.
 4. **Design questionnaire** (answered 2026-09-18: four switchable themes, Track by default;
    [docs/design/spec.md](design/spec.md), ADR 0008)
 5. **M1: data and sync** (built 2026-09-18)
-6. **M2: tasks everywhere** (built 2026-09-19, checked on both apps against the local stack;
-   custom area colors wait for the owner's decision, see M2-11)
+6. **M2: tasks everywhere** (built 2026-09-19, checked on both apps against the local stack)
 7. M3 to M6, then v1.0
 8. M7 and the post-v1 list
 

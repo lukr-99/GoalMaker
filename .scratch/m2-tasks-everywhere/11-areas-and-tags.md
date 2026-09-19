@@ -1,6 +1,6 @@
 # M2-11: Areas and tags
 
-**Status:** done 2026-09-19, except custom colors (the owner's decision) · **Milestone:** M2
+**Status:** done 2026-09-19 · **Milestone:** M2
 
 ## Scope
 - Create, rename, recolor (palette or custom), add an emoji, reorder and archive areas; tags
@@ -29,9 +29,9 @@
   in the composer brings it back. Checked on the emulator: archived on the phone, synced, the task
   kept its chip and the filter row went away.
 
+- Custom colors: the owner chose more palette colors instead (2026-09-19). The palette grew from 12
+  to 20 (indigo, sky, emerald, amber, coral, rose, purple, stone), each checked at 4.5:1 or better
+  for chip text in light and dark; no migration, since `areas.color` holds a palette id.
+
 ## Left
-- **Custom colors** wait for the owner's decision. `areas.color` holds a palette id so every theme
-  can draw it for light and dark and keep WCAG AA contrast (migration 0003, ADR 0008); a free hex
-  color would undo that. Options: more palette entries (no migration), or a custom hex that each
-  theme adjusts for contrast (a migration, a contract rule, and both renderers).
 - Windows draws emoji in one color; WPF has no color emoji.

@@ -44,8 +44,8 @@ class DesignTokensTest {
     }
 
     @Test
-    fun `twelve area colors with chip pairs for both modes`() {
-        assertEquals(12, tokens.areaColors.size)
+    fun `twenty area colors with chip pairs for both modes`() {
+        assertEquals(20, tokens.areaColors.size)
         assertEquals(0xFF5B21B6.toInt(), tokens.areaColor("violet")!!.light.content)
     }
 

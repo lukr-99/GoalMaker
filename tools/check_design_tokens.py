@@ -113,8 +113,8 @@ def check(data: dict) -> list[str]:
             if ratio < 4.5:
                 problems.append(f"area {color['id']}.{mode}: chip text is {ratio:.2f}:1, needs 4.5:1")
     ids = [color["id"] for color in data["areaPalette"]["colors"]]
-    if len(ids) != 12 or len(set(ids)) != 12:
-        problems.append("areaPalette: needs 12 distinct colors")
+    if len(ids) < 12 or len(set(ids)) != len(ids):
+        problems.append("areaPalette: needs at least 12 colors, each with its own id")
     return problems
 
 

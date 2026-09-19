@@ -15,6 +15,14 @@ export const AREA_COLORS = [
   "pink",
   "magenta",
   "slate",
+  "indigo",
+  "sky",
+  "emerald",
+  "amber",
+  "coral",
+  "rose",
+  "purple",
+  "stone",
 ];
 
 /** The color a new area gets: the first one no area uses yet, then around the palette again (as the apps do). */

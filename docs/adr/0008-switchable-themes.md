@@ -4,7 +4,7 @@ The design questionnaire (docs/design/questionnaire.md) was answered on a board 
 directions as the same Today screen, and the owner asked for all four as themes the user can
 switch, with the sporty Track theme as the default. GoalMaker therefore defines its themes once in
 `contracts/design/themes.json` (palettes for light, dark and pure black, typography, corner shapes,
-the 12 area colors, spacing per device, motion timings) and both apps load that file at run time,
+the area colors, spacing per device, motion timings) and both apps load that file at run time,
 like the synced-table contract. `tools/check_design_tokens.py` runs in CI and refuses a theme that
 is incomplete or misses WCAG AA contrast in any mode. A theme changes colors, fonts, corners and
 the look of big numbers; spacing stays per device (airy phone, compact Windows) and behavior never

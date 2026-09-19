@@ -129,7 +129,7 @@
     }
   },
   "areaPalette": {
-    "description": "The 12 area colors, the same in every theme. 'swatch' is the dot and picker color; chips use container and content, per light or dark. Custom colors derive their pair at run time (docs/design/spec.md).",
+    "description": "The 20 area colors, the same in every theme. 'swatch' is the dot and picker color; chips use container and content, per light or dark. New areas take the first unused color in this order (docs/design/spec.md).",
     "colors": [
       { "id": "violet", "swatch": "#8B5CF6", "light": { "container": "#EDE9FE", "content": "#5B21B6" }, "dark": { "container": "#3B1F74", "content": "#DDD6FE" } },
       { "id": "blue", "swatch": "#3B82F6", "light": { "container": "#DBEAFE", "content": "#1E40AF" }, "dark": { "container": "#1E3A8A", "content": "#DBEAFE" } },
@@ -142,7 +142,15 @@
       { "id": "red", "swatch": "#EF4444", "light": { "container": "#FEE2E2", "content": "#991B1B" }, "dark": { "container": "#7F1D1D", "content": "#FEE2E2" } },
       { "id": "pink", "swatch": "#EC4899", "light": { "container": "#FCE7F3", "content": "#9D174D" }, "dark": { "container": "#831843", "content": "#FCE7F3" } },
       { "id": "magenta", "swatch": "#D946EF", "light": { "container": "#FAE8FF", "content": "#86198F" }, "dark": { "container": "#701A75", "content": "#FAE8FF" } },
-      { "id": "slate", "swatch": "#64748B", "light": { "container": "#E2E8F0", "content": "#1E293B" }, "dark": { "container": "#334155", "content": "#F1F5F9" } }
+      { "id": "slate", "swatch": "#64748B", "light": { "container": "#E2E8F0", "content": "#1E293B" }, "dark": { "container": "#334155", "content": "#F1F5F9" } },
+      { "id": "indigo", "swatch": "#6366F1", "light": { "container": "#E0E7FF", "content": "#3730A3" }, "dark": { "container": "#312E81", "content": "#E0E7FF" } },
+      { "id": "sky", "swatch": "#0EA5E9", "light": { "container": "#E0F2FE", "content": "#075985" }, "dark": { "container": "#0C4A6E", "content": "#E0F2FE" } },
+      { "id": "emerald", "swatch": "#10B981", "light": { "container": "#D1FAE5", "content": "#065F46" }, "dark": { "container": "#064E3B", "content": "#D1FAE5" } },
+      { "id": "amber", "swatch": "#F59E0B", "light": { "container": "#FEF3C7", "content": "#92400E" }, "dark": { "container": "#78350F", "content": "#FEF3C7" } },
+      { "id": "coral", "swatch": "#FB7156", "light": { "container": "#FFE6DF", "content": "#9C2A17" }, "dark": { "container": "#7A2616", "content": "#FFE6DF" } },
+      { "id": "rose", "swatch": "#F43F5E", "light": { "container": "#FFE4E6", "content": "#9F1239" }, "dark": { "container": "#881337", "content": "#FFE4E6" } },
+      { "id": "purple", "swatch": "#A855F7", "light": { "container": "#F3E8FF", "content": "#6B21A8" }, "dark": { "container": "#581C87", "content": "#F3E8FF" } },
+      { "id": "stone", "swatch": "#78716C", "light": { "container": "#E7E5E4", "content": "#292524" }, "dark": { "container": "#44403C", "content": "#F5F5F4" } }
     ]
   },
   "density": {
