@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.R
 
 /** The signed-out screen: email, then the 6-digit code. */
@@ -56,11 +58,14 @@ fun SignInScreen(viewModel: SignInViewModel, backendLabel: String?) {
                 modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    GoalMakerLogo(size = 40.dp)
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     text = stringResource(R.string.sign_in_title),
                     style = MaterialTheme.typography.displaySmall,

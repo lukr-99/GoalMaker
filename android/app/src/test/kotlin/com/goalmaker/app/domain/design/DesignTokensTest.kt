@@ -26,6 +26,15 @@ class DesignTokensTest {
     }
 
     @Test
+    fun `every theme colors the mark, and the mark's shape loads`() {
+        assertEquals(LogoColors(0xFF0A0A0A.toInt(), 0xFFFFFFFF.toInt(), 0xFFD6FF3A.toInt()), tokens.theme("track").logo)
+        assertEquals(0xFFC2185B.toInt(), tokens.theme("sunrise").logo.tile)
+        val mark = LogoMark.parse(File(System.getProperty("goalmaker.contracts")!!, "design/logo.json").readText())
+        assertEquals(100f, mark.size)
+        assertTrue(mark.letter.startsWith("M") && mark.trend.startsWith("M") && mark.head.endsWith("Z"))
+    }
+
+    @Test
     fun `pure black keeps the dark palette on black surfaces`() {
         tokens.themes.forEach { theme ->
             assertEquals(0xFF000000.toInt(), theme.black.background)

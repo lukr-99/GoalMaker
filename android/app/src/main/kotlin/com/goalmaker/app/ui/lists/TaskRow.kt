@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -46,6 +47,7 @@ import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
+import com.goalmaker.app.ui.nav.sharedTaskBounds
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -96,7 +98,8 @@ fun TaskRow(
             // The list saves this state per task; left dismissed, an undone row would delete itself again.
             scope.launch { dismiss.reset() }
         },
-        backgroundContent = { DeleteBackground() },
+        // Only while a swipe is under way: the row also lifts off when it grows into the task's details.
+        backgroundContent = { if (dismiss.dismissDirection == SwipeToDismissBoxValue.EndToStart) DeleteBackground() },
         modifier = modifier.semantics {
             customActions = listOf(
                 CustomAccessibilityAction(deleteLabel) { onDelete(); true },
@@ -107,7 +110,10 @@ fun TaskRow(
         Surface(
             color = AppTheme.colors.surface,
             shape = AppTheme.shapes.row,
-            modifier = Modifier.fillMaxWidth().combinedClickable(onLongClick = onRemind, onClick = onOpen),
+            modifier = Modifier
+                .sharedTaskBounds(task.id, AppTheme.shapes.row, details = false)
+                .fillMaxWidth()
+                .combinedClickable(onLongClick = onRemind, onClick = onOpen),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -143,13 +149,13 @@ fun TaskRow(
     }
 }
 
-/** A task's time, in the theme's number style. */
+/** A task's time, in the theme's number style and accent. */
 @Composable
 internal fun TaskTime(time: LocalTime, modifier: Modifier = Modifier) {
     Text(
         text = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(LocalConfiguration.current.locales[0]).format(time),
         style = AppTheme.type.number.merge(MaterialTheme.typography.titleMedium),
-        color = AppTheme.colors.textMuted,
+        color = AppTheme.colors.accent,
         modifier = modifier.padding(start = 8.dp),
     )
 }

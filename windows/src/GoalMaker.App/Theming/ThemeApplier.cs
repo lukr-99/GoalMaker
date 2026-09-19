@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using GoalMaker.App.Controls;
 using GoalMaker.Core.Design;
 using GoalMaker.Core.Settings;
 using Microsoft.Win32;
@@ -15,17 +16,20 @@ namespace GoalMaker.App.Theming;
 /// black: GoalMaker's own resources (GM.* brushes, fonts, corners, spacing), and WPF UI's theme and
 /// the resource keys its controls use, so built-in controls match. Views read GM.* keys through
 /// DynamicResource, so switching applies at once. Follows Windows' light or dark when the mode is
-/// System.
+/// System. With the <paramref name="logo"/> mark it also sets the theme's logo colors and renders the
+/// logo as the window and tray icon (<see cref="LogoIcon"/>).
 /// </summary>
 public sealed class ThemeApplier : IDisposable
 {
     private readonly ResourceDictionary resources;
+    private readonly LogoMark? logo;
     private Appearance current = Appearance.Default;
 
-    public ThemeApplier(DesignTokens tokens, ResourceDictionary resources)
+    public ThemeApplier(DesignTokens tokens, ResourceDictionary resources, LogoMark? logo = null)
     {
         Tokens = tokens;
         this.resources = resources;
+        this.logo = logo;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
     }
 
@@ -37,7 +41,13 @@ public sealed class ThemeApplier : IDisposable
     /// <summary>Whether animations should become short fades (the system setting or the in-app switch).</summary>
     public bool MotionReduced { get; private set; }
 
-    /// <summary>After every Apply, so views can rebuild what they colored in code (area dots).</summary>
+    /// <summary>The logo in the current theme's colors, for the window and the taskbar; null without a mark.</summary>
+    public ImageSource? LogoIcon { get; private set; }
+
+    /// <summary>The same logo as an .ico file's bytes, for the tray; null without a mark.</summary>
+    public byte[]? LogoIconFile { get; private set; }
+
+    /// <summary>After every Apply, so views can rebuild what they colored in code (area dots, the tray icon).</summary>
     public event EventHandler? Applied;
 
     /// <summary>
@@ -75,6 +85,7 @@ public sealed class ThemeApplier : IDisposable
             _ => !SystemParameters.ClientAreaAnimation,
         };
         resources["GM.ReduceMotion"] = MotionReduced;
+        SetLogo(theme.Logo);
         Applied?.Invoke(this, EventArgs.Empty);
     }
 
@@ -95,6 +106,21 @@ public sealed class ThemeApplier : IDisposable
     /// the GoalMaker assembly, so the fonts load wherever the resources are used (tests too).
     /// </summary>
     public static FontFamily Face(string name) => new(new Uri("pack://application:,,,/GoalMaker;component/"), "./Assets/Fonts/#" + name);
+
+    // The mark's colors (the logo control fades to them) and the icon rendered in them.
+    private void SetLogo(LogoColors colors)
+    {
+        resources["GM.LogoTileColor"] = ToColor(colors.Tile);
+        resources["GM.LogoLetterColor"] = ToColor(colors.Letter);
+        resources["GM.LogoArrowColor"] = ToColor(colors.Arrow);
+        if (logo is not null)
+        {
+            resources["GM.LogoMark"] = logo;
+            LogoIcon = GoalMakerLogo.Render(logo, colors, 64);
+            LogoIconFile = GoalMakerLogo.IconFile(logo, colors);
+            resources["GM.LogoIcon"] = LogoIcon;
+        }
+    }
 
     private void SetColors(Palette p)
     {

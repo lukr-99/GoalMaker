@@ -32,9 +32,14 @@ the system unless the user picks light or dark.
 
 Screens use roles, never raw colors: `background`, `surface` (cards, rows), `surfaceVariant`
 (composer, inputs), `text`, `textMuted`, `outline`, `primary`/`onPrimary` (buttons, send),
-`accent`/`onAccent` (checks, progress, rings), `hero`/`onHero`/`heroAccent` (big-number cards),
-`danger`. Material 3 on Android and WPF UI on Windows get their own color slots filled from these
-roles, so built-in controls match.
+`accent`/`onAccent` (checks, progress, rings, section labels, task times and field labels),
+`hero`/`onHero`/`heroAccent` (big-number cards), `danger`. Material 3 on Android and WPF UI on
+Windows get their own color slots filled from these roles, so built-in controls match.
+
+The accent is each theme's second color (coral in Electric, cyan in Night, magenta in Sunrise), so it
+also carries labels and times: the owner found it too rare when it only marked checks (2026-09-19).
+Because it is text there, it has to reach 4.5:1 like any text, which `tools/check_design_tokens.py`
+checks.
 
 In Track light, `accent` is black (volt on white is unreadable); volt appears on black: the hero
 card, the send button's icon, checked boxes' marks.
@@ -85,6 +90,9 @@ Level 3 of 5 on the celebration scale:
 - **Habit done:** its ring fills with a spring and a small burst.
 - **Goal hit or streak milestone:** confetti (Konfetti on Android, a lighter burst on Windows).
   Nothing else gets confetti.
+- **Opening a task:** its row grows into the details, and leaving drains them back into the row
+  while the list comes back up (Android; a back swipe drives it with the finger). Other screens
+  slide in a little and fade.
 
 Durations: quick 120 ms (state changes), standard 250 ms (moves, sheets), emphasized 400 ms
 (celebrations). **Reduce motion** follows the system setting and has an in-app switch; it turns
@@ -117,10 +125,15 @@ areas and tags as filters, and Settings at the bottom. It collapses to icons and
 
 The mark is a **G whose middle turns into a trend line** that zigzags up and leaves through the G's
 opening as an arrow. It is drawn once in `tools/generate_app_icon.py`, which writes the Windows
-`.ico`, the Android adaptive icon's vector layer and
-[`brand/goalmaker-icon.svg`](brand/goalmaker-icon.svg). The app icon uses Track's colors in every
-theme: a black tile, a white G, a volt arrow. The "GoalMaker" wordmark appears on the sign-in
-screen only.
+`.ico`, the Android adaptive icon's vector layer, [`brand/goalmaker-icon.svg`](brand/goalmaker-icon.svg)
+and `contracts/design/logo.json`. The app icon uses Track's colors in every theme: a black tile, a
+white G, a volt arrow. The "GoalMaker" wordmark appears on the sign-in screen only.
+
+Inside the apps the mark takes each theme's logo colors (`themes.json`, `logo`), one brand color on
+the tile and the other on the arrow: Electric violet and coral, Night indigo and cyan, Sunrise
+magenta and tangerine. When the theme changes it recolors and draws its arrow again (the owner's
+idea, 2026-09-19). It sits on the sign-in screen and in Appearance; on Windows the window, taskbar
+and tray icons follow the theme too. The Android launcher icon stays Track's.
 
 **Emoji:** areas, goals and habits may carry one optional emoji, shown next to the name and on
 widgets.

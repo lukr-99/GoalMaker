@@ -18,6 +18,7 @@
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
             <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
         </Style>
         <Style x:Key="Hint" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,4,0,0" />

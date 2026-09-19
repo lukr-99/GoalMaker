@@ -26,7 +26,7 @@ import com.goalmaker.app.ui.theme.GoalMakerTheme
 fun GoalMakerApp(graph: AppGraph) {
     val appearance by graph.settings.appearance.collectAsStateWithLifecycle()
     val session by graph.auth.session.collectAsStateWithLifecycle()
-    GoalMakerTheme(graph.design, appearance) {
+    GoalMakerTheme(graph.design, appearance, graph.logo) {
         Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
             Crossfade(targetState = session, label = "session") { current ->
                 when (current) {

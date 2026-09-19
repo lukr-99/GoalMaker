@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.core.view.WindowCompat
 import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.design.ThemeDefinition
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.ReduceMotion
@@ -34,10 +35,10 @@ import com.goalmaker.app.domain.settings.ThemeMode
 /**
  * The app theme (ADR 0008): the chosen theme from contracts/design/themes.json in light, dark or
  * pure black, as Material 3 Expressive colors, type and shapes, plus GoalMaker's own roles in
- * [AppTheme]. Switching applies at once.
+ * [AppTheme], and the [logo] mark in the theme's colors. Switching applies at once.
  */
 @Composable
-fun GoalMakerTheme(tokens: DesignTokens, appearance: Appearance, content: @Composable () -> Unit) {
+fun GoalMakerTheme(tokens: DesignTokens, appearance: Appearance, logo: LogoMark? = null, content: @Composable () -> Unit) {
     val dark = when (appearance.mode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -83,6 +84,7 @@ fun GoalMakerTheme(tokens: DesignTokens, appearance: Appearance, content: @Compo
         LocalAreaColors provides tokens.areaColors,
         LocalReduceMotion provides reduceMotion,
         LocalCompletionSound provides appearance.completionSound,
+        LocalThemeLogo provides logo?.let { mark -> ThemeLogo(mark, theme.logo) },
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorScheme(colors),

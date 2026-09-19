@@ -48,6 +48,26 @@ public sealed class TrayIcon : IDisposable
         icon.ForceCreate(enablesEfficiencyMode: false);
     }
 
+    /// <summary>
+    /// Shows the logo in the current theme's colors. The tray reads icons from files only, so the bytes
+    /// land in <paramref name="folder"/>, one file per set of colors.
+    /// </summary>
+    public void SetIcon(byte[]? iconFile, string folder)
+    {
+        if (iconFile is null)
+        {
+            return;
+        }
+
+        var path = System.IO.Path.Combine(folder, $"tray-{Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(iconFile))[..12]}.ico");
+        if (!System.IO.File.Exists(path))
+        {
+            System.IO.File.WriteAllBytes(path, iconFile);
+        }
+
+        icon.IconSource = new BitmapImage(new Uri(path));
+    }
+
     /// <summary>Closes the flyout, for example after the quick-add box took over.</summary>
     public void CloseFlyout() => icon.CloseTrayPopup();
 

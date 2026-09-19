@@ -66,6 +66,7 @@ import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.composer.describeRepeat
+import com.goalmaker.app.ui.nav.sharedTaskBounds
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.Instant
 import java.time.LocalDate
@@ -90,7 +91,9 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
     val task = state.task ?: return
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = Modifier
+            .sharedTaskBounds(task.id, AppTheme.shapes.row, details = true)
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { Text(AppTheme.headline(stringResource(R.string.task_title))) },
@@ -459,7 +462,7 @@ private fun Field(label: String, value: String, onClick: (() -> Unit)?, onClear:
             .heightIn(min = 48.dp)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
-        Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(0.35f))
+        Text(label, style = MaterialTheme.typography.titleSmall, color = AppTheme.colors.accent, modifier = Modifier.weight(0.35f))
         Text(
             value,
             style = MaterialTheme.typography.bodyLarge,

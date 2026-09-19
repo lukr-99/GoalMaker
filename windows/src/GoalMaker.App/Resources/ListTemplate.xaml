@@ -61,7 +61,7 @@
                                                Text="{Binding Header}"
                                                FontSize="11"
                                                FontFamily="{DynamicResource GM.BodyStrongFont}"
-                                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                                               Foreground="{DynamicResource GM.AccentBrush}"
                                                Visibility="{Binding HasPlainHeader, Converter={StaticResource BoolToVisibility}}" />
                                     <ToggleButton Margin="0,8,0,6"
                                                   HorizontalAlignment="Left"
@@ -76,8 +76,8 @@
                                                        Text="{Binding Header}"
                                                        FontSize="11"
                                                        FontFamily="{DynamicResource GM.BodyStrongFont}"
-                                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
-                                            <ui:SymbolIcon Margin="6,0,0,0" FontSize="12" Symbol="ChevronDown16" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                                       Foreground="{DynamicResource GM.AccentBrush}" />
+                                            <ui:SymbolIcon Margin="6,0,0,0" FontSize="12" Symbol="ChevronDown16" Foreground="{DynamicResource GM.AccentBrush}" />
                                         </StackPanel>
                                     </ToggleButton>
                                     <ItemsControl ItemsSource="{Binding Rows}"
@@ -134,7 +134,7 @@
                                                                    Text="{Binding TimeText}"
                                                                    FontSize="16"
                                                                    FontFamily="{DynamicResource GM.NumberFont}"
-                                                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                                   Foreground="{DynamicResource GM.AccentBrush}"
                                                                    Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                                                         <CheckBox VerticalAlignment="Center"
                                                                   Foreground="{DynamicResource GM.TextBrush}"

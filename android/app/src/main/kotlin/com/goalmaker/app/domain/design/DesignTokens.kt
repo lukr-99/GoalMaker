@@ -70,6 +70,7 @@ class DesignTokens(
                 light = palette(theme.obj("light")),
                 dark = palette(dark),
                 black = palette(JsonObject(dark + theme.obj("black"))),
+                logo = theme.obj("logo").let { logo -> LogoColors(logo.color("tile"), logo.color("letter"), logo.color("arrow")) },
             )
         }
 

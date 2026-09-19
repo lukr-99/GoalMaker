@@ -1,13 +1,18 @@
 <UserControl x:Class="GoalMaker.App.Views.SignInView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:controls="clr-namespace:GoalMaker.App.Controls">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel MaxWidth="460" Margin="32" VerticalAlignment="Center">
-            <TextBlock Text="{DynamicResource App.Name}"
-                       FontSize="16"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+            <StackPanel Orientation="Horizontal">
+                <controls:GoalMakerLogo Width="36" Height="36" Margin="0,0,12,0" />
+                <TextBlock VerticalAlignment="Center"
+                           Text="{DynamicResource App.Name}"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+            </StackPanel>
             <TextBlock Margin="0,12,0,24"
                        Text="{DynamicResource SignIn.Title}"
                        FontSize="36"

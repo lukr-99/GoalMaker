@@ -1,17 +1,17 @@
 {
   "schema": 1,
-  "description": "GoalMaker's themes (ADR 0008, docs/design/spec.md): the four directions from the 2026-09-18 design board. Both apps load this file at run time; tools/check_design_tokens.py checks that every theme is complete and that text and controls meet WCAG AA contrast. Colors are #RRGGBB. Each theme has light and dark palettes; 'black' overrides the dark palette's surfaces for the pure-black option.",
+  "description": "GoalMaker's themes (ADR 0008, docs/design/spec.md): the four directions from the 2026-09-18 design board. Both apps load this file at run time; tools/check_design_tokens.py checks that every theme is complete and that text and controls meet WCAG AA contrast. Colors are #RRGGBB. Each theme has light and dark palettes; 'black' overrides the dark palette's surfaces for the pure-black option. 'logo' colors the mark (contracts/design/logo.json) in the app: the tile, the G and the trend arrow.",
   "defaultTheme": "track",
   "roles": {
     "background": "The page behind everything.",
     "surface": "Cards and list rows.",
     "surfaceVariant": "The composer, inputs and secondary containers.",
     "text": "Body text and titles.",
-    "textMuted": "Secondary text: dates, counts, hints, section labels.",
+    "textMuted": "Secondary text: dates, counts, hints.",
     "outline": "Unchecked checkboxes, input borders, dividers that must be visible.",
     "primary": "Primary buttons, the send button, selected navigation.",
     "onPrimary": "Text and icons on primary.",
-    "accent": "Checked boxes, progress fills, habit rings.",
+    "accent": "Checked boxes, progress fills, habit rings, section labels, task times and field labels (text, so 4.5:1).",
     "onAccent": "The check mark and icons on accent.",
     "hero": "Big-number cards (goal progress, stats).",
     "onHero": "Text on hero.",
@@ -28,6 +28,7 @@
         "number": { "family": "Archivo", "weight": 900, "width": 112.5, "italic": true }
       },
       "shape": { "card": 12, "row": 8, "checkbox": 3, "button": 8 },
+      "logo": { "tile": "#0A0A0A", "letter": "#FFFFFF", "arrow": "#D6FF3A" },
       "light": {
         "background": "#FFFFFF", "surface": "#F2F2EF", "surfaceVariant": "#E8E8E3",
         "text": "#0A0A0A", "textMuted": "#5A5A56", "outline": "#6E6E69",
@@ -55,11 +56,12 @@
         "number": { "family": "Plus Jakarta Sans", "weight": 800, "width": 100, "italic": false }
       },
       "shape": { "card": 24, "row": 16, "checkbox": 999, "button": 999 },
+      "logo": { "tile": "#5B2EE6", "letter": "#FFFFFF", "arrow": "#FF9A85" },
       "light": {
         "background": "#F6F3FF", "surface": "#FFFFFF", "surfaceVariant": "#ECE6FF",
         "text": "#1B1433", "textMuted": "#5E5680", "outline": "#7D74A2",
         "primary": "#5B2EE6", "onPrimary": "#FFFFFF",
-        "accent": "#D9402A", "onAccent": "#FFFFFF",
+        "accent": "#CA3924", "onAccent": "#FFFFFF",
         "hero": "#5B2EE6", "onHero": "#FFFFFF", "heroAccent": "#FFD0C4",
         "danger": "#C62828"
       },
@@ -82,6 +84,7 @@
         "number": { "family": "Space Grotesk", "weight": 700, "width": 100, "italic": false }
       },
       "shape": { "card": 10, "row": 7, "checkbox": 5, "button": 8 },
+      "logo": { "tile": "#3730A3", "letter": "#FFFFFF", "arrow": "#22D3EE" },
       "light": {
         "background": "#FBFAFF", "surface": "#F0EEFA", "surfaceVariant": "#E6E3F6",
         "text": "#12101F", "textMuted": "#5A5679", "outline": "#76729A",
@@ -109,6 +112,7 @@
         "number": { "family": "Outfit", "weight": 800, "width": 100, "italic": false }
       },
       "shape": { "card": 28, "row": 20, "checkbox": 7, "button": 999 },
+      "logo": { "tile": "#C2185B", "letter": "#FFFFFF", "arrow": "#FFB36B" },
       "light": {
         "background": "#FFF6EC", "surface": "#FFFFFF", "surfaceVariant": "#FFE7D1",
         "text": "#2B1408", "textMuted": "#765646", "outline": "#957464",

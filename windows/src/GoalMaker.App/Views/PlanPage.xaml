@@ -121,7 +121,7 @@
                                                    Text="{Binding TimeText}"
                                                    FontSize="16"
                                                    FontFamily="{DynamicResource GM.NumberFont}"
-                                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                   Foreground="{DynamicResource GM.AccentBrush}"
                                                    Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                                         <StackPanel>
                                             <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
@@ -241,7 +241,7 @@
                                                Text="{Binding TimeText}"
                                                FontSize="16"
                                                FontFamily="{DynamicResource GM.NumberFont}"
-                                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                                               Foreground="{DynamicResource GM.AccentBrush}"
                                                Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />

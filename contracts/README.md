@@ -23,6 +23,7 @@ the planning files too: lists, plan, recurrence, archive, the ritual ids in remi
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |
 | `schemas/synced-tables.json` | Every synced column once, for both replicas and the JSON mapping | (`tools/check_synced_tables.py`) | (`tools/check_synced_tables.py`) |
 | `design/themes.json` | The four themes' tokens ([design](../docs/design/spec.md)) | `DesignTokensTest` | `DesignTokensTests` |
+| `design/logo.json` | The mark's shape, written by `tools/generate_app_icon.py`; each theme colors it | `DesignTokensTest` | `DesignTokensTests` |
 
 ## Rules for changing a contract
 

@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.R
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
@@ -89,7 +91,11 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Section(stringResource(R.string.settings_appearance)) {
-                Label(stringResource(R.string.settings_theme))
+                // The mark takes on the theme's colors, and redraws itself when the theme changes.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { Label(stringResource(R.string.settings_theme)) }
+                    GoalMakerLogo(size = 44.dp)
+                }
                 ThemePicker(
                     themes = state.themes,
                     selectedId = state.themeId,

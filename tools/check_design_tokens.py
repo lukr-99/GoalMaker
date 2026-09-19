@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check contracts/design/themes.json: every theme complete, every pair readable (WCAG 2.2 AA).
 
+Each theme's logo colors are checked too: the G and the arrow need 3:1 against the tile.
+
 Text needs 4.5:1 against what it sits on; large text (the big numbers) and controls that must be
 seen (checkbox borders, filled checks, buttons, the check mark) need 3:1. The pure-black option is
 checked as the dark palette with the theme's 'black' surfaces. Run in CI (codeprint.yml):
@@ -37,8 +39,8 @@ PAIRS = [
     ("danger", "surface", 4.5, "errors on cards"),
     ("outline", "surface", 3.0, "unchecked boxes on rows"),
     ("outline", "background", 3.0, "input borders on the page"),
-    ("accent", "surface", 3.0, "checked boxes and progress on rows"),
-    ("accent", "background", 3.0, "rings and progress on the page"),
+    ("accent", "surface", 4.5, "checked boxes, progress and times on rows"),
+    ("accent", "background", 4.5, "rings, section labels and field labels on the page"),
     ("onAccent", "accent", 3.0, "the check mark"),
     ("primary", "background", 3.0, "buttons on the page"),
     ("primary", "surfaceVariant", 3.0, "the send button in the composer"),
@@ -87,6 +89,17 @@ def check(data: dict) -> list[str]:
             if extra:
                 problems.append(f"{key}.{mode}: unknown roles {', '.join(sorted(extra))}")
             palettes[mode] = palette
+        # The mark in the theme's colors: the G and the arrow each have to stand out on the tile.
+        logo = theme.get("logo", {})
+        if set(logo) != {"tile", "letter", "arrow"}:
+            problems.append(f"{key}.logo: needs exactly tile, letter and arrow")
+        elif not all(HEX.fullmatch(color) for color in logo.values()):
+            problems.append(f"{key}.logo: colors must be #RRGGBB (uppercase)")
+        else:
+            for part in ("letter", "arrow"):
+                ratio = contrast(logo[part], logo["tile"])
+                if ratio < 3.0:
+                    problems.append(f"{key}.logo: {part} on tile is {ratio:.2f}:1, needs 3:1")
         black = theme.get("black", {})
         if set(black) != BLACK_ROLES:
             problems.append(f"{key}.black: must override exactly {', '.join(sorted(BLACK_ROLES))}")

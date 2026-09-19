@@ -8,7 +8,7 @@
                  Height="720"
                  MinWidth="720"
                  MinHeight="480"
-                 Icon="pack://application:,,,/Assets/GoalMaker.ico"
+                 Icon="{DynamicResource GM.LogoIcon}"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="None"
                  WindowCornerPreference="Round"
@@ -22,7 +22,7 @@
 
         <ui:TitleBar Grid.Row="0" Title="{DynamicResource App.Name}">
             <ui:TitleBar.Icon>
-                <ui:ImageIcon Source="pack://application:,,,/Assets/GoalMaker.ico" />
+                <ui:ImageIcon Source="{DynamicResource GM.LogoIcon}" />
             </ui:TitleBar.Icon>
         </ui:TitleBar>
 

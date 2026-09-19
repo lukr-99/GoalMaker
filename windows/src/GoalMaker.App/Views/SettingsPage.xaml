@@ -31,8 +31,14 @@
 
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Appearance}" />
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.Theme}" />
+                    <!-- The mark takes on the theme's colors, and redraws itself when the theme changes. -->
+                    <DockPanel>
+                        <controls:GoalMakerLogo DockPanel.Dock="Right" Width="44" Height="44" VerticalAlignment="Top" />
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Appearance}" />
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.Theme}" />
+                        </StackPanel>
+                    </DockPanel>
                     <ItemsControl ItemsSource="{Binding Themes}" Focusable="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>

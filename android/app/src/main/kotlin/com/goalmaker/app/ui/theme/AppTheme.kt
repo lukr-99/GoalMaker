@@ -16,6 +16,7 @@ internal val LocalMotionTokens = staticCompositionLocalOf<MotionTokens> { error(
 internal val LocalAreaColors = staticCompositionLocalOf<List<AreaColor>> { emptyList() }
 internal val LocalReduceMotion = staticCompositionLocalOf { false }
 internal val LocalCompletionSound = staticCompositionLocalOf { false }
+internal val LocalThemeLogo = staticCompositionLocalOf<ThemeLogo?> { null }
 
 /**
  * GoalMaker's theme values beside MaterialTheme's, the way screens read them:
@@ -50,6 +51,11 @@ object AppTheme {
     @Composable
     @ReadOnlyComposable
     fun headline(text: String): String = type.headline(text, LocalConfiguration.current.locales[0])
+
+    /** The mark in the current theme's colors; null where no mark was handed to the theme (previews). */
+    val logo: ThemeLogo?
+        @Composable @ReadOnlyComposable
+        get() = LocalThemeLogo.current
 
     /** Whether completing something plays the soft tick (Settings > Appearance). */
     val completionSound: Boolean

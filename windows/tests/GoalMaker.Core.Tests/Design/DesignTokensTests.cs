@@ -24,6 +24,16 @@ public sealed class DesignTokensTests
     }
 
     [Fact]
+    public void EveryThemeColorsTheMarkAndTheMarksShapeLoads()
+    {
+        Assert.Equal(new LogoColors(0xFF0A0A0Au, 0xFFFFFFFFu, 0xFFD6FF3Au), tokens.Theme("track").Logo);
+        Assert.Equal(0xFFC2185Bu, tokens.Theme("sunrise").Logo.Tile);
+        var mark = ContractResources.Logo();
+        Assert.Equal(100, mark.Size);
+        Assert.True(mark.Letter.StartsWith('M') && mark.Trend.StartsWith('M') && mark.Head.EndsWith('Z'));
+    }
+
+    [Fact]
     public void PureBlackKeepsTheDarkPaletteOnBlackSurfaces()
     {
         foreach (var theme in tokens.Themes)

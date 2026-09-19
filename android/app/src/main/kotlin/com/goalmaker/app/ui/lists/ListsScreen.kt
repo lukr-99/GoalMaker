@@ -312,7 +312,7 @@ private fun ListContent(
     }
 }
 
-/** A list's section label; with [onToggle] it folds and shows whether it's open. */
+/** A list's section label in the theme's accent; with [onToggle] it folds and shows whether it's open. */
 @Composable
 internal fun SectionHeader(text: String, expanded: Boolean? = null, onToggle: (() -> Unit)? = null) {
     Row(
@@ -326,11 +326,11 @@ internal fun SectionHeader(text: String, expanded: Boolean? = null, onToggle: ((
         Text(
             text = AppTheme.headline(text).uppercase(LocalConfiguration.current.locales[0]),
             style = MaterialTheme.typography.labelMedium,
-            color = AppTheme.colors.textMuted,
+            color = AppTheme.colors.accent,
             modifier = Modifier.weight(1f),
         )
         if (expanded != null) {
-            Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, contentDescription = null, tint = AppTheme.colors.textMuted)
+            Icon(if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, contentDescription = null, tint = AppTheme.colors.accent)
         }
     }
 }

@@ -51,6 +51,7 @@ import com.goalmaker.app.data.update.ApkInstallerLauncher
 import com.goalmaker.app.data.update.EcdsaSignatureVerifier
 import com.goalmaker.app.data.update.SupabaseReleaseChannel
 import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.sync.SyncedTable
 import com.goalmaker.app.domain.sync.SyncedTableCatalog
@@ -99,6 +100,9 @@ class AppGraph(context: Context) {
     val design: DesignTokens = DesignTokens.parse(
         appContext.assets.open("themes.json").use { it.readBytes().toString(Charsets.UTF_8) },
     )
+
+    /** The mark's shape, drawn in each theme's logo colors. */
+    val logo: LogoMark = LogoMark.parse(appContext.assets.open("logo.json").use { it.readBytes().toString(Charsets.UTF_8) })
 
     private val defaultBackend = BackendEnvironment(BuildConfig.DEFAULT_SUPABASE_URL, BuildConfig.DEFAULT_SUPABASE_KEY)
     private val backend = (if (BuildConfig.IS_DEV_BUILD) settings.backendOverride() else null) ?: defaultBackend

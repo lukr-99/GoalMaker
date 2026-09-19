@@ -5,7 +5,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
  * Copies the files both apps share into generated assets, byte for byte, so the repository copies
  * stay the only ones anyone edits: the replica migrations as assets/replica/NNNN_name.sql and the
  * synced-table contract as assets/synced-tables.json (ADR 0007), the theme tokens as
- * assets/themes.json and the variable fonts with their licenses as assets/fonts/<family>/ (ADR 0008).
+ * assets/themes.json, the logo's shape as assets/logo.json and the variable fonts with their licenses
+ * as assets/fonts/<family>/ (ADR 0008).
  */
 abstract class SharedAssets : DefaultTask() {
     @get:InputDirectory
@@ -19,6 +20,10 @@ abstract class SharedAssets : DefaultTask() {
     @get:InputFile
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val themes: RegularFileProperty
+
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val logo: RegularFileProperty
 
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
@@ -37,6 +42,7 @@ abstract class SharedAssets : DefaultTask() {
         }
         syncedTables.get().asFile.copyTo(output.resolve("synced-tables.json"))
         themes.get().asFile.copyTo(output.resolve("themes.json"))
+        logo.get().asFile.copyTo(output.resolve("logo.json"))
         val fontRoot = fonts.get().asFile
         fontRoot.walkTopDown()
             .filter { it.isFile && (it.extension == "ttf" || it.name == "OFL.txt") }
@@ -105,6 +111,7 @@ val sharedAssets = tasks.register<SharedAssets>("sharedAssets") {
     migrations.set(repositoryRoot.resolve("replica/migrations"))
     syncedTables.set(repositoryRoot.resolve("contracts/schemas/synced-tables.json"))
     themes.set(repositoryRoot.resolve("contracts/design/themes.json"))
+    logo.set(repositoryRoot.resolve("contracts/design/logo.json"))
     fonts.set(repositoryRoot.resolve("fonts"))
     outputDirectory.set(layout.buildDirectory.dir("generated/shared-assets"))
 }

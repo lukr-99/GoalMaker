@@ -141,7 +141,7 @@ public sealed class AppGraph : IDisposable
             }
         });
 
-        Theme = new ThemeApplier(design, appResources);
+        Theme = new ThemeApplier(design, appResources, ContractResources.Logo());
         SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null);
         Shell = new ShellViewModel(Auth, SignIn, runOnUi);
 

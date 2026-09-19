@@ -213,9 +213,23 @@ public sealed class PageSnapshots
         planner.Time.Advance(TimeSpan.FromSeconds(1));
     }
 
+    [Fact(Explicit = true)]
+    public void LogoInEveryTheme() => OnUiThread(folder =>
+    {
+        var tokens = ContractResources.Themes();
+        var mark = ContractResources.Logo();
+        var strip = new StackPanel { Orientation = Orientation.Horizontal, Background = Brushes.White };
+        foreach (var theme in tokens.Themes)
+        {
+            strip.Children.Add(new Image { Source = Controls.GoalMakerLogo.Render(mark, theme.Logo, 128), Width = 128, Height = 128, Margin = new Thickness(8) });
+        }
+
+        Save(strip, folder, "logo-every-theme", new Size(4 * 144, 144));
+    });
+
     private static ThemeApplier Theme(TestPlanner planner)
     {
-        var theme = new ThemeApplier(ContractResources.Themes(), Application.Current.Resources);
+        var theme = new ThemeApplier(ContractResources.Themes(), Application.Current.Resources, ContractResources.Logo());
         theme.Apply(planner.Settings.Appearance);
         return theme;
     }

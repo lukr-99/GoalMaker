@@ -41,6 +41,9 @@ public partial class App : Application
         graph.Theme.Apply(graph.Settings.Appearance);
         quickAdd = new QuickAddWindow(graph.QuickAdd, strings);
         tray = new TrayIcon(strings, build.IsDevBuild, new TrayFlyout(graph.TrayFlyout), graph.TrayFlyout.Refresh, ShowMainWindow, SummonQuickAdd, Quit);
+        // The tray shows the logo in the theme's colors, like the window and the taskbar (GM.LogoIcon).
+        tray.SetIcon(graph.Theme.LogoIconFile, graph.Paths.Root);
+        graph.Theme.Applied += (_, _) => tray.SetIcon(graph.Theme.LogoIconFile, graph.Paths.Root);
         graph.WindowRequested += (_, page) =>
         {
             tray.CloseFlyout();
