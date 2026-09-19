@@ -1,0 +1,76 @@
+<UserControl x:Class="GoalMaker.App.Controls.ConnectorCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             FontFamily="{DynamicResource GM.BodyFont}"
+             Foreground="{DynamicResource GM.TextBrush}">
+    <!-- The Claude connector card (docs/connector.md), bound to a ConnectorViewModel: the link's state,
+         Create, Make a new link and Revoke (confirmed first), and a new link shown once with Copy. -->
+    <UserControl.Resources>
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Margin" Value="0,0,0,12" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+        </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Margin" Value="0,12,0,8" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <ui:Card Padding="20">
+        <StackPanel>
+            <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Connector.Title}" />
+            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Connector.Intro}" />
+            <Border Margin="0,8,0,8" Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceVariantBrush}"
+                    Visibility="{Binding HasNewUrl, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Connector.NewTitle}" />
+                    <TextBox IsReadOnly="True" TextWrapping="Wrap" Text="{Binding NewUrl, Mode=OneWay}"
+                             AutomationProperties.Name="{DynamicResource Connector.NewTitle}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,8" Text="{DynamicResource Connector.NewSteps}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Appearance="Primary" Content="{DynamicResource Connector.Copy}" Command="{Binding CopyCommand}" />
+                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Connector.Done}" Command="{Binding HideNewUrlCommand}" />
+                        <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Connector.Copied}"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding Copied, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <StackPanel Visibility="{Binding Unavailable, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Margin="0,4,0,8" TextWrapping="Wrap" Text="{DynamicResource Connector.Offline}" />
+                <ui:Button HorizontalAlignment="Left" Content="{DynamicResource Connector.Retry}" Command="{Binding RefreshCommand}" />
+            </StackPanel>
+            <StackPanel Visibility="{Binding ShowCreate, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Margin="0,4,0,8" Text="{Binding Status}" />
+                <ui:Button HorizontalAlignment="Left" Appearance="Primary" Content="{DynamicResource Connector.Create}" Command="{Binding CreateCommand}" />
+            </StackPanel>
+            <StackPanel Visibility="{Binding ShowActive, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Margin="0,4,0,0" Text="{Binding Status}" />
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding LastUsed}" />
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <ui:Button Content="{DynamicResource Connector.Rotate}" Command="{Binding RotateCommand}" />
+                    <ui:Button Margin="8,0,0,0" Content="{DynamicResource Connector.Revoke}" Command="{Binding RevokeCommand}" />
+                </StackPanel>
+            </StackPanel>
+            <Border Margin="0,8,0,0" Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceVariantBrush}"
+                    Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Text="{Binding ConfirmText}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <ui:Button Appearance="Danger" Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}" />
+                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Connector.Cancel}" Command="{Binding CancelCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <TextBlock Style="{StaticResource Hint}" Margin="0,12,0,0" Text="{DynamicResource Connector.Risk}" />
+        </StackPanel>
+    </ui:Card>
+</UserControl>

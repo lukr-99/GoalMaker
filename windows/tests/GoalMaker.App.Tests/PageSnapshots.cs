@@ -1,5 +1,7 @@
 using System.IO;
+using System.Text.Json.Nodes;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -7,7 +9,9 @@ using GoalMaker.App.Localization;
 using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 using GoalMaker.App.Views;
+using GoalMaker.Core.Activity;
 using GoalMaker.Core.Composer;
+using GoalMaker.Core.Connector;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 using GoalMaker.Infrastructure.Sync;
@@ -181,6 +185,27 @@ public sealed class PageSnapshots
         Save(new ArchivePage(archive), folder, "archive");
     });
 
+    [Fact(Explicit = true)]
+    public void ActivityAndTheConnectorCard() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.Appearance = Appearance.Default with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark };
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+
+        var activity = new ActivityViewModel(new SnapshotLog(), strings, () => { });
+        activity.RefreshAsync().GetAwaiter().GetResult();
+        Save(new ActivityPage(activity), folder, "activity");
+
+        var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
+        connector.CreateCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        connector.CopyCommand.Execute(null);
+        Save(OnPage(new Controls.ConnectorCard { DataContext = connector }), folder, "connector-card", new Size(760, 480));
+        connector.HideNewUrlCommand.Execute(null);
+        connector.RevokeCommand.Execute(null);
+        Save(OnPage(new Controls.ConnectorCard { DataContext = connector }), folder, "connector-card-revoking", new Size(760, 400));
+    });
+
     private static void Add(TestPlanner planner, string line, DateOnly? day)
     {
         var draft = ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime) with { PlannedDate = day };
@@ -193,6 +218,14 @@ public sealed class PageSnapshots
         var theme = new ThemeApplier(ContractResources.Themes(), Application.Current.Resources);
         theme.Apply(planner.Settings.Appearance);
         return theme;
+    }
+
+    // A control on the theme's page background, as it sits in the app, instead of on nothing.
+    private static Border OnPage(FrameworkElement control)
+    {
+        var page = new Border { Padding = new Thickness(16), Child = control };
+        page.SetResourceReference(Border.BackgroundProperty, "GM.BackgroundBrush");
+        return page;
     }
 
     // Lays the page out at the main window's content size, or the given one, and writes it as a PNG.
@@ -229,6 +262,47 @@ public sealed class PageSnapshots
         public void Cancel()
         {
         }
+    }
+
+    // A few changes by the owner and by Claude, one of them undone, for the Activity page.
+    private sealed class SnapshotLog : IActivityLog
+    {
+        public Task<IReadOnlyList<ActivityEntry>> RecentAsync(int limit = 60, CancellationToken cancellationToken = default)
+        {
+            var at = new DateTimeOffset(2026, 9, 19, 9, 0, 0, TimeSpan.Zero);
+            JsonObject Task(string title, string status, string? day) =>
+                new() { ["title"] = title, ["status"] = status, ["planned_date"] = day };
+            return System.Threading.Tasks.Task.FromResult<IReadOnlyList<ActivityEntry>>(
+            [
+                new(6, "tasks", "a", "update", "claude", Task("Call the bank", "open", "2026-09-19"), Task("Call the bank", "open", "2026-09-21"), at.AddMinutes(50), null),
+                new(5, "tasks", "b", "update", "owner", Task("Water the plants", "open", "2026-09-19"), Task("Water the plants", "done", "2026-09-19"), at.AddMinutes(40), null),
+                new(4, "areas", "c", "update", "owner", new JsonObject { ["name"] = "Garden", ["archived_at"] = null }, new JsonObject { ["name"] = "Garden", ["archived_at"] = "2026-09-19T09:30:00+00:00" }, at.AddMinutes(30), null),
+                new(3, "tasks", "d", "create", "claude", null, Task("Book the dentist", "open", "2026-09-19"), at.AddMinutes(20), at.AddMinutes(25)),
+                new(2, "reviews", "e", "create", "claude", null, new JsonObject { ["kind"] = "weekly" }, at.AddMinutes(10), null),
+                new(1, "tasks", "a", "create", "owner", null, Task("Call the bank", "open", "2026-09-19"), at, null),
+            ]);
+        }
+
+        public Task<UndoOutcome> UndoAsync(long entryId, CancellationToken cancellationToken = default) =>
+            System.Threading.Tasks.Task.FromResult(UndoOutcome.Undone);
+    }
+
+    // One link, made and used earlier, for the connector card.
+    private sealed class SnapshotLinks : IConnectorLinks
+    {
+        private readonly List<ConnectorLink> links = [];
+
+        public Task<IReadOnlyList<ConnectorLink>> ListAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ConnectorLink>>([.. links]);
+
+        public Task<string> CreateAsync(CancellationToken cancellationToken = default)
+        {
+            var at = new DateTimeOffset(2026, 9, 19, 9, 0, 0, TimeSpan.Zero);
+            links.Add(new ConnectorLink("link", at, at.AddMinutes(12), null));
+            return Task.FromResult("Mz3dKq0pX8vYt2LwR5nS7cJ1hG4fB6eA9uD0iO_-kPq");
+        }
+
+        public Task RevokeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     // WPF needs one STA thread with an Application holding the app's resources; nothing is shown.
