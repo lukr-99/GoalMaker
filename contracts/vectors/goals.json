@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "description": "Goals (docs/goals.md, supabase/migrations/0009_goals.sql). 'periods': the first and last day of the period of 'horizon' that 'day' falls in (weeks start on Monday). 'parents': whether a goal of 'parent' can serve as the parent of a goal of 'child': the parent's horizon must be longer (year > month > week > day) and its period must overlap the child's. 'progress': a goal's progress from its mode, its status, the tasks that serve it (not deleted; dropped ones don't count) and the amounts logged on it (deleted ones don't count): 'done' mode is 1 of 1 when the goal is done; 'tasks' is the tasks done of those that count; 'number' is the sum of the amounts against the target. A done goal is hit with its fraction at 1; a dropped goal is never hit; otherwise hit means the fraction reached 1. 'fraction' is value / target, at most 1 and 0 when there is nothing to count. 'copy': last period's goals copied into the next period: every goal that wasn't dropped, open again, keeping its parent only when the parent's period overlaps the new one. 2026-09-18 is a Friday.",
+  "periods": [
+    { "horizon": "year", "day": "2026-09-18", "start": "2026-01-01", "end": "2026-12-31" },
+    { "horizon": "month", "day": "2026-09-18", "start": "2026-09-01", "end": "2026-09-30" },
+    { "horizon": "month", "day": "2028-02-10", "start": "2028-02-01", "end": "2028-02-29" },
+    { "horizon": "week", "day": "2026-09-18", "start": "2026-09-14", "end": "2026-09-20" },
+    { "horizon": "week", "day": "2026-09-14", "start": "2026-09-14", "end": "2026-09-20" },
+    { "horizon": "week", "day": "2026-09-20", "start": "2026-09-14", "end": "2026-09-20" },
+    { "horizon": "week", "day": "2027-01-01", "start": "2026-12-28", "end": "2027-01-03" },
+    { "horizon": "day", "day": "2026-09-18", "start": "2026-09-18", "end": "2026-09-18" }
+  ],
+  "parents": [
+    { "name": "a month serves its year", "child": { "horizon": "month", "start": "2026-09-01" }, "parent": { "horizon": "year", "start": "2026-01-01" }, "allowed": true },
+    { "name": "a week serves its month", "child": { "horizon": "week", "start": "2026-09-14" }, "parent": { "horizon": "month", "start": "2026-09-01" }, "allowed": true },
+    { "name": "a week across two months serves either", "child": { "horizon": "week", "start": "2026-09-28" }, "parent": { "horizon": "month", "start": "2026-10-01" }, "allowed": true },
+    { "name": "a day serves its week", "child": { "horizon": "day", "start": "2026-09-18" }, "parent": { "horizon": "week", "start": "2026-09-14" }, "allowed": true },
+    { "name": "a day serves its year", "child": { "horizon": "day", "start": "2026-09-18" }, "parent": { "horizon": "year", "start": "2026-01-01" }, "allowed": true },
+    { "name": "not another year's", "child": { "horizon": "month", "start": "2026-09-01" }, "parent": { "horizon": "year", "start": "2025-01-01" }, "allowed": false },
+    { "name": "not another month's", "child": { "horizon": "week", "start": "2026-09-14" }, "parent": { "horizon": "month", "start": "2026-08-01" }, "allowed": false },
+    { "name": "not the same horizon", "child": { "horizon": "week", "start": "2026-09-14" }, "parent": { "horizon": "week", "start": "2026-09-14" }, "allowed": false },
+    { "name": "not a shorter horizon", "child": { "horizon": "month", "start": "2026-09-01" }, "parent": { "horizon": "week", "start": "2026-09-14" }, "allowed": false }
+  ],
+  "progress": [
+    { "name": "an open done-or-not goal", "goal": { "mode": "done", "status": "open" }, "tasks": [], "entries": [], "expect": { "value": 0, "target": 1, "fraction": 0, "hit": false } },
+    { "name": "a done done-or-not goal", "goal": { "mode": "done", "status": "done" }, "tasks": [], "entries": [], "expect": { "value": 1, "target": 1, "fraction": 1, "hit": true } },
+    {
+      "name": "tasks: the share done, dropped and deleted ones don't count",
+      "goal": { "mode": "tasks", "status": "open" },
+      "tasks": [{ "status": "done" }, { "status": "open" }, { "status": "done" }, { "status": "open" }, { "status": "dropped" }, { "status": "done", "deleted": true }],
+      "entries": [],
+      "expect": { "value": 2, "target": 4, "fraction": 0.5, "hit": false }
+    },
+    {
+      "name": "tasks: all done is hit",
+      "goal": { "mode": "tasks", "status": "open" },
+      "tasks": [{ "status": "done" }, { "status": "done" }],
+      "entries": [],
+      "expect": { "value": 2, "target": 2, "fraction": 1, "hit": true }
+    },
+    { "name": "tasks: none yet is nothing", "goal": { "mode": "tasks", "status": "open" }, "tasks": [], "entries": [], "expect": { "value": 0, "target": 0, "fraction": 0, "hit": false } },
+    {
+      "name": "number: the sum against the target, deleted entries don't count",
+      "goal": { "mode": "number", "status": "open", "target": 80 },
+      "tasks": [],
+      "entries": [{ "amount": 5 }, { "amount": 10 }, { "amount": 7.5 }, { "amount": 100, "deleted": true }],
+      "expect": { "value": 22.5, "target": 80, "fraction": 0.28125, "hit": false }
+    },
+    {
+      "name": "number: a correction subtracts",
+      "goal": { "mode": "number", "status": "open", "target": 10 },
+      "tasks": [],
+      "entries": [{ "amount": 6 }, { "amount": -2 }],
+      "expect": { "value": 4, "target": 10, "fraction": 0.4, "hit": false }
+    },
+    {
+      "name": "number: past the target is hit, the fraction stays at 1",
+      "goal": { "mode": "number", "status": "open", "target": 20 },
+      "tasks": [],
+      "entries": [{ "amount": 15 }, { "amount": 10 }],
+      "expect": { "value": 25, "target": 20, "fraction": 1, "hit": true }
+    },
+    {
+      "name": "number: below zero shows as nothing",
+      "goal": { "mode": "number", "status": "open", "target": 10 },
+      "tasks": [],
+      "entries": [{ "amount": -3 }],
+      "expect": { "value": -3, "target": 10, "fraction": 0, "hit": false }
+    },
+    {
+      "name": "a goal marked done is hit whatever its numbers",
+      "goal": { "mode": "number", "status": "done", "target": 80 },
+      "tasks": [],
+      "entries": [{ "amount": 30 }],
+      "expect": { "value": 30, "target": 80, "fraction": 1, "hit": true }
+    },
+    {
+      "name": "a dropped goal isn't hit",
+      "goal": { "mode": "tasks", "status": "dropped" },
+      "tasks": [{ "status": "done" }],
+      "entries": [],
+      "expect": { "value": 1, "target": 1, "fraction": 1, "hit": false }
+    }
+  ],
+  "copy": [
+    {
+      "name": "last week's goals come back open, dropped ones stay behind",
+      "to": { "horizon": "week", "start": "2026-09-21" },
+      "goals": [
+        { "id": "g1", "title": "3 runs", "status": "done", "parent": "m9" },
+        { "id": "g2", "title": "Read 2 chapters", "status": "open", "parent": null },
+        { "id": "g3", "title": "Fix the bike", "status": "dropped", "parent": null }
+      ],
+      "parents": [{ "id": "m9", "horizon": "month", "start": "2026-09-01" }],
+      "expect": [{ "title": "3 runs", "parent": "m9" }, { "title": "Read 2 chapters", "parent": null }]
+    },
+    {
+      "name": "a parent from a period that is over is let go",
+      "to": { "horizon": "week", "start": "2026-10-05" },
+      "goals": [{ "id": "g1", "title": "3 runs", "status": "open", "parent": "m9" }],
+      "parents": [{ "id": "m9", "horizon": "month", "start": "2026-09-01" }],
+      "expect": [{ "title": "3 runs", "parent": null }]
+    },
+    {
+      "name": "a missing parent is let go",
+      "to": { "horizon": "month", "start": "2026-10-01" },
+      "goals": [{ "id": "g1", "title": "Run 80 km", "status": "open", "parent": "gone" }],
+      "parents": [],
+      "expect": [{ "title": "Run 80 km", "parent": null }]
+    }
+  ]
+}

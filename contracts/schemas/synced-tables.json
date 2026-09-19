@@ -29,6 +29,40 @@
       ]
     },
     {
+      "name": "goals",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "title", "kind": "text" },
+        { "name": "emoji", "kind": "text" },
+        { "name": "horizon", "kind": "text" },
+        { "name": "period_start", "kind": "date" },
+        { "name": "parent_id", "kind": "text" },
+        { "name": "progress_mode", "kind": "text" },
+        { "name": "target", "kind": "real" },
+        { "name": "unit", "kind": "text" },
+        { "name": "status", "kind": "text" },
+        { "name": "completed_at", "kind": "timestamp" },
+        { "name": "position", "kind": "real" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "goal_entries",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "goal_id", "kind": "text" },
+        { "name": "day", "kind": "date" },
+        { "name": "amount", "kind": "real" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
       "name": "tasks",
       "columns": [
         { "name": "id", "kind": "text" },
@@ -44,6 +78,7 @@
         { "name": "area_id", "kind": "text" },
         { "name": "recurrence", "kind": "text" },
         { "name": "series_id", "kind": "text" },
+        { "name": "goal_id", "kind": "text" },
         { "name": "position", "kind": "real" },
         { "name": "created_at", "kind": "timestamp" },
         { "name": "updated_at", "kind": "timestamp" },

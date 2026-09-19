@@ -1,7 +1,15 @@
 // Runs the contract vectors the Kotlin and C# tests run (contracts/vectors), against the TypeScript
 // rules the connector uses, so all three agree on Today, Plan tomorrow, repeats and the archive.
-import { assertEquals } from "jsr:@std/assert@1.0.13";
+import { assert, assertEquals } from "jsr:@std/assert@1.0.13";
 import { searchArchive } from "./archiveRules.ts";
+import {
+  canServe,
+  goalCopies,
+  type GoalItem,
+  goalProgress,
+  periodEnd,
+  periodStart as goalPeriodStart,
+} from "./goals.ts";
 import { lists } from "./listRules.ts";
 import { nameBasedUuid } from "./nameBasedUuid.ts";
 import { successorId, tagLinkId, toDrop } from "./occurrences.ts";
@@ -131,6 +139,58 @@ Deno.test("reviews.json: review ids and periods", async () => {
   }
   for (const vector of file.periods) {
     assertEquals(periodStart(vector.kind, vector.day), vector.start, `${vector.kind} ${vector.day}`);
+  }
+});
+
+Deno.test("goals.json: periods, parents, progress and copies", async () => {
+  const file = await vectors("goals.json");
+  for (const vector of file.periods) {
+    const start = goalPeriodStart(vector.horizon, vector.day);
+    assertEquals(start, vector.start, `${vector.horizon} ${vector.day}`);
+    assertEquals(periodEnd(vector.horizon, start), vector.end, `${vector.horizon} ${vector.day} end`);
+  }
+  for (const vector of file.parents) {
+    assertEquals(
+      canServe(vector.child.horizon, vector.child.start, vector.parent.horizon, vector.parent.start),
+      vector.allowed,
+      vector.name,
+    );
+  }
+  for (const vector of file.progress) {
+    const tasks = vector.tasks.map((fields: Json, index: number) => task({ id: `t${index}`, ...fields }, index));
+    const entries = vector.entries.map((entry: Json) => ({ amount: entry.amount, deleted: entry.deleted ?? false }));
+    const progress = goalProgress(vector.goal.mode, vector.goal.status, vector.goal.target ?? null, tasks, entries);
+    for (const key of ["value", "target", "fraction"] as const) {
+      assert(Math.abs(progress[key] - vector.expect[key]) < 1e-9, `${vector.name}: ${key} ${progress[key]}`);
+    }
+    assertEquals(progress.hit, vector.expect.hit, vector.name);
+  }
+  for (const vector of file.copy) {
+    const goal = (fields: Json, horizon: string, start: string) => ({
+      id: fields.id,
+      title: fields.title ?? "Parent",
+      horizon,
+      periodStart: start,
+      mode: "done",
+      status: fields.status ?? "open",
+      emoji: null,
+      parentId: fields.parent ?? null,
+      target: null,
+      unit: null,
+      deleted: false,
+    });
+    const goals = vector.goals.map((fields: Json) => goal(fields, vector.to.horizon, vector.to.start));
+    const parents = new Map<string, GoalItem>(
+      vector.parents.map((fields: Json) => [fields.id, goal(fields, fields.horizon, fields.start)]),
+    );
+    assertEquals(
+      goalCopies(goals, parents, vector.to.horizon, vector.to.start).map((copy) => ({
+        title: copy.title,
+        parent: copy.parentId,
+      })),
+      vector.expect,
+      vector.name,
+    );
   }
 });
 
