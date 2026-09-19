@@ -1,7 +1,8 @@
 {
   "schema": 1,
-  "description": "Reminders (docs/reminders.md). 'due': the local date and time a reminder fires, from the reminder ('fireAt', or 'offsetMinutes' before the task's planned time, plus its state and 'snoozedUntil') and its task; null means it never fires. 'quietHours': what the window [start, end) does to a reminder due at 'at'; a window whose start equals its end is off, and important reminders pass. 'snooze': where each snooze option lands, counted from 'now' with the day starting at 'dayStartHour'; 'tomorrowMorning' is 'morningHour' on the day after the current planning day. 'schedule': what a device does when it looks: 'due' lists the reminders that arrive after 'since' (the last look) up to and including 'now', soonest first; 'next' is the first one after 'now', the one the alarm is armed for. Reminders and tasks in 'schedule' and 'stale' leave out fields that keep their defaults (no offset, pending, not snoozed, not important; a task open with no day or time). 'stale': which of the notifications on screen ('shown', reminder ids) have to go at 'now' because their reminder was handled, snoozed, moved or deleted, or its task finished; sorted by id.",
+  "description": "Reminders (docs/reminders.md). 'due': the local date and time a reminder fires, from the reminder ('fireAt', or 'offsetMinutes' before the task's planned time, plus its state and 'snoozedUntil') and its task; null means it never fires. 'quietHours': what the window [start, end) does to a reminder due at 'at'; a window whose start equals its end is off, and important reminders pass. 'snooze': where each snooze option lands, counted from 'now' with the day starting at 'dayStartHour'; 'tomorrowMorning' is 'morningHour' on the day after the current planning day. 'schedule': what a device does when it looks: 'due' lists the reminders that arrive after 'since' (the last look) up to and including 'now', soonest first; 'next' is the first one after 'now', the one the alarm is armed for. Reminders and tasks in 'schedule' and 'stale' leave out fields that keep their defaults (no offset, pending, not snoozed, not important; a task open with no day or time). 'stale': which of the notifications on screen ('shown', reminder ids) have to go at 'now' because their reminder was handled, snoozed, moved or deleted, or its task finished; sorted by id. 'ritual': the evening Plan tomorrow reminder at 'time' (null: off). For a planning day D it rings at the first moment of D whose clock reads 'time' (after midnight when 'time' is before the day's start), unless D is in 'ran' (done or skipped on any device); quiet hours don't move it. 'due' is today's planning day when its moment came after 'since' and up to 'now', never an earlier day; 'next' is the moment the alarm waits for. 'ritualStale': whether a reminder on screen for 'day' has to go, because it ran or the planning day moved on. 'ritualIds': a run's id is a UUID version 5 of '<owner, lower case>/<ritual>/<day>' in 'runNamespace'.",
   "morningHour": 8,
+  "runNamespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
   "due": [
     { "name": "a fixed time on an open task", "fireAt": "2026-09-18T17:00", "offsetMinutes": null, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T17:00" },
     { "name": "fifteen minutes before the task", "fireAt": null, "offsetMinutes": -15, "state": "pending", "snoozedUntil": null, "reminderDeleted": false, "task": { "planned": "2026-09-18", "time": "17:00", "status": "open", "deleted": false }, "due": "2026-09-18T16:45" },
@@ -72,5 +73,29 @@
     { "name": "its task was finished", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t", "status": "done" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00" }], "clear": ["a"] },
     { "name": "the task moved later, so the reminder did too", "now": "2026-09-18T09:00", "shown": ["a"], "tasks": [{ "id": "t", "planned": "2026-09-18", "time": "12:00" }], "reminders": [{ "id": "a", "task": "t", "offsetMinutes": -15 }], "clear": ["a"] },
     { "name": "a reminder deleted or never known", "now": "2026-09-18T09:00", "shown": ["z", "a"], "tasks": [{ "id": "t" }], "reminders": [{ "id": "a", "task": "t", "fireAt": "2026-09-18T08:00" }], "clear": ["z"] }
+  ],
+  "ritual": [
+    {"name": "before its time, the alarm waits for it", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-18T10:00", "now": "2026-09-18T12:00", "due": null, "next": "2026-09-18T20:00"},
+    {"name": "at its time it rings, and tomorrow's is next", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-18T19:00", "now": "2026-09-18T20:00", "due": "2026-09-18", "next": "2026-09-19T20:00"},
+    {"name": "already done today, so quiet until tomorrow", "time": "20:00", "dayStartHour": 4, "ran": ["2026-09-18"], "since": "2026-09-18T19:00", "now": "2026-09-18T20:05", "due": null, "next": "2026-09-19T20:00"},
+    {"name": "done on the other device before its time", "time": "20:00", "dayStartHour": 4, "ran": ["2026-09-18"], "since": "2026-09-18T10:00", "now": "2026-09-18T12:00", "due": null, "next": "2026-09-19T20:00"},
+    {"name": "after days away, only today's counts", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-15T12:00", "now": "2026-09-18T21:00", "due": "2026-09-18", "next": "2026-09-19T20:00"},
+    {"name": "missed yesterday's, and the day has moved on", "time": "20:00", "dayStartHour": 4, "ran": [], "since": "2026-09-17T12:00", "now": "2026-09-18T10:00", "due": null, "next": "2026-09-18T20:00"},
+    {"name": "a time after midnight belongs to the planning day before", "time": "00:30", "dayStartHour": 4, "ran": [], "since": "2026-09-18T22:00", "now": "2026-09-18T23:00", "due": null, "next": "2026-09-19T00:30"},
+    {"name": "after midnight, before the day starts", "time": "00:30", "dayStartHour": 4, "ran": [], "since": "2026-09-19T00:00", "now": "2026-09-19T00:45", "due": "2026-09-18", "next": "2026-09-20T00:30"},
+    {"name": "a day that starts at midnight", "time": "20:00", "dayStartHour": 0, "ran": [], "since": "2026-09-18T10:00", "now": "2026-09-18T12:00", "due": null, "next": "2026-09-18T20:00"},
+    {"name": "switched off", "time": null, "dayStartHour": 4, "ran": [], "since": "2026-09-18T19:00", "now": "2026-09-18T21:00", "due": null, "next": null}
+  ],
+  "ritualStale": [
+    {"name": "still today and not done", "day": "2026-09-18", "dayStartHour": 4, "ran": [], "now": "2026-09-18T21:00", "stale": false},
+    {"name": "done on the other device", "day": "2026-09-18", "dayStartHour": 4, "ran": ["2026-09-18"], "now": "2026-09-18T21:00", "stale": true},
+    {"name": "the day has moved on", "day": "2026-09-17", "dayStartHour": 4, "ran": [], "now": "2026-09-18T10:00", "stale": true},
+    {"name": "after midnight it is still the same planning day", "day": "2026-09-18", "dayStartHour": 4, "ran": [], "now": "2026-09-19T01:00", "stale": false}
+  ],
+  "ritualIds": [
+    {"owner": "11111111-2222-4333-8444-555555555555", "ritual": "plan_tomorrow", "day": "2026-09-18", "id": "42d7b4f9-ce2b-5c1c-a83a-767e82139116"},
+    {"owner": "11111111-2222-4333-8444-555555555555", "ritual": "plan_tomorrow", "day": "2026-09-19", "id": "0bdc6d85-0f0f-5942-b4e8-109cdfe5ef72"},
+    {"owner": "0B7E9F4C-2D6A-4E8B-A1C3-5F7D9E1B3A2C", "ritual": "plan_tomorrow", "day": "2026-09-18", "id": "39433440-5975-54c1-9414-8d6c5a31f578"},
+    {"owner": "11111111-2222-4333-8444-555555555555", "ritual": "weekly_review", "day": "2026-09-20", "id": "63405079-9958-5cbf-a60a-c30843b6b259"}
   ]
 }

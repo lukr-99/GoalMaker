@@ -1,6 +1,6 @@
 package com.goalmaker.app.application.planning
 
-import java.security.MessageDigest
+import com.goalmaker.app.domain.planning.NameBasedUuid
 import java.util.Locale
 
 /**
@@ -9,7 +9,7 @@ import java.util.Locale
  * open occurrences to drop when a sync left a series with more than one.
  */
 object Occurrences {
-    private val NAMESPACE = "77797aa79e1142d8a66724b0596d2a4f".chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    private const val NAMESPACE = "77797aa7-9e11-42d8-a667-24b0596d2a4f"
 
     /** The next occurrence's id: the same on every device that moves this occurrence on. */
     fun successorId(id: String): String = nameBased(id.lowercase(Locale.ROOT))
@@ -33,15 +33,5 @@ object Occurrences {
         }
         .map(TaskItem::id)
 
-    // A UUID version 5 (RFC 9562): SHA-1 of the namespace and the name, with the version and variant set.
-    private fun nameBased(name: String): String {
-        val hash = MessageDigest.getInstance("SHA-1").run {
-            update(NAMESPACE)
-            digest(name.toByteArray(Charsets.UTF_8))
-        }
-        hash[6] = ((hash[6].toInt() and 0x0F) or 0x50).toByte()
-        hash[8] = ((hash[8].toInt() and 0x3F) or 0x80).toByte()
-        val hex = hash.take(16).joinToString("") { "%02x".format(it) }
-        return "${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}"
-    }
+    private fun nameBased(name: String): String = NameBasedUuid.of(NAMESPACE, name)
 }

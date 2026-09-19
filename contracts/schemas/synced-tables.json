@@ -11,6 +11,7 @@
         { "name": "color", "kind": "text" },
         { "name": "emoji", "kind": "text" },
         { "name": "position", "kind": "real" },
+        { "name": "archived_at", "kind": "timestamp" },
         { "name": "created_at", "kind": "timestamp" },
         { "name": "updated_at", "kind": "timestamp" },
         { "name": "deleted_at", "kind": "timestamp" }
@@ -86,6 +87,19 @@
         { "name": "important", "kind": "boolean" },
         { "name": "state", "kind": "text" },
         { "name": "snoozed_until", "kind": "timestamp" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
+    },
+    {
+      "name": "ritual_runs",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "ritual", "kind": "text" },
+        { "name": "day", "kind": "date" },
+        { "name": "outcome", "kind": "text" },
         { "name": "created_at", "kind": "timestamp" },
         { "name": "updated_at", "kind": "timestamp" },
         { "name": "deleted_at", "kind": "timestamp" }

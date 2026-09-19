@@ -10,7 +10,7 @@ namespace GoalMaker.Core.Planning;
 /// </summary>
 public static class Occurrences
 {
-    private static readonly byte[] Namespace = Convert.FromHexString("77797aa79e1142d8a66724b0596d2a4f");
+    private const string Namespace = "77797aa7-9e11-42d8-a667-24b0596d2a4f";
 
     /// <summary>The next occurrence's id: the same on every device that moves this occurrence on.</summary>
     public static string SuccessorId(string id) => NameBased(id.ToLowerInvariant());
@@ -32,13 +32,5 @@ public static class Occurrences
                 .Skip(1))
             .Select(task => task.Id)];
 
-    // A UUID version 5 (RFC 9562): SHA-1 of the namespace and the name, with the version and variant set.
-    private static string NameBased(string name)
-    {
-        var hash = SHA1.HashData([.. Namespace, .. Encoding.UTF8.GetBytes(name)]);
-        hash[6] = (byte)((hash[6] & 0x0F) | 0x50);
-        hash[8] = (byte)((hash[8] & 0x3F) | 0x80);
-        var hex = Convert.ToHexStringLower(hash, 0, 16);
-        return $"{hex[..8]}-{hex[8..12]}-{hex[12..16]}-{hex[16..20]}-{hex[20..]}";
-    }
+    private static string NameBased(string name) => NameBasedUuid.Of(Namespace, name);
 }

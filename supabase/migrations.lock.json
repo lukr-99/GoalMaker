@@ -5,6 +5,7 @@
     "0002_release_channel.sql": "58a8cde7a242e715e4cbb6714d938696fc756de7ee2b55664e5f9a4e3c4a1f78",
     "0003_planning_core.sql": "30e7eccc5db665364b4feebfed60816a4e8cda45e199d0a72f43e95ebdd73c20",
     "0004_activity_log.sql": "5782778ef5cbfdef7faf20c5fe6fc54b6d487303f03df8f8cc036404eb509552",
-    "0005_tombstone_purge.sql": "8c61fecf60857c8153108a6eca3e2b70edb239c4d0f0b495a81974a6b6fd51a3"
+    "0005_tombstone_purge.sql": "8c61fecf60857c8153108a6eca3e2b70edb239c4d0f0b495a81974a6b6fd51a3",
+    "0006_rituals_and_archived_areas.sql": "4a0abf261fab4cd8e3fe026fc69836cb81668088058c6dd2b0be3264023a26ba"
   }
 }

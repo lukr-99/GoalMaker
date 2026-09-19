@@ -66,6 +66,20 @@ last look stays on the device, so:
 - a device that was off or asleep shows everything it missed when it comes back,
 - a device that never looked starts from now, so installing the app doesn't replay old reminders.
 
+## The evening Plan tomorrow reminder
+
+Once per planning day, at a time the owner chooses (20:00 unless changed, or switched off), a
+reminder offers to start Plan tomorrow ([plan tomorrow](plan-tomorrow.md)). It rings at the first
+moment of the planning day whose clock shows that time, so 00:30 with a 04:00 day start still
+belongs to the evening before. Quiet hours don't move it, because the owner picked the time.
+
+It stays quiet on a day the ritual was already **done** or **skipped** ("Not today") on either
+device. That is kept in the synced `ritual_runs` table: one row per ritual and planning day, whose
+id is a UUID version 5 of `<owner>/<ritual>/<day>`, so both devices recording it make the same row.
+A device that was away shows only today's reminder, never an earlier day's, and takes it down when
+the ritual runs elsewhere or the planning day moves on. Pinned by the `ritual`, `ritualStale` and
+`ritualIds` cases in [`contracts/vectors/reminders.json`](../contracts/vectors/reminders.json).
+
 ## Two devices
 
 Handling a reminder writes its state (`dismissed`, `done`, or `snoozed` with a time), which syncs

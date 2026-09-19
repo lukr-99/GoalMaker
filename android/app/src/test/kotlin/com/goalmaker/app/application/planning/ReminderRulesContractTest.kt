@@ -2,6 +2,7 @@ package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.contracts.ContractFiles
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.planning.Snooze
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -96,6 +97,43 @@ class ReminderRulesContractTest {
             if (actual == expected) null else "${name(case)}: expected $expected, got $actual"
         }
         assertTrue(failures.joinToString("\n", prefix = "${failures.size} of ${cases.size} failed:\n"), failures.isEmpty())
+    }
+
+    @Test
+    fun `every evening ritual reminder`() {
+        vectors.getValue("ritual").jsonArray.map { it.jsonObject }.forEach { case ->
+            val time = case.getValue("time").let { if (it == JsonNull) null else LocalTime.parse(it.jsonPrimitive.content) }
+            val start = case.getValue("dayStartHour").jsonPrimitive.int
+            val ran = case.getValue("ran").jsonArray.map { LocalDate.parse(it.jsonPrimitive.content) }.toSet()
+            val now = dateTime(case.getValue("now"))!!
+            val due = RitualReminder.due(time, start, ran, dateTime(case.getValue("since"))!!, now)
+            val next = RitualReminder.next(time, start, ran, now)
+            assertEquals(name(case), date(case.getValue("due")) to dateTime(case.getValue("next")), due to next)
+        }
+    }
+
+    @Test
+    fun `every stale ritual reminder`() {
+        vectors.getValue("ritualStale").jsonArray.map { it.jsonObject }.forEach { case ->
+            val ran = case.getValue("ran").jsonArray.map { LocalDate.parse(it.jsonPrimitive.content) }.toSet()
+            val stale = RitualReminder.stale(
+                date(case.getValue("day"))!!,
+                case.getValue("dayStartHour").jsonPrimitive.int,
+                ran,
+                dateTime(case.getValue("now"))!!,
+            )
+            assertEquals(name(case), case.getValue("stale").jsonPrimitive.boolean, stale)
+        }
+    }
+
+    @Test
+    fun `every ritual run id`() {
+        vectors.getValue("ritualIds").jsonArray.map { it.jsonObject }.forEach { case ->
+            assertEquals(
+                case.getValue("id").jsonPrimitive.content,
+                RitualRunList.idOf(case.getValue("owner").jsonPrimitive.content, case.getValue("ritual").jsonPrimitive.content, date(case.getValue("day"))!!),
+            )
+        }
     }
 
     @Test

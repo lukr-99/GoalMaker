@@ -122,6 +122,50 @@ public sealed class ReminderRulesContractTests
     }
 
     [Fact]
+    public void EveryEveningRitualReminder()
+    {
+        foreach (var testCase in vectors.GetProperty("ritual").EnumerateArray())
+        {
+            var time = Time(testCase.GetProperty("time"));
+            var start = testCase.GetProperty("dayStartHour").GetInt32();
+            var ran = Days(testCase.GetProperty("ran"));
+            var now = DateTimeOrNull(testCase.GetProperty("now"))!.Value;
+            var due = RitualReminder.Due(time, start, ran, DateTimeOrNull(testCase.GetProperty("since"))!.Value, now);
+            var next = RitualReminder.Next(time, start, ran, now);
+
+            Assert.True(
+                (Date(testCase.GetProperty("due")), DateTimeOrNull(testCase.GetProperty("next"))) == (due, next),
+                $"{Name(testCase)}: got {due} then {next}");
+        }
+    }
+
+    [Fact]
+    public void EveryStaleRitualReminder()
+    {
+        foreach (var testCase in vectors.GetProperty("ritualStale").EnumerateArray())
+        {
+            var stale = RitualReminder.Stale(
+                Date(testCase.GetProperty("day"))!.Value,
+                testCase.GetProperty("dayStartHour").GetInt32(),
+                Days(testCase.GetProperty("ran")),
+                DateTimeOrNull(testCase.GetProperty("now"))!.Value);
+
+            Assert.True(testCase.GetProperty("stale").GetBoolean() == stale, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryRitualRunId()
+    {
+        foreach (var testCase in vectors.GetProperty("ritualIds").EnumerateArray())
+        {
+            Assert.Equal(
+                testCase.GetProperty("id").GetString(),
+                RitualRunList.IdOf(testCase.GetProperty("owner").GetString()!, testCase.GetProperty("ritual").GetString()!, Date(testCase.GetProperty("day"))!.Value));
+        }
+    }
+
+    [Fact]
     public void TheMorningHourMatchesTheVectors()
     {
         Assert.Equal(SnoozeTimes.MorningHour, vectors.GetProperty("morningHour").GetInt32());
@@ -189,6 +233,8 @@ public sealed class ReminderRulesContractTests
         task.TryGetProperty("time", out var time) ? Time(time) : null);
 
     private static string? Name(JsonElement testCase) => testCase.GetProperty("name").GetString();
+
+    private static HashSet<DateOnly> Days(JsonElement days) => [.. days.EnumerateArray().Select(day => Date(day)!.Value)];
 
     private static DateOnly? Date(JsonElement value) =>
         value.ValueKind == JsonValueKind.Null ? null : DateOnly.ParseExact(value.GetString()!, "yyyy-MM-dd", CultureInfo.InvariantCulture);
