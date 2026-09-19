@@ -65,6 +65,11 @@
                         <ui:SymbolIcon Symbol="Flag24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Habits}" TargetPageType="{x:Type views:HabitsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="ArrowRepeatAll24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
             <ui:NavigationView.FooterMenuItems>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Archive}" TargetPageType="{x:Type views:ArchivePage}">

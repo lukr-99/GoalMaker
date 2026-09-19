@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.ExpandLess
@@ -49,14 +50,19 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -66,19 +72,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
 import com.goalmaker.app.ui.goals.GoalSummaryRow
+import com.goalmaker.app.ui.habits.AmountDialog
+import com.goalmaker.app.ui.habits.HabitRingsRow
+import com.goalmaker.app.ui.habits.HabitRow
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.launch
 
 /**
  * The planner's home: Today, Tomorrow and the Inbox behind a bottom navigation (docs/lists.md), with
@@ -93,6 +105,7 @@ fun ListsScreen(
     onOpenTask: (String) -> Unit,
     onOpenArchive: () -> Unit,
     onOpenGoals: () -> Unit,
+    onOpenHabits: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
@@ -103,6 +116,29 @@ fun ListsScreen(
     val tick = rememberTickSound()
     var remindFor by remember { mutableStateOf<TaskItem?>(null) }
     var taskReminders by remember { mutableStateOf(emptyList<ReminderItem>()) }
+    var logging by remember { mutableStateOf<HabitItem?>(null) }
+    val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+
+    // A tap on a habit's ring checks in; an amount asks for its value first.
+    fun tapHabit(row: HabitRow) {
+        haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+        scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
+    }
+
+    // Confetti when a habit's streak reaches a milestone while Today is open (design spec).
+    val reduceMotion = AppTheme.reduceMotion
+    var seenMilestones by remember { mutableStateOf<Set<String>?>(null) }
+    var bursts by remember { mutableIntStateOf(0) }
+    LaunchedEffect(state.lists != null, state.habitMilestones) {
+        if (state.lists == null) return@LaunchedEffect
+        val before = seenMilestones
+        seenMilestones = state.habitMilestones
+        if (before != null && !reduceMotion && !before.containsAll(state.habitMilestones)) bursts++
+    }
+    logging?.let { habit ->
+        AmountDialog(habit, onLog = { amount -> viewModel.checkIn(habit.id, amount) }, onDismiss = { logging = null })
+    }
 
     // The sheet reads the task's reminders when it opens, and again after every change to them.
     LaunchedEffect(remindFor, state.reminded) {
@@ -133,89 +169,97 @@ fun ListsScreen(
         }
     }
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        snackbarHost = { SnackbarHost(snackbars) },
-        topBar = {
-            LargeFlexibleTopAppBar(
-                title = { ScreenTitle(stringResource(tab.title())) },
-                subtitle = { state.lists?.let { Text(subtitle(tab, it)) } },
-                actions = {
-                    SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
-                    IconButton(onClick = onOpenGoals) {
-                        Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
-                    }
-                    IconButton(onClick = onOpenArchive) {
-                        Icon(Icons.Outlined.Inventory2, contentDescription = stringResource(R.string.archive_title))
-                    }
-                    IconButton(onClick = onOpenPlan) {
-                        Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.today_settings))
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
-        },
-        bottomBar = {
-            Column(Modifier.imePadding()) {
-                val line = composer.text.toString()
-                val draft = remember(line) { viewModel.preview(line) }
-                ComposerBar(
-                    state = composer,
-                    chips = composerChips(line, draft, viewModel.today(), state.areas, state.tagNames),
-                    canSend = (draft.title.isNotBlank() && draft.command == null) || draft.command?.name == PlanRules.COMMAND,
-                    onSubmit = {
-                        if (draft.command?.name == PlanRules.COMMAND) {
-                            composer.clearText()
-                            onOpenPlan()
-                        } else if (viewModel.submit(draft, tab)) {
-                            composer.clearText()
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            snackbarHost = { SnackbarHost(snackbars) },
+            topBar = {
+                LargeFlexibleTopAppBar(
+                    title = { ScreenTitle(stringResource(tab.title())) },
+                    subtitle = { state.lists?.let { Text(subtitle(tab, it, state.habits.count { row -> !row.done })) } },
+                    actions = {
+                        SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
+                        IconButton(onClick = onOpenHabits) {
+                            Icon(Icons.Outlined.DonutLarge, contentDescription = stringResource(R.string.habits_title))
+                        }
+                        IconButton(onClick = onOpenGoals) {
+                            Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
+                        }
+                        IconButton(onClick = onOpenArchive) {
+                            Icon(Icons.Outlined.Inventory2, contentDescription = stringResource(R.string.archive_title))
+                        }
+                        IconButton(onClick = onOpenPlan) {
+                            Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.today_settings))
                         }
                     },
-                    onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
+                    scrollBehavior = scrollBehavior,
                 )
-                if (!WindowInsets.isImeVisible) {
-                    NavigationBar {
-                        ListTab.entries.forEach { entry ->
-                            NavigationBarItem(
-                                selected = tab == entry,
-                                onClick = { tab = entry },
-                                icon = { Icon(entry.icon(), contentDescription = null) },
-                                label = { Text(stringResource(entry.title())) },
-                            )
+            },
+            bottomBar = {
+                Column(Modifier.imePadding()) {
+                    val line = composer.text.toString()
+                    val draft = remember(line) { viewModel.preview(line) }
+                    ComposerBar(
+                        state = composer,
+                        chips = composerChips(line, draft, viewModel.today(), state.areas, state.tagNames),
+                        canSend = (draft.title.isNotBlank() && draft.command == null) || draft.command?.name == PlanRules.COMMAND,
+                        onSubmit = {
+                            if (draft.command?.name == PlanRules.COMMAND) {
+                                composer.clearText()
+                                onOpenPlan()
+                            } else if (viewModel.submit(draft, tab)) {
+                                composer.clearText()
+                            }
+                        },
+                        onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
+                    )
+                    if (!WindowInsets.isImeVisible) {
+                        NavigationBar {
+                            ListTab.entries.forEach { entry ->
+                                NavigationBarItem(
+                                    selected = tab == entry,
+                                    onClick = { tab = entry },
+                                    icon = { Icon(entry.icon(), contentDescription = null) },
+                                    label = { Text(stringResource(entry.title())) },
+                                )
+                            }
                         }
                     }
                 }
-            }
-        },
-    ) { padding ->
-        PullToRefreshBox(
-            isRefreshing = state.refreshing,
-            onRefresh = viewModel::refresh,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
-            val lists = state.lists
-            if (lists == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingIndicator(Modifier.size(64.dp))
+            },
+        ) { padding ->
+            PullToRefreshBox(
+                isRefreshing = state.refreshing,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+            ) {
+                val lists = state.lists
+                if (lists == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        LoadingIndicator(Modifier.size(64.dp))
+                    }
+                } else {
+                    Column {
+                        ListFilterRow(
+                            filter = state.filter,
+                            areas = state.areas.filterNot { it.archived },
+                            tags = state.tags,
+                            onArea = viewModel::filterByArea,
+                            onTag = viewModel::filterByTag,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        ListContent(tab, lists, state, viewModel, tick, onOpenTask, onOpenGoals, onOpenHabits, ::tapHabit) { remindFor = it }
+                    }
                 }
-            } else {
-                Column {
-                    ListFilterRow(
-                        filter = state.filter,
-                        areas = state.areas.filterNot { it.archived },
-                        tags = state.tags,
-                        onArea = viewModel::filterByArea,
-                        onTag = viewModel::filterByTag,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                    ListContent(tab, lists, state, viewModel, tick, onOpenTask, onOpenGoals) { remindFor = it }
-                }
             }
+        }
+        if (bursts > 0) {
+            key(bursts) { ConfettiBurst(onFinished = { bursts = 0 }) }
         }
     }
 }
@@ -229,6 +273,8 @@ private fun ListContent(
     tick: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenGoals: () -> Unit,
+    onOpenHabits: () -> Unit,
+    onTapHabit: (HabitRow) -> Unit,
     onRemind: (TaskItem) -> Unit,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
@@ -259,7 +305,7 @@ private fun ListContent(
             ListTab.TODAY -> {
                 val sections = lists.todaySections
                 val labelled = listOf(sections.priorities, sections.scheduled, sections.more).count { it.isNotEmpty() } > 1 ||
-                    sections.priorities.isNotEmpty() || sections.scheduled.isNotEmpty()
+                    sections.priorities.isNotEmpty() || sections.scheduled.isNotEmpty() || state.habits.isNotEmpty()
                 if (sections.priorities.isNotEmpty()) {
                     item(key = "h-priorities") { SectionHeader(stringResource(R.string.lists_priorities)) }
                     rows(sections.priorities)
@@ -267,6 +313,17 @@ private fun ListContent(
                 if (sections.scheduled.isNotEmpty()) {
                     item(key = "h-scheduled") { SectionHeader(stringResource(R.string.lists_scheduled)) }
                     rows(sections.scheduled)
+                }
+                // Today's habits as a row of rings, between the timed tasks and the rest (design spec, Today).
+                if (state.habits.isNotEmpty()) {
+                    item(key = "h-habits") {
+                        val left = state.habits.count { !it.done }
+                        SectionHeader(
+                            text = if (left == 0) stringResource(R.string.habits_today_done) else pluralStringResource(R.plurals.habits_today_left, left, left),
+                            onToggle = onOpenHabits,
+                        )
+                    }
+                    item(key = "habits") { HabitRingsRow(state.habits, onTap = onTapHabit, onOpen = onOpenHabits, modifier = Modifier.animateItem()) }
                 }
                 if (sections.more.isNotEmpty()) {
                     if (labelled) item(key = "h-more") { SectionHeader(stringResource(R.string.lists_more)) }
@@ -347,13 +404,14 @@ private fun Empty(text: String) {
 }
 
 @Composable
-private fun subtitle(tab: ListTab, lists: PlanningLists): String {
+private fun subtitle(tab: ListTab, lists: PlanningLists, habitsLeft: Int): String {
     val locale = LocalConfiguration.current.locales[0]
     val longDate = DateTimeFormatter.ofPattern("EEEE d MMMM", locale)
     return when (tab) {
         ListTab.TODAY -> {
             val date = longDate.format(lists.today)
-            if (lists.summary.total == 0) date else pluralStringResource(R.plurals.lists_today_summary, lists.summary.total, date, lists.summary.done, lists.summary.total)
+            val tasks = if (lists.summary.total == 0) date else pluralStringResource(R.plurals.lists_today_summary, lists.summary.total, date, lists.summary.done, lists.summary.total)
+            if (habitsLeft == 0) tasks else stringResource(R.string.habits_summary, tasks, pluralStringResource(R.plurals.habits_left, habitsLeft, habitsLeft))
         }
         ListTab.TOMORROW -> longDate.format(lists.today.plusDays(1))
         ListTab.INBOX -> pluralStringResource(R.plurals.lists_inbox_count, lists.inbox.size, lists.inbox.size)

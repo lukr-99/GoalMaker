@@ -18,6 +18,7 @@ public sealed partial class GoalsViewModel : ObservableObject
 {
     private readonly GoalList goals;
     private readonly TaskList tasks;
+    private readonly HabitList? habits;
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
@@ -48,10 +49,18 @@ public sealed partial class GoalsViewModel : ObservableObject
     private string logText = string.Empty;
 
     public GoalsViewModel(
-        GoalList goals, TaskList tasks, ISettingsStore settings, IStrings strings, TimeProvider time, Func<bool> motionReduced, Action<Action> runOnUi)
+        GoalList goals,
+        TaskList tasks,
+        ISettingsStore settings,
+        IStrings strings,
+        TimeProvider time,
+        Func<bool> motionReduced,
+        Action<Action> runOnUi,
+        HabitList? habits = null)
     {
         this.goals = goals;
         this.tasks = tasks;
+        this.habits = habits;
         this.settings = settings;
         this.strings = strings;
         this.time = time;
@@ -66,6 +75,11 @@ public sealed partial class GoalsViewModel : ObservableObject
         };
         goals.Changed += (_, _) => runOnUi(Refresh);
         tasks.Changed += (_, _) => runOnUi(Refresh);
+        if (habits is not null)
+        {
+            habits.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
@@ -99,11 +113,11 @@ public sealed partial class GoalsViewModel : ObservableObject
     };
 
     /// <summary>This week's goals with where they stand, for Today's folded section.</summary>
-    public static IReadOnlyList<GoalRowViewModel> ThisWeek(GoalList goals, TaskList tasks, DateOnly today, IStrings strings)
+    public static IReadOnlyList<GoalRowViewModel> ThisWeek(GoalList goals, TaskList tasks, DateOnly today, IStrings strings, HabitList? habits = null)
     {
         var week = GoalRules.PeriodStart(GoalHorizon.Week, today);
         var all = goals.All();
-        var progress = ProgressOf(goals.Entries(), tasks.All());
+        var progress = ProgressOf(goals.Entries(), tasks.All(), habits);
         return [.. all.Where(goal => goal.Horizon == GoalHorizon.Week && goal.PeriodStart == week && goal.Status != GoalRules.Dropped)
             .Select(goal => new GoalRowViewModel(goal, progress(goal), null, 0, strings))];
     }
@@ -113,7 +127,7 @@ public sealed partial class GoalsViewModel : ObservableObject
         var today = Today();
         var all = goals.All();
         var byId = all.ToDictionary(goal => goal.Id, StringComparer.Ordinal);
-        var progress = ProgressOf(goals.Entries(), tasks.All());
+        var progress = ProgressOf(goals.Entries(), tasks.All(), habits);
         GoalRowViewModel Row(GoalItem goal, int depth = 0) =>
             new(goal, progress(goal), goal.ParentId is { } id && byId.TryGetValue(id, out var parent) ? parent.Title : null, depth, strings, this);
         bool Kept(GoalItem goal, GoalHorizon horizon, DateOnly start) =>
@@ -219,11 +233,20 @@ public sealed partial class GoalsViewModel : ObservableObject
 
     private DateOnly Today() => PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
 
-    private static Func<GoalItem, GoalProgress> ProgressOf(IEnumerable<GoalEntryItem> entries, IEnumerable<TaskItem> taskList)
+    // Progress from the tasks that serve a goal, the amounts logged on it, and the check-ins of habits
+    // serving it in its unit (story 32, docs/habits.md).
+    private static Func<GoalItem, GoalProgress> ProgressOf(IEnumerable<GoalEntryItem> entries, IEnumerable<TaskItem> taskList, HabitList? habits)
     {
         var entriesByGoal = entries.ToLookup(entry => entry.GoalId, StringComparer.Ordinal);
         var tasksByGoal = taskList.Where(task => task.GoalId is not null).ToLookup(task => task.GoalId!, StringComparer.Ordinal);
-        return goal => GoalRules.Progress(goal.Mode, goal.Status, goal.Target, tasksByGoal[goal.Id], entriesByGoal[goal.Id]);
+        var habitList = habits?.All() ?? [];
+        var checkins = habits?.Checkins() ?? [];
+        return goal => GoalRules.Progress(
+            goal.Mode,
+            goal.Status,
+            goal.Target,
+            tasksByGoal[goal.Id],
+            [.. entriesByGoal[goal.Id], .. HabitRules.GoalAmounts(goal, habitList, checkins).Select(amount => new GoalEntryItem(string.Empty, goal.Id, goal.PeriodStart, amount))]);
     }
 
     private static string Upper(string text) => text.ToUpper(CultureInfo.CurrentUICulture);

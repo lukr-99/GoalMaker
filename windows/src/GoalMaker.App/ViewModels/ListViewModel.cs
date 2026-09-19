@@ -34,6 +34,9 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly Action<string>? openTask;
     private readonly GoalList? goals;
     private readonly Action? openGoals;
+    private readonly HabitsViewModel? habitsPage;
+    private readonly HabitList? habitList;
+    private readonly Action? openHabits;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -59,6 +62,15 @@ public sealed partial class ListViewModel : ObservableObject
     /// <summary>Whether this week's goals are unfolded under Today; they start folded (design spec, Today).</summary>
     [ObservableProperty]
     private bool isWeekGoalsExpanded;
+
+    [ObservableProperty]
+    private IReadOnlyList<HabitRowViewModel> habits = [];
+
+    [ObservableProperty]
+    private string habitsHeader = string.Empty;
+
+    [ObservableProperty]
+    private bool hasHabits;
 
     [ObservableProperty]
     private string undoText = string.Empty;
@@ -92,11 +104,17 @@ public sealed partial class ListViewModel : ObservableObject
         Action<string>? openTask = null,
         ListFiltersViewModel? filters = null,
         GoalList? goals = null,
-        Action? openGoals = null)
+        Action? openGoals = null,
+        HabitsViewModel? habitsPage = null,
+        HabitList? habitList = null,
+        Action? openHabits = null)
     {
         this.openTask = openTask;
         this.goals = goals;
         this.openGoals = openGoals;
+        this.habitsPage = habitsPage;
+        this.habitList = habitList;
+        this.openHabits = openHabits;
         Filters = filters;
         this.openPlan = openPlan;
         this.reminders = reminders;
@@ -146,6 +164,11 @@ public sealed partial class ListViewModel : ObservableObject
         if (goals is not null && kind == ListKind.Today)
         {
             goals.Changed += (_, _) => runOnUi(Refresh);
+        }
+
+        if (habitList is not null && kind == ListKind.Today)
+        {
+            habitList.Changed += (_, _) => runOnUi(Refresh);
         }
 
         sync.StatusChanged += (_, status) => runOnUi(() => ShowSync(status));
@@ -274,15 +297,18 @@ public sealed partial class ListViewModel : ObservableObject
                         expanded => overdueExpanded = expanded));
                 }
 
+                ShowHabits();
                 if (goals is not null)
                 {
-                    WeekGoals = GoalsViewModel.ThisWeek(goals, tasks, today, strings);
+                    WeekGoals = GoalsViewModel.ThisWeek(goals, tasks, today, strings, habitList);
                     HasWeekGoals = WeekGoals.Count > 0;
                     WeekGoalsHeader = Upper(strings.Get("Goals.WeekCount", WeekGoals.Count(row => row.IsHit), WeekGoals.Count));
                 }
 
                 var date = today.ToString("dddd d MMMM", CultureInfo.CurrentCulture);
-                Subtitle = lists.Summary.Total == 0 ? date : strings.Get("Lists.TodaySummary", date, lists.Summary.Done, lists.Summary.Total);
+                var summary = lists.Summary.Total == 0 ? date : strings.Get("Lists.TodaySummary", date, lists.Summary.Done, lists.Summary.Total);
+                var habitsLeft = Habits.Count(row => !row.IsDone);
+                Subtitle = habitsLeft == 0 ? summary : strings.Get("Habits.Summary", summary, strings.Get("Habits.Left", habitsLeft));
                 break;
             case ListKind.Tomorrow:
                 Add(string.Empty, Rows(lists.Tomorrow));
@@ -302,6 +328,23 @@ public sealed partial class ListViewModel : ObservableObject
 
     [RelayCommand]
     private void OpenGoals() => openGoals?.Invoke();
+
+    [RelayCommand]
+    private void OpenHabits() => openHabits?.Invoke();
+
+    // Today's habits as a row of rings, with how many are left (design spec, Today).
+    private void ShowHabits()
+    {
+        if (habitsPage is null || Kind != ListKind.Today)
+        {
+            return;
+        }
+
+        Habits = habitsPage.TodayRows();
+        HasHabits = Habits.Count > 0;
+        var left = Habits.Count(row => !row.IsDone);
+        HabitsHeader = Upper(left == 0 ? strings.Get("Habits.TodayDone") : strings.Get("Habits.TodayLeft", left));
+    }
 
     [RelayCommand]
     private void Undo()

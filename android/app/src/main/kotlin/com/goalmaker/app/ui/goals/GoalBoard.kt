@@ -4,21 +4,31 @@ import com.goalmaker.app.application.planning.GoalEntryItem
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.application.planning.HabitData
+import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.TaskItem
 import java.time.LocalDate
 
 /**
  * What the Goals screen and Today show (docs/goals.md): the current year, month, week and day, next
- * week for planning ahead, and the same goals as the cascade. Dropped goals stay off both.
+ * week for planning ahead, and the same goals as the cascade. Dropped goals stay off both. Check-ins of
+ * habits serving a numeric goal in its unit count like logged amounts (docs/habits.md).
  */
 object GoalBoard {
-    fun build(all: List<GoalItem>, entries: List<GoalEntryItem>, tasks: List<TaskItem>, today: LocalDate, showTree: Boolean = false): GoalsUiState {
+    fun build(
+        all: List<GoalItem>,
+        entries: List<GoalEntryItem>,
+        tasks: List<TaskItem>,
+        today: LocalDate,
+        showTree: Boolean = false,
+        habits: HabitData = HabitData(),
+    ): GoalsUiState {
         val byId = all.associateBy(GoalItem::id)
         val entriesByGoal = entries.groupBy(GoalEntryItem::goalId)
         val tasksByGoal = tasks.filter { it.goalId != null }.groupBy { it.goalId!! }
         fun row(goal: GoalItem, depth: Int = 0) = GoalRow(
             goal = goal,
-            progress = GoalRules.progress(goal.mode, goal.status, goal.target, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty()),
+            progress = GoalRules.progress(goal.mode, goal.status, goal.target, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty() + habitEntries(goal, habits)),
             parentTitle = goal.parentId?.let(byId::get)?.title,
             depth = depth,
         )
@@ -63,6 +73,14 @@ object GoalBoard {
     }
 
     /** This week's goals with their progress, for Today (design spec, Today). */
-    fun thisWeek(all: List<GoalItem>, entries: List<GoalEntryItem>, tasks: List<TaskItem>, today: LocalDate): List<GoalRow> =
-        build(all, entries, tasks, today).sections.first { it.horizon == GoalHorizon.WEEK && !it.next }.rows
+    fun thisWeek(all: List<GoalItem>, entries: List<GoalEntryItem>, tasks: List<TaskItem>, today: LocalDate, habits: HabitData = HabitData()): List<GoalRow> =
+        build(all, entries, tasks, today, habits = habits).sections.first { it.horizon == GoalHorizon.WEEK && !it.next }.rows
+
+    // A numeric goal's habit check-ins, as entries on the goal.
+    private fun habitEntries(goal: GoalItem, habits: HabitData): List<GoalEntryItem> =
+        if (goal.mode != GoalRules.MODE_NUMBER || habits.habits.isEmpty()) {
+            emptyList()
+        } else {
+            HabitRules.goalAmounts(goal, habits.habits, habits.checkins).map { GoalEntryItem("", goal.id, goal.periodStart, it) }
+        }
 }

@@ -55,9 +55,18 @@ after the habit resumes, so old streaks still read right.
 ## On screen
 
 - **Today's ring** fills with the day's value against the target for a daily or weekday habit, and
-  with the days met so far against N for a weekly or monthly one.
+  with the days met so far against N for a weekly or monthly one. A tap checks a check habit (and
+  takes it back), adds one to a count, and asks for the value of an amount. The ring fills with a
+  spring and a small burst, and a streak reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods
+  gets confetti; both are skipped under reduce motion.
 - **The heatmap** gives each day a value: nothing before the start or on a day that isn't due,
-  paused, skipped, or the day's value against its target from 0 to 1 (a check is 0 or 1).
+  paused, skipped, or the day's value against its target from 0 to 1 (a check is 0 or 1). It runs by
+  weeks, Monday at the top, from the habit's first week and at most 26 weeks back, and shows the last
+  weeks that fit the width.
+- **Today** holds the habits due today as a row of rings above the rest of the tasks, with how many
+  are left in the day's line (design spec, Today). Both apps also have a Habits screen with every
+  habit, its streak and its map, and the archived ones folded at the end.
+- A habit can be **archived**: it leaves Today and the list, keeping its history, and can come back.
 
 ## Goals
 

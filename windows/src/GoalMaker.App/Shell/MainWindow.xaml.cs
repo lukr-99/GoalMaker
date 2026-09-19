@@ -37,6 +37,7 @@ public partial class MainWindow
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage, graph.Connector),
             [typeof(ActivityPage)] = () => new ActivityPage(graph.Activity),
             [typeof(GoalsPage)] = () => new GoalsPage(graph.GoalsPage),
+            [typeof(HabitsPage)] = () => new HabitsPage(graph.HabitsPage),
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
@@ -99,6 +100,7 @@ public partial class MainWindow
             AppPage.Archive => typeof(ArchivePage),
             AppPage.Activity => typeof(ActivityPage),
             AppPage.Goals => typeof(GoalsPage),
+            AppPage.Habits => typeof(HabitsPage),
             AppPage.Task => typeof(TaskPage),
             _ => typeof(TodayPage),
         };

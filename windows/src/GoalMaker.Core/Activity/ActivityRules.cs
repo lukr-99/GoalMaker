@@ -11,14 +11,16 @@ public static class ActivityRules
         var subject = entity switch
         {
             "tasks" or "task_steps" or "goals" => Text(after, "title"),
-            "areas" or "tags" => Text(after, "name"),
+            "areas" or "tags" or "habits" => Text(after, "name"),
             _ => null,
         };
-        var change = action switch
+        var change = (action, entity) switch
         {
-            "create" => "added",
-            "delete" => "deleted",
-            "restore" => "restored",
+            // A check-in and a pause say what they did, not that a row was added.
+            ("create", "habit_checkins" or "habit_pauses") => Updated(entity, null, after),
+            ("create", _) => "added",
+            ("delete", _) => "deleted",
+            ("restore", _) => "restored",
             _ => Updated(entity, before, after),
         };
         return new ActivityChange(change, subject, change == "moved" ? Text(after, "planned_date") : null);
@@ -45,9 +47,16 @@ public static class ActivityRules
             "task_steps" when Changed("title") => "renamed",
             "reminders" when Changed("state") && Text(after, "state") is "done" or "dismissed" => "handled",
             "reminders" when Changed("state") && Text(after, "state") == "snoozed" => "snoozed",
+            "habits" when Changed("archived_at") => Text(after, "archived_at") is not null ? "archived" : "unarchived",
+            "habits" when Changed("name") => "renamed",
+            "habit_checkins" => Text(after, "skipped") == "true" ? "skipped" : Amount(after, "value") >= 1 ? "checked" : "unchecked",
+            "habit_pauses" => Text(after, "ends_on") is not null ? "resumed" : "paused",
             _ => "edited",
         };
     }
+
+    private static double Amount(JsonObject row, string column) =>
+        double.TryParse(Text(row, column), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var value) ? value : 0;
 
     // A column's value as text; missing and JSON null are both null, and booleans read true or false.
     private static string? Text(JsonObject? row, string column) => row?[column] switch

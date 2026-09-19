@@ -9,13 +9,15 @@ object ActivityRules {
     fun change(entity: String, action: String, before: JsonObject?, after: JsonObject): ActivityChange {
         val subject = when (entity) {
             "tasks", "task_steps", "goals" -> after.text("title")
-            "areas", "tags" -> after.text("name")
+            "areas", "tags", "habits" -> after.text("name")
             else -> null
         }
-        val change = when (action) {
-            "create" -> "added"
-            "delete" -> "deleted"
-            "restore" -> "restored"
+        val change = when {
+            // A check-in and a pause say what they did, not that a row was added.
+            action == "create" && entity in OWN_WORDS -> updated(entity, null, after)
+            action == "create" -> "added"
+            action == "delete" -> "deleted"
+            action == "restore" -> "restored"
             else -> updated(entity, before, after)
         }
         return ActivityChange(change, subject, if (change == "moved") after.text("planned_date") else null)
@@ -55,6 +57,17 @@ object ActivityRules {
                 changed("state") && after.text("state") == "snoozed" -> "snoozed"
                 else -> "edited"
             }
+            "habits" -> when {
+                changed("archived_at") -> if (after.text("archived_at") != null) "archived" else "unarchived"
+                changed("name") -> "renamed"
+                else -> "edited"
+            }
+            "habit_checkins" -> when {
+                after.text("skipped") == "true" -> "skipped"
+                (after.text("value")?.toDoubleOrNull() ?: 0.0) >= 1.0 -> "checked"
+                else -> "unchecked"
+            }
+            "habit_pauses" -> if (after.text("ends_on") != null) "resumed" else "paused"
             else -> "edited"
         }
     }
@@ -62,4 +75,6 @@ object ActivityRules {
     // A column's value as text; missing and JSON null are both null.
     private fun JsonObject.text(column: String): String? =
         (this[column] as? JsonPrimitive)?.takeUnless { it == JsonNull }?.content
+
+    private val OWN_WORDS = setOf("habit_checkins", "habit_pauses")
 }

@@ -36,6 +36,7 @@ internal sealed class TestPlanner : IDisposable
         Steps = new StepList(replica, rows, () => { });
         Rituals = new RitualRunList(replica, rows, () => { });
         Goals = new GoalList(replica, rows, () => { });
+        Habits = new HabitList(replica, rows, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -59,6 +60,8 @@ internal sealed class TestPlanner : IDisposable
     public RitualRunList Rituals { get; }
 
     public GoalList Goals { get; }
+
+    public HabitList Habits { get; }
 
     public TickSound Tick { get; } = new();
 

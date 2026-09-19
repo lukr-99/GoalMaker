@@ -32,7 +32,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +69,7 @@ import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProgressRing
@@ -330,7 +330,7 @@ private fun GoalDialog(
                 Label(stringResource(R.string.goals_horizon))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     GoalHorizon.entries.forEach { choice ->
-                        FilterChip(
+                        ChoiceChip(
                             selected = horizon == choice,
                             onClick = {
                                 if (horizon != choice) {
@@ -338,24 +338,20 @@ private fun GoalDialog(
                                     start = GoalRules.periodStart(choice, today)
                                 }
                             },
-                            label = { Text(stringResource(choice.label())) },
+                            label = stringResource(choice.label()),
                         )
                     }
                 }
                 Label(stringResource(R.string.goals_period))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     periods.forEach { choice ->
-                        FilterChip(
+                        ChoiceChip(
                             selected = start == choice,
                             onClick = { start = choice },
-                            label = {
-                                Text(
-                                    when (choice) {
-                                        current -> stringResource(horizon.thisLabel())
-                                        next -> stringResource(horizon.nextLabel())
-                                        else -> periodText(horizon, choice, locale)
-                                    },
-                                )
+                            label = when (choice) {
+                                current -> stringResource(horizon.thisLabel())
+                                next -> stringResource(horizon.nextLabel())
+                                else -> periodText(horizon, choice, locale)
                             },
                         )
                     }
@@ -367,13 +363,13 @@ private fun GoalDialog(
                         GoalRules.MODE_TASKS to R.string.goals_mode_tasks,
                         GoalRules.MODE_NUMBER to R.string.goals_mode_number,
                     ).forEach { (id, label) ->
-                        FilterChip(
+                        ChoiceChip(
                             selected = mode == id,
                             onClick = {
                                 mode = id
                                 refused = false
                             },
-                            label = { Text(stringResource(label)) },
+                            label = stringResource(label),
                         )
                     }
                 }

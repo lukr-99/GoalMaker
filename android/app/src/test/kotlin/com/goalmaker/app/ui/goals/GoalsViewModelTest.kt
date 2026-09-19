@@ -7,6 +7,7 @@ import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
@@ -50,7 +51,7 @@ class GoalsViewModelTest {
         val tags = TagList(test.replica, rows, {})
         goals = GoalList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, {}) { LocalDate.parse("2026-09-18") }
-        viewModel = GoalsViewModel(goals, tasks, MutableStateFlow(4), Dispatchers.Unconfined) { now }
+        viewModel = GoalsViewModel(goals, tasks, HabitList(test.replica, rows, {}), MutableStateFlow(4), Dispatchers.Unconfined) { now }
     }
 
     @After

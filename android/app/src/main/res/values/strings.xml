@@ -430,8 +430,117 @@
         <item quantity="other">This week\'s goals, %1$d of %2$d hit</item>
     </plurals>
     <string name="goals_all">All goals</string>
+
+    <!-- Habits (docs/habits.md) -->
+    <string name="habits_title">Habits</string>
+    <string name="habits_add">New habit</string>
+    <string name="habits_empty">No habits yet. Start with something small, like a glass of water or ten minutes of reading.</string>
+    <plurals name="habits_archived">
+        <item quantity="one">Archived · %1$d</item>
+        <item quantity="other">Archived · %1$d</item>
+    </plurals>
+    <string name="habits_new">New habit</string>
+    <string name="habits_edit">Edit the habit</string>
+    <string name="habits_name">Habit</string>
+    <string name="habits_emoji">Emoji (optional)</string>
+    <string name="habits_cadence">How often</string>
+    <string name="habits_cadence_daily">Every day</string>
+    <string name="habits_cadence_weekdays">Some days</string>
+    <string name="habits_cadence_per_week">A week</string>
+    <string name="habits_cadence_per_month">A month</string>
+    <string name="habits_workdays">Monday to Friday</string>
+    <string name="habits_weekend">Weekends</string>
+    <string name="habits_times">Times</string>
+    <string name="habits_fewer">Fewer</string>
+    <string name="habits_more_times">More</string>
+    <plurals name="habits_times_week">
+        <item quantity="one">%1$d time a week</item>
+        <item quantity="other">%1$d times a week</item>
+    </plurals>
+    <plurals name="habits_times_month">
+        <item quantity="one">%1$d time a month</item>
+        <item quantity="other">%1$d times a month</item>
+    </plurals>
+    <string name="habits_measure">Measured as</string>
+    <string name="habits_measure_check">A check</string>
+    <string name="habits_measure_count">A count</string>
+    <string name="habits_measure_amount">An amount</string>
+    <string name="habits_target">Target a day</string>
+    <string name="habits_unit">Unit (optional)</string>
+    <string name="habits_goal">Serves</string>
+    <string name="habits_no_goal">No goal</string>
+    <string name="habits_goal_hint">A count or amount in the goal\'s unit adds to it.</string>
+    <string name="habits_invalid">Give it a name and its days, and a count or amount a target above zero.</string>
+    <string name="habits_save">Save</string>
+    <string name="habits_cancel">Cancel</string>
+    <string name="habits_delete">Delete</string>
+    <string name="habits_more">More for %1$s</string>
+    <string name="habits_check_in">Check in %1$s</string>
+    <string name="habits_log">Log an amount</string>
+    <string name="habits_log_title">Log on “%1$s”</string>
+    <string name="habits_log_amount">Amount</string>
+    <string name="habits_log_add">Add</string>
+    <string name="habits_clear">Clear today</string>
+    <string name="habits_skip_day">Skip today</string>
+    <string name="habits_skip_week">Skip this week</string>
+    <string name="habits_skip_month">Skip this month</string>
+    <string name="habits_unskip">Undo the skip</string>
+    <string name="habits_pause">Pause</string>
+    <string name="habits_resume">Resume</string>
+    <string name="habits_archive">Archive</string>
+    <string name="habits_unarchive">Bring back</string>
+    <string name="habits_edit_menu">Edit</string>
+    <plurals name="habits_streak_days">
+        <item quantity="one">%1$d-day streak</item>
+        <item quantity="other">%1$d-day streak</item>
+    </plurals>
+    <plurals name="habits_streak_weeks">
+        <item quantity="one">%1$d-week streak</item>
+        <item quantity="other">%1$d-week streak</item>
+    </plurals>
+    <plurals name="habits_streak_months">
+        <item quantity="one">%1$d-month streak</item>
+        <item quantity="other">%1$d-month streak</item>
+    </plurals>
+    <string name="habits_paused">Paused</string>
+    <string name="habits_skipped">Skipped</string>
+    <string name="habits_not_due">Not today</string>
+    <string name="habits_done">Done today</string>
+    <string name="habits_not_yet">Not yet today</string>
+    <string name="habits_value">%1$s of %2$s today</string>
+    <string name="habits_value_unit">%1$s of %2$s %3$s today</string>
+    <plurals name="habits_met_week">
+        <item quantity="one">%1$d of %2$d this week</item>
+        <item quantity="other">%1$d of %2$d this week</item>
+    </plurals>
+    <plurals name="habits_met_month">
+        <item quantity="one">%1$d of %2$d this month</item>
+        <item quantity="other">%1$d of %2$d this month</item>
+    </plurals>
+    <string name="habits_serves">Serves %1$s</string>
+    <string name="habits_line">%1$s · %2$s</string>
+    <plurals name="habits_heat_summary">
+        <item quantity="one">Heatmap: %1$d of %2$d day met</item>
+        <item quantity="other">Heatmap: %1$d of %2$d days met</item>
+    </plurals>
+    <plurals name="habits_today_left">
+        <item quantity="one">Habits · %1$d left</item>
+        <item quantity="other">Habits · %1$d left</item>
+    </plurals>
+    <string name="habits_today_done">Habits · all done</string>
+    <plurals name="habits_left">
+        <item quantity="one">%1$d habit left</item>
+        <item quantity="other">%1$d habits left</item>
+    </plurals>
+    <string name="habits_summary">%1$s, %2$s</string>
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
     <string name="activity_goal">goal “%1$s”</string>
     <string name="activity_goal_entry">an amount on a goal</string>
+    <string name="activity_habit">the habit “%1$s”</string>
+    <string name="activity_habit_checkin">a habit check-in</string>
+    <string name="activity_habit_pause">a habit pause</string>
+    <string name="activity_skipped">%1$s skipped %2$s</string>
+    <string name="activity_paused">%1$s paused %2$s</string>
+    <string name="activity_resumed">%1$s resumed %2$s</string>
 </resources>

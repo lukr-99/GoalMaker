@@ -250,6 +250,62 @@ public sealed class PageSnapshots
         Save(page, folder, "goals-editor", new Size(852, 760));
     });
 
+    [Fact(Explicit = true)]
+    public void HabitsPageAndEditor() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        var goal = planner.Goals.Add(new GoalDraft("Run 80 km", GoalHorizon.Month, Today, GoalRules.ModeNumber, Target: 80, Unit: "km"))!;
+        var read = planner.Habits.Add(new HabitDraft("Read before bed", Today.AddDays(-120)) { Emoji = "📖" })!;
+        var water = planner.Habits.Add(new HabitDraft("Drink water", Today.AddDays(-60)) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
+        var run = planner.Habits.Add(new HabitDraft("Run", Today.AddDays(-90))
+        {
+            Cadence = HabitRules.PerWeek,
+            Times = 3,
+            Measure = HabitRules.Amount,
+            Target = 5,
+            Unit = "km",
+            GoalId = goal.Id,
+            Emoji = "🏃",
+        })!;
+        var gym = planner.Habits.Add(new HabitDraft("Gym", Today.AddDays(-45)) { Cadence = HabitRules.OnWeekdays, Weekdays = 21 })!;
+        // A few months of history: most days read, water and runs often, the gym on its days.
+        for (var back = 120; back >= 0; back--)
+        {
+            var day = Today.AddDays(-back);
+            if (back % 9 != 3)
+            {
+                planner.Habits.CheckIn(read.Id, day);
+            }
+
+            if (back % 4 != 1 && day >= Today.AddDays(-60))
+            {
+                planner.Habits.CheckIn(water.Id, day, back % 3 == 0 ? 8 : 5);
+            }
+
+            if (back % 3 == 0 && day >= Today.AddDays(-90))
+            {
+                planner.Habits.CheckIn(run.Id, day, 6);
+            }
+
+            if (HabitRules.IsDue(gym, day) && back % 5 != 0 && day >= Today.AddDays(-45))
+            {
+                planner.Habits.CheckIn(gym.Id, day);
+            }
+        }
+
+        planner.Habits.Skip(read.Id, Today.AddDays(-14));
+        planner.Habits.Pause(gym.Id, Today.AddDays(-9));
+        planner.Habits.Resume(gym.Id, Today.AddDays(-4));
+        using var theme = Theme(planner);
+        var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
+        var page = new HabitsPage(habits);
+        Save(page, folder, "habits", new Size(852, 900));
+
+        habits.Edit(planner.Habits.Find(run.Id)!);
+        Save(page, folder, "habits-editor", new Size(852, 1000));
+    });
+
     // Controls made under one theme take the next theme's accent (in a window, where resource changes
     // reach them): Electric's toggles once stayed Track's lime.
     [Fact(Explicit = true)]

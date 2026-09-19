@@ -30,6 +30,9 @@ fun activitySentence(row: ActivityRow): String {
         "reviews" -> stringResource(R.string.activity_review)
         "goals" -> stringResource(R.string.activity_goal, subject)
         "goal_entries" -> stringResource(R.string.activity_goal_entry)
+        "habits" -> stringResource(R.string.activity_habit, subject)
+        "habit_checkins" -> stringResource(R.string.activity_habit_checkin)
+        "habit_pauses" -> stringResource(R.string.activity_habit_pause)
         else -> entry.entity
     }
     val days = DateTimeFormatter.ofPattern("EEE d MMM", LocalConfiguration.current.locales[0])
@@ -47,6 +50,9 @@ fun activitySentence(row: ActivityRow): String {
         "archived" -> stringResource(R.string.activity_archived, actor, what)
         "unarchived" -> stringResource(R.string.activity_unarchived, actor, what)
         "checked" -> stringResource(R.string.activity_checked, actor, what)
+        "skipped" -> stringResource(R.string.activity_skipped, actor, what)
+        "paused" -> stringResource(R.string.activity_paused, actor, what)
+        "resumed" -> stringResource(R.string.activity_resumed, actor, what)
         "unchecked" -> stringResource(R.string.activity_unchecked, actor, what)
         "handled" -> stringResource(R.string.activity_handled, actor, what)
         "snoozed" -> stringResource(R.string.activity_snoozed, actor, what)

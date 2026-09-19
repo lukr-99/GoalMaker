@@ -34,5 +34,5 @@ public sealed class StartupOptionsTests
 
     [Fact]
     public void UnknownValuesAreIgnored() =>
-        Assert.Equal(new StartupOptions(true, null), StartupOptions.Parse(["--tray", "--open", "habits", "--mini", "today"]));
+        Assert.Equal(new StartupOptions(true, null), StartupOptions.Parse(["--tray", "--open", "projects", "--mini", "today"]));
 }

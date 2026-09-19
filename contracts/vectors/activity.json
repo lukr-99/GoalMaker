@@ -1,184 +1,626 @@
 {
   "schema": 1,
-  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals) or name (areas, tags) from 'after', else null.",
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals) or name (areas, tags, habits) from 'after', else null.",
   "cases": [
     {
       "name": "a new task is added",
-      "entity": "tasks", "action": "create", "before": null,
-      "after": { "title": "Book the dentist", "status": "open", "planned_date": "2026-09-18" },
-      "expect": { "change": "added", "subject": "Book the dentist" }
+      "entity": "tasks",
+      "action": "create",
+      "before": null,
+      "after": {
+        "title": "Book the dentist",
+        "status": "open",
+        "planned_date": "2026-09-18"
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Book the dentist"
+      }
     },
     {
       "name": "completing a task",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Book the dentist", "status": "open", "planned_date": "2026-09-18" },
-      "after": { "title": "Book the dentist", "status": "done", "planned_date": "2026-09-18" },
-      "expect": { "change": "completed", "subject": "Book the dentist" }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Book the dentist",
+        "status": "open",
+        "planned_date": "2026-09-18"
+      },
+      "after": {
+        "title": "Book the dentist",
+        "status": "done",
+        "planned_date": "2026-09-18"
+      },
+      "expect": {
+        "change": "completed",
+        "subject": "Book the dentist"
+      }
     },
     {
       "name": "dropping a task",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Old idea", "status": "open", "planned_date": null },
-      "after": { "title": "Old idea", "status": "dropped", "planned_date": null },
-      "expect": { "change": "dropped", "subject": "Old idea" }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Old idea",
+        "status": "open",
+        "planned_date": null
+      },
+      "after": {
+        "title": "Old idea",
+        "status": "dropped",
+        "planned_date": null
+      },
+      "expect": {
+        "change": "dropped",
+        "subject": "Old idea"
+      }
     },
     {
       "name": "reopening a done task wins over its move",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Call the bank", "status": "done", "planned_date": "2026-09-17" },
-      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-19" },
-      "expect": { "change": "reopened", "subject": "Call the bank" }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Call the bank",
+        "status": "done",
+        "planned_date": "2026-09-17"
+      },
+      "after": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-19"
+      },
+      "expect": {
+        "change": "reopened",
+        "subject": "Call the bank"
+      }
     },
     {
       "name": "moving a task to another day",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18" },
-      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-19" },
-      "expect": { "change": "moved", "subject": "Call the bank", "day": "2026-09-19" }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-18"
+      },
+      "after": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-19"
+      },
+      "expect": {
+        "change": "moved",
+        "subject": "Call the bank",
+        "day": "2026-09-19"
+      }
     },
     {
       "name": "taking a task's day away",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18" },
-      "after": { "title": "Call the bank", "status": "open", "planned_date": null },
-      "expect": { "change": "moved", "subject": "Call the bank", "day": null }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-18"
+      },
+      "after": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": null
+      },
+      "expect": {
+        "change": "moved",
+        "subject": "Call the bank",
+        "day": null
+      }
     },
     {
       "name": "renaming a task",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Call bank", "status": "open", "planned_date": "2026-09-18" },
-      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18" },
-      "expect": { "change": "renamed", "subject": "Call the bank" }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Call bank",
+        "status": "open",
+        "planned_date": "2026-09-18"
+      },
+      "after": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-18"
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "Call the bank"
+      }
     },
     {
       "name": "any other task change is an edit",
-      "entity": "tasks", "action": "update",
-      "before": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18", "top_priority": false },
-      "after": { "title": "Call the bank", "status": "open", "planned_date": "2026-09-18", "top_priority": true },
-      "expect": { "change": "edited", "subject": "Call the bank" }
+      "entity": "tasks",
+      "action": "update",
+      "before": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-18",
+        "top_priority": false
+      },
+      "after": {
+        "title": "Call the bank",
+        "status": "open",
+        "planned_date": "2026-09-18",
+        "top_priority": true
+      },
+      "expect": {
+        "change": "edited",
+        "subject": "Call the bank"
+      }
     },
     {
       "name": "deleting and restoring use the server's action",
-      "entity": "tasks", "action": "delete",
-      "before": { "title": "Oops", "status": "open" },
-      "after": { "title": "Oops", "status": "open" },
-      "expect": { "change": "deleted", "subject": "Oops" }
+      "entity": "tasks",
+      "action": "delete",
+      "before": {
+        "title": "Oops",
+        "status": "open"
+      },
+      "after": {
+        "title": "Oops",
+        "status": "open"
+      },
+      "expect": {
+        "change": "deleted",
+        "subject": "Oops"
+      }
     },
     {
       "name": "a restored task",
-      "entity": "tasks", "action": "restore",
-      "before": { "title": "Oops", "status": "open" },
-      "after": { "title": "Oops", "status": "open" },
-      "expect": { "change": "restored", "subject": "Oops" }
+      "entity": "tasks",
+      "action": "restore",
+      "before": {
+        "title": "Oops",
+        "status": "open"
+      },
+      "after": {
+        "title": "Oops",
+        "status": "open"
+      },
+      "expect": {
+        "change": "restored",
+        "subject": "Oops"
+      }
     },
     {
       "name": "archiving an area",
-      "entity": "areas", "action": "update",
-      "before": { "name": "Garden", "archived_at": null },
-      "after": { "name": "Garden", "archived_at": "2026-09-19T10:16:50.397366+00:00" },
-      "expect": { "change": "archived", "subject": "Garden" }
+      "entity": "areas",
+      "action": "update",
+      "before": {
+        "name": "Garden",
+        "archived_at": null
+      },
+      "after": {
+        "name": "Garden",
+        "archived_at": "2026-09-19T10:16:50.397366+00:00"
+      },
+      "expect": {
+        "change": "archived",
+        "subject": "Garden"
+      }
     },
     {
       "name": "bringing an area back",
-      "entity": "areas", "action": "update",
-      "before": { "name": "Garden", "archived_at": "2026-09-19T10:16:50.397366+00:00" },
-      "after": { "name": "Garden", "archived_at": null },
-      "expect": { "change": "unarchived", "subject": "Garden" }
+      "entity": "areas",
+      "action": "update",
+      "before": {
+        "name": "Garden",
+        "archived_at": "2026-09-19T10:16:50.397366+00:00"
+      },
+      "after": {
+        "name": "Garden",
+        "archived_at": null
+      },
+      "expect": {
+        "change": "unarchived",
+        "subject": "Garden"
+      }
     },
     {
       "name": "renaming a tag",
-      "entity": "tags", "action": "update",
-      "before": { "name": "errand" },
-      "after": { "name": "errands" },
-      "expect": { "change": "renamed", "subject": "errands" }
+      "entity": "tags",
+      "action": "update",
+      "before": {
+        "name": "errand"
+      },
+      "after": {
+        "name": "errands"
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "errands"
+      }
     },
     {
       "name": "checking a step",
-      "entity": "task_steps", "action": "update",
-      "before": { "title": "Pack the charger", "done": false },
-      "after": { "title": "Pack the charger", "done": true },
-      "expect": { "change": "checked", "subject": "Pack the charger" }
+      "entity": "task_steps",
+      "action": "update",
+      "before": {
+        "title": "Pack the charger",
+        "done": false
+      },
+      "after": {
+        "title": "Pack the charger",
+        "done": true
+      },
+      "expect": {
+        "change": "checked",
+        "subject": "Pack the charger"
+      }
     },
     {
       "name": "unchecking a step",
-      "entity": "task_steps", "action": "update",
-      "before": { "title": "Pack the charger", "done": true },
-      "after": { "title": "Pack the charger", "done": false },
-      "expect": { "change": "unchecked", "subject": "Pack the charger" }
+      "entity": "task_steps",
+      "action": "update",
+      "before": {
+        "title": "Pack the charger",
+        "done": true
+      },
+      "after": {
+        "title": "Pack the charger",
+        "done": false
+      },
+      "expect": {
+        "change": "unchecked",
+        "subject": "Pack the charger"
+      }
     },
     {
       "name": "handling a reminder",
-      "entity": "reminders", "action": "update",
-      "before": { "state": "pending" },
-      "after": { "state": "done" },
-      "expect": { "change": "handled", "subject": null }
+      "entity": "reminders",
+      "action": "update",
+      "before": {
+        "state": "pending"
+      },
+      "after": {
+        "state": "done"
+      },
+      "expect": {
+        "change": "handled",
+        "subject": null
+      }
     },
     {
       "name": "snoozing a reminder",
-      "entity": "reminders", "action": "update",
-      "before": { "state": "pending" },
-      "after": { "state": "snoozed" },
-      "expect": { "change": "snoozed", "subject": null }
+      "entity": "reminders",
+      "action": "update",
+      "before": {
+        "state": "pending"
+      },
+      "after": {
+        "state": "snoozed"
+      },
+      "expect": {
+        "change": "snoozed",
+        "subject": null
+      }
     },
     {
       "name": "a tag link has no subject of its own",
-      "entity": "task_tags", "action": "create", "before": null,
-      "after": { "task_id": "aaaaaaaa-0000-0000-0000-000000000001", "tag_id": "bbbbbbbb-0000-0000-0000-000000000001" },
-      "expect": { "change": "added", "subject": null }
+      "entity": "task_tags",
+      "action": "create",
+      "before": null,
+      "after": {
+        "task_id": "aaaaaaaa-0000-0000-0000-000000000001",
+        "tag_id": "bbbbbbbb-0000-0000-0000-000000000001"
+      },
+      "expect": {
+        "change": "added",
+        "subject": null
+      }
     },
     {
       "name": "a review's summary changes",
-      "entity": "reviews", "action": "update",
-      "before": { "kind": "weekly", "summary": "Wins" },
-      "after": { "kind": "weekly", "summary": "Wins and lessons" },
-      "expect": { "change": "edited", "subject": null }
+      "entity": "reviews",
+      "action": "update",
+      "before": {
+        "kind": "weekly",
+        "summary": "Wins"
+      },
+      "after": {
+        "kind": "weekly",
+        "summary": "Wins and lessons"
+      },
+      "expect": {
+        "change": "edited",
+        "subject": null
+      }
     },
     {
       "name": "a new goal is added",
-      "entity": "goals", "action": "create", "before": null,
-      "after": { "title": "Run 80 km", "status": "open", "horizon": "month" },
-      "expect": { "change": "added", "subject": "Run 80 km" }
+      "entity": "goals",
+      "action": "create",
+      "before": null,
+      "after": {
+        "title": "Run 80 km",
+        "status": "open",
+        "horizon": "month"
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Run 80 km"
+      }
     },
     {
       "name": "hitting a goal by hand",
-      "entity": "goals", "action": "update",
-      "before": { "title": "Book the race", "status": "open", "completed_at": null },
-      "after": { "title": "Book the race", "status": "done", "completed_at": "2026-09-19T10:00:00Z" },
-      "expect": { "change": "completed", "subject": "Book the race" }
+      "entity": "goals",
+      "action": "update",
+      "before": {
+        "title": "Book the race",
+        "status": "open",
+        "completed_at": null
+      },
+      "after": {
+        "title": "Book the race",
+        "status": "done",
+        "completed_at": "2026-09-19T10:00:00Z"
+      },
+      "expect": {
+        "change": "completed",
+        "subject": "Book the race"
+      }
     },
     {
       "name": "dropping a goal",
-      "entity": "goals", "action": "update",
-      "before": { "title": "Old plan", "status": "open" },
-      "after": { "title": "Old plan", "status": "dropped" },
-      "expect": { "change": "dropped", "subject": "Old plan" }
+      "entity": "goals",
+      "action": "update",
+      "before": {
+        "title": "Old plan",
+        "status": "open"
+      },
+      "after": {
+        "title": "Old plan",
+        "status": "dropped"
+      },
+      "expect": {
+        "change": "dropped",
+        "subject": "Old plan"
+      }
     },
     {
       "name": "reopening a goal",
-      "entity": "goals", "action": "update",
-      "before": { "title": "Book the race", "status": "done" },
-      "after": { "title": "Book the race", "status": "open" },
-      "expect": { "change": "reopened", "subject": "Book the race" }
+      "entity": "goals",
+      "action": "update",
+      "before": {
+        "title": "Book the race",
+        "status": "done"
+      },
+      "after": {
+        "title": "Book the race",
+        "status": "open"
+      },
+      "expect": {
+        "change": "reopened",
+        "subject": "Book the race"
+      }
     },
     {
       "name": "renaming a goal",
-      "entity": "goals", "action": "update",
-      "before": { "title": "Run 80 km", "status": "open", "target": 80 },
-      "after": { "title": "Run 100 km", "status": "open", "target": 100 },
-      "expect": { "change": "renamed", "subject": "Run 100 km" }
+      "entity": "goals",
+      "action": "update",
+      "before": {
+        "title": "Run 80 km",
+        "status": "open",
+        "target": 80
+      },
+      "after": {
+        "title": "Run 100 km",
+        "status": "open",
+        "target": 100
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "Run 100 km"
+      }
     },
     {
       "name": "a goal's new target is an edit",
-      "entity": "goals", "action": "update",
-      "before": { "title": "Run 100 km", "status": "open", "target": 80 },
-      "after": { "title": "Run 100 km", "status": "open", "target": 100 },
-      "expect": { "change": "edited", "subject": "Run 100 km" }
+      "entity": "goals",
+      "action": "update",
+      "before": {
+        "title": "Run 100 km",
+        "status": "open",
+        "target": 80
+      },
+      "after": {
+        "title": "Run 100 km",
+        "status": "open",
+        "target": 100
+      },
+      "expect": {
+        "change": "edited",
+        "subject": "Run 100 km"
+      }
     },
     {
       "name": "an amount logged on a goal has no subject of its own",
-      "entity": "goal_entries", "action": "create", "before": null,
-      "after": { "goal_id": "cccccccc-0000-0000-0000-000000000001", "day": "2026-09-19", "amount": 5 },
-      "expect": { "change": "added", "subject": null }
+      "entity": "goal_entries",
+      "action": "create",
+      "before": null,
+      "after": {
+        "goal_id": "cccccccc-0000-0000-0000-000000000001",
+        "day": "2026-09-19",
+        "amount": 5
+      },
+      "expect": {
+        "change": "added",
+        "subject": null
+      }
+    },
+    {
+      "name": "a new habit is added",
+      "entity": "habits",
+      "action": "create",
+      "before": null,
+      "after": {
+        "name": "Read before bed",
+        "cadence": "daily",
+        "archived_at": null
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Read before bed"
+      }
+    },
+    {
+      "name": "a habit is renamed",
+      "entity": "habits",
+      "action": "update",
+      "before": {
+        "name": "Read",
+        "archived_at": null
+      },
+      "after": {
+        "name": "Read before bed",
+        "archived_at": null
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "Read before bed"
+      }
+    },
+    {
+      "name": "a habit is archived",
+      "entity": "habits",
+      "action": "update",
+      "before": {
+        "name": "Read",
+        "archived_at": null
+      },
+      "after": {
+        "name": "Read",
+        "archived_at": "2026-09-18T20:00:00.000000Z"
+      },
+      "expect": {
+        "change": "archived",
+        "subject": "Read"
+      }
+    },
+    {
+      "name": "an archived habit comes back",
+      "entity": "habits",
+      "action": "update",
+      "before": {
+        "name": "Read",
+        "archived_at": "2026-09-18T20:00:00.000000Z"
+      },
+      "after": {
+        "name": "Read",
+        "archived_at": null
+      },
+      "expect": {
+        "change": "unarchived",
+        "subject": "Read"
+      }
+    },
+    {
+      "name": "a habit's cadence changes",
+      "entity": "habits",
+      "action": "update",
+      "before": {
+        "name": "Read",
+        "cadence": "daily",
+        "archived_at": null
+      },
+      "after": {
+        "name": "Read",
+        "cadence": "per_week",
+        "archived_at": null
+      },
+      "expect": {
+        "change": "edited",
+        "subject": "Read"
+      }
+    },
+    {
+      "name": "a check-in checks the day",
+      "entity": "habit_checkins",
+      "action": "create",
+      "before": null,
+      "after": {
+        "day": "2026-09-18",
+        "value": 1,
+        "skipped": false
+      },
+      "expect": {
+        "change": "checked",
+        "subject": null
+      }
+    },
+    {
+      "name": "a check-in is taken back",
+      "entity": "habit_checkins",
+      "action": "update",
+      "before": {
+        "day": "2026-09-18",
+        "value": 1,
+        "skipped": false
+      },
+      "after": {
+        "day": "2026-09-18",
+        "value": 0,
+        "skipped": false
+      },
+      "expect": {
+        "change": "unchecked",
+        "subject": null
+      }
+    },
+    {
+      "name": "a period is skipped",
+      "entity": "habit_checkins",
+      "action": "update",
+      "before": {
+        "day": "2026-09-18",
+        "value": 0,
+        "skipped": false
+      },
+      "after": {
+        "day": "2026-09-18",
+        "value": 0,
+        "skipped": true
+      },
+      "expect": {
+        "change": "skipped",
+        "subject": null
+      }
+    },
+    {
+      "name": "a habit is paused",
+      "entity": "habit_pauses",
+      "action": "create",
+      "before": null,
+      "after": {
+        "starts_on": "2026-09-18",
+        "ends_on": null
+      },
+      "expect": {
+        "change": "paused",
+        "subject": null
+      }
+    },
+    {
+      "name": "a paused habit resumes",
+      "entity": "habit_pauses",
+      "action": "update",
+      "before": {
+        "starts_on": "2026-09-14",
+        "ends_on": null
+      },
+      "after": {
+        "starts_on": "2026-09-14",
+        "ends_on": "2026-09-17"
+      },
+      "expect": {
+        "change": "resumed",
+        "subject": null
+      }
     }
   ]
 }

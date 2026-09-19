@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
+import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ReminderItem
@@ -19,6 +20,7 @@ import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.Snooze
 import com.goalmaker.app.ui.goals.GoalBoard
+import com.goalmaker.app.ui.habits.HabitBoard
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -40,8 +42,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * Today, Tomorrow and the Inbox (docs/lists.md), the composer with its live preview
- * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), this week's
- * goals (docs/goals.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
+ * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), today's habits
+ * (docs/habits.md), this week's goals (docs/goals.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
  * composer read.
  */
 class ListsViewModel(
@@ -49,6 +51,7 @@ class ListsViewModel(
     areas: AreaList,
     private val tags: TagList,
     goals: GoalList,
+    private val habits: HabitList,
     private val settings: SettingsStore,
     private val reminders: ReminderService,
     private val sync: SyncCoordinator,
@@ -91,10 +94,12 @@ class ListsViewModel(
 
     private val rows = combine(areas.watch().flowOn(io), tags.watch().flowOn(io), reminded, ::RowContext)
 
-    // This week's goals and where they stand, for Today's folded section (design spec, Today).
-    private val weekGoals = combine(goals.watch().flowOn(io), tasks.watchAll().flowOn(io), settings.dayStartHour, minutes) {
-            (all, entries), taskList, startHour, _ ->
-        GoalBoard.thisWeek(all, entries, taskList, PlanningDay.of(clock(), startHour))
+    // Today's habits for the ring row, and this week's goals with where they stand (habit check-ins
+    // included) for Today's folded section (design spec, Today).
+    private val goalsAndHabits = combine(goals.watch().flowOn(io), tasks.watchAll().flowOn(io), habits.watch().flowOn(io), settings.dayStartHour, minutes) {
+            (all, entries), taskList, habitData, startHour, _ ->
+        val day = PlanningDay.of(clock(), startHour)
+        GoalBoard.thisWeek(all, entries, taskList, day, habitData) to HabitBoard.today(habitData, day)
     }
 
     val uiState: StateFlow<ListsUiState> = combine(
@@ -102,8 +107,8 @@ class ListsViewModel(
         rows,
         sync.status,
         refreshing,
-        weekGoals,
-    ) { (planning, narrowed), context, status, pulled, goalRows ->
+        goalsAndHabits,
+    ) { (planning, narrowed), context, status, pulled, (goalRows, habitRows) ->
         ListsUiState(
             lists = planning,
             sync = status,
@@ -114,6 +119,8 @@ class ListsViewModel(
             filter = narrowed,
             tags = context.tags,
             weekGoals = goalRows,
+            habits = habitRows,
+            habitMilestones = HabitBoard.milestones(habitRows),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -154,6 +161,14 @@ class ListsViewModel(
     fun delete(task: TaskItem) {
         viewModelScope.launch(io) { tasks.delete(task.id) }
         undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DELETED, task.title) { viewModelScope.launch(io) { tasks.restore(task.id) } })
+    }
+
+    /** A tap on a habit's ring: a check toggles, a count adds one. False for an amount, which asks for the value. */
+    suspend fun tapHabit(id: String): Boolean = withContext(io) { habits.tap(id, today()) }
+
+    /** Adds [amount] to today's value of a habit. */
+    fun checkIn(id: String, amount: Double) {
+        viewModelScope.launch(io) { habits.checkIn(id, today(), amount) }
     }
 
     /** Narrows every list to an area, or stops narrowing by area when [areaId] is null. */

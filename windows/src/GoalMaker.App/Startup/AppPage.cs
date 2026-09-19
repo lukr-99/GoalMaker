@@ -12,6 +12,7 @@ public enum AppPage
     Archive,
     Activity,
     Goals,
+    Habits,
 
     /// <summary>A task's details; opened from a list, never by a launch switch.</summary>
     Task,

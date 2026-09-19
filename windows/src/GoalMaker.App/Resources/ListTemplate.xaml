@@ -228,6 +228,56 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- Today's habits as a row of rings (design spec, Today); a click checks one in. -->
+                    <StackPanel Margin="0,4,0,4" Visibility="{Binding HasHabits, Converter={StaticResource BoolToVisibility}}">
+                        <ui:Button Margin="0,4,0,2"
+                                   HorizontalAlignment="Left"
+                                   Padding="4,2"
+                                   Appearance="Transparent"
+                                   Command="{Binding OpenHabitsCommand}"
+                                   Content="{Binding HabitsHeader}"
+                                   FontSize="11"
+                                   FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                   Foreground="{DynamicResource GM.AccentBrush}" />
+                        <ItemsControl ItemsSource="{Binding Habits}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:HabitRowViewModel}">
+                                    <Button Width="84"
+                                            Margin="0,0,4,4"
+                                            Padding="4,8"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Command="{Binding CheckInCommand}"
+                                            IsEnabled="{Binding CanCheckIn}"
+                                            ToolTip="{Binding StatusText}"
+                                            AutomationProperties.Name="{Binding CheckInText}">
+                                        <StackPanel>
+                                            <Grid Width="44" Height="44" HorizontalAlignment="Center">
+                                                <controls:GoalRing Fraction="{Binding Fraction}" Thickness="4" />
+                                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RingText}" FontSize="15" />
+                                                <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" Symbol="Checkmark20"
+                                                               Foreground="{DynamicResource GM.AccentBrush}"
+                                                               Visibility="{Binding ShowsCheck, Converter={StaticResource BoolToVisibility}}" />
+                                            </Grid>
+                                            <TextBlock Margin="0,6,0,0"
+                                                       HorizontalAlignment="Center"
+                                                       Text="{Binding Name}"
+                                                       FontSize="11"
+                                                       TextAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
                     <!-- This week's goals, folded like the overdue tasks (design spec, Today). -->
                     <StackPanel Visibility="{Binding HasWeekGoals, Converter={StaticResource BoolToVisibility}}">
                         <ToggleButton Margin="0,8,0,6"

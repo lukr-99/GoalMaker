@@ -174,12 +174,19 @@ public sealed class AppGraph : IDisposable
             }),
             Filters,
             Goals,
-            () => PageRequested?.Invoke(this, AppPage.Goals));
+            () => PageRequested?.Invoke(this, AppPage.Goals),
+            HabitsPage,
+            Habits,
+            () => PageRequested?.Invoke(this, AppPage.Habits));
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
         Goals = new GoalList(replica, newRows, Sync.Request);
-        GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
+        Habits = new HabitList(replica, newRows, Sync.Request);
+        GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits);
+        HabitsPage = new HabitsViewModel(Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
+        // An amount habit tapped on Today asks for its value on the Habits page.
+        HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
         Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));
@@ -268,6 +275,12 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The Goals page.</summary>
     public GoalsViewModel GoalsPage { get; private set; } = null!;
+
+    /// <summary>The owner's habits, their check-ins and pauses (docs/habits.md).</summary>
+    public HabitList Habits { get; private set; } = null!;
+
+    /// <summary>The Habits page.</summary>
+    public HabitsViewModel HabitsPage { get; private set; } = null!;
 
     public ReminderService Reminders { get; }
 
@@ -496,6 +509,7 @@ public sealed class AppGraph : IDisposable
         Inbox.Refresh();
         Plan.Refresh();
         GoalsPage.Refresh();
+        HabitsPage.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

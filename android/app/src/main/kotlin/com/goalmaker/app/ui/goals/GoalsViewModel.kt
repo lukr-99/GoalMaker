@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalList
+import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.domain.planning.PlanningDay
 import java.time.LocalDateTime
@@ -19,12 +20,13 @@ import kotlinx.coroutines.withContext
 
 /**
  * The Goals screen (docs/goals.md): this year's, month's, week's and today's goals with their progress,
- * next week's for planning ahead, and the same goals as the cascade. Disk work runs on [io]; [clock] and
- * [dayStartHour] give the planning day.
+ * next week's for planning ahead, and the same goals as the cascade; [habits] serving a numeric goal add
+ * their check-ins. Disk work runs on [io]; [clock] and [dayStartHour] give the planning day.
  */
 class GoalsViewModel(
     private val goals: GoalList,
     tasks: TaskList,
+    habits: HabitList,
     private val dayStartHour: StateFlow<Int>,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -34,10 +36,11 @@ class GoalsViewModel(
     val uiState: StateFlow<GoalsUiState> = combine(
         goals.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
+        habits.watch().flowOn(io),
         dayStartHour,
         tree,
-    ) { (all, entries), taskList, startHour, showTree ->
-        GoalBoard.build(all, entries, taskList, PlanningDay.of(clock(), startHour), showTree)
+    ) { (all, entries), taskList, habitData, startHour, showTree ->
+        GoalBoard.build(all, entries, taskList, PlanningDay.of(clock(), startHour), showTree, habitData)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GoalsUiState())
 
     /** Shows the goals as the cascade instead of by period, or back. */

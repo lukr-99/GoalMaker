@@ -33,6 +33,9 @@ import com.goalmaker.app.ui.connector.ConnectorViewModel
 import com.goalmaker.app.ui.goals.GoalsKey
 import com.goalmaker.app.ui.goals.GoalsScreen
 import com.goalmaker.app.ui.goals.GoalsViewModel
+import com.goalmaker.app.ui.habits.HabitsKey
+import com.goalmaker.app.ui.habits.HabitsScreen
+import com.goalmaker.app.ui.habits.HabitsViewModel
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
@@ -82,6 +85,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 areas = graph.areas,
                                 tags = graph.tags,
                                 goals = graph.goals,
+                                habits = graph.habits,
                                 settings = graph.settings,
                                 reminders = graph.reminders,
                                 sync = graph.sync,
@@ -96,11 +100,16 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenTask = { id -> backStack.add(TaskKey(id)) },
                             onOpenArchive = { backStack.add(ArchiveKey) },
                             onOpenGoals = { backStack.add(GoalsKey) },
+                            onOpenHabits = { backStack.add(HabitsKey) },
                         )
                     }
                     entry<GoalsKey> {
-                        val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
+                        val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
                         GoalsScreen(viewModel = goalsViewModel, onBack = { backStack.removeLastOrNull() })
+                    }
+                    entry<HabitsKey> {
+                        val habitsViewModel = viewModel { HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
+                        HabitsScreen(viewModel = habitsViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<PlanKey> {
                         val planViewModel = viewModel {
