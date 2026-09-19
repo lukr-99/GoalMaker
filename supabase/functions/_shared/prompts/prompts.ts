@@ -109,8 +109,8 @@ export const prompts: Prompt[] = [
         "",
         "Walk me through it one step at a time: what went well, what slipped and why, what to carry into next week " +
         "(move_task for the open ones), and one or two focuses for next week. Then write a short summary of the week " +
-        "(a few sentences: wins, lessons, focus) and save it with save_review_summary as a weekly review for " +
-        `${first}.`,
+        "(a few sentences: wins, lessons, focus) and save it with save_review_summary (kind weekly, period " +
+        `${first}), with my mood and energy from 1 to 5 if I gave them. get_review_summaries shows earlier weeks.`,
       ].join("\n"));
     },
   },
@@ -156,7 +156,7 @@ export const prompts: Prompt[] = [
         "",
         "Help me see the month: which areas got attention and which didn't, what I'm proud of, what to stop or " +
         "change, and up to three things that matter most next month. One question at a time. Then write a short " +
-        `summary and save it with save_review_summary as a monthly review for ${first}.`,
+        `summary and save it with save_review_summary (kind monthly, period ${first}).`,
       ].join("\n"));
     },
   },

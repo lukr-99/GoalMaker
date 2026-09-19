@@ -8,6 +8,7 @@ import { successorId, tagLinkId, toDrop } from "./occurrences.ts";
 import { planningDay } from "./planningDay.ts";
 import { decision, priorities, review, tomorrow } from "./planRules.ts";
 import { nextOccurrence, parseRecurrence } from "./recurrence.ts";
+import { periodStart, reviewId } from "./reviews.ts";
 import type { TaskItem, TaskState } from "./task.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -120,6 +121,16 @@ Deno.test("reminders.json: ritual run ids", async () => {
   for (const vector of file.ritualIds) {
     const name = `${vector.owner.toLowerCase()}/${vector.ritual}/${vector.day}`;
     assertEquals(await nameBasedUuid(file.runNamespace, name), vector.id, name);
+  }
+});
+
+Deno.test("reviews.json: review ids and periods", async () => {
+  const file = await vectors("reviews.json");
+  for (const vector of file.ids) {
+    assertEquals(await reviewId(vector.owner, vector.kind, vector.periodStart), vector.id, vector.id);
+  }
+  for (const vector of file.periods) {
+    assertEquals(periodStart(vector.kind, vector.day), vector.start, `${vector.kind} ${vector.day}`);
   }
 });
 

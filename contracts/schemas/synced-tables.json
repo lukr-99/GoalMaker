@@ -104,6 +104,21 @@
         { "name": "updated_at", "kind": "timestamp" },
         { "name": "deleted_at", "kind": "timestamp" }
       ]
+    },
+    {
+      "name": "reviews",
+      "columns": [
+        { "name": "id", "kind": "text" },
+        { "name": "owner_id", "kind": "text" },
+        { "name": "kind", "kind": "text" },
+        { "name": "period_start", "kind": "date" },
+        { "name": "mood", "kind": "integer" },
+        { "name": "energy", "kind": "integer" },
+        { "name": "summary", "kind": "text" },
+        { "name": "created_at", "kind": "timestamp" },
+        { "name": "updated_at", "kind": "timestamp" },
+        { "name": "deleted_at", "kind": "timestamp" }
+      ]
     }
   ]
 }

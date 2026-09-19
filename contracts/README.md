@@ -2,7 +2,8 @@
 
 Behavior that the Android app (Kotlin) and the Windows app (C#) must implement identically lives
 here as data. Both test suites load the same files, so a disagreement fails CI in whichever app is
-wrong.
+wrong. The Claude connector's TypeScript rules (`supabase/functions/_shared/rules/rules_test.ts`) run
+the planning files too: lists, plan, recurrence, archive, the ritual ids in reminders, and reviews.
 
 | File | Rule | Kotlin test | C# test |
 | --- | --- | --- | --- |
@@ -16,6 +17,7 @@ wrong.
 | `vectors/archive.json` | The archive of done tasks and its search ([archive](../docs/archive.md)) | `ArchiveContractTest` | `ArchiveContractTests` |
 | `vectors/markdown.json` | The light Markdown in task notes ([archive](../docs/archive.md)) | `LightMarkdownContractTest` | `LightMarkdownContractTests` |
 | `vectors/reminders.json` | Reminder times, quiet hours and snooze ([reminders](../docs/reminders.md)) | `ReminderRulesContractTest` | `ReminderRulesContractTests` |
+| `vectors/reviews.json` | Review periods and ids ([connector](../docs/connector.md)) | `ReviewRulesContractTest` | `ReviewRulesContractTests` |
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |
 | `schemas/synced-tables.json` | Every synced column once, for both replicas and the JSON mapping | (`tools/check_synced_tables.py`) | (`tools/check_synced_tables.py`) |
 | `design/themes.json` | The four themes' tokens ([design](../docs/design/spec.md)) | `DesignTokensTest` | `DesignTokensTests` |

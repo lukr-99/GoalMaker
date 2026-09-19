@@ -4,6 +4,7 @@ import { nameBasedUuid } from "../rules/nameBasedUuid.ts";
 import { seriesOf, successorId, tagLinkId } from "../rules/occurrences.ts";
 import { DEFAULT_START_HOUR, planningDay } from "../rules/planningDay.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
+import { periodStart, reviewId, type ReviewKind } from "../rules/reviews.ts";
 import type { TaskItem, TaskState } from "../rules/task.ts";
 import { colorForNewArea } from "./palette.ts";
 
@@ -46,6 +47,14 @@ export interface TaskFields {
   tags?: string[];
   topPriority?: boolean;
   repeat?: string | null;
+}
+
+export interface Review {
+  kind: ReviewKind;
+  periodStart: Day;
+  mood: number | null;
+  energy: number | null;
+  summary: string;
 }
 
 export class PlannerError extends Error {}
@@ -303,6 +312,52 @@ export class Planner {
       insert into public.ritual_runs (id, ritual, day, outcome)
       values (${id}, ${ritual}, ${day}, ${skipped ? "skipped" : "done"})
       on conflict (id) do update set outcome = excluded.outcome, deleted_at = null`;
+  }
+
+  /** Saves a review's summary (and mood and energy, when given) for the period `day` falls in. */
+  async saveReview(
+    kind: ReviewKind,
+    day: Day,
+    review: { summary: string; mood?: number; energy?: number },
+  ): Promise<Review> {
+    const summary = review.summary.trim();
+    if (summary.length === 0 || summary.length > MAX_NOTES) {
+      throw new PlannerError(`A summary needs 1 to ${MAX_NOTES} characters.`);
+    }
+    for (const [name, value] of [["mood", review.mood], ["energy", review.energy]] as const) {
+      if (value !== undefined && (!Number.isInteger(value) || value < 1 || value > 5)) {
+        throw new PlannerError(`${name} is a whole number from 1 to 5.`);
+      }
+    }
+    const start = periodStart(kind, day);
+    const owner = (await this.db`select auth.uid()::text as id`)[0].id as string;
+    const id = await reviewId(owner, kind, start);
+    await this.db`
+      insert into public.reviews (id, kind, period_start, summary, mood, energy)
+      values (${id}, ${kind}, ${start}, ${summary}, ${review.mood ?? null}, ${review.energy ?? null})
+      on conflict (id) do update set
+        summary = excluded.summary,
+        mood = coalesce(excluded.mood, public.reviews.mood),
+        energy = coalesce(excluded.energy, public.reviews.energy),
+        deleted_at = null`;
+    return (await this.reviews(kind, 1, start))[0];
+  }
+
+  /** The latest reviews, newest period first; of one kind, and from one period start, when given. */
+  async reviews(kind: ReviewKind | null, limit: number, start: Day | null = null): Promise<Review[]> {
+    const rows = await this.db`
+      select kind, period_start::text, mood, energy, summary from public.reviews
+      where deleted_at is null
+        and (${kind}::text is null or kind = ${kind})
+        and (${start}::date is null or period_start = ${start}::date)
+      order by period_start desc, kind limit ${limit}`;
+    return rows.map((row) => ({
+      kind: row.kind,
+      periodStart: row.period_start,
+      mood: row.mood,
+      energy: row.energy,
+      summary: row.summary,
+    }));
   }
 
   /** The area with this name (ignoring case), brought back if archived, or a new one with the next free color. */

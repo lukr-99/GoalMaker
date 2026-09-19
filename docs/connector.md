@@ -29,6 +29,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `add_reminder`, `remove_reminder` | At a local time, or minutes before the task's time |
 | `add_step`, `check_step` | A task's checklist |
 | `finish_plan_tomorrow` | Records the ritual, which quiets the evening reminder on both devices |
+| `save_review_summary`, `get_review_summaries` | A weekly or monthly review's summary, mood and energy |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
@@ -71,3 +72,17 @@ $env:GOALMAKER_CONNECTOR_TEST = '1'; npx deno test --allow-read --allow-env --al
 ```
 
 CI runs both in the Supabase job.
+
+## A weekly summary routine
+
+A scheduled Claude routine (or any assistant that can use MCP connectors) can leave a summary of the
+week waiting in GoalMaker (spec, story 75). Schedule it for Sunday evening with GoalMaker turned on
+and a prompt like this:
+
+> Use GoalMaker. Look at this week: call get_today and search_tasks with an empty query for what I
+> completed this week, and get_review_summaries for last week's summary. Write a short summary of
+> my week in plain words: what I got done, what slipped, and one focus for next week, in at most
+> six sentences. Save it with save_review_summary, kind weekly. Don't change any tasks.
+
+The summary is saved as the week's review (the `reviews` table, one row per week, so running it again
+replaces it) and shows in the activity log as made by Claude. The apps' review screens arrive in M4.

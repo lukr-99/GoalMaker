@@ -394,4 +394,53 @@ export const tools: Tool[] = [
       return `Plan tomorrow is recorded for ${format.longDay(today)}; the evening reminder stays quiet.`;
     },
   },
+  {
+    name: "save_review_summary",
+    title: "Save a review summary",
+    description:
+      "Saves the summary of a weekly or monthly review (a few sentences: wins, lessons, focus), for the week or " +
+      "month that contains the given day. Saving again for the same period replaces the summary. A scheduled " +
+      "routine can call this to leave the owner a weekly summary.",
+    input: {
+      kind: z.enum(["weekly", "monthly"]).describe("weekly or monthly."),
+      period: day.optional().describe("Any day in the week or month; today by default."),
+      summary: z.string().describe("The summary, plain text or light Markdown."),
+      mood: z.number().int().optional().describe("How the period felt, 1 (low) to 5 (great), if the owner said."),
+      energy: z.number().int().optional().describe("The owner's energy, 1 (low) to 5 (high), if they said."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const inPeriod = (await dayFrom(planner, args.period)) ?? (await planner.now()).today;
+      const review = await planner.saveReview(args.kind, inPeriod, {
+        summary: args.summary,
+        mood: args.mood,
+        energy: args.energy,
+      });
+      return `Saved the ${review.kind} review summary for the period starting ${format.longDay(review.periodStart)}.`;
+    },
+  },
+  {
+    name: "get_review_summaries",
+    title: "Past review summaries",
+    description: "The latest weekly and monthly review summaries, newest first, to compare with earlier periods.",
+    input: {
+      kind: z.enum(["weekly", "monthly"]).optional().describe("Only this kind."),
+      limit: z.number().int().min(1).max(20).optional().describe("How many; 5 by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const reviews = await planner.reviews(args.kind ?? null, args.limit ?? 5);
+      if (reviews.length === 0) return "No review summaries yet.";
+      return reviews.map((review) =>
+        [
+          `${review.kind} review, from ${format.longDay(review.periodStart)}` +
+          (review.mood !== null ? `, mood ${review.mood}/5` : "") +
+          (review.energy !== null ? `, energy ${review.energy}/5` : "") + ":",
+          review.summary,
+        ].join("\n")
+      ).join("\n\n");
+    },
+  },
 ];

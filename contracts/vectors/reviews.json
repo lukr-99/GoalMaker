@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday.",
+  "namespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
+  "ids": [
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "kind": "weekly",
+      "periodStart": "2026-09-14",
+      "id": "305cee4f-88d6-5a79-910d-7221f45f95c2"
+    },
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "kind": "weekly",
+      "periodStart": "2026-09-21",
+      "id": "c0cfd44b-7cff-598f-be28-d941e9cff61e"
+    },
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "kind": "monthly",
+      "periodStart": "2026-09-01",
+      "id": "f2390f2f-02c3-50fc-885f-9b8018aa1b03"
+    },
+    {
+      "owner": "11111111-2222-4333-8444-555555555555",
+      "kind": "yearly",
+      "periodStart": "2026-01-01",
+      "id": "ce518902-f3c3-5d2f-89a1-8f3a25df5a97"
+    },
+    {
+      "owner": "ABCDEF00-2222-4333-8444-555555555555",
+      "kind": "weekly",
+      "periodStart": "2026-09-14",
+      "id": "59791b59-78aa-5e4c-bc1b-334cf99a0600"
+    }
+  ],
+  "periods": [
+    {
+      "kind": "weekly",
+      "day": "2026-09-18",
+      "start": "2026-09-14"
+    },
+    {
+      "kind": "weekly",
+      "day": "2026-09-14",
+      "start": "2026-09-14"
+    },
+    {
+      "kind": "weekly",
+      "day": "2026-09-20",
+      "start": "2026-09-14"
+    },
+    {
+      "kind": "weekly",
+      "day": "2026-01-01",
+      "start": "2025-12-29"
+    },
+    {
+      "kind": "monthly",
+      "day": "2026-09-18",
+      "start": "2026-09-01"
+    },
+    {
+      "kind": "monthly",
+      "day": "2026-02-28",
+      "start": "2026-02-01"
+    },
+    {
+      "kind": "yearly",
+      "day": "2026-09-18",
+      "start": "2026-01-01"
+    }
+  ]
+}

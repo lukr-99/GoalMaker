@@ -170,6 +170,32 @@ Deno.test({
         assertEquals(run.outcome, "done");
       });
 
+      await t.step("a weekly summary is saved for its week and read back", async () => {
+        const saved = await client.tool("save_review_summary", {
+          kind: "weekly",
+          period: "2026-09-17",
+          summary: "Shipped the connector.",
+          mood: 4,
+        });
+        assert(!saved.isError, saved.text);
+        assertStringIncludes(saved.text, "Monday 14 September 2026");
+        const again = await client.tool("save_review_summary", {
+          kind: "weekly",
+          period: "2026-09-18",
+          summary: "Shipped the connector and the palette.",
+        });
+        assert(!again.isError, again.text);
+        const [review] = await sql`
+          select period_start::text, summary, mood from public.reviews where owner_id = ${OWNER} and kind = 'weekly'`;
+        assertEquals(review, {
+          period_start: "2026-09-14",
+          summary: "Shipped the connector and the palette.",
+          mood: 4,
+        });
+        const read = await client.tool("get_review_summaries", { kind: "weekly" });
+        assertStringIncludes(read.text, "weekly review, from Monday 14 September 2026, mood 4/5:");
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120
