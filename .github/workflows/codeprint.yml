@@ -32,6 +32,9 @@ jobs:
       - name: Every theme is complete and readable (WCAG AA)
         run: python tools/check_design_tokens.py
 
+      - name: The review prompt library is sound
+        run: python tools/check_prompts.py
+
       - name: Check PowerShell syntax
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1

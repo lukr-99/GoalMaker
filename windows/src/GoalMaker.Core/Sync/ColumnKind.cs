@@ -10,4 +10,7 @@ public enum ColumnKind
     Timestamp,
     Date,
     Time,
+
+    /// <summary>A JSON value: its JSON text in the replica, the value itself on the wire.</summary>
+    Json,
 }

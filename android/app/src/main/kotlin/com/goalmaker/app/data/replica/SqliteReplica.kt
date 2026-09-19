@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -241,6 +242,7 @@ class SqliteReplica(
                     column.kind == ColumnKind.BOOLEAN -> JsonPrimitive(row.getLong(index) != 0L)
                     column.kind == ColumnKind.INTEGER -> JsonPrimitive(row.getLong(index))
                     column.kind == ColumnKind.REAL -> JsonPrimitive(row.getDouble(index))
+                    column.kind == ColumnKind.JSON -> Json.parseToJsonElement(row.getText(index))
                     else -> JsonPrimitive(row.getText(index))
                 }
             },
@@ -254,6 +256,7 @@ class SqliteReplica(
                 ColumnKind.BOOLEAN -> if (primitive != null && !primitive.isString && primitive.content == "true") 1L else 0L
                 ColumnKind.INTEGER -> BigDecimal(primitive?.content ?: value.toString()).toLong()
                 ColumnKind.REAL -> (primitive?.content ?: value.toString()).toDouble()
+                ColumnKind.JSON -> value.toString()
                 else -> if (primitive != null && primitive.isString) primitive.content else value.toString()
             }
         }

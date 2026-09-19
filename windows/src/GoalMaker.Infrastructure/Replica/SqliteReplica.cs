@@ -290,6 +290,7 @@ public sealed class SqliteReplica : IReplica, IDisposable
                     ColumnKind.Boolean => JsonValue.Create(reader.GetInt64(ordinal) != 0),
                     ColumnKind.Integer => JsonValue.Create(reader.GetInt64(ordinal)),
                     ColumnKind.Real => JsonValue.Create(reader.GetDouble(ordinal)),
+                    ColumnKind.Json => JsonNode.Parse(reader.GetString(ordinal)),
                     _ => JsonValue.Create(reader.GetString(ordinal)),
                 };
         }
@@ -311,6 +312,7 @@ public sealed class SqliteReplica : IReplica, IDisposable
             ColumnKind.Boolean => kind == System.Text.Json.JsonValueKind.True ? 1L : 0L,
             ColumnKind.Integer => (long)decimal.Parse(value.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture),
             ColumnKind.Real => double.Parse(value.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture),
+            ColumnKind.Json => value.ToJsonString(),
             _ => kind == System.Text.Json.JsonValueKind.String ? value.GetValue<string>() : value.ToJsonString(),
         };
     }

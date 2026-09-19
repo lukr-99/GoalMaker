@@ -11,6 +11,9 @@ enum class ColumnKind {
     TIMESTAMP,
     DATE,
     TIME,
+
+    /** A JSON value: its JSON text in the replica, the value itself on the wire. */
+    JSON,
     ;
 
     companion object {

@@ -25,6 +25,10 @@ abstract class SharedAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val logo: RegularFileProperty
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val prompts: RegularFileProperty
+
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val fonts: DirectoryProperty
@@ -43,6 +47,7 @@ abstract class SharedAssets : DefaultTask() {
         syncedTables.get().asFile.copyTo(output.resolve("synced-tables.json"))
         themes.get().asFile.copyTo(output.resolve("themes.json"))
         logo.get().asFile.copyTo(output.resolve("logo.json"))
+        prompts.get().asFile.copyTo(output.resolve("prompts.json"))
         val fontRoot = fonts.get().asFile
         fontRoot.walkTopDown()
             .filter { it.isFile && (it.extension == "ttf" || it.name == "OFL.txt") }
@@ -112,6 +117,7 @@ val sharedAssets = tasks.register<SharedAssets>("sharedAssets") {
     syncedTables.set(repositoryRoot.resolve("contracts/schemas/synced-tables.json"))
     themes.set(repositoryRoot.resolve("contracts/design/themes.json"))
     logo.set(repositoryRoot.resolve("contracts/design/logo.json"))
+    prompts.set(repositoryRoot.resolve("contracts/content/prompts.json"))
     fonts.set(repositoryRoot.resolve("fonts"))
     outputDirectory.set(layout.buildDirectory.dir("generated/shared-assets"))
 }

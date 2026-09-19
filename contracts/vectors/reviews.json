@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday.",
+  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday. 'rotation': the prompt ids a review asks, from contracts/content/prompts.json: the prompts that suit the review's kind and carry no trigger, walking the categories in file order from the one after the last id in 'shown', taking from each the prompt of that category that was shown longest ago (never shown first, then file order); with 'category' the case asks that one category for one prompt instead. 'reactive': the triggered prompts the period's facts call for, in this order, each with the habit, task or goal that triggered it: a goal at least 0.2 behind 'expected' (furthest behind first), a habit missing at least half of its periods when it has two or more (most missed first), a task moved three times or more (most moves first), the habit with a streak of 7 or more (longest first), a goal at least 0.2 ahead, 'goals/none' when the period had no goals, and, for weekly and monthly reviews only, 'periods/quiet' when the done tasks are at most half the average and 'periods/busy' when they are at least one and a half times it; ties are broken by name. 'promptTexts': a prompt's text with '{period}' replaced by week, month or year and '{subject}' by the subject.",
   "namespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
   "ids": [
     {
@@ -69,6 +69,368 @@
       "kind": "yearly",
       "day": "2026-09-18",
       "start": "2026-01-01"
+    }
+  ],
+  "rotation": [
+    {
+      "name": "a first review asks the first prompt of each category in turn",
+      "kind": "weekly",
+      "shown": [],
+      "count": 3,
+      "expect": [
+        "wins/proud",
+        "lessons/taught",
+        "energy/gave"
+      ]
+    },
+    {
+      "name": "the next review goes on from the category after the last one shown",
+      "kind": "weekly",
+      "shown": [
+        "wins/proud",
+        "lessons/taught"
+      ],
+      "count": 2,
+      "expect": [
+        "energy/gave",
+        "focus/mattered"
+      ]
+    },
+    {
+      "name": "a category gives its next unseen prompt",
+      "kind": "weekly",
+      "shown": [
+        "wins/proud",
+        "lessons/taught",
+        "energy/gave",
+        "focus/mattered",
+        "gratitude/thankful",
+        "people/closer",
+        "health/sleep",
+        "obstacles/blocked",
+        "craft/proud",
+        "next/one"
+      ],
+      "count": 2,
+      "expect": [
+        "wins/small",
+        "lessons/again"
+      ]
+    },
+    {
+      "name": "a used-up category starts again with the prompt shown longest ago",
+      "kind": "weekly",
+      "shown": [
+        "wins/proud",
+        "wins/small",
+        "wins/surprise",
+        "wins/finished",
+        "wins/brave",
+        "wins/helped",
+        "wins/momentum",
+        "wins/kept"
+      ],
+      "count": 1,
+      "category": "wins",
+      "expect": [
+        "wins/proud"
+      ]
+    },
+    {
+      "name": "a monthly review skips the weekly-only prompts",
+      "kind": "monthly",
+      "shown": [
+        "wins/proud"
+      ],
+      "count": 1,
+      "category": "wins",
+      "expect": [
+        "wins/surprise"
+      ]
+    },
+    {
+      "name": "a yearly review asks the prompts that suit a year",
+      "kind": "yearly",
+      "shown": [],
+      "count": 2,
+      "expect": [
+        "wins/proud",
+        "lessons/taught"
+      ]
+    }
+  ],
+  "reactive": [
+    {
+      "name": "a goal behind plan, a habit mostly missed and a task that keeps moving",
+      "kind": "weekly",
+      "facts": {
+        "doneTasks": 9,
+        "averageDone": 10,
+        "goals": [
+          {
+            "title": "Run 80 km",
+            "fraction": 0.3,
+            "expected": 0.7
+          }
+        ],
+        "habits": [
+          {
+            "name": "Read",
+            "missed": 5,
+            "periods": 7,
+            "streak": 0
+          }
+        ],
+        "tasks": [
+          {
+            "title": "Call the bank",
+            "moves": 4
+          }
+        ]
+      },
+      "expect": [
+        {
+          "prompt": "goals/behind",
+          "subject": "Run 80 km"
+        },
+        {
+          "prompt": "habits/missed",
+          "subject": "Read"
+        },
+        {
+          "prompt": "tasks/slipping",
+          "subject": "Call the bank"
+        }
+      ]
+    },
+    {
+      "name": "the worst of each kind comes first",
+      "kind": "weekly",
+      "facts": {
+        "doneTasks": 10,
+        "averageDone": 10,
+        "goals": [
+          {
+            "title": "Read 4 books",
+            "fraction": 0.5,
+            "expected": 0.8
+          },
+          {
+            "title": "Run 80 km",
+            "fraction": 0.1,
+            "expected": 0.7
+          }
+        ],
+        "habits": [
+          {
+            "name": "Read",
+            "missed": 4,
+            "periods": 7,
+            "streak": 0
+          },
+          {
+            "name": "Stretch",
+            "missed": 6,
+            "periods": 7,
+            "streak": 0
+          }
+        ],
+        "tasks": [
+          {
+            "title": "Call the bank",
+            "moves": 3
+          },
+          {
+            "title": "Fix the bike",
+            "moves": 6
+          }
+        ]
+      },
+      "expect": [
+        {
+          "prompt": "goals/behind",
+          "subject": "Run 80 km"
+        },
+        {
+          "prompt": "habits/missed",
+          "subject": "Stretch"
+        },
+        {
+          "prompt": "tasks/slipping",
+          "subject": "Fix the bike"
+        }
+      ]
+    },
+    {
+      "name": "a long streak and a goal ahead of plan are worth asking about too",
+      "kind": "weekly",
+      "facts": {
+        "doneTasks": 11,
+        "averageDone": 10,
+        "goals": [
+          {
+            "title": "Run 80 km",
+            "fraction": 0.95,
+            "expected": 0.7
+          }
+        ],
+        "habits": [
+          {
+            "name": "Read",
+            "missed": 0,
+            "periods": 7,
+            "streak": 21
+          }
+        ],
+        "tasks": []
+      },
+      "expect": [
+        {
+          "prompt": "habits/streak",
+          "subject": "Read"
+        },
+        {
+          "prompt": "goals/ahead",
+          "subject": "Run 80 km"
+        }
+      ]
+    },
+    {
+      "name": "a period without goals asks about that",
+      "kind": "weekly",
+      "facts": {
+        "doneTasks": 8,
+        "averageDone": 10,
+        "goals": [],
+        "habits": [],
+        "tasks": []
+      },
+      "expect": [
+        {
+          "prompt": "goals/none",
+          "subject": null
+        }
+      ]
+    },
+    {
+      "name": "a much quieter period than usual",
+      "kind": "weekly",
+      "facts": {
+        "doneTasks": 3,
+        "averageDone": 12,
+        "goals": [
+          {
+            "title": "Run 80 km",
+            "fraction": 0.7,
+            "expected": 0.7
+          }
+        ],
+        "habits": [],
+        "tasks": []
+      },
+      "expect": [
+        {
+          "prompt": "periods/quiet",
+          "subject": null
+        }
+      ]
+    },
+    {
+      "name": "a much busier period than usual",
+      "kind": "monthly",
+      "facts": {
+        "doneTasks": 40,
+        "averageDone": 20,
+        "goals": [
+          {
+            "title": "Run 80 km",
+            "fraction": 0.7,
+            "expected": 0.7
+          }
+        ],
+        "habits": [],
+        "tasks": []
+      },
+      "expect": [
+        {
+          "prompt": "periods/busy",
+          "subject": null
+        }
+      ]
+    },
+    {
+      "name": "an ordinary period asks nothing of its own",
+      "kind": "weekly",
+      "facts": {
+        "doneTasks": 10,
+        "averageDone": 10,
+        "goals": [
+          {
+            "title": "Run 80 km",
+            "fraction": 0.7,
+            "expected": 0.7
+          }
+        ],
+        "habits": [
+          {
+            "name": "Read",
+            "missed": 1,
+            "periods": 7,
+            "streak": 3
+          }
+        ],
+        "tasks": [
+          {
+            "title": "Call the bank",
+            "moves": 1
+          }
+        ]
+      },
+      "expect": []
+    },
+    {
+      "name": "a yearly review has no quiet or busy prompt",
+      "kind": "yearly",
+      "facts": {
+        "doneTasks": 30,
+        "averageDone": 300,
+        "goals": [],
+        "habits": [],
+        "tasks": []
+      },
+      "expect": []
+    }
+  ],
+  "promptTexts": [
+    {
+      "prompt": "wins/proud",
+      "kind": "weekly",
+      "subject": null,
+      "expect": "What are you most proud of this week?"
+    },
+    {
+      "prompt": "wins/proud",
+      "kind": "monthly",
+      "subject": null,
+      "expect": "What are you most proud of this month?"
+    },
+    {
+      "prompt": "energy/drained",
+      "kind": "yearly",
+      "subject": null,
+      "expect": "What drained you, and can it be smaller next year?"
+    },
+    {
+      "prompt": "habits/missed",
+      "kind": "monthly",
+      "subject": "Read",
+      "expect": "“Read” slipped most of this month. What got in its way?"
+    },
+    {
+      "prompt": "goals/ahead",
+      "kind": "weekly",
+      "subject": "Run 80 km",
+      "expect": "“Run 80 km” is ahead of plan. What is working?"
     }
   ]
 }

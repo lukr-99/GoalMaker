@@ -28,6 +28,15 @@ import { successorId, tagLinkId, toDrop } from "./occurrences.ts";
 import { planningDay } from "./planningDay.ts";
 import { decision, priorities, review, tomorrow } from "./planRules.ts";
 import { nextOccurrence, parseRecurrence } from "./recurrence.ts";
+import {
+  nextPrompt,
+  type PeriodFacts,
+  periodWord,
+  type PromptLibrary,
+  promptText,
+  reactive,
+  rotation,
+} from "./prompts.ts";
 import { periodStart, reviewId } from "./reviews.ts";
 import type { TaskItem, TaskState } from "./task.ts";
 
@@ -261,6 +270,33 @@ Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids and
     const habits = vector.habits.map((fields: Json) => ({ deleted: false, ...fields }));
     assertEquals(goalAmounts(goal, habits, checkins(vector)), vector.expect, vector.name);
   }
+});
+
+Deno.test("reviews.json: the prompt rotation, the reactive prompts and their texts", async () => {
+  const file = await vectors("reviews.json");
+  const library: PromptLibrary = JSON.parse(
+    await Deno.readTextFile(new URL("../../../../contracts/content/prompts.json", import.meta.url)),
+  );
+  for (const vector of file.rotation) {
+    const chosen = vector.category !== undefined
+      ? [nextPrompt(library, vector.kind, vector.category, vector.shown)].filter((prompt) => prompt !== null)
+      : rotation(library, vector.kind, vector.shown, vector.count);
+    assertEquals(chosen.map((prompt) => prompt.id), vector.expect, vector.name);
+  }
+  for (const vector of file.reactive) {
+    const facts = vector.facts as PeriodFacts;
+    const questions = reactive(library, vector.kind, facts);
+    assertEquals(
+      questions.map((question) => ({ prompt: question.promptId, subject: question.subject })),
+      vector.expect,
+      vector.name,
+    );
+  }
+  for (const vector of file.promptTexts) {
+    const prompt = library.prompts.find((entry) => entry.id === vector.prompt)!;
+    assertEquals(promptText(prompt, vector.kind, vector.subject), vector.expect, vector.prompt);
+  }
+  assertEquals(periodWord("monthly"), "month");
 });
 
 Deno.test("planning day starts at the start hour", () => {

@@ -25,6 +25,8 @@
                       LogicalName="GoalMaker.Contracts.themes.json" />
     <EmbeddedResource Include="$(RepositoryRoot)\contracts\design\logo.json"
                       LogicalName="GoalMaker.Contracts.logo.json" />
+    <EmbeddedResource Include="$(RepositoryRoot)\contracts\content\prompts.json"
+                      LogicalName="GoalMaker.Contracts.prompts.json" />
   </ItemGroup>
 
   <ItemGroup>

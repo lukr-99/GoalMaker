@@ -1,0 +1,1077 @@
+{
+  "schema": "goalmaker/prompts@1",
+  "version": 1,
+  "description": "The reflection prompts the weekly, monthly and yearly reviews ask (docs/reviews.md, spec stories 62 and 63). A prompt has an id ('<category>/<name>', what reviews.reflections stores), the reviews it suits, and its text. '{period}' in a text is replaced by week, month or year. A prompt with a 'trigger' is asked only when the period's facts call for it, and '{subject}' is replaced by the habit, task or goal that triggered it. The rotation and the triggers are pinned by contracts/vectors/reviews.json, sections 'rotation' and 'reactive'.",
+  "categories": [
+    {
+      "id": "wins",
+      "title": "Wins",
+      "about": "What went well."
+    },
+    {
+      "id": "lessons",
+      "title": "Lessons",
+      "about": "What the period taught."
+    },
+    {
+      "id": "energy",
+      "title": "Energy",
+      "about": "What gave energy and what took it."
+    },
+    {
+      "id": "focus",
+      "title": "Focus",
+      "about": "Where attention went."
+    },
+    {
+      "id": "gratitude",
+      "title": "Gratitude",
+      "about": "What is worth being thankful for."
+    },
+    {
+      "id": "people",
+      "title": "People",
+      "about": "The people around the work."
+    },
+    {
+      "id": "health",
+      "title": "Health",
+      "about": "Body, sleep and rest."
+    },
+    {
+      "id": "obstacles",
+      "title": "Obstacles",
+      "about": "What got in the way."
+    },
+    {
+      "id": "craft",
+      "title": "Craft",
+      "about": "Skill and the quality of the work."
+    },
+    {
+      "id": "next",
+      "title": "Next",
+      "about": "The period ahead."
+    }
+  ],
+  "prompts": [
+    {
+      "id": "wins/proud",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What are you most proud of this {period}?"
+    },
+    {
+      "id": "wins/small",
+      "category": "wins",
+      "reviews": [
+        "weekly"
+      ],
+      "text": "What small win almost slipped by unnoticed?"
+    },
+    {
+      "id": "wins/surprise",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What went better than you expected?"
+    },
+    {
+      "id": "wins/finished",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did you finish that had been waiting a while?"
+    },
+    {
+      "id": "wins/brave",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Where did you do the harder thing instead of the easy one?"
+    },
+    {
+      "id": "wins/helped",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "Who did you help, and how did it go?"
+    },
+    {
+      "id": "wins/momentum",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What is building momentum right now?"
+    },
+    {
+      "id": "wins/praise",
+      "category": "wins",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What would someone who watched your {period} praise you for?"
+    },
+    {
+      "id": "wins/kept",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Which promise to yourself did you keep?"
+    },
+    {
+      "id": "wins/worth",
+      "category": "wins",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "Which of this year's wins will still matter in five years?"
+    },
+    {
+      "id": "lessons/taught",
+      "category": "lessons",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did this {period} teach you?"
+    },
+    {
+      "id": "lessons/again",
+      "category": "lessons",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What would you do differently if the {period} started over?"
+    },
+    {
+      "id": "lessons/mistake",
+      "category": "lessons",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What mistake is worth keeping, because of what it showed you?"
+    },
+    {
+      "id": "lessons/assumption",
+      "category": "lessons",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Which assumption turned out to be wrong?"
+    },
+    {
+      "id": "lessons/advice",
+      "category": "lessons",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What advice would you give yourself at the start of this {period}?"
+    },
+    {
+      "id": "lessons/pattern",
+      "category": "lessons",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What pattern keeps repeating, good or bad?"
+    },
+    {
+      "id": "lessons/cost",
+      "category": "lessons",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did saying yes to everything cost you?"
+    },
+    {
+      "id": "lessons/evidence",
+      "category": "lessons",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What do you now believe that you didn't before, and why?"
+    },
+    {
+      "id": "lessons/ask",
+      "category": "lessons",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What should you have asked for sooner?"
+    },
+    {
+      "id": "lessons/story",
+      "category": "lessons",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "How would you tell the story of this year in three sentences?"
+    },
+    {
+      "id": "energy/gave",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What gave you energy this {period}?"
+    },
+    {
+      "id": "energy/drained",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What drained you, and can it be smaller next {period}?"
+    },
+    {
+      "id": "energy/best",
+      "category": "energy",
+      "reviews": [
+        "weekly"
+      ],
+      "text": "Which day felt best, and what made it so?"
+    },
+    {
+      "id": "energy/morning",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "How were your mornings, and what would improve them?"
+    },
+    {
+      "id": "energy/flow",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "When did the work feel easy and absorbing?"
+    },
+    {
+      "id": "energy/dread",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What did you keep dreading, and what is really behind it?"
+    },
+    {
+      "id": "energy/rest",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Did you rest on purpose, or only when you ran out?"
+    },
+    {
+      "id": "energy/noise",
+      "category": "energy",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What noise would you cut to get an hour back a day?"
+    },
+    {
+      "id": "energy/recharge",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What recharges you fastest, and when did you last do it?"
+    },
+    {
+      "id": "energy/season",
+      "category": "energy",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "Which seasons of the year felt strongest, and why?"
+    },
+    {
+      "id": "focus/mattered",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What mattered most this {period}, and did your time show it?"
+    },
+    {
+      "id": "focus/scattered",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Where did your attention scatter?"
+    },
+    {
+      "id": "focus/onething",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "If you could keep only one thing from this {period}, what would it be?"
+    },
+    {
+      "id": "focus/saidno",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What did you say no to, and how did that feel?"
+    },
+    {
+      "id": "focus/habit",
+      "category": "focus",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What are you doing only out of habit?"
+    },
+    {
+      "id": "focus/deep",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "How many hours went into deep, uninterrupted work?"
+    },
+    {
+      "id": "focus/switch",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What pulled you away most often?"
+    },
+    {
+      "id": "focus/clear",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Was it clear each morning what the day was for?"
+    },
+    {
+      "id": "focus/half",
+      "category": "focus",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What is half-finished and quietly costing you?"
+    },
+    {
+      "id": "focus/direction",
+      "category": "focus",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "Did this year move you toward the life you want, or sideways?"
+    },
+    {
+      "id": "gratitude/thankful",
+      "category": "gratitude",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What are you thankful for this {period}?"
+    },
+    {
+      "id": "gratitude/person",
+      "category": "gratitude",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Who made your {period} easier?"
+    },
+    {
+      "id": "gratitude/ordinary",
+      "category": "gratitude",
+      "reviews": [
+        "weekly"
+      ],
+      "text": "Which ordinary moment would you keep?"
+    },
+    {
+      "id": "gratitude/luck",
+      "category": "gratitude",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Where were you simply lucky?"
+    },
+    {
+      "id": "gratitude/body",
+      "category": "gratitude",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did your body carry you through?"
+    },
+    {
+      "id": "gratitude/place",
+      "category": "gratitude",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Which place felt good to be in?"
+    },
+    {
+      "id": "gratitude/tool",
+      "category": "gratitude",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "Which tool or habit quietly did its job?"
+    },
+    {
+      "id": "gratitude/past",
+      "category": "gratitude",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did a past version of you set up that you enjoyed now?"
+    },
+    {
+      "id": "gratitude/given",
+      "category": "gratitude",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did you give that you are glad you gave?"
+    },
+    {
+      "id": "gratitude/note",
+      "category": "gratitude",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "Who deserves a thank-you note before the year ends?"
+    },
+    {
+      "id": "people/closer",
+      "category": "people",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Who did you grow closer to this {period}?"
+    },
+    {
+      "id": "people/missed",
+      "category": "people",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Who did you mean to reach out to and didn't?"
+    },
+    {
+      "id": "people/hard",
+      "category": "people",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "Which conversation felt hard, and what came of it?"
+    },
+    {
+      "id": "people/learned",
+      "category": "people",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did you learn from someone else's way of working?"
+    },
+    {
+      "id": "people/owe",
+      "category": "people",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Who is waiting on something from you?"
+    },
+    {
+      "id": "people/boundary",
+      "category": "people",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Where do you need a clearer boundary?"
+    },
+    {
+      "id": "people/around",
+      "category": "people",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "How did the people around you shape this {period}?"
+    },
+    {
+      "id": "people/ask",
+      "category": "people",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What help would make the next {period} lighter, and who could give it?"
+    },
+    {
+      "id": "people/generous",
+      "category": "people",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Who was generous with you, and how will you return it?"
+    },
+    {
+      "id": "people/grew",
+      "category": "people",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "Which relationship grew most this year?"
+    },
+    {
+      "id": "health/sleep",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "How was your sleep, really?"
+    },
+    {
+      "id": "health/moved",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "How did you move your body this {period}?"
+    },
+    {
+      "id": "health/ate",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "How did you eat when the {period} got busy?"
+    },
+    {
+      "id": "health/signal",
+      "category": "health",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What is your body telling you that you keep ignoring?"
+    },
+    {
+      "id": "health/outside",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "How much time did you spend outside?"
+    },
+    {
+      "id": "health/screens",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "How did screens treat you this {period}?"
+    },
+    {
+      "id": "health/calm",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "When did you feel calm, and what made it possible?"
+    },
+    {
+      "id": "health/care",
+      "category": "health",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What check-up or small repair are you putting off?"
+    },
+    {
+      "id": "health/enough",
+      "category": "health",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Did you do enough of what keeps you well, or only what was urgent?"
+    },
+    {
+      "id": "health/compare",
+      "category": "health",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "How is your health different from a year ago?"
+    },
+    {
+      "id": "obstacles/blocked",
+      "category": "obstacles",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What got in the way this {period}?"
+    },
+    {
+      "id": "obstacles/again",
+      "category": "obstacles",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Which obstacle showed up more than once?"
+    },
+    {
+      "id": "obstacles/own",
+      "category": "obstacles",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "How much of it was outside you, and how much was you?"
+    },
+    {
+      "id": "obstacles/smaller",
+      "category": "obstacles",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "How could you make the same obstacle smaller next {period}?"
+    },
+    {
+      "id": "obstacles/waited",
+      "category": "obstacles",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What were you waiting for, and was the wait needed?"
+    },
+    {
+      "id": "obstacles/fear",
+      "category": "obstacles",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What are you avoiding because it might not go well?"
+    },
+    {
+      "id": "obstacles/slow",
+      "category": "obstacles",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "What made the work slower than it needed to be?"
+    },
+    {
+      "id": "obstacles/rules",
+      "category": "obstacles",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Which rule of your own is no longer serving you?"
+    },
+    {
+      "id": "obstacles/help",
+      "category": "obstacles",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Where would asking for help have saved a day?"
+    },
+    {
+      "id": "obstacles/hardest",
+      "category": "obstacles",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "What was the hardest stretch of the year, and how did you get through it?"
+    },
+    {
+      "id": "craft/proud",
+      "category": "craft",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Which piece of work are you proud of the craft in?"
+    },
+    {
+      "id": "craft/better",
+      "category": "craft",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What got noticeably better this {period}?"
+    },
+    {
+      "id": "craft/corner",
+      "category": "craft",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "Where did you cut a corner you regret?"
+    },
+    {
+      "id": "craft/learn",
+      "category": "craft",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did you learn to do that you couldn't before?"
+    },
+    {
+      "id": "craft/read",
+      "category": "craft",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What did you read or watch that changed how you work?"
+    },
+    {
+      "id": "craft/reuse",
+      "category": "craft",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What would you build once and reuse, instead of redoing it?"
+    },
+    {
+      "id": "craft/standard",
+      "category": "craft",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "Did the work meet your own standard?"
+    },
+    {
+      "id": "craft/teach",
+      "category": "craft",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What could you teach someone else after this {period}?"
+    },
+    {
+      "id": "craft/sharpen",
+      "category": "craft",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "text": "Which tool deserves an hour of sharpening?"
+    },
+    {
+      "id": "craft/defined",
+      "category": "craft",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "What skill defined your year?"
+    },
+    {
+      "id": "next/one",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What is the one thing that must happen next {period}?"
+    },
+    {
+      "id": "next/start",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What will you start next {period}?"
+    },
+    {
+      "id": "next/stop",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What will you stop?"
+    },
+    {
+      "id": "next/keep",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What is worth keeping exactly as it is?"
+    },
+    {
+      "id": "next/monday",
+      "category": "next",
+      "reviews": [
+        "weekly"
+      ],
+      "text": "What will you do first on Monday morning?"
+    },
+    {
+      "id": "next/risk",
+      "category": "next",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "What could go wrong next {period}, and what would soften it?"
+    },
+    {
+      "id": "next/easier",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What would make next {period} easier than this one?"
+    },
+    {
+      "id": "next/promise",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "text": "What do you promise yourself for the next {period}?"
+    },
+    {
+      "id": "next/space",
+      "category": "next",
+      "reviews": [
+        "monthly",
+        "yearly"
+      ],
+      "text": "Where will you leave space for the unexpected?"
+    },
+    {
+      "id": "next/true",
+      "category": "next",
+      "reviews": [
+        "yearly"
+      ],
+      "text": "What do you want to be true by the end of next year?"
+    },
+    {
+      "id": "habits/missed",
+      "category": "habits",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "trigger": "habit_missed",
+      "text": "“{subject}” slipped most of this {period}. What got in its way?"
+    },
+    {
+      "id": "habits/streak",
+      "category": "habits",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "trigger": "habit_streak",
+      "text": "“{subject}” is on your longest streak. What is making it stick?"
+    },
+    {
+      "id": "tasks/slipping",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "trigger": "task_slipping",
+      "text": "“{subject}” has moved day after day. Is it still worth doing?"
+    },
+    {
+      "id": "goals/behind",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "trigger": "goal_behind",
+      "text": "“{subject}” is behind where it should be. What would get it moving?"
+    },
+    {
+      "id": "goals/ahead",
+      "category": "wins",
+      "reviews": [
+        "weekly",
+        "monthly",
+        "yearly"
+      ],
+      "trigger": "goal_ahead",
+      "text": "“{subject}” is ahead of plan. What is working?"
+    },
+    {
+      "id": "periods/quiet",
+      "category": "focus",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "trigger": "quiet_period",
+      "text": "This {period} was quiet. Was that rest, or drift?"
+    },
+    {
+      "id": "periods/busy",
+      "category": "energy",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "trigger": "busy_period",
+      "text": "This {period} was your busiest in a while. Did the load pay off?"
+    },
+    {
+      "id": "goals/none",
+      "category": "next",
+      "reviews": [
+        "weekly",
+        "monthly"
+      ],
+      "trigger": "no_goals",
+      "text": "You had no goals for this {period}. What would one have changed?"
+    }
+  ]
+}

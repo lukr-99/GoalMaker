@@ -1,6 +1,6 @@
 # M4-05: Review prompts: the library and data-reactive prompts
 
-**Status:** todo · **Milestone:** M4
+**Status:** done · **Milestone:** M4
 
 ## Scope
 - `contracts/content/prompts.json`: a versioned library of about 100 reflection prompts with
@@ -15,3 +15,11 @@
 
 ## Acceptance criteria
 - The content file validates in CI; every vector case passes in all three implementations.
+
+## Notes
+- The library is `contracts/content/prompts.json` (100 prompts in 10 categories plus 8 triggered ones),
+  shipped by both apps and read by the connector; `tools/check_prompts.py` validates it in CI.
+- The rotation and the reactive prompts are `PromptRules` in Kotlin and C# and `rules/prompts.ts` in the
+  connector, pinned by the new 'rotation', 'reactive' and 'promptTexts' sections of vectors/reviews.json.
+- `reviews.reflections` came with Supabase migration 0011 and replica 0006, and a json column kind in
+  the synced-tables contract that both replicas now read and write. Documented in docs/reviews.md.

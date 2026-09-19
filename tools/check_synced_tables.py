@@ -38,6 +38,7 @@ REPLICA_TYPES = {
     "timestamp": {"TEXT"},
     "date": {"TEXT"},
     "time": {"TEXT"},
+    "json": {"TEXT"},
 }
 SERVER_TYPES = {
     "text": {"text", "uuid"},
@@ -47,6 +48,7 @@ SERVER_TYPES = {
     "timestamp": {"timestamp with time zone"},
     "date": {"date"},
     "time": {"time without time zone"},
+    "json": {"jsonb", "json"},
 }
 
 
