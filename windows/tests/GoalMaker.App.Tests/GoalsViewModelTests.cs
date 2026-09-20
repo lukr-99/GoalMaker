@@ -27,7 +27,9 @@ public sealed class GoalsViewModelTests : IDisposable
                 (GoalHorizon.Week, new DateOnly(2026, 9, 21)),
             ],
             page.Sections.Select(section => (section.Horizon, section.Start)));
-        Assert.Equal("GOALS.SECTION(GOALS.THISWEEK,GOALS.RANGE(14,20 SEP))", page.Sections[2].Header);
+        var week = new DateOnly(2026, 9, 14);
+        var range = $"GOALS.RANGE({week:%d},{week.AddDays(6).ToString("d MMM", CultureInfo.CurrentCulture)})".ToUpperInvariant();
+        Assert.Equal($"GOALS.SECTION(GOALS.THISWEEK,{range})", page.Sections[2].Header);
     }
 
     [Fact]
