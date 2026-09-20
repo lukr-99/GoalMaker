@@ -3,8 +3,11 @@ using CommunityToolkit.Mvvm.Input;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>One line of what a day holds: a planned task, a deadline or a repeat (docs/calendar.md).</summary>
-public sealed class CalendarEntryViewModel(string title, string label, string time, bool done, Action open)
+public sealed class CalendarEntryViewModel(string id, string title, string label, string time, bool done, Action open)
 {
+    /// <summary>The task's id, which a drag onto another day carries.</summary>
+    public string Id { get; } = id;
+
     public string Title { get; } = title;
 
     /// <summary>Planned, due or repeats, in the owner's words.</summary>

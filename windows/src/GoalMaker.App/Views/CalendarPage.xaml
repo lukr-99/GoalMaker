@@ -50,6 +50,7 @@
             <ui:Button Margin="2" Padding="0" Height="64" HorizontalAlignment="Stretch"
                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
+                       AllowDrop="True" DragOver="OnCellDragOver" Drop="OnCellDrop"
                        AutomationProperties.Name="{Binding Day}">
                 <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
                     <StackPanel VerticalAlignment="Center">
@@ -84,7 +85,9 @@
         <!-- One line of what a day holds. -->
         <DataTemplate x:Key="DayEntry" DataType="{x:Type vm:CalendarEntryViewModel}">
             <ui:Button Margin="0,0,0,6" Padding="12,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                       Appearance="Transparent" Command="{Binding OpenCommand}">
+                       Appearance="Transparent" Command="{Binding OpenCommand}"
+                       PreviewMouseLeftButtonDown="OnEntryPressed" PreviewMouseMove="OnEntryMove"
+                       ToolTip="{DynamicResource Calendar.DragHint}">
                 <StackPanel>
                     <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal">

@@ -1,7 +1,11 @@
 package com.goalmaker.app.ui.calendar
 
+import android.content.ClipData
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.draganddrop.dragAndDropSource
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,8 +36,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
@@ -122,6 +133,7 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit, onOpenTask:
                                 inPeriod = state.kind == CalendarRules.WEEK || day.day.month == state.anchor.month,
                                 selected = day.day == state.selected,
                                 onClick = { viewModel.open(day.day) },
+                                onDropTask = { id -> viewModel.plan(id, day.day) },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -153,8 +165,16 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit, onOpenTask:
                         )
                     }
                 }
+                item("drag-hint") {
+                    Text(
+                        stringResource(R.string.calendar_drag_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppTheme.colors.textMuted,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
                 open.planned.forEach { task ->
-                    item("planned-" + task.id) { DayRow(task, R.string.calendar_planned, onOpenTask) }
+                    item("planned-" + task.id) { DayRow(task, R.string.calendar_planned, onOpenTask, draggable = true) }
                 }
                 open.deadlines.forEach { task ->
                     item("deadline-" + task.id) { DayRow(task, R.string.calendar_deadline, onOpenTask) }
@@ -200,7 +220,11 @@ private fun WeekdayRow(locale: java.util.Locale) {
     }
 }
 
-/** One day of the grid: what it holds as a number, with today outlined and the day open filled. */
+/**
+ * One day of the grid: what it holds as a number, with today outlined and the day open filled. A task
+ * dragged from the day's list below lands on it, which plans it for that day (docs/calendar.md).
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DayCell(
     day: CalendarDay,
@@ -208,9 +232,35 @@ private fun DayCell(
     inPeriod: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
+    onDropTask: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var hovered by remember { mutableStateOf(false) }
+    val target = remember(day.day) {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                hovered = false
+                val id = event.toAndroidDragEvent().clipData?.getItemAt(0)?.text?.toString().orEmpty()
+                if (id.isEmpty()) return false
+                onDropTask(id)
+                return true
+            }
+
+            override fun onEntered(event: DragAndDropEvent) {
+                hovered = true
+            }
+
+            override fun onExited(event: DragAndDropEvent) {
+                hovered = false
+            }
+
+            override fun onEnded(event: DragAndDropEvent) {
+                hovered = false
+            }
+        }
+    }
     val background = when {
+        hovered -> AppTheme.colors.accent.copy(alpha = 0.4f)
         selected -> AppTheme.colors.accent
         day.empty -> AppTheme.colors.surface.copy(alpha = if (inPeriod) 1f else 0.4f)
         else -> AppTheme.colors.surface
@@ -224,6 +274,7 @@ private fun DayCell(
             .clip(RoundedCornerShape(10.dp))
             .background(background)
             .clickable(onClick = onClick)
+            .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = target)
             .padding(2.dp),
     ) {
         Text(
@@ -250,14 +301,27 @@ private fun DayCell(
     }
 }
 
+/** One line of what a day holds; a planned task can be dragged onto another day of the grid. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DayRow(task: TaskItem, label: Int, onOpenTask: (String) -> Unit) {
+private fun DayRow(task: TaskItem, label: Int, onOpenTask: (String) -> Unit, draggable: Boolean = false) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .background(AppTheme.colors.surface, AppTheme.shapes.row)
             .clickable { onOpenTask(task.id) }
+            .then(
+                if (!draggable) {
+                    Modifier
+                } else {
+                    Modifier.dragAndDropSource(
+                        transferData = {
+                            DragAndDropTransferData(ClipData.newPlainText(task.title, task.id))
+                        },
+                    )
+                },
+            )
             .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
         Column(Modifier.weight(1f)) {

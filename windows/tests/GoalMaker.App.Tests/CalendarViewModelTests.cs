@@ -89,6 +89,21 @@ public sealed class CalendarViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ATaskDraggedOntoAnotherDayIsPlannedForIt()
+    {
+        Plan("Call the bank", Today);
+        var page = Page();
+        page.Open(Today);
+        var card = Assert.Single(page.DayEntries);
+
+        page.MoveTo(card.Id, Today.AddDays(2));
+
+        Assert.Equal(Today.AddDays(2), planner.Task("Call the bank").PlannedDate);
+        Assert.Equal(["Call the bank"], page.DayEntries.Select(entry => entry.Title));
+        Assert.Contains("20", page.DayTitle);
+    }
+
+    [Fact]
     public void PickingTheSameDayAgainClosesIt()
     {
         var page = Page();

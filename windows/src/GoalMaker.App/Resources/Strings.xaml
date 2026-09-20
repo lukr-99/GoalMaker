@@ -488,6 +488,7 @@
     <sys:String x:Key="Calendar.Deadline">Due</sys:String>
     <sys:String x:Key="Calendar.Repeat">Repeats</sys:String>
     <sys:String x:Key="Calendar.Reminders">{0} reminders ring</sys:String>
+    <sys:String x:Key="Calendar.DragHint">Drag onto another day to move it</sys:String>
 
     <!-- Projects (docs/projects.md) -->
     <sys:String x:Key="Nav.Projects">Projects</sys:String>

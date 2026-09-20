@@ -124,6 +124,7 @@ public sealed partial class CalendarViewModel : ObservableObject
             {
                 var id = task.Id;
                 DayEntries.Add(new CalendarEntryViewModel(
+                    id,
                     task.Title,
                     strings.Get(label),
                     task.PlannedTime?.ToString("t", CultureInfo.CurrentCulture) ?? string.Empty,
@@ -161,6 +162,14 @@ public sealed partial class CalendarViewModel : ObservableObject
     {
         anchor = null;
         selected = null;
+        Refresh();
+    }
+
+    /// <summary>Moves a task to another day, which is what dragging it onto a cell does.</summary>
+    public void MoveTo(string taskId, DateOnly day)
+    {
+        tasks.Plan(taskId, day);
+        selected = day;
         Refresh();
     }
 

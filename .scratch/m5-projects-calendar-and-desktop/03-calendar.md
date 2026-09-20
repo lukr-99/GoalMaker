@@ -24,5 +24,7 @@
   `--open calendar`; both draw the grid with a bar that grows with the day, and picking a day lists
   what is on it. Tests: the contract cases in both apps and `CalendarViewModelTests` on Windows, with
   a rendered snapshot of the page.
-- Left for later: dragging a task to another day from the grid (the calendar opens the task instead),
-  and showing a reminder's own time in the day's list.
+- Dragging a planned task from the day's list onto another cell moves it (the owner asked): Compose
+  drag and drop on Android with the cell lighting up under it, and DragDrop in the page's code-behind
+  on Windows. Deadlines and projected repeats stay put.
+- Left for later: showing a reminder's own time in the day's list.

@@ -34,3 +34,8 @@ Android reaches the calendar from the overflow menu on Today, Windows from the s
 `--open calendar`. Both draw the month as a grid of day cells with a bar that grows with what the day
 holds, today outlined and the day the owner picked filled; picking a day lists what is on it, and a
 task opens from there. The week view is the same grid, one row.
+
+**Moving a task** is a drag: hold a planned task in the day's list and drop it on another cell, and
+it is planned for that day, moves counted like any other move ([plan tomorrow](plan-tomorrow.md)).
+The cell lights up while a task hangs over it. Deadlines and projected repeats are not dragged: a
+deadline belongs to its task and a repeat has no row of its own yet.
