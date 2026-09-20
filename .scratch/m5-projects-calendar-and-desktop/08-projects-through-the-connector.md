@@ -1,6 +1,6 @@
 # M5-08: Projects through the connector
 
-**Status:** todo · **Milestone:** M5
+**Status:** done · **Milestone:** M5
 
 ## Scope
 - Tools to read projects and their boards, add and edit items with type, priority, column and

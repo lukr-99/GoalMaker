@@ -29,8 +29,11 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 - **M5, in progress:** projects with a Backlog, To do, Doing and Done board
   ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
   ([docs/calendar.md](docs/calendar.md)), and Today and Habits widgets on Android
-  ([docs/widgets.md](docs/widgets.md)). Still to come: share to GoalMaker, the Windows mini windows,
-  Startup Profiles and projects through the connector.
+  ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
+  project by the repository or folder it is working in
+  ([docs/connector.md](docs/connector.md)), and sharing text or a link from any Android app into a
+  task ([docs/composer.md](docs/composer.md)). Still to come: the Windows mini windows and Startup
+  Profiles.
 
 No release has been published yet; the cloud project and the signing keys still need the one-time
 setup in [docs/setup/](docs/setup/).

@@ -1,6 +1,6 @@
 # M5-05: Share to GoalMaker
 
-**Status:** todo · **Milestone:** M5
+**Status:** done · **Milestone:** M5
 
 ## Scope
 - An Android share target that takes text or a link from any app into a new task, with the composer's
