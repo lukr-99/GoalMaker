@@ -23,7 +23,8 @@ and each has markdown issues under `.scratch/<milestone>/`.
    their board, the week and month calendar with dragging, the Android Today and Habits widgets,
    projects through the connector, share to GoalMaker, the Windows mini windows and Add to Startup
    Profiles; checked through the endpoint against the local stack)
-10. M6, then v1.0
+10. **M6: v1.0** (planned as issues 2026-09-20: backup and restore, updates end to end, the
+    accessibility pass, hardening, and the first release)
 11. M7 and the post-v1 list
 
 ## Milestones
@@ -70,8 +71,10 @@ pinnable mini windows, share to GoalMaker, Add to Startup Profiles. Issues:
 
 ### M6: v1.0
 
-Backup and restore (versioned JSON export, checked restore, weekly automatic export), live updates
-through the channel, hardening, accessibility pass, first release.
+Backup and restore (a versioned JSON export both apps read, a checked restore that merges and never
+wipes, and the weekly automatic export on Windows), updates through the channel proved end to end on
+both apps, the accessibility pass, hardening, and the first release with the owner's one-time setup.
+Issues: `.scratch/m6-backup-updates-and-v1/`.
 
 ### M7: quick chat
 
