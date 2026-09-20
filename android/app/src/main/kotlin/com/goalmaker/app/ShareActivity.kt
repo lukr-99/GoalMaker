@@ -14,8 +14,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.getValue
 import com.goalmaker.app.domain.share.SharedCapture
-import com.goalmaker.app.ui.share.ShareScreen
-import com.goalmaker.app.ui.share.ShareViewModel
+import com.goalmaker.app.ui.capture.ShareScreen
+import com.goalmaker.app.ui.capture.CaptureViewModel
 import com.goalmaker.app.ui.theme.GoalMakerTheme
 import java.time.LocalDateTime
 
@@ -40,7 +40,7 @@ class ShareActivity : ComponentActivity() {
                 Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
                     ShareScreen(
                         viewModel = viewModel {
-                            ShareViewModel(
+                            CaptureViewModel(
                                 tasks = graph.tasks,
                                 areas = graph.areas,
                                 tags = graph.tags,

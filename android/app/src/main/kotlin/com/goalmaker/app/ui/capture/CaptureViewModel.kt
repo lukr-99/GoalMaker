@@ -1,4 +1,4 @@
-package com.goalmaker.app.ui.share
+package com.goalmaker.app.ui.capture
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -23,11 +23,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withContext
 
 /**
- * What another app shared, on its way into a task (spec, story 10). The shared text becomes a
- * composer line, so every shortcut works on it, and the link it came from waits in the notes. With
- * no day, area or project the task lands in the Inbox.
+ * A task on its way in from outside the app: a share from another app (spec, story 10) or the
+ * quick-add widget. Whatever came in becomes a composer line, so every shortcut works on it, and
+ * anything worth keeping behind it waits in the notes. With no day, area or project it lands in the
+ * Inbox.
  */
-class ShareViewModel(
+class CaptureViewModel(
     private val tasks: TaskList,
     areas: AreaList,
     tags: TagList,
@@ -38,20 +39,20 @@ class ShareViewModel(
     private val clock: () -> LocalDateTime,
 ) : ViewModel() {
 
-    val uiState: StateFlow<ShareUiState> = combine(
+    val uiState: StateFlow<CaptureUiState> = combine(
         auth.session,
         areas.watch().flowOn(io),
         tags.watchNames().flowOn(io),
         projects.watch().flowOn(io).map { it.projects },
     ) { session, areaList, tagNames, projectList ->
-        ShareUiState(
+        CaptureUiState(
             loaded = session != AuthSession.Loading,
             signedIn = session is AuthSession.SignedIn,
             areas = areaList,
             tagNames = tagNames,
             projects = projectList,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ShareUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CaptureUiState())
 
     /** The planning day the preview calls "today". */
     fun today(): LocalDate = PlanningDay.of(clock(), dayStartHour.value)

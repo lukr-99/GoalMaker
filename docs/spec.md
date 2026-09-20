@@ -238,7 +238,9 @@ through the Gemini free tier follows as M7.
 85. As the owner, I want a Today widget where I can tick off tasks, so that I don't open the app for
     small wins.
 86. As the owner, I want a Habits widget for one-tap check-ins, so that logging habits is instant.
-87. As the owner, I want a bold, energetic look with satisfying motion and a small celebration when
+87. As the owner, I want a quick-add widget that opens a composer over whatever I'm in, so that a
+    thought reaches the Inbox or today without opening the app.
+88. As the owner, I want a bold, energetic look with satisfying motion and a small celebration when
     I hit a goal or a streak milestone, so that progress feels rewarding.
 
 ### Account, data and delivery

@@ -28,7 +28,7 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   reminders, and the stats screen ([docs/stats.md](docs/stats.md)).
 - **Projects, calendar, widgets and the desktop (M5):** projects with a Backlog, To do, Doing and
   Done board ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
-  ([docs/calendar.md](docs/calendar.md)), Today and Habits widgets on Android
+  ([docs/calendar.md](docs/calendar.md)), Today, Habits and quick-add widgets on Android
   ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
   project by the repository or folder it is working in ([docs/connector.md](docs/connector.md)),
   sharing text or a link from any Android app into a task ([docs/composer.md](docs/composer.md)),

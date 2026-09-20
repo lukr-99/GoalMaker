@@ -1,4 +1,4 @@
-package com.goalmaker.app.ui.share
+package com.goalmaker.app.ui.capture
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun ShareScreen(
-    viewModel: ShareViewModel,
+    viewModel: CaptureViewModel,
     capture: SharedCapture,
     onSaved: () -> Unit,
     onCancel: () -> Unit,
@@ -160,7 +160,7 @@ private fun Picker(title: String, names: List<String>, chosen: String?, onPick: 
 }
 
 // Picking sets the line's own token, so the composer stays the one thing that says what is saved.
-private fun TextFieldState.pick(kind: SpanKind, marker: String, name: String?, viewModel: ShareViewModel) {
+private fun TextFieldState.pick(kind: SpanKind, marker: String, name: String?, viewModel: CaptureViewModel) {
     val current = text.toString()
     val without = removeParts(current, viewModel.preview(current).spans.filter { it.kind == kind })
     val token = name?.let { " $marker${it.trim().replace(' ', '_')}" }.orEmpty()

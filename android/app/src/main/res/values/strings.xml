@@ -687,6 +687,11 @@
     <string name="activity_skipped">%1$s skipped %2$s</string>
     <string name="activity_paused">%1$s paused %2$s</string>
     <string name="activity_resumed">%1$s resumed %2$s</string>
+    <string name="quick_add_title">Quick add</string>
+    <string name="quick_add_saved">Added</string>
+    <string name="widget_quick_add_hint">Add a task…</string>
+    <string name="widget_quick_add_today">Today</string>
+    <string name="widget_quick_add_description">A line straight into GoalMaker: the Inbox, or today.</string>
     <string name="share_target">Add to GoalMaker</string>
     <string name="share_title">Add to GoalMaker</string>
     <string name="share_notes">Kept in the notes</string>

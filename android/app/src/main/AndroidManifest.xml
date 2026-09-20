@@ -97,6 +97,28 @@
                 android:resource="@xml/habits_widget_info" />
         </receiver>
 
+        <!-- The quick-add box the widget opens; it sits over whatever app is in front. -->
+        <activity
+            android:name=".QuickAddActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:label="@string/quick_add_title"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:theme="@style/Theme.GoalMaker.QuickAdd"
+            android:windowSoftInputMode="adjustResize|stateVisible" />
+
+        <receiver
+            android:name=".ui.widget.QuickAddWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_add_widget_info" />
+        </receiver>
+
         <!-- Hands downloaded update APKs to the system installer (M0-06). -->
         <provider
             android:name="androidx.core.content.FileProvider"

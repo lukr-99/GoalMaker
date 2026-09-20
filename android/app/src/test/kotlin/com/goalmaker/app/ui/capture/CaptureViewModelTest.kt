@@ -1,4 +1,4 @@
-package com.goalmaker.app.ui.share
+package com.goalmaker.app.ui.capture
 
 import android.app.Application
 import com.goalmaker.app.application.auth.AuthGateway
@@ -38,12 +38,12 @@ import org.robolectric.annotation.Config
 /** What a share from another app saves (spec, story 10; M5-05). */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
-class ShareViewModelTest {
+class CaptureViewModelTest {
     private val now = LocalDateTime.parse("2026-09-20T19:00")
     private lateinit var test: TestReplica
     private lateinit var tasks: TaskList
     private lateinit var projects: ProjectList
-    private lateinit var viewModel: ShareViewModel
+    private lateinit var viewModel: CaptureViewModel
 
     @Before
     fun setUp() {
@@ -53,7 +53,7 @@ class ShareViewModelTest {
         val tags = TagList(test.replica, rows, {})
         projects = ProjectList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { LocalDate.parse("2026-09-20") }
-        viewModel = ShareViewModel(
+        viewModel = CaptureViewModel(
             tasks = tasks,
             areas = areas,
             tags = tags,
@@ -118,6 +118,24 @@ class ShareViewModelTest {
         assertNotNull(projects.find("Signing"))
         assertEquals("Ship the installer", only().title)
         assertEquals(ProjectRules.TODO, only().boardColumn)
+    }
+
+    @Test
+    fun `a quick-add line with no day waits in the Inbox`() = runTest {
+        assertTrue(viewModel.save(viewModel.preview("Ask about the invoice"), notes = ""))
+
+        val task = only()
+        assertNull(task.plannedDate)
+        assertNull(task.areaId)
+        assertTrue(ListRules.lists(tasks.all(), LocalDate.parse("2026-09-20")).inbox.any { it.id == task.id })
+    }
+
+    @Test
+    fun `the widget's Today button plans the line for today`() = runTest {
+        assertTrue(viewModel.save(viewModel.preview("today Water the plants"), notes = ""))
+
+        assertEquals(LocalDate.parse("2026-09-20"), only().plannedDate)
+        assertEquals("Water the plants", only().title)
     }
 
     @Test

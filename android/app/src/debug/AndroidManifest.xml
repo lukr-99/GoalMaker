@@ -4,6 +4,14 @@
 
     <application
         android:networkSecurityConfig="@xml/network_security_config"
-        tools:ignore="UnusedAttribute" />
+        tools:ignore="UnusedAttribute">
+
+        <!-- Debug builds only: android/tools and a person at a terminal can open the quick-add box
+             with `adb shell am start`, which a release build keeps to the widget. -->
+        <activity
+            android:name=".QuickAddActivity"
+            android:exported="true"
+            tools:replace="android:exported" />
+    </application>
 
 </manifest>
