@@ -54,6 +54,7 @@ import com.goalmaker.app.data.update.ApkInstallerLauncher
 import com.goalmaker.app.data.update.EcdsaSignatureVerifier
 import com.goalmaker.app.data.update.SupabaseReleaseChannel
 import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.ui.widget.Widgets
 import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.planning.PromptLibrary
 import com.goalmaker.app.domain.planning.PlanningDay
@@ -295,7 +296,10 @@ class AppGraph(context: Context) {
      */
     suspend fun syncInBackground(): Boolean {
         if (auth.session.first { it != AuthSession.Loading } !is AuthSession.SignedIn) return true
-        return !sync.syncNow().offline
+        val reached = !sync.syncNow().offline
+        // What came in may change what the home screen shows (docs/widgets.md).
+        Widgets.refresh(appContext)
+        return reached
     }
 
     /** Relaunches the app so a changed backend takes effect (dev builds only). */

@@ -60,6 +60,28 @@
             </intent-filter>
         </receiver>
 
+        <!-- The home screen widgets (spec, stories 85 and 86; M5-04). -->
+        <receiver
+            android:name=".ui.widget.TodayWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".ui.widget.HabitsWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/habits_widget_info" />
+        </receiver>
+
         <!-- Hands downloaded update APKs to the system installer (M0-06). -->
         <provider
             android:name="androidx.core.content.FileProvider"

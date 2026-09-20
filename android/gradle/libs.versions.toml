@@ -18,6 +18,8 @@ junit = "4.13.2"
 robolectric = "4.17"
 # Goal-hit confetti (design spec, motion and feedback).
 konfetti = "2.0.5"
+# Home screen widgets (spec, stories 85 and 86).
+glance = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -51,6 +53,8 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 konfetti-compose = { module = "nl.dionsegijn:konfetti-compose", version.ref = "konfetti" }
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
+androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glance" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

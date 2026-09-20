@@ -606,6 +606,15 @@
         <item quantity="one">%1$d task behind you, and %2$d answers written down.</item>
         <item quantity="other">%1$d tasks behind you, and %2$d answers written down.</item>
     </plurals>
+    <!-- Widgets (docs/widgets.md) -->
+    <string name="widget_today_header">Today · %1$d of %2$d done</string>
+    <string name="widget_today_empty">Nothing planned for today.</string>
+    <string name="widget_today_description">The tasks for today, with a tick on each.</string>
+    <string name="widget_habits_title">Habits</string>
+    <string name="widget_habits_header">Habits · %1$d left</string>
+    <string name="widget_habits_empty">No habits due today.</string>
+    <string name="widget_habits_description">The habits for today, one tap to check one in.</string>
+
     <!-- Calendar (docs/calendar.md) -->
     <string name="calendar_title">Calendar</string>
     <string name="calendar_week">Week</string>
