@@ -195,6 +195,9 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Section(stringResource(R.string.settings_backup)) {
+                BackupCard(viewModel, state.backup)
+            }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)
                 val unsynced = state.unsyncedAtSignOut

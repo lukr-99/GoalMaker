@@ -5,16 +5,20 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthSession
+import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
+import com.goalmaker.app.domain.backup.BackupProblem
+import com.goalmaker.app.domain.backup.BackupRules
 import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Appearance, account, updates, about and (dev builds) the backend switch. */
 class SettingsViewModel(
@@ -34,6 +39,8 @@ class SettingsViewModel(
     private val design: DesignTokens,
     private val updates: UpdateService,
     private val appInfo: AppInfo,
+    private val backup: BackupService,
+    private val requestSync: () -> Unit,
     private val restartApp: () -> Unit,
 ) : ViewModel() {
 
@@ -171,6 +178,50 @@ class SettingsViewModel(
             state.update { it.copy(update = UpdateUiState.Installing(result)) }
         }
     }
+
+    /** The export's text, for the file the owner picked, or null when there is nothing to write. */
+    suspend fun exportText(): String? = withContext(io) { backup.export() }
+
+    /** The name the file is offered under: goalmaker-<today>.json (docs/backup.md). */
+    fun exportName(): String = BackupRules.fileName(LocalDate.now().toString())
+
+    /** Says what the export did, or that the file could not be written. */
+    fun exported(written: Boolean) = state.update {
+        it.copy(backup = BackupUiState(outcome = if (written) BackupOutcome.EXPORTED else BackupOutcome.COULD_NOT_WRITE))
+    }
+
+    /** Reads a picked file and offers what restoring it would do; the owner confirms after this. */
+    fun offerRestore(text: String?) {
+        if (text == null) {
+            state.update { it.copy(backup = BackupUiState(outcome = BackupOutcome.COULD_NOT_READ)) }
+            return
+        }
+        viewModelScope.launch(io) {
+            val problem = backup.check(text)
+            val preview = if (problem == null) backup.preview(text) else null
+            state.update { it.copy(backup = BackupUiState(pending = if (problem == null) text else null, preview = preview, problem = problem)) }
+        }
+    }
+
+    /** Restores the file the owner just confirmed. */
+    fun confirmRestore() {
+        val text = state.value.backup.pending ?: return
+        viewModelScope.launch(io) {
+            val report = backup.restore(text, requestSync)
+            state.update {
+                it.copy(
+                    backup = if (report == null) {
+                        BackupUiState(problem = backup.check(text), outcome = BackupOutcome.COULD_NOT_READ)
+                    } else {
+                        BackupUiState(outcome = BackupOutcome.RESTORED, report = report)
+                    },
+                )
+            }
+        }
+    }
+
+    /** Closes whatever the backup card is saying. */
+    fun clearBackup() = state.update { it.copy(backup = BackupUiState()) }
 
     fun onBackendUrlChange(value: String) = state.update { it.copy(backendUrlDraft = value) }
 

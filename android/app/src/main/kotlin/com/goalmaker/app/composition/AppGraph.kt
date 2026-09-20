@@ -9,6 +9,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.goalmaker.app.BuildConfig
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.AuthGateway
+import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.activity.ActivityLog
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.connector.ConnectorLinks
@@ -193,6 +194,16 @@ class AppGraph(context: Context) {
     val reviews = ReviewList(replica, newRows, sync::request)
     val projects = ProjectList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
+
+    /** Reading the owner's data out to a file and back in (docs/backup.md). */
+    val backup = BackupService(
+        catalog = catalog,
+        replica = replica,
+        ownerId = { (auth.session.value as? AuthSession.SignedIn)?.userId },
+        appVersion = appInfo.versionName,
+        app = "android",
+        now = Instant::now,
+    )
 
     /** The planning day it is now, by the owner's day start (docs/lists.md). */
     fun today(): LocalDate = PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)

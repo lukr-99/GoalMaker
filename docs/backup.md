@@ -44,5 +44,12 @@ onto a live replica adds what is missing and leaves the rest. Row by row, the fi
 when there is none here yet, or when the file's `updated_at` is newer than the local one. That is the
 rule sync already uses, so a restore cannot undo newer work.
 
-The report says, per table, how many rows were added, updated and kept, and both apps show it before
-the owner confirms and after it runs.
+The report says how many rows were added, updated and kept, and both apps show it before the owner
+confirms and after it runs.
+
+## In the apps
+
+Android: Settings, Your data. **Export** writes through the system file picker, so no storage
+permission is asked for, and offers the name `goalmaker-<day>.json`. **Restore** picks a file, says
+what it would do, and waits for the owner to agree. A file that cannot be written or read says so on
+its own terms; a file that is refused says which check failed.

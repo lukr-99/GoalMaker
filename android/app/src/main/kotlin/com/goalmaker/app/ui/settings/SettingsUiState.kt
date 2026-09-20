@@ -29,4 +29,6 @@ data class SettingsUiState(
     val appInfo: AppInfo,
     val backendUrlDraft: String,
     val backendKeyDraft: String,
+    /** What the Your data card is doing: nothing, asking about a file, or saying what happened. */
+    val backup: BackupUiState = BackupUiState(),
 )

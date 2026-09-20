@@ -225,6 +225,8 @@ fun SignedInNavigation(graph: AppGraph) {
                                 design = graph.design,
                                 updates = graph.updates,
                                 appInfo = graph.appInfo,
+                                backup = graph.backup,
+                                requestSync = graph.sync::request,
                                 restartApp = graph.restartApp,
                             )
                         }
