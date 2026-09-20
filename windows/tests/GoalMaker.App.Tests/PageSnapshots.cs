@@ -307,6 +307,41 @@ public sealed class PageSnapshots
     });
 
     [Fact(Explicit = true)]
+    public void ProjectsPage_() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, strings, _ => { }, action => action());
+        projects.NewCommand.Execute(null);
+        projects.ProjectName = "GoalMaker";
+        projects.ProjectDescription = "The planner on the phone and the PC.";
+        projects.ProjectRepository = "https://github.com/owner/goalmaker";
+        projects.ProjectFolder = @"F:\Code\GoalMaker";
+        projects.SaveCommand.Execute(null);
+        foreach (var (title, type) in new[]
+        {
+            ("Widgets for habits", ProjectRules.Idea),
+            ("Share to GoalMaker", ProjectRules.Idea),
+            ("The calendar view", ProjectRules.Task),
+            ("Mini windows", ProjectRules.Task),
+            ("The board drags nothing yet", ProjectRules.Bug),
+        })
+        {
+            projects.NewItemType = type;
+            projects.NewItemTitle = title;
+            projects.AddItemCommand.Execute(null);
+        }
+
+        planner.Tasks.SetPriority(planner.Task("The board drags nothing yet").Id, ProjectRules.Urgent);
+        planner.Tasks.SetBoardColumn(planner.Task("The calendar view").Id, ProjectRules.Doing);
+        planner.Tasks.SetBoardColumn(planner.Task("Mini windows").Id, ProjectRules.Done);
+        projects.Refresh();
+
+        Save(new ProjectsPage(projects), folder, "projects", new Size(1100, 700));
+    });
+
+    [Fact(Explicit = true)]
     public void ReviewPages() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();

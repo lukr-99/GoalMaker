@@ -15,6 +15,7 @@ public enum AppPage
     Habits,
     Reviews,
     Stats,
+    Projects,
 
     /// <summary>One period's guided review; opened from the Reviews page.</summary>
     Review,

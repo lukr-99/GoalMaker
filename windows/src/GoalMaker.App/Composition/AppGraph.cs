@@ -187,6 +187,7 @@ public sealed class AppGraph : IDisposable
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits);
         HabitsPage = new HabitsViewModel(Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
         Reviews = new ReviewList(replica, newRows, Sync.Request);
+        Projects = new ProjectList(replica, newRows, Sync.Request);
         Review = new ReviewViewModel(
             ReviewRules.Weekly,
             ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),
@@ -203,6 +204,7 @@ public sealed class AppGraph : IDisposable
             runOnUi);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi);
+        ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
@@ -306,11 +308,17 @@ public sealed class AppGraph : IDisposable
     /// <summary>The owner's weekly, monthly and yearly reviews (docs/reviews.md).</summary>
     public ReviewList Reviews { get; private set; } = null!;
 
+    /// <summary>The owner's projects and their milestones (docs/projects.md).</summary>
+    public ProjectList Projects { get; private set; } = null!;
+
     /// <summary>The Reviews page.</summary>
     public ReviewsViewModel ReviewsPage { get; private set; } = null!;
 
     /// <summary>The Stats page (docs/stats.md).</summary>
     public StatsViewModel StatsPage { get; private set; } = null!;
+
+    /// <summary>The Projects page (docs/projects.md).</summary>
+    public ProjectsViewModel ProjectsPage { get; private set; } = null!;
 
     /// <summary>The guided review, opened from the Reviews page.</summary>
     public ReviewViewModel Review { get; private set; } = null!;
@@ -582,6 +590,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.Refresh();
         ReviewsPage.Refresh();
         StatsPage.Refresh();
+        ProjectsPage.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

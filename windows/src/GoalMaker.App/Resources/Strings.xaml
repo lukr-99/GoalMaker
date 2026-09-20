@@ -474,6 +474,40 @@
     <sys:String x:Key="Habits.Left">{0} habits left</sys:String>
     <sys:String x:Key="Habits.Summary">{0}, {1}</sys:String>
 
+    <!-- Projects (docs/projects.md) -->
+    <sys:String x:Key="Nav.Projects">Projects</sys:String>
+    <sys:String x:Key="Projects.Title">Projects</sys:String>
+    <sys:String x:Key="Projects.Empty">No projects yet. A project is where a piece of work keeps its own backlog.</sys:String>
+    <sys:String x:Key="Projects.Add">New project</sys:String>
+    <sys:String x:Key="Projects.Edit">Edit</sys:String>
+    <sys:String x:Key="Projects.Delete">Delete project</sys:String>
+    <sys:String x:Key="Projects.Name">Name</sys:String>
+    <sys:String x:Key="Projects.Description">Description</sys:String>
+    <sys:String x:Key="Projects.Repository">Repository URL</sys:String>
+    <sys:String x:Key="Projects.Folder">Local folder</sys:String>
+    <sys:String x:Key="Projects.Status">Status</sys:String>
+    <sys:String x:Key="Projects.Active">Active</sys:String>
+    <sys:String x:Key="Projects.Paused">Paused</sys:String>
+    <sys:String x:Key="Projects.Finished">Done</sys:String>
+    <sys:String x:Key="Projects.AddItem">Add</sys:String>
+    <sys:String x:Key="Projects.ItemTitle">What is it?</sys:String>
+    <sys:String x:Key="Projects.ItemType">Kind</sys:String>
+    <sys:String x:Key="Projects.ItemMenu">More</sys:String>
+    <sys:String x:Key="Projects.OpenItem">Open</sys:String>
+    <sys:String x:Key="Projects.RemoveItem">Out of the project</sys:String>
+    <sys:String x:Key="Projects.ColumnEmpty">Nothing here yet.</sys:String>
+    <sys:String x:Key="Projects.Backlog">Backlog</sys:String>
+    <sys:String x:Key="Projects.Todo">To do</sys:String>
+    <sys:String x:Key="Projects.Doing">Doing</sys:String>
+    <sys:String x:Key="Projects.Done">Done</sys:String>
+    <sys:String x:Key="Projects.Task">Task</sys:String>
+    <sys:String x:Key="Projects.Idea">Idea</sys:String>
+    <sys:String x:Key="Projects.Bug">Bug</sys:String>
+    <sys:String x:Key="Projects.Urgent">Urgent</sys:String>
+    <sys:String x:Key="Projects.High">High</sys:String>
+    <sys:String x:Key="Projects.Normal">Normal</sys:String>
+    <sys:String x:Key="Projects.Low">Low</sys:String>
+
     <!-- Stats (docs/stats.md) -->
     <sys:String x:Key="Nav.Stats">Stats</sys:String>
     <sys:String x:Key="Stats.Title">Stats</sys:String>

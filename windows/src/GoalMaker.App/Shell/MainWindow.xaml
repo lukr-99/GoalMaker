@@ -75,6 +75,11 @@
                         <ui:SymbolIcon Symbol="BookOpen24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
+                <ui:NavigationViewItem Content="{DynamicResource Nav.Projects}" TargetPageType="{x:Type views:ProjectsPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Board24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Stats}" TargetPageType="{x:Type views:StatsPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="DataTrending24" />
