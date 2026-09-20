@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Iterable, Sequence
@@ -94,12 +95,28 @@ def _matches_any(path: Path, patterns: Iterable[str]) -> bool:
     return any(normalized.match(pattern) for pattern in patterns)
 
 
+def _git_ignored(root: Path) -> set[str]:
+    """What git is told to ignore. A generated file (a tool's state, a local config) is not the
+    repository's to keep tidy, and complaining about it stops the whole check."""
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--others", "--ignored", "--exclude-standard"],
+            capture_output=True, text=True, check=False, timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()} if result.returncode == 0 else set()
+
+
 def _iter_files(root: Path) -> Iterable[Path]:
+    ignored = _git_ignored(root)
     for path in root.rglob("*"):
         if not path.is_file():
             continue
         relative = path.relative_to(root)
         if any(part in IGNORED_DIRECTORY_NAMES for part in relative.parts):
+            continue
+        if relative.as_posix() in ignored:
             continue
         yield path
 

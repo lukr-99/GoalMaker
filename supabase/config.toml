@@ -424,3 +424,47 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# The cloud project (docs/setup/cloud-supabase.md). Everything above is the local stack, and pushing
+# it whole would weaken the real project: a one-second email rate limit, MFA off and a site URL on
+# localhost. This block says what the cloud project should have, so `supabase config push
+# --project-ref wkjnauxqwlqhsqrqnkhg` changes only the sign-in code settings and their templates.
+# Check with `supabase config diff --project-ref wkjnauxqwlqhsqrqnkhg` before every push.
+[remotes.production]
+project_id = "wkjnauxqwlqhsqrqnkhg"
+
+[remotes.production.auth]
+site_url = "https://wkjnauxqwlqhsqrqnkhg.supabase.co"
+additional_redirect_urls = []
+
+[remotes.production.auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[remotes.production.auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+secure_password_change = false
+# A minute between codes on the real project; the local stack's one second is for testing.
+max_frequency = "1m0s"
+otp_length = 6
+otp_expiry = 600
+
+# The sign-in code template cannot go out yet: a free project on Supabase's own email service
+# refuses any template change ("Email template modification is not available for free tier projects
+# using the default email provider"). Until the project has its own SMTP, these keep the built-in
+# templates, so nothing tries to push them. See docs/setup/cloud-supabase.md.
+[remotes.production.auth.email.template.magic_link]
+subject = "Your sign-in link"
+
+[remotes.production.auth.email.template.confirmation]
+subject = "Confirm your email address"
+
+[remotes.production.storage.analytics]
+enabled = true
+max_namespaces = 10
+
+[remotes.production.db.pooler]
+default_pool_size = 15
+max_client_conn = 200
