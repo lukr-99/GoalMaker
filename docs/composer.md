@@ -66,6 +66,15 @@ When a line names no day (and no repeat or time, which bring their own), the lis
 supplies it: Today plans the task for today, Tomorrow for tomorrow, and the Inbox leaves it without
 a day. The parser itself never guesses; the composer applies this after parsing.
 
+## Sharing into GoalMaker
+
+On Android, anything another app can share as text opens the same composer (spec, story 10): the
+shared text becomes the line, so every shortcut above works on it, and the link it came from waits
+in the notes, so the item carries where it came from. A share with only a link takes the link's host
+and path as its title; a shared passage keeps its first line as the title and the rest in the notes.
+The sheet offers the owner's areas and projects as chips, which write their own `@Area` and
+`+Project` into the line. With no day, area or project chosen, the item lands in the Inbox.
+
 ## The result
 
 The title is what remains, words joined by single spaces. It may be empty; the composer then has

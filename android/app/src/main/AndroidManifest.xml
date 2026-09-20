@@ -36,6 +36,21 @@
             </intent-filter>
         </activity>
 
+        <!-- Text or a link shared from any app becomes a task (spec, story 10; M5-05). -->
+        <activity
+            android:name=".ShareActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/share_target"
+            android:noHistory="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <!-- WorkManager starts on demand with GoalMakerApplication's worker factory (M1-04). -->
         <provider
             android:name="androidx.startup.InitializationProvider"
