@@ -68,8 +68,10 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
@@ -80,6 +82,7 @@ import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.ConfettiBurst
+import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.composer.ComposerBar
@@ -181,7 +184,12 @@ fun ListsScreen(
             topBar = {
                 LargeFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(tab.title())) },
-                    subtitle = { state.lists?.let { Text(subtitle(tab, it, state.habits.count { row -> !row.done })) } },
+                    subtitle = {
+                        state.lists?.let {
+                            Text(subtitle(tab, it), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    },
+                    navigationIcon = { DayProgress(tab, state.lists) },
                     actions = {
                         SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
                         IconButton(onClick = onOpenHabits) {
@@ -424,6 +432,30 @@ private fun MoreMenu(
     }
 }
 
+/**
+  * Today's tasks as a ring that fills: what the top bar used to spell out, so its one line of text
+  * never wraps and the bar keeps its height from tab to tab.
+  */
+@Composable
+private fun DayProgress(tab: ListTab, lists: PlanningLists?) {
+    if (tab != ListTab.TODAY || lists == null || lists.summary.total == 0) return
+    val done = lists.summary.done
+    val total = lists.summary.total
+    val label = stringResource(R.string.lists_today_progress, done, total)
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier.padding(start = 12.dp).semantics { contentDescription = label },
+    ) {
+        ProgressRing(fraction = done.toFloat() / total, size = 34.dp, stroke = 3.dp) {
+            Text(
+                done.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (done == total) AppTheme.colors.accent else AppTheme.colors.text,
+            )
+        }
+    }
+}
+
 /** A list's section label in the theme's accent; with [onToggle] it folds and shows whether it's open. */
 @Composable
 internal fun SectionHeader(text: String, expanded: Boolean? = null, onToggle: (() -> Unit)? = null) {
@@ -458,16 +490,12 @@ private fun Empty(text: String) {
 }
 
 @Composable
-private fun subtitle(tab: ListTab, lists: PlanningLists, habitsLeft: Int): String {
+private fun subtitle(tab: ListTab, lists: PlanningLists): String {
     val locale = LocalConfiguration.current.locales[0]
-    val longDate = DateTimeFormatter.ofPattern("EEEE d MMMM", locale)
+    val date = DateTimeFormatter.ofPattern("EEE d MMM", locale)
     return when (tab) {
-        ListTab.TODAY -> {
-            val date = longDate.format(lists.today)
-            val tasks = if (lists.summary.total == 0) date else pluralStringResource(R.plurals.lists_today_summary, lists.summary.total, date, lists.summary.done, lists.summary.total)
-            if (habitsLeft == 0) tasks else stringResource(R.string.habits_summary, tasks, pluralStringResource(R.plurals.habits_left, habitsLeft, habitsLeft))
-        }
-        ListTab.TOMORROW -> longDate.format(lists.today.plusDays(1))
+        ListTab.TODAY -> date.format(lists.today)
+        ListTab.TOMORROW -> date.format(lists.today.plusDays(1))
         ListTab.INBOX -> pluralStringResource(R.plurals.lists_inbox_count, lists.inbox.size, lists.inbox.size)
     }
 }
