@@ -44,6 +44,9 @@ import com.goalmaker.app.ui.review.ReviewKey
 import com.goalmaker.app.ui.review.ReviewScreen
 import com.goalmaker.app.ui.review.ReviewViewModel
 import com.goalmaker.app.ui.review.ReviewsKey
+import com.goalmaker.app.ui.calendar.CalendarKey
+import com.goalmaker.app.ui.calendar.CalendarScreen
+import com.goalmaker.app.ui.calendar.CalendarViewModel
 import com.goalmaker.app.ui.projects.ProjectsKey
 import com.goalmaker.app.ui.projects.ProjectsScreen
 import com.goalmaker.app.ui.projects.ProjectsViewModel
@@ -126,6 +129,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenReviews = { backStack.add(ReviewsKey) },
                             onOpenStats = { backStack.add(StatsKey) },
                             onOpenProjects = { backStack.add(ProjectsKey) },
+                            onOpenCalendar = { backStack.add(CalendarKey) },
                         )
                     }
                     entry<GoalsKey> {
@@ -138,6 +142,16 @@ fun SignedInNavigation(graph: AppGraph) {
                             viewModel = reviewsViewModel,
                             onBack = { backStack.removeLastOrNull() },
                             onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                        )
+                    }
+                    entry<CalendarKey> {
+                        val calendarViewModel = viewModel {
+                            CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
+                        }
+                        CalendarScreen(
+                            viewModel = calendarViewModel,
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpenTask = { id -> backStack.add(TaskKey(id)) },
                         )
                     }
                     entry<ProjectsKey> {

@@ -1,0 +1,359 @@
+{
+  "schema": 1,
+  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday.",
+  "grids": [
+    {
+      "kind": "week",
+      "day": "2026-09-18",
+      "start": "2026-09-14",
+      "end": "2026-09-20",
+      "count": 7
+    },
+    {
+      "kind": "week",
+      "day": "2026-09-14",
+      "start": "2026-09-14",
+      "end": "2026-09-20",
+      "count": 7
+    },
+    {
+      "kind": "week",
+      "day": "2026-09-20",
+      "start": "2026-09-14",
+      "end": "2026-09-20",
+      "count": 7
+    },
+    {
+      "kind": "month",
+      "day": "2026-09-18",
+      "start": "2026-08-31",
+      "end": "2026-10-04",
+      "count": 35
+    },
+    {
+      "kind": "month",
+      "day": "2026-02-10",
+      "start": "2026-01-26",
+      "end": "2026-03-01",
+      "count": 35
+    },
+    {
+      "kind": "month",
+      "day": "2026-11-30",
+      "start": "2026-10-26",
+      "end": "2026-12-06",
+      "count": 42
+    }
+  ],
+  "days": [
+    {
+      "name": "a week with times, a deadline, a reminder and a daily repeat",
+      "from": "2026-09-14",
+      "to": "2026-09-20",
+      "today": "2026-09-16",
+      "tasks": [
+        {
+          "id": "t1",
+          "createdAt": "2026-09-01T08:00:00Z",
+          "plannedDate": "2026-09-16",
+          "plannedTime": "09:00",
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false
+        },
+        {
+          "id": "t2",
+          "createdAt": "2026-09-01T08:01:00Z",
+          "plannedDate": "2026-09-16",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false
+        },
+        {
+          "id": "t3",
+          "createdAt": "2026-09-01T08:02:00Z",
+          "plannedDate": "2026-09-16",
+          "plannedTime": "08:00",
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false
+        },
+        {
+          "id": "t4",
+          "createdAt": "2026-09-01T08:03:00Z",
+          "plannedDate": null,
+          "plannedTime": null,
+          "deadline": "2026-09-18",
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false
+        },
+        {
+          "id": "t5",
+          "createdAt": "2026-09-01T08:04:00Z",
+          "plannedDate": "2026-09-15",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "done",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false
+        },
+        {
+          "id": "t6",
+          "createdAt": "2026-09-01T08:05:00Z",
+          "plannedDate": "2026-09-15",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "dropped",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false
+        },
+        {
+          "id": "t7",
+          "createdAt": "2026-09-01T08:06:00Z",
+          "plannedDate": "2026-09-17",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": true
+        },
+        {
+          "id": "t8",
+          "createdAt": "2026-09-01T08:07:00Z",
+          "plannedDate": "2026-09-16",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": "FREQ=DAILY",
+          "seriesId": "t8",
+          "deleted": false
+        },
+        {
+          "id": "t9",
+          "createdAt": "2026-09-01T08:08:00Z",
+          "plannedDate": "2026-09-19",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": "t8",
+          "deleted": false
+        }
+      ],
+      "reminders": [
+        {
+          "taskId": "t1",
+          "at": "2026-09-16T08:45"
+        },
+        {
+          "taskId": "t4",
+          "at": "2026-09-18T17:00"
+        },
+        {
+          "taskId": "t4",
+          "at": "2026-09-30T17:00"
+        }
+      ],
+      "expect": {
+        "2026-09-14": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-15": {
+          "planned": [
+            "t5"
+          ],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-16": {
+          "planned": [
+            "t3",
+            "t1",
+            "t2",
+            "t8"
+          ],
+          "deadlines": [],
+          "reminders": 1,
+          "repeats": []
+        },
+        "2026-09-17": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "t8"
+          ]
+        },
+        "2026-09-18": {
+          "planned": [],
+          "deadlines": [
+            "t4"
+          ],
+          "reminders": 1,
+          "repeats": [
+            "t8"
+          ]
+        },
+        "2026-09-19": {
+          "planned": [
+            "t9"
+          ],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-20": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "t8"
+          ]
+        }
+      }
+    },
+    {
+      "name": "a weekly repeat lands on its weekdays, and a done task never repeats",
+      "from": "2026-09-14",
+      "to": "2026-09-27",
+      "today": "2026-09-14",
+      "tasks": [
+        {
+          "id": "r1",
+          "createdAt": "2026-09-01T08:00:00Z",
+          "plannedDate": "2026-09-14",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": "FREQ=WEEKLY;BYDAY=MO,TH",
+          "seriesId": "r1",
+          "deleted": false
+        },
+        {
+          "id": "r2",
+          "createdAt": "2026-09-01T08:01:00Z",
+          "plannedDate": "2026-09-15",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "done",
+          "recurrence": "FREQ=DAILY",
+          "seriesId": "r2",
+          "deleted": false
+        }
+      ],
+      "reminders": [],
+      "expect": {
+        "2026-09-14": {
+          "planned": [
+            "r1"
+          ],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-15": {
+          "planned": [
+            "r2"
+          ],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-16": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-17": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "r1"
+          ]
+        },
+        "2026-09-18": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-19": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-20": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-21": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "r1"
+          ]
+        },
+        "2026-09-22": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-23": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-24": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "r1"
+          ]
+        },
+        "2026-09-25": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-26": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-27": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        }
+      }
+    }
+  ]
+}

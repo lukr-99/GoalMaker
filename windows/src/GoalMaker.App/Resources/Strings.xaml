@@ -474,6 +474,21 @@
     <sys:String x:Key="Habits.Left">{0} habits left</sys:String>
     <sys:String x:Key="Habits.Summary">{0}, {1}</sys:String>
 
+    <!-- Calendar (docs/calendar.md) -->
+    <sys:String x:Key="Nav.Calendar">Calendar</sys:String>
+    <sys:String x:Key="Calendar.Title">Calendar</sys:String>
+    <sys:String x:Key="Calendar.Week">Week</sys:String>
+    <sys:String x:Key="Calendar.Month">Month</sys:String>
+    <sys:String x:Key="Calendar.Back">Earlier</sys:String>
+    <sys:String x:Key="Calendar.Forward">Later</sys:String>
+    <sys:String x:Key="Calendar.Today">Today</sys:String>
+    <sys:String x:Key="Calendar.PickADay">Pick a day to see what is on it.</sys:String>
+    <sys:String x:Key="Calendar.DayEmpty">Nothing on this day.</sys:String>
+    <sys:String x:Key="Calendar.Planned">Planned</sys:String>
+    <sys:String x:Key="Calendar.Deadline">Due</sys:String>
+    <sys:String x:Key="Calendar.Repeat">Repeats</sys:String>
+    <sys:String x:Key="Calendar.Reminders">{0} reminders ring</sys:String>
+
     <!-- Projects (docs/projects.md) -->
     <sys:String x:Key="Nav.Projects">Projects</sys:String>
     <sys:String x:Key="Projects.Title">Projects</sys:String>

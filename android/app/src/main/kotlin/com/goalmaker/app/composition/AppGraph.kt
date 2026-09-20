@@ -198,7 +198,8 @@ class AppGraph(context: Context) {
 
     // Reminders (docs/reminders.md): the replica decides, AlarmManager carries the one armed alarm.
     val reminderNotifications = ReminderNotifications(appContext)
-    private val reminderList = ReminderList(replica, newRows, sync::request)
+    /** The reminder rows themselves; the calendar reads them, the service arms them. */
+    val reminderList = ReminderList(replica, newRows, sync::request)
     /** Which rituals ran on which planning day (docs/reminders.md, docs/reviews.md). */
     val rituals = RitualRunList(replica, newRows, sync::request)
     val reminders = ReminderService(

@@ -307,6 +307,36 @@ public sealed class PageSnapshots
     });
 
     [Fact(Explicit = true)]
+    public void CalendarPage_() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        foreach (var (line, day) in new[]
+        {
+            ("Call the bank 9:00", Today),
+            ("Water the plants", Today),
+            ("File the receipts", Today.AddDays(-3)),
+            ("Pack the gym bag 7:00", Today.AddDays(1)),
+            ("Book the dentist", Today.AddDays(4)),
+            ("Read about sourdough", Today.AddDays(4)),
+            ("Fix the bike", Today.AddDays(4)),
+        })
+        {
+            var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
+            planner.Tasks.Plan(task.Id, day);
+        }
+
+        planner.Tasks.SetDeadline(planner.Task("Book the dentist").Id, Today.AddDays(9));
+        planner.Tasks.SetRecurrence(planner.Task("Water the plants").Id, "FREQ=DAILY");
+
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Settings, strings, planner.Time, _ => { }, action => action());
+        calendar.Open(Today);
+        Save(new CalendarPage(calendar), folder, "calendar", new Size(1000, 620));
+    });
+
+    [Fact(Explicit = true)]
     public void ProjectsPage_() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();

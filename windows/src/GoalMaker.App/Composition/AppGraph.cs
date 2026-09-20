@@ -100,8 +100,9 @@ public sealed class AppGraph : IDisposable
         // carries the next one, and toasts show them with the same buttons as the phone.
         reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
         Rituals = new RitualRunList(replica, newRows, Sync.Request);
+        ReminderRows = new ReminderList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
-            new ReminderList(replica, newRows, Sync.Request),
+            ReminderRows,
             Tasks,
             reminderTimer,
             Settings,
@@ -205,6 +206,8 @@ public sealed class AppGraph : IDisposable
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi);
         ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi);
+        CalendarPage = new CalendarViewModel(
+            Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
@@ -320,10 +323,16 @@ public sealed class AppGraph : IDisposable
     /// <summary>The Projects page (docs/projects.md).</summary>
     public ProjectsViewModel ProjectsPage { get; private set; } = null!;
 
+    /// <summary>The Calendar page (docs/calendar.md).</summary>
+    public CalendarViewModel CalendarPage { get; private set; } = null!;
+
     /// <summary>The guided review, opened from the Reviews page.</summary>
     public ReviewViewModel Review { get; private set; } = null!;
 
     public ReminderService Reminders { get; }
+
+    /// <summary>The reminder rows themselves; the calendar reads them, the service arms them.</summary>
+    public ReminderList ReminderRows { get; }
 
     /// <summary>The composer behind the global quick-add box; its lines land in the Inbox unless they name a day.</summary>
     public ComposerViewModel QuickAdd { get; private set; } = null!;
@@ -591,6 +600,7 @@ public sealed class AppGraph : IDisposable
         ReviewsPage.Refresh();
         StatsPage.Refresh();
         ProjectsPage.Refresh();
+        CalendarPage.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

@@ -606,6 +606,20 @@
         <item quantity="one">%1$d task behind you, and %2$d answers written down.</item>
         <item quantity="other">%1$d tasks behind you, and %2$d answers written down.</item>
     </plurals>
+    <!-- Calendar (docs/calendar.md) -->
+    <string name="calendar_title">Calendar</string>
+    <string name="calendar_week">Week</string>
+    <string name="calendar_month">Month</string>
+    <string name="calendar_back">Earlier</string>
+    <string name="calendar_forward">Later</string>
+    <string name="calendar_today">Today</string>
+    <string name="calendar_pick_a_day">Pick a day to see what is on it.</string>
+    <string name="calendar_day_empty">Nothing on this day.</string>
+    <string name="calendar_planned">Planned</string>
+    <string name="calendar_deadline">Due</string>
+    <string name="calendar_repeat">Repeats</string>
+    <string name="calendar_reminders">%1$d reminders ring</string>
+
     <!-- Projects (docs/projects.md) -->
     <string name="projects_title">Projects</string>
     <string name="projects_empty">No projects yet. A project is where a piece of work keeps its own backlog.</string>
