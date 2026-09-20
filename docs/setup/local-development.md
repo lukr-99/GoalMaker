@@ -52,6 +52,10 @@ and read the code in the mail viewer.
 
 `android/tools/phone.ps1` has serial-safe screenshots, logcat, taps and key presses.
 
+The home screen widgets ([widgets](../widgets.md)) turn up in the launcher's widget picker under
+GoalMaker. A widget keeps its own state per id, so after changing one, reinstall the app and add the
+widget again rather than waiting for the old one to redraw.
+
 ## Windows
 
 ```powershell
@@ -60,9 +64,10 @@ windows\src\GoalMaker.App\bin\Debug\net10.0-windows10.0.19041.0\GoalMaker.exe --
 ```
 
 Dev builds use `http://127.0.0.1:55321` and keep their files in `%LOCALAPPDATA%\GoalMaker-dev`
-(session, settings, `logs\crash.log`). Launch switches: `--tray` (start hidden), `--open
-today|settings`, `--no-activate` (show without taking focus). A second launch hands its switches to
-the running app.
+(session, settings, `logs\crash.log`). Launch switches: `--tray` (start hidden), `--no-activate`
+(show without taking focus) and `--open <page>`, where a page is `today`, `tomorrow`, `inbox`,
+`plan`, `goals`, `habits`, `reviews`, `stats`, `projects`, `calendar`, `areas`, `archive`,
+`activity` or `settings`. A second launch hands its switches to the running app.
 
 A side-by-side dev installer ("GoalMaker Dev") for testing the installer itself:
 

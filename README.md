@@ -6,29 +6,34 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 
 ## Status
 
-**M0, the delivery spine, is done.** What works today:
+**M0 to M4 are built and M5 is under way.** What works today, on both apps unless it says otherwise:
 
-- Sign-in with an emailed 6-digit code on both apps (Supabase Auth), sessions kept across restarts.
-- The Android app (Material 3 Expressive, Navigation 3) and the Windows app (WPF UI shell, tray icon,
-  single instance, launch switches, remembered window position), each with Today and Settings
-  placeholders, light/dark/system themes and a `-dev` identity for local builds.
-- The update channel: a signed release manifest in a private Supabase Storage bucket, verified by
-  both apps before they download and install an update (tested end to end on Windows, 0.1.0 → 0.1.1).
-- The database migration chain with full-chain, isolated and row-security tests on a local stack.
-- CI for every part and a tag-driven release workflow.
+- **Delivery (M0):** sign-in with an emailed 6-digit code, sessions kept across restarts, a signed
+  update channel in Supabase Storage that both apps verify before installing, the migration chain
+  with full-chain, isolated and row-security tests, CI for every part and a tag-driven release.
+- **Sync (M1):** a SQLite replica with an outbox on each device, offline work, Realtime refresh
+  ([docs/sync.md](docs/sync.md)).
+- **Tasks (M2):** Today, Tomorrow and Inbox, the composer with shortcuts and a live preview, Plan
+  tomorrow, repeating tasks ([docs/repeating.md](docs/repeating.md)), reminders with quiet hours and
+  snooze ([docs/reminders.md](docs/reminders.md)), areas and tags with filters, a task's detail view
+  with notes in light Markdown and a checklist, the searchable archive
+  ([docs/archive.md](docs/archive.md)), the four switchable themes, and on Windows the tray's Today
+  flyout and a global quick-add shortcut.
+- **Claude (M3):** the connector, an MCP Edge Function Claude reaches through a secret link, with
+  the activity log and undo ([docs/connector.md](docs/connector.md)).
+- **Goals, habits, reviews, stats (M4):** the year to day goal cascade with three progress modes
+  ([docs/goals.md](docs/goals.md)), habits with cadences, check-ins, streaks and a heatmap
+  ([docs/habits.md](docs/habits.md)), the guided weekly and monthly review with a rotating prompt
+  library and prompts that react to the period's data ([docs/reviews.md](docs/reviews.md)), review
+  reminders, and the stats screen ([docs/stats.md](docs/stats.md)).
+- **M5, in progress:** projects with a Backlog, To do, Doing and Done board
+  ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
+  ([docs/calendar.md](docs/calendar.md)), and Today and Habits widgets on Android
+  ([docs/widgets.md](docs/widgets.md)). Still to come: share to GoalMaker, the Windows mini windows,
+  Startup Profiles and projects through the connector.
 
-- Sync (M1): both apps keep a SQLite replica with an outbox, work offline, and sync through
-  Supabase with Realtime refresh ([docs/sync.md](docs/sync.md)).
-- Planning (M2, in progress): four switchable themes, Today, Tomorrow and Inbox, the composer with
-  shortcuts and a live preview, Plan tomorrow, repeating tasks, reminders with quiet hours and
-  snooze on both apps ([docs/reminders.md](docs/reminders.md)), and on Windows the tray's Today
-  flyout and a global quick-add shortcut, areas and tags with filters on every list, a task's detail
-  view with notes in light Markdown and a checklist, and the searchable archive of done tasks
-  ([docs/archive.md](docs/archive.md)).
-
-The Claude connector ([docs/connector.md](docs/connector.md)) arrived with M3; goals and habits come
-in M4. No release has been published yet; the cloud project and the signing keys still need the one-time setup in
-[docs/setup/](docs/setup/).
+No release has been published yet; the cloud project and the signing keys still need the one-time
+setup in [docs/setup/](docs/setup/).
 
 ## Parts
 

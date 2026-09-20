@@ -42,15 +42,21 @@ composition root creates everything
 - `application/`: ports and use cases: `auth/AuthGateway`, `update/UpdateService` with the
   `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
   `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
-  `planning/` (`TaskList`, `StepList`, the list, filter, archive and ritual rules, `ReminderRules`).
+  `planning/`: the lists that read and write the replica (`TaskList`, `StepList`, `GoalList`,
+  `HabitList`, `ReviewList`, `ProjectList`, `ReminderList`, `RitualRunList`) and the rules beside
+  them (`ListRules`, `PlanRules`, `ArchiveRules`, `GoalRules`, `HabitRules`, `ReviewRules`,
+  `ReviewLookBack`, `StatsRules`, `ProjectRules`, `CalendarRules`, `ReminderRules`).
 - `data/`: `SupabaseAuthGateway`, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`,
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
   (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
   `WorkManagerSyncScheduler`), `planning/` (`AlarmReminderScheduler`, `ReminderNotifications`,
-  `ReminderReceiver`).
-- `ui/`: `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `signin/`,
-  `today/`, `settings/`, `nav/` (Navigation 3 back stack).
+  `ReminderReceiver`), `activity/` and `connector/` (PostgREST readers), `diagnostics/CrashLog`.
+- `ui/`: `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `components/`
+  (the shared ring, chips, emoji field and logo), `signin/`, `lists/` (Today, Tomorrow, Inbox),
+  `plan/`, `task/`, `goals/`, `habits/`, `review/`, `stats/`, `projects/`, `calendar/`, `archive/`,
+  `activity/`, `areas/`, `connector/`, `settings/`, `widget/` (the Glance home screen widgets),
+  `nav/` (Navigation 3 back stack).
 - `composition/AppGraph` is the composition root, owned by `GoalMakerApplication`, which also hands
   WorkManager a worker factory wired to it.
 
@@ -76,7 +82,11 @@ composition root creates everything
 Rules that must match across Kotlin and C# live as vector files, one per rule, listed in
 [contracts/README.md](contracts/README.md): versions and the update offer policy, release manifest
 verification, the sync rules, the composer grammar, the lists and their filter, Plan tomorrow,
-repeating tasks, reminder times, the archive, and the light Markdown in notes. Both test suites read the same files. `contracts/schemas/synced-tables.json`
+repeating tasks, reminder times, the archive, the light Markdown in notes, goals, habits, reviews and
+their prompts, the activity log, the stats numbers, project boards and the calendar. The connector's
+TypeScript rules run the planning ones too, so Claude and the apps agree.
+`contracts/content/prompts.json` is shipped content rather than a vector file: the review prompt
+library, validated by `tools/check_prompts.py`. Both test suites read the same files. `contracts/schemas/synced-tables.json`
 describes every synced column once; both apps build their replica SQL and JSON mapping from it, and
 `tools/check_synced_tables.py` keeps it equal to the replica and server schemas.
 

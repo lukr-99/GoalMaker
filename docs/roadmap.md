@@ -19,8 +19,12 @@ and each has markdown issues under `.scratch/<milestone>/`.
    with check-ins, streaks and the heatmap, the guided weekly and monthly review with the prompt
    library and the data-reactive prompts, review reminders, the stats screen, and goals and habits
    through the connector; checked on both apps and through the endpoint against the local stack)
-9. M5 and M6, then v1.0
-10. M7 and the post-v1 list
+9. **M5: projects, calendar, widgets, mini windows, share target** (under way since 2026-09-20:
+   projects with their board, the week and month calendar with dragging, and the Android Today and
+   Habits widgets are built; share to GoalMaker, the Windows mini windows, Startup Profiles and
+   projects through the connector remain)
+10. M6, then v1.0
+11. M7 and the post-v1 list
 
 ## Milestones
 
