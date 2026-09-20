@@ -113,6 +113,21 @@ public static class HabitRules
     }
 
     /// <summary>A day of the heatmap: none, paused, skipped, or the day's value against its target.</summary>
+    /// <summary>The starts of the habit's periods that touch the days <paramref name="from"/> to <paramref name="to"/>, oldest first.</summary>
+    public static IEnumerable<DateOnly> PeriodsBetween(HabitItem habit, DateOnly from, DateOnly to)
+    {
+        var start = PeriodStart(habit, from);
+        while (start <= to)
+        {
+            if (start >= from || PeriodEnd(habit, start) >= from)
+            {
+                yield return start;
+            }
+
+            start = PeriodEnd(habit, start).AddDays(1);
+        }
+    }
+
     public static HabitHeat Heat(HabitItem habit, DateOnly day, IReadOnlyList<HabitCheckin> checkins, IReadOnlyList<HabitPause> pauses)
     {
         if (day < habit.StartsOn || !IsDue(habit, day))

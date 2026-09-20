@@ -241,12 +241,7 @@ public sealed partial class GoalsViewModel : ObservableObject
         var tasksByGoal = taskList.Where(task => task.GoalId is not null).ToLookup(task => task.GoalId!, StringComparer.Ordinal);
         var habitList = habits?.All() ?? [];
         var checkins = habits?.Checkins() ?? [];
-        return goal => GoalRules.Progress(
-            goal.Mode,
-            goal.Status,
-            goal.Target,
-            tasksByGoal[goal.Id],
-            [.. entriesByGoal[goal.Id], .. HabitRules.GoalAmounts(goal, habitList, checkins).Select(amount => new GoalEntryItem(string.Empty, goal.Id, goal.PeriodStart, amount))]);
+        return goal => GoalRules.ProgressOf(goal, tasksByGoal[goal.Id], entriesByGoal[goal.Id], habitList, checkins);
     }
 
     private static string Upper(string text) => text.ToUpper(CultureInfo.CurrentUICulture);

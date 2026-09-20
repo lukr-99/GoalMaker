@@ -82,6 +82,17 @@ object HabitRules {
         return count
     }
 
+    /** The starts of [habit]'s periods that touch the days [from] to [to], oldest first. */
+    fun periodsBetween(habit: HabitItem, from: LocalDate, to: LocalDate): List<LocalDate> {
+        val starts = mutableListOf<LocalDate>()
+        var start = periodStart(habit, from)
+        while (!start.isAfter(to)) {
+            if (!start.isBefore(from) || !periodEnd(habit, start).isBefore(from)) starts += start
+            start = periodEnd(habit, start).plusDays(1)
+        }
+        return starts
+    }
+
     /** A day of the heatmap: none, paused, skipped, or the day's value against its target. */
     fun heat(habit: HabitItem, day: LocalDate, checkins: List<HabitCheckin>, pauses: List<HabitPause>): HabitHeat {
         if (day.isBefore(habit.startsOn) || !isDue(habit, day)) return HabitHeat.None

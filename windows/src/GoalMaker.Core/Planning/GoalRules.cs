@@ -76,6 +76,23 @@ public static class GoalRules
     }
 
     /// <summary>
+    /// Where <paramref name="goal"/> stands, from the tasks that serve it, the entries logged on it and
+    /// the check-ins of the habits that feed a numeric goal (docs/habits.md).
+    /// </summary>
+    public static GoalProgress ProgressOf(
+        GoalItem goal,
+        IEnumerable<TaskItem> tasks,
+        IEnumerable<GoalEntryItem> entries,
+        IReadOnlyList<HabitItem> habits,
+        IReadOnlyList<HabitCheckin> checkins)
+    {
+        IEnumerable<GoalEntryItem> amounts = goal.Mode == ModeNumber && habits.Count > 0
+            ? HabitRules.GoalAmounts(goal, habits, checkins).Select(amount => new GoalEntryItem(string.Empty, goal.Id, goal.PeriodStart, amount))
+            : [];
+        return Progress(goal.Mode, goal.Status, goal.Target, tasks, [.. entries, .. amounts]);
+    }
+
+    /// <summary>
     /// Last period's goals as copies for a new <paramref name="horizon"/> period starting on
     /// <paramref name="start"/>: all but the dropped, each keeping its parent only when that goal still
     /// overlaps the period.

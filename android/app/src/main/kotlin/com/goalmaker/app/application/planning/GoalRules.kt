@@ -53,6 +53,19 @@ object GoalRules {
     }
 
     /**
+     * Where [goal] stands, from the [tasks] that serve it, the [entries] logged on it and the
+     * check-ins of the [habits] that feed a numeric goal (docs/habits.md).
+     */
+    fun progressOf(goal: GoalItem, tasks: List<TaskItem>, entries: List<GoalEntryItem>, habits: HabitData): GoalProgress {
+        val amounts = if (goal.mode != MODE_NUMBER || habits.habits.isEmpty()) {
+            emptyList()
+        } else {
+            HabitRules.goalAmounts(goal, habits.habits, habits.checkins).map { GoalEntryItem("", goal.id, goal.periodStart, it) }
+        }
+        return progress(goal.mode, goal.status, goal.target, tasks, entries + amounts)
+    }
+
+    /**
      * Last period's [goals] as copies for a new [horizon] period starting on [start]: all but the
      * dropped, each keeping its parent only when that goal ([parents], by id) still overlaps the period.
      */

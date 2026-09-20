@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace GoalMaker.Core.Planning;
 
 /// <summary>
@@ -23,4 +25,13 @@ public sealed record TaskItem(
     string? GoalId = null,
 
     /// <summary>How often the task was moved from one planned day to another (docs/reviews.md).</summary>
-    int MovedCount = 0);
+    int MovedCount = 0)
+{
+    /// <summary>The day it was finished, by the server's timestamp, or null while it is not done.</summary>
+    public DateOnly? CompletedDay =>
+        State == TaskState.Done
+        && CompletedAt is { Length: >= 10 } stamp
+        && DateOnly.TryParseExact(stamp[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day
+            : null;
+}

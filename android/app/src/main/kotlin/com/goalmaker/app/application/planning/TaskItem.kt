@@ -25,4 +25,10 @@ data class TaskItem(
     val completedAt: String? = null,
     val goalId: String? = null,
     val movedCount: Int = 0,
-)
+) {
+    /** The day it was finished, by the server's timestamp, or null while it is not done. */
+    val completedDay: LocalDate? get() {
+        val stamp = completedAt?.takeIf { state == TaskState.DONE && it.length >= 10 } ?: return null
+        return runCatching { LocalDate.parse(stamp.take(10)) }.getOrNull()
+    }
+}

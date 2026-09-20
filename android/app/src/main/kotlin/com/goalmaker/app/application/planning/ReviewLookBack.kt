@@ -35,7 +35,7 @@ object ReviewLookBack {
     ): ReviewDigest {
         val end = periodEnd(kind, periodStart)
         val live = tasks.filterNot(TaskItem::deleted)
-        val doneDays = live.mapNotNull { task -> completedOn(task)?.let { it to task } }
+        val doneDays = live.mapNotNull { task -> task.completedDay?.let { it to task } }
         val inPeriod = doneDays.filter { (day, _) -> !day.isBefore(periodStart) && !day.isAfter(end) }
         val previous = previousStart(kind, periodStart)
         val beforeEnd = periodEnd(kind, previous)
@@ -63,20 +63,14 @@ object ReviewLookBack {
         val entriesByGoal = entries.groupBy(GoalEntryItem::goalId)
         val tasksByGoal = live.filter { it.goalId != null }.groupBy { it.goalId!! }
         val goalRows = periodGoals.map { goal ->
-            val progress = GoalRules.progress(
-                goal.mode,
-                goal.status,
-                goal.target,
-                tasksByGoal[goal.id].orEmpty(),
-                entriesByGoal[goal.id].orEmpty() + habitAmounts(goal, habits),
-            )
+            val progress = GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty(), habits)
             ReviewDigest.Goal(goal.id, goal.title, goal.emoji, progress.fraction, progress.hit)
         }
 
         val habitRows = habits.habits.filterNot(HabitItem::archived).map { habit ->
             val checkins = habits.checkinsOf(habit.id)
             val pauses = habits.pausesOf(habit.id)
-            val starts = periods(habit, periodStart, minOf(end, today))
+            val starts = HabitRules.periodsBetween(habit, periodStart, minOf(end, today))
             val states = starts.map { HabitRules.state(habit, it, today, checkins, pauses) }
             ReviewDigest.Habit(
                 id = habit.id,
@@ -134,28 +128,6 @@ object ReviewLookBack {
         ReviewRules.YEARLY -> GoalHorizon.YEAR
         else -> GoalHorizon.WEEK
     }
-
-    // The starts of the habit's periods inside the review's period.
-    private fun periods(habit: HabitItem, from: LocalDate, to: LocalDate): List<LocalDate> {
-        val starts = mutableListOf<LocalDate>()
-        var start = HabitRules.periodStart(habit, from)
-        while (!start.isAfter(to)) {
-            if (!start.isBefore(from) || !HabitRules.periodEnd(habit, start).isBefore(from)) starts += start
-            start = HabitRules.periodEnd(habit, start).plusDays(1)
-        }
-        return starts
-    }
-
-    private fun habitAmounts(goal: GoalItem, habits: HabitData): List<GoalEntryItem> =
-        if (goal.mode != GoalRules.MODE_NUMBER) {
-            emptyList()
-        } else {
-            HabitRules.goalAmounts(goal, habits.habits, habits.checkins).map { GoalEntryItem("", goal.id, goal.periodStart, it) }
-        }
-
-    // The day a task was completed, by the server's timestamp.
-    private fun completedOn(task: TaskItem): LocalDate? =
-        task.completedAt?.takeIf { task.state == TaskState.DONE && it.length >= 10 }?.let { LocalDate.parse(it.take(10)) }
 
     // How often a task was moved: how many days it has slipped past its first plan, at most one a day.
     private fun moves(task: TaskItem): Int = task.movedCount

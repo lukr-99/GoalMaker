@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace GoalMaker.Core.Planning;
 
 /// <summary>
@@ -60,7 +58,7 @@ public static class ReviewLookBack
     {
         var end = PeriodEnd(kind, periodStart);
         var live = tasks.Where(task => !task.Deleted).ToList();
-        var completed = live.Select(task => (Day: CompletedOn(task), Task: task)).Where(entry => entry.Day is not null).ToList();
+        var completed = live.Select(task => (Day: task.CompletedDay, Task: task)).Where(entry => entry.Day is not null).ToList();
         var inPeriod = completed.Where(entry => entry.Day >= periodStart && entry.Day <= end).ToList();
         var previous = PreviousStart(kind, periodStart);
         var beforeEnd = PeriodEnd(kind, previous);
@@ -95,10 +93,7 @@ public static class ReviewLookBack
         var tasksByGoal = live.Where(task => task.GoalId is not null).ToLookup(task => task.GoalId!, StringComparer.Ordinal);
         var goalRows = periodGoals.Select(goal =>
         {
-            var habitAmounts = goal.Mode == GoalRules.ModeNumber
-                ? HabitRules.GoalAmounts(goal, habits, checkins).Select(amount => new GoalEntryItem(string.Empty, goal.Id, goal.PeriodStart, amount))
-                : [];
-            var progress = GoalRules.Progress(goal.Mode, goal.Status, goal.Target, tasksByGoal[goal.Id], [.. entriesByGoal[goal.Id], .. habitAmounts]);
+            var progress = GoalRules.ProgressOf(goal, tasksByGoal[goal.Id], entriesByGoal[goal.Id], habits, checkins);
             return new ReviewDigest.Goal(goal.Id, goal.Title, goal.Emoji, progress.Fraction, progress.Hit);
         }).ToList();
 
@@ -106,7 +101,7 @@ public static class ReviewLookBack
         {
             var own = checkins.Where(checkin => checkin.HabitId == habit.Id).ToList();
             var rests = pauses.Where(pause => pause.HabitId == habit.Id).ToList();
-            var states = Periods(habit, periodStart, last).Select(start => HabitRules.State(habit, start, today, own, rests)).ToList();
+            var states = HabitRules.PeriodsBetween(habit, periodStart, last).Select(start => HabitRules.State(habit, start, today, own, rests)).ToList();
             return new ReviewDigest.Habit(
                 habit.Id,
                 habit.Name,
@@ -144,24 +139,4 @@ public static class ReviewLookBack
         };
     }
 
-    // The starts of the habit's periods inside the review's period.
-    private static IEnumerable<DateOnly> Periods(HabitItem habit, DateOnly from, DateOnly to)
-    {
-        var start = HabitRules.PeriodStart(habit, from);
-        while (start <= to)
-        {
-            if (start >= from || HabitRules.PeriodEnd(habit, start) >= from)
-            {
-                yield return start;
-            }
-
-            start = HabitRules.PeriodEnd(habit, start).AddDays(1);
-        }
-    }
-
-    // The day a task was completed, by the server's timestamp.
-    private static DateOnly? CompletedOn(TaskItem task) =>
-        task.State == TaskState.Done && task.CompletedAt is { Length: >= 10 } stamp
-            ? DateOnly.ParseExact(stamp[..10], "yyyy-MM-dd", CultureInfo.InvariantCulture)
-            : null;
 }

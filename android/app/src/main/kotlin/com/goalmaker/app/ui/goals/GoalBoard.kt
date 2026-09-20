@@ -5,7 +5,6 @@ import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitData
-import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.TaskItem
 import java.time.LocalDate
 
@@ -28,7 +27,7 @@ object GoalBoard {
         val tasksByGoal = tasks.filter { it.goalId != null }.groupBy { it.goalId!! }
         fun row(goal: GoalItem, depth: Int = 0) = GoalRow(
             goal = goal,
-            progress = GoalRules.progress(goal.mode, goal.status, goal.target, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty() + habitEntries(goal, habits)),
+            progress = GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty(), habits),
             parentTitle = goal.parentId?.let(byId::get)?.title,
             depth = depth,
         )
@@ -76,11 +75,4 @@ object GoalBoard {
     fun thisWeek(all: List<GoalItem>, entries: List<GoalEntryItem>, tasks: List<TaskItem>, today: LocalDate, habits: HabitData = HabitData()): List<GoalRow> =
         build(all, entries, tasks, today, habits = habits).sections.first { it.horizon == GoalHorizon.WEEK && !it.next }.rows
 
-    // A numeric goal's habit check-ins, as entries on the goal.
-    private fun habitEntries(goal: GoalItem, habits: HabitData): List<GoalEntryItem> =
-        if (goal.mode != GoalRules.MODE_NUMBER || habits.habits.isEmpty()) {
-            emptyList()
-        } else {
-            HabitRules.goalAmounts(goal, habits.habits, habits.checkins).map { GoalEntryItem("", goal.id, goal.periodStart, it) }
-        }
 }
