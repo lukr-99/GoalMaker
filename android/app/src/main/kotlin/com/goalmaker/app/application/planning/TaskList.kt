@@ -80,6 +80,8 @@ class TaskList(
                     "recurrence" to (draft.repeat?.let(::JsonPrimitive) ?: JsonNull),
                     "project_id" to (projectId?.let(::JsonPrimitive) ?: JsonNull),
                     "item_type" to JsonPrimitive(itemType),
+                    // Every column the server has must carry a value: a null defeats its default.
+                    "priority" to JsonPrimitive(ProjectRules.NORMAL),
                     "board_column" to (
                         projectId?.let { JsonPrimitive(ProjectRules.columnFor(itemType)) } ?: JsonNull
                         ),

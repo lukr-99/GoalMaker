@@ -11,6 +11,10 @@ public sealed class TaskListTests : IDisposable
     private readonly FakeTimeProvider time = new(new DateTimeOffset(2026, 9, 18, 12, 0, 0, TimeSpan.Zero));
     private int syncRequests;
 
+    /// <summary>The columns the server's tasks table has as not null.</summary>
+    private static readonly string[] Required =
+        ["id", "owner_id", "title", "notes", "top_priority", "status", "position", "moved_count", "item_type", "priority"];
+
     private TaskList Tasks(string? owner = TestReplica.Owner)
     {
         var rows = new NewRows(test.Catalog, () => owner, time);
@@ -34,6 +38,14 @@ public sealed class TaskListTests : IDisposable
         Assert.Equal(TestReplica.Owner, (string?)row["owner_id"]);
         Assert.Equal("2026-09-18T12:00:00.000000Z", (string?)row["created_at"]);
         Assert.Equal(test.Catalog["tasks"].Columns.Count, row.Count);
+
+        // The server refuses a row that carries a null where its column is not null, and a null
+        // defeats the column's default (Supabase migrations 0003 and 0013).
+        foreach (var column in Required)
+        {
+            Assert.True(row[column] is not null, $"{column} needs a value");
+        }
+
         Assert.Single(test.Replica.Outbox());
         Assert.Equal(1, syncRequests);
     }

@@ -97,6 +97,8 @@ public sealed class TaskList
                 ["recurrence"] = draft.Repeat,
                 ["project_id"] = projectId,
                 ["item_type"] = itemType,
+                // Every column the server has must carry a value: a null defeats its default.
+                ["priority"] = ProjectRules.Normal,
                 ["board_column"] = projectId is null ? null : ProjectRules.ColumnFor(itemType),
             });
             if (task is null)
