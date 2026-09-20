@@ -34,6 +34,13 @@ harness stops at the first migration that has none, so the whole chain went unch
 someone ran it. `python tools/supabase_migrations.py test` says exactly which file it wants; run it
 with the migration, not later.
 
+## WPF will not show a maximized window without activating it
+
+2026-09-20, M6. `Show()` throws "Cannot show Window when ShowActivated is false and WindowState is
+set to Maximized", so GoalMaker died at start-up whenever a window left maximized was launched with
+`--no-activate`, which is how the dev guides and start-up scripts launch it. A window in that state
+goes up normal and is maximized once it is on screen (`WindowShow.Plan`).
+
 ## A test that formats a date or a time must format it the way the code does
 
 2026-09-20 and 2026-09-18. `"14,20 SEP"` and `"18:00"` are one machine's calendar and clock. A

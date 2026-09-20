@@ -6,7 +6,9 @@ using GoalMaker.App.Shell;
 using GoalMaker.App.Startup;
 using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
+using System.Globalization;
 using GoalMaker.Core.About;
+using GoalMaker.Core.Backup;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
@@ -14,6 +16,7 @@ using GoalMaker.Core.Startup;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 using GoalMaker.Infrastructure.Activity;
+using GoalMaker.Infrastructure.Backup;
 using GoalMaker.Infrastructure.Auth;
 using GoalMaker.Infrastructure.Connector;
 using GoalMaker.Infrastructure.Planning;
@@ -244,12 +247,22 @@ public sealed class AppGraph : IDisposable
         shownDay = PlanningDay.Of(DateTime.Now, Settings.DayStartHour);
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
+        // Your data (docs/backup.md): the export both apps read, and the weekly one into a folder.
+        Backup = new BackupService(
+            catalog, replica, () => (Auth.Session as AuthSession.SignedIn)?.UserId, AppInfo.Version, "windows", TimeProvider.System);
+        var backupFolder = new DiskBackupFolder();
+        Weekly = new WeeklyBackup(Backup, Settings, TimeProvider.System, backupFolder);
+        // One a week, looked at after every sync run, so a PC that was off for three weeks writes
+        // one at its next start rather than three (story 92).
+        Sync.RunCompleted += (_, _) => Weekly.Run();
+
         // Startup: GoalMaker's own value under Run (story 81), and the ask that hands it to Startup
         // Profiles through that app's own window when it is installed (story 84).
         var executable = Environment.ProcessPath ?? string.Empty;
         SettingsPage = new SettingsViewModel(
             Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm,
             gesture => ApplyQuickAddHotkey(gesture), OpenMini,
+            Backup, Weekly, backupFolder, Sync.Request, PickExport, PickImport, PickFolder,
             new WindowsSignInStartup(build.InstanceName, executable),
             new WindowsStartupProfiles(),
             new StartupProfilesRequest("com.goalmaker.app", strings.Get("App.Name"), executable)
@@ -265,6 +278,38 @@ public sealed class AppGraph : IDisposable
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
         Activity = new ActivityViewModel(new PostgrestActivityLog(postgrest), strings, Sync.Request);
     }
+
+    // Where an export is written, where one is read from, and the folder the weekly one uses. The
+    // owner always picks: GoalMaker never writes outside what they chose.
+    private static string? PickExport()
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = BackupRules.FileName(DateOnly.FromDateTime(DateTime.Now).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
+            Filter = "GoalMaker export (*.json)|*.json",
+            DefaultExt = ".json",
+            AddExtension = true,
+        };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    private static string? PickImport()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "GoalMaker export (*.json)|*.json", CheckFileExists = true };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
+    private static string? PickFolder()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog { Multiselect = false };
+        return dialog.ShowDialog() == true ? dialog.FolderName : null;
+    }
+
+    /// <summary>Reading the owner's data out to a file and back in (docs/backup.md).</summary>
+    public BackupService Backup { get; private set; } = null!;
+
+    /// <summary>The weekly export into the folder the owner chose; the shell runs it after a sync.</summary>
+    public WeeklyBackup Weekly { get; private set; } = null!;
 
     /// <summary>The Claude connector card in Settings.</summary>
     public ConnectorViewModel Connector { get; }

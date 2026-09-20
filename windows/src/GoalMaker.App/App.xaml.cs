@@ -131,12 +131,13 @@ public partial class App : Application
             return;
         }
 
+        // WPF refuses to show a maximized window without activating it, so a window left maximized
+        // and asked for with --no-activate goes up normal and is maximized once it is on screen.
+        var (show, after) = WindowShow.Plan(activate, window.WindowState);
+        window.WindowState = show;
         window.ShowActivated = activate;
         window.Show();
-        if (window.WindowState == WindowState.Minimized)
-        {
-            window.WindowState = WindowState.Normal;
-        }
+        window.WindowState = after;
 
         if (activate)
         {

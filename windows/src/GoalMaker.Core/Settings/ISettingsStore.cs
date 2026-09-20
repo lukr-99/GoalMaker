@@ -45,4 +45,10 @@ public interface ISettingsStore
 
     /// <summary>Where each mini window was last and whether it was pinned, by its name.</summary>
     IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; }
+
+    /// <summary>The folder the weekly export writes into, or null when it is off (docs/backup.md).</summary>
+    string? WeeklyBackupFolder { get; set; }
+
+    /// <summary>When the last weekly export was written; the next is due a week after it.</summary>
+    DateTimeOffset? WeeklyBackupWritten { get; set; }
 }

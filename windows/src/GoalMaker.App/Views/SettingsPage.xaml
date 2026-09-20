@@ -226,6 +226,38 @@
                 </StackPanel>
             </ui:Card>
 
+            <!-- Your data (docs/backup.md): one file with everything, and the weekly one. -->
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Backup}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" Text="{DynamicResource Settings.BackupHint}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Content="{DynamicResource Settings.BackupExport}" Command="{Binding ExportDataCommand}" />
+                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.BackupRestore}" Command="{Binding OfferRestoreCommand}" />
+                        <ui:Button Margin="8,0,0,0"
+                                   Appearance="Primary"
+                                   Content="{DynamicResource Settings.BackupRestoreGo}"
+                                   Command="{Binding RestoreDataCommand}"
+                                   Visibility="{Binding HasPendingRestore, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,16,0,4" Text="{DynamicResource Settings.BackupWeekly}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Settings.BackupWeeklyHint}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Content="{DynamicResource Settings.BackupWeeklyChoose}" Command="{Binding ChooseWeeklyBackupCommand}" />
+                        <ui:Button Margin="8,0,0,0"
+                                   Content="{DynamicResource Settings.BackupWeeklyOffButton}"
+                                   Command="{Binding TurnOffWeeklyBackupCommand}"
+                                   Visibility="{Binding HasWeeklyBackup, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                    <TextBlock Style="{StaticResource Hint}"
+                               Margin="0,8,0,0"
+                               Text="{Binding WeeklyBackupFolder}"
+                               Visibility="{Binding HasWeeklyBackup, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding BackupStatus}" />
+                </StackPanel>
+            </ui:Card>
+
             <!-- Startup: GoalMaker's own (story 81) and the ask that hands it to Startup Profiles (story 84). -->
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>

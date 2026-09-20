@@ -408,6 +408,27 @@
     <!-- Habits (docs/habits.md) -->
     <sys:String x:Key="Nav.Habits">Habits</sys:String>
     <sys:String x:Key="Habits.Title">Habits</sys:String>
+    <sys:String x:Key="Settings.Backup">Your data</sys:String>
+    <sys:String x:Key="Settings.BackupHint">One file with everything: your tasks, goals, habits, projects and reviews. A restore adds what is missing and never deletes anything.</sys:String>
+    <sys:String x:Key="Settings.BackupExport">Export</sys:String>
+    <sys:String x:Key="Settings.BackupRestore">Choose a file to restore</sys:String>
+    <sys:String x:Key="Settings.BackupRestoreGo">Restore now</sys:String>
+    <sys:String x:Key="Settings.BackupWeekly">Weekly backup</sys:String>
+    <sys:String x:Key="Settings.BackupWeeklyHint">GoalMaker writes one export a week into a folder you choose, and keeps the last eight.</sys:String>
+    <sys:String x:Key="Settings.BackupWeeklyChoose">Choose the folder</sys:String>
+    <sys:String x:Key="Settings.BackupWeeklyOffButton">Turn it off</sys:String>
+    <sys:String x:Key="Settings.BackupWeeklyOn">Weekly backup is on, and the first one is written.</sys:String>
+    <sys:String x:Key="Settings.BackupWeeklyOff">Weekly backup is off. The files already written stay where they are.</sys:String>
+    <sys:String x:Key="Settings.BackupExported">Exported.</sys:String>
+    <sys:String x:Key="Settings.BackupPreview">This file would add {0} and update {1}. {2} are already as new here or newer, and stay. Restore now to go ahead.</sys:String>
+    <sys:String x:Key="Settings.BackupRestored">Restored: {0} added, {1} updated, {2} left as they were.</sys:String>
+    <sys:String x:Key="Settings.BackupNotWritten">That file could not be written. Pick another place and try again.</sys:String>
+    <sys:String x:Key="Settings.BackupNotRead">That file could not be read. Pick it again, or try another copy.</sys:String>
+    <sys:String x:Key="Settings.BackupNotABackup">That file could not be read as a GoalMaker export.</sys:String>
+    <sys:String x:Key="Settings.BackupTooNew">That export is from a newer GoalMaker. Update this one first.</sys:String>
+    <sys:String x:Key="Settings.BackupAnotherOwner">That export belongs to another account.</sys:String>
+    <sys:String x:Key="Settings.BackupUnknownTable">That export holds something this version does not know. Update GoalMaker first.</sys:String>
+    <sys:String x:Key="Settings.BackupBrokenRow">That export has a row with no id, so it cannot be trusted.</sys:String>
     <sys:String x:Key="Settings.Startup">Startup</sys:String>
     <sys:String x:Key="Settings.StartWithWindows">Start GoalMaker in the tray when I sign in</sys:String>
     <sys:String x:Key="Settings.StartWithWindowsHint">Reminders on this PC need GoalMaker running, so leave this on unless you start it yourself.</sys:String>

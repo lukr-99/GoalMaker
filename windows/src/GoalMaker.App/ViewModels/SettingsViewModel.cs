@@ -8,6 +8,7 @@ using GoalMaker.App.Startup;
 using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
+using GoalMaker.Core.Backup;
 using GoalMaker.Core.Design;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
@@ -33,6 +34,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly Action quietHoursChanged;
     private readonly Func<HotkeyGesture?, bool> applyQuickAddHotkey;
     private readonly Action<MiniPage> openMini;
+    private readonly BackupService backup;
+    private readonly WeeklyBackup weekly;
+    private readonly Action requestSync;
+    private readonly Func<string?> pickExport;
+    private readonly Func<string?> pickImport;
+    private readonly Func<string?> pickFolder;
+    private readonly IBackupFolder folder;
     private readonly ISignInStartup signInStartup;
     private readonly IStartupProfiles startupProfiles;
     private readonly StartupProfilesRequest startupProfilesRequest;
@@ -71,6 +79,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string startupProfilesStatus = string.Empty;
 
+    [ObservableProperty]
+    private string backupStatus = string.Empty;
+
+    private string weeklyBackupFolder = string.Empty;
+    private string? pending;
+
     private bool startsWithWindows;
 
     [ObservableProperty]
@@ -93,6 +107,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action quietHoursChanged,
         Func<HotkeyGesture?, bool> applyQuickAddHotkey,
         Action<MiniPage> openMini,
+        BackupService backup,
+        WeeklyBackup weekly,
+        IBackupFolder folder,
+        Action requestSync,
+        Func<string?> pickExport,
+        Func<string?> pickImport,
+        Func<string?> pickFolder,
         ISignInStartup signInStartup,
         IStartupProfiles startupProfiles,
         StartupProfilesRequest startupProfilesRequest,
@@ -100,6 +121,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action<Action> runOnUi)
     {
         this.openMini = openMini;
+        this.backup = backup;
+        this.weekly = weekly;
+        this.folder = folder;
+        this.requestSync = requestSync;
+        this.pickExport = pickExport;
+        this.pickImport = pickImport;
+        this.pickFolder = pickFolder;
+        weeklyBackupFolder = settings.WeeklyBackupFolder ?? string.Empty;
         this.signInStartup = signInStartup;
         this.startupProfiles = startupProfiles;
         this.startupProfilesRequest = startupProfilesRequest;
@@ -371,6 +400,134 @@ public sealed partial class SettingsViewModel : ObservableObject
         StartupProfilesStatus = strings.Get(startupProfiles.Ask(startupProfilesRequest)
             ? "Settings.StartupProfilesAsked"
             : "Settings.StartupProfilesFailed");
+
+    /// <summary>The folder the weekly export writes into, or empty when it is off (story 92).</summary>
+    public string WeeklyBackupFolder
+    {
+        get => weeklyBackupFolder;
+        private set
+        {
+            weeklyBackupFolder = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasWeeklyBackup));
+        }
+    }
+
+    public bool HasWeeklyBackup => WeeklyBackupFolder.Length > 0;
+
+    /// <summary>Writes the whole export wherever the owner picks (story 91).</summary>
+    [RelayCommand]
+    private void ExportData()
+    {
+        if (pickExport() is not { } path)
+        {
+            return;
+        }
+
+        var text = backup.Export();
+        BackupStatus = strings.Get(text is not null && folder.Write(
+            System.IO.Path.GetDirectoryName(path) ?? string.Empty,
+            System.IO.Path.GetFileName(path),
+            text ?? string.Empty)
+            ? "Settings.BackupExported"
+            : "Settings.BackupNotWritten");
+    }
+
+    /// <summary>Reads a file and says what restoring it would do; RestoreData then does it.</summary>
+    [RelayCommand]
+    private void OfferRestore()
+    {
+        if (pickImport() is not { } path)
+        {
+            return;
+        }
+
+        var text = Read(path);
+        if (text is null)
+        {
+            BackupStatus = strings.Get("Settings.BackupNotRead");
+            return;
+        }
+
+        if (backup.Check(text) is { } problem)
+        {
+            pending = null;
+            BackupStatus = strings.Get(Reason(problem));
+            return;
+        }
+
+        pending = text;
+        var preview = backup.Preview(text) ?? new RestoreReport();
+        BackupStatus = strings.Get("Settings.BackupPreview", preview.Added, preview.Updated, preview.Kept);
+        OnPropertyChanged(nameof(HasPendingRestore));
+    }
+
+    /// <summary>Restores the file the owner just looked at.</summary>
+    [RelayCommand]
+    private void RestoreData()
+    {
+        if (pending is not { } text)
+        {
+            return;
+        }
+
+        var report = backup.Restore(text, requestSync);
+        pending = null;
+        OnPropertyChanged(nameof(HasPendingRestore));
+        BackupStatus = report is null
+            ? strings.Get("Settings.BackupNotRead")
+            : strings.Get("Settings.BackupRestored", report.Added, report.Updated, report.Kept);
+    }
+
+    /// <summary>True while a file has been read and checked but not restored yet.</summary>
+    public bool HasPendingRestore => pending is not null;
+
+    /// <summary>Picks the folder the weekly export writes into, and writes the first one now.</summary>
+    [RelayCommand]
+    private void ChooseWeeklyBackup()
+    {
+        if (pickFolder() is not { } chosen)
+        {
+            return;
+        }
+
+        settings.WeeklyBackupFolder = chosen;
+        settings.WeeklyBackupWritten = null;
+        WeeklyBackupFolder = chosen;
+        BackupStatus = strings.Get(weekly.Run() == WeeklyBackupResult.Written
+            ? "Settings.BackupWeeklyOn"
+            : "Settings.BackupNotWritten");
+    }
+
+    /// <summary>Stops the weekly export; the files already written stay where they are.</summary>
+    [RelayCommand]
+    private void TurnOffWeeklyBackup()
+    {
+        settings.WeeklyBackupFolder = null;
+        WeeklyBackupFolder = string.Empty;
+        BackupStatus = strings.Get("Settings.BackupWeeklyOff");
+    }
+
+    private static string Reason(BackupProblem problem) => problem switch
+    {
+        BackupProblem.TooNew => "Settings.BackupTooNew",
+        BackupProblem.AnotherOwner => "Settings.BackupAnotherOwner",
+        BackupProblem.UnknownTable => "Settings.BackupUnknownTable",
+        BackupProblem.RowWithoutId => "Settings.BackupBrokenRow",
+        _ => "Settings.BackupNotABackup",
+    };
+
+    private static string? Read(string path)
+    {
+        try
+        {
+            return System.IO.File.ReadAllText(path);
+        }
+        catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Opens the Today mini window (spec, story 80); the tray and `--mini today` do the same.</summary>
     [RelayCommand]

@@ -49,7 +49,16 @@ confirms and after it runs.
 
 ## In the apps
 
-Android: Settings, Your data. **Export** writes through the system file picker, so no storage
-permission is asked for, and offers the name `goalmaker-<day>.json`. **Restore** picks a file, says
-what it would do, and waits for the owner to agree. A file that cannot be written or read says so on
-its own terms; a file that is refused says which check failed.
+Both apps put this under Settings, **Your data**. **Export** writes the file wherever the owner
+picks, under the name `goalmaker-<day>.json`; on Android that is the system file picker, so no
+storage permission is asked for. **Restore** picks a file, says what it would do, and waits for the
+owner to agree. A file that cannot be written or read says so on its own terms; a file that is
+refused says which check failed.
+
+## The weekly backup on Windows
+
+Windows also writes one export a week into a folder the owner chooses (spec, story 92), and keeps
+the last eight. The week is counted from the last one that was written, not from a calendar day, so
+a PC that was off for three weeks writes one at its next start rather than three. It is looked at
+after every sync, and a folder that has gone away turns the weekly backup off and says so, rather
+than failing quietly every week.

@@ -118,6 +118,18 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { MiniWindows = new Dictionary<string, MiniWindowState>(value, StringComparer.Ordinal) });
     }
 
+    public string? WeeklyBackupFolder
+    {
+        get => document.WeeklyBackupFolder;
+        set => Save(document with { WeeklyBackupFolder = string.IsNullOrWhiteSpace(value) ? null : value.Trim() });
+    }
+
+    public DateTimeOffset? WeeklyBackupWritten
+    {
+        get => document.WeeklyBackupWritten;
+        set => Save(document with { WeeklyBackupWritten = value });
+    }
+
     private static SettingsDocument Load(string path)
     {
         try

@@ -46,4 +46,8 @@ public sealed record SettingsDocument
     public WindowPlacement? MainWindowPlacement { get; init; }
 
     public Dictionary<string, MiniWindowState>? MiniWindows { get; init; }
+
+    public string? WeeklyBackupFolder { get; init; }
+
+    public DateTimeOffset? WeeklyBackupWritten { get; init; }
 }
