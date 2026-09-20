@@ -25,6 +25,14 @@ export interface TaskItem {
   goalId?: string | null;
   /** How often the task was moved from one planned day to another (docs/reviews.md). */
   movedCount?: number;
+  /** The project this task is an item of, and what the board says about it (docs/projects.md). */
+  projectId?: string | null;
+  itemType?: string;
+  boardColumn?: string | null;
+  priority?: string;
+  milestoneId?: string | null;
+  /** Where the owner dragged it inside its column or list. */
+  position?: number;
 }
 
 /** Text order, the way Kotlin and C# compare strings (UTF-16 code units). */

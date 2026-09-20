@@ -25,6 +25,12 @@ data class TaskItem(
     val completedAt: String? = null,
     val goalId: String? = null,
     val movedCount: Int = 0,
+    val projectId: String? = null,
+    val itemType: String = ProjectRules.TASK,
+    val boardColumn: String? = null,
+    val priority: String = ProjectRules.NORMAL,
+    val milestoneId: String? = null,
+    val position: Double = 0.0,
 ) {
     /** The day it was finished, by the server's timestamp, or null while it is not done. */
     val completedDay: LocalDate? get() {

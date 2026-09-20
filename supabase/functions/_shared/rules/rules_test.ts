@@ -37,6 +37,7 @@ import {
   reactive,
   rotation,
 } from "./prompts.ts";
+import { board, columnFor, COLUMNS, finishedIn, moved, order, PRIORITIES } from "./projects.ts";
 import { periodStart, reviewId } from "./reviews.ts";
 import type { TaskItem, TaskState } from "./task.ts";
 
@@ -163,6 +164,45 @@ Deno.test("reviews.json: review ids and periods", async () => {
   }
   for (const vector of file.periods) {
     assertEquals(periodStart(vector.kind, vector.day), vector.start, `${vector.kind} ${vector.day}`);
+  }
+});
+
+Deno.test("projects.json: new items, moves, finishing, order and the board", async () => {
+  const file = await vectors("projects.json");
+  assertEquals(COLUMNS, file.columns);
+  assertEquals(PRIORITIES, file.priorities);
+  for (const vector of file.newItems) {
+    assertEquals(columnFor(vector.type), vector.expect, vector.name);
+  }
+  for (const vector of file.moves) {
+    assertEquals(vector.expect.column, vector.column, vector.name);
+    assertEquals(moved(vector.column, vector.state), vector.expect.state, vector.name);
+  }
+  for (const vector of file.finishing) {
+    assertEquals(finishedIn(vector.state, vector.column), vector.expect, vector.name);
+  }
+  const items = (rows: Json[]): TaskItem[] =>
+    rows.map((fields: Json, index: number) => ({
+      ...task({ id: fields.id, status: fields.state }, index),
+      createdAt: fields.createdAt,
+      projectId: "p",
+      boardColumn: fields.column,
+      priority: fields.priority,
+      position: fields.position,
+    }));
+  for (const vector of file.order) {
+    assertEquals(order(items(vector.items)).map((item) => item.id), vector.expect, vector.name);
+  }
+  for (const vector of file.board) {
+    const columns = board(items(vector.items));
+    assertEquals(columns.map((column) => column.column), file.columns, vector.name);
+    for (const column of columns) {
+      assertEquals(
+        column.items.map((item) => item.id),
+        vector.expect[column.column],
+        `${vector.name} ${column.column}`,
+      );
+    }
   }
 });
 

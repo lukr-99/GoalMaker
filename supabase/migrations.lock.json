@@ -12,6 +12,7 @@
     "0009_goals.sql": "00d1f66db91972f1b1ff1ce47b9c09be7e8f2bd8919d3f5088ffda093b1bc5da",
     "0010_habits.sql": "5f1594baee6196be1a9cb3e3567868b75f53c24a36147422bfefe2bab5d3da93",
     "0011_review_reflections.sql": "8946a365b38d8143920eabb81aa4eb0f0fe1b25317b69df3be6db7d18caa475b",
-    "0012_task_moves.sql": "0948282727ac1e40a71f5ed2eb1c91481efbc09890c755311f4eea9dba6f1034"
+    "0012_task_moves.sql": "0948282727ac1e40a71f5ed2eb1c91481efbc09890c755311f4eea9dba6f1034",
+    "0013_projects.sql": "0719cf24032685bc9e864c95da8168cf7f0fe852c2f385129f0c6d730ca2f98f"
   }
 }

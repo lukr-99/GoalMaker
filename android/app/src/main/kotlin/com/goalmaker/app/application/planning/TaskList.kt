@@ -13,8 +13,9 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 
 /**
  * Tasks as the lists need them: read from the replica, written through its outbox. Every write
@@ -299,6 +300,12 @@ class TaskList(
         deadline = row.text("deadline")?.let(LocalDate::parse),
         completedAt = row.text("completed_at"),
         goalId = row.text(GOAL_ID),
+        projectId = row.text("project_id"),
+        itemType = row.text("item_type") ?: ProjectRules.TASK,
+        boardColumn = row.text("board_column"),
+        priority = row.text("priority") ?: ProjectRules.NORMAL,
+        milestoneId = row.text("milestone_id"),
+        position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
     )
 
     private companion object {

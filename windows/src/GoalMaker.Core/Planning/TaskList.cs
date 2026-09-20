@@ -420,5 +420,11 @@ public sealed class TaskList
         Deadline: (string?)row["deadline"] is { } deadline ? DateOnly.ParseExact(deadline, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null,
         CompletedAt: (string?)row["completed_at"],
         GoalId: (string?)row[GoalId],
-        MovedCount: row["moved_count"] is System.Text.Json.Nodes.JsonValue moved && moved.TryGetValue<long>(out var count) ? (int)count : 0);
+        MovedCount: row["moved_count"] is System.Text.Json.Nodes.JsonValue moved && moved.TryGetValue<long>(out var count) ? (int)count : 0,
+        ProjectId: (string?)row["project_id"],
+        ItemType: (string?)row["item_type"] ?? ProjectRules.Task,
+        BoardColumn: (string?)row["board_column"],
+        Priority: (string?)row["priority"] ?? ProjectRules.Normal,
+        MilestoneId: (string?)row["milestone_id"],
+        Position: row["position"] is System.Text.Json.Nodes.JsonValue place && place.TryGetValue<double>(out var at) ? at : 0);
 }

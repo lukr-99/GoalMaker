@@ -1,0 +1,56 @@
+# Projects
+
+A project is where long-running work lives: code projects above all, but anything with its own
+backlog (spec, stories 43 to 50). The rules below are pinned by
+[`contracts/vectors/projects.json`](../contracts/vectors/projects.json) and run by both apps and the
+connector.
+
+## A project
+
+A project has a name, a description, an **area**, a **status** (active, paused or done), the
+**repository URL** and the **local folder** it lives in, and notes. The repository and the folder are
+what let a tool find the right project: Claude Code working in `F:\GoalMaker` can drop an idea into
+this project's backlog without being told which one it is (story 76, [connector](connector.md)).
+
+**Milestones** are optional and belong to one project: M0 to M6, or whatever the owner calls them.
+An item may carry one.
+
+## Items are tasks
+
+A project item is an ordinary task with project columns on it, not a thing of its own. It keeps its
+area, tags, steps, reminders and repeat, and a project item with a planned day turns up in Today next
+to everything else (story 50). Every task, in or out of a project, carries a **priority**: low,
+normal, high or urgent.
+
+An item is typed **task**, **idea** or **bug**, and sits in one of four **board columns**:
+
+| Column | What it holds |
+|---|---|
+| Backlog | Everything caught but not chosen yet. New ideas land here (story 49). |
+| To do | Chosen for soon. New tasks and bugs land here. |
+| Doing | In hand now. |
+| Done | Finished. |
+
+The column and the task's own state move together, so a board and a list never disagree:
+
+- Moving an item to **Done** completes the task, exactly as ticking it does.
+- Completing a task that is a project item moves it to **Done**.
+- Moving a done item back to any other column reopens it.
+- Dropping a task leaves its column alone: a dropped item stays where it was, greyed out.
+
+Items are ordered inside a column by priority (urgent, high, normal, low), then by the position the
+owner dragged them to, then by when they were created.
+
+## In the apps
+
+Windows shows the four columns side by side as a board, Android the same items as a grouped list,
+one group per column with a move action. Both offer the project list with its status, area,
+repository and folder, and the milestones of the project on show.
+
+## Storage
+
+`projects` and `project_milestones` are synced tables (Supabase migration 0013, replica migration
+0008), and `tasks` gained `project_id`, `item_type`, `board_column`, `priority` and `milestone_id`.
+A task with no project has no column and no milestone, which a check constraint keeps true, and a
+milestone has to belong to the item's own project. Deleting a project leaves its items behind as
+plain tasks rather than taking them with it.

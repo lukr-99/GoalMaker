@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'moves': what moving an item to a column does to the task itself: the done column completes it, any other column reopens a done one, and a dropped item keeps its state wherever it sits. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the four columns of a project with their items in that order. 2026-09-18 is a Friday.",
+  "columns": [
+    "backlog",
+    "todo",
+    "doing",
+    "done"
+  ],
+  "priorities": [
+    "urgent",
+    "high",
+    "normal",
+    "low"
+  ],
+  "newItems": [
+    {
+      "name": "an idea lands in the backlog so it does not clutter to do",
+      "type": "idea",
+      "expect": "backlog"
+    },
+    {
+      "name": "a task is chosen for soon",
+      "type": "task",
+      "expect": "todo"
+    },
+    {
+      "name": "a bug is chosen for soon",
+      "type": "bug",
+      "expect": "todo"
+    }
+  ],
+  "moves": [
+    {
+      "name": "moving an item to done finishes the task",
+      "column": "done",
+      "state": "open",
+      "expect": {
+        "column": "done",
+        "state": "done"
+      }
+    },
+    {
+      "name": "moving a done item back to doing reopens it",
+      "column": "doing",
+      "state": "done",
+      "expect": {
+        "column": "doing",
+        "state": "open"
+      }
+    },
+    {
+      "name": "moving between the open columns leaves the task alone",
+      "column": "backlog",
+      "state": "open",
+      "expect": {
+        "column": "backlog",
+        "state": "open"
+      }
+    },
+    {
+      "name": "a dropped item keeps its state wherever it is put",
+      "column": "done",
+      "state": "dropped",
+      "expect": {
+        "column": "done",
+        "state": "dropped"
+      }
+    }
+  ],
+  "finishing": [
+    {
+      "name": "completing an item moves it to done",
+      "state": "done",
+      "column": "doing",
+      "expect": "done"
+    },
+    {
+      "name": "reopening a done item puts it back in to do",
+      "state": "open",
+      "column": "done",
+      "expect": "todo"
+    },
+    {
+      "name": "reopening an item that never left its column changes nothing",
+      "state": "open",
+      "column": "doing",
+      "expect": "doing"
+    },
+    {
+      "name": "dropping leaves the column alone",
+      "state": "dropped",
+      "column": "doing",
+      "expect": "doing"
+    }
+  ],
+  "order": [
+    {
+      "name": "the most important first, then where the owner put them",
+      "items": [
+        {
+          "id": "a",
+          "column": "todo",
+          "priority": "normal",
+          "position": 1,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "b",
+          "column": "todo",
+          "priority": "urgent",
+          "position": 5,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "c",
+          "column": "todo",
+          "priority": "high",
+          "position": 2,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "d",
+          "column": "todo",
+          "priority": "low",
+          "position": 0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "e",
+          "column": "todo",
+          "priority": "high",
+          "position": 1,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        }
+      ],
+      "expect": [
+        "b",
+        "e",
+        "c",
+        "a",
+        "d"
+      ]
+    },
+    {
+      "name": "the same priority and position falls back to the oldest, then the id",
+      "items": [
+        {
+          "id": "b",
+          "column": "todo",
+          "priority": "normal",
+          "position": 0.0,
+          "createdAt": "2026-09-18T09:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "a",
+          "column": "todo",
+          "priority": "normal",
+          "position": 0.0,
+          "createdAt": "2026-09-18T09:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "c",
+          "column": "todo",
+          "priority": "normal",
+          "position": 0.0,
+          "createdAt": "2026-09-17T09:00:00Z",
+          "state": "open"
+        }
+      ],
+      "expect": [
+        "c",
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "board": [
+    {
+      "name": "a board with something in every column",
+      "items": [
+        {
+          "id": "i1",
+          "column": "backlog",
+          "priority": "low",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "i2",
+          "column": "backlog",
+          "priority": "urgent",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "i3",
+          "column": "todo",
+          "priority": "normal",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "i4",
+          "column": "doing",
+          "priority": "high",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "i5",
+          "column": "done",
+          "priority": "normal",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "done"
+        },
+        {
+          "id": "i6",
+          "column": "doing",
+          "priority": "high",
+          "position": 1,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        }
+      ],
+      "expect": {
+        "backlog": [
+          "i2",
+          "i1"
+        ],
+        "todo": [
+          "i3"
+        ],
+        "doing": [
+          "i4",
+          "i6"
+        ],
+        "done": [
+          "i5"
+        ]
+      }
+    },
+    {
+      "name": "an empty project still has its four columns",
+      "items": [],
+      "expect": {
+        "backlog": [],
+        "todo": [],
+        "doing": [],
+        "done": []
+      }
+    }
+  ]
+}

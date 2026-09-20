@@ -334,6 +334,100 @@
       ]
     },
     {
+      "name": "projects",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text"
+        },
+        {
+          "name": "owner_id",
+          "kind": "text"
+        },
+        {
+          "name": "name",
+          "kind": "text"
+        },
+        {
+          "name": "description",
+          "kind": "text"
+        },
+        {
+          "name": "area_id",
+          "kind": "text"
+        },
+        {
+          "name": "status",
+          "kind": "text"
+        },
+        {
+          "name": "repository_url",
+          "kind": "text"
+        },
+        {
+          "name": "local_folder",
+          "kind": "text"
+        },
+        {
+          "name": "notes",
+          "kind": "text"
+        },
+        {
+          "name": "position",
+          "kind": "real"
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp"
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp"
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp"
+        }
+      ]
+    },
+    {
+      "name": "project_milestones",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text"
+        },
+        {
+          "name": "owner_id",
+          "kind": "text"
+        },
+        {
+          "name": "project_id",
+          "kind": "text"
+        },
+        {
+          "name": "name",
+          "kind": "text"
+        },
+        {
+          "name": "position",
+          "kind": "real"
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp"
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp"
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp"
+        }
+      ]
+    },
+    {
       "name": "tasks",
       "columns": [
         {
@@ -394,6 +488,26 @@
         },
         {
           "name": "goal_id",
+          "kind": "text"
+        },
+        {
+          "name": "project_id",
+          "kind": "text"
+        },
+        {
+          "name": "item_type",
+          "kind": "text"
+        },
+        {
+          "name": "board_column",
+          "kind": "text"
+        },
+        {
+          "name": "priority",
+          "kind": "text"
+        },
+        {
+          "name": "milestone_id",
           "kind": "text"
         },
         {

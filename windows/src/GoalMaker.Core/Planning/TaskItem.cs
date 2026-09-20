@@ -25,7 +25,25 @@ public sealed record TaskItem(
     string? GoalId = null,
 
     /// <summary>How often the task was moved from one planned day to another (docs/reviews.md).</summary>
-    int MovedCount = 0)
+    int MovedCount = 0,
+
+    /// <summary>The project this task is an item of, if any (docs/projects.md).</summary>
+    string? ProjectId = null,
+
+    /// <summary>A project item is a task, an idea or a bug.</summary>
+    string ItemType = ProjectRules.Task,
+
+    /// <summary>Which board column a project item sits in; null for a task outside a project.</summary>
+    string? BoardColumn = null,
+
+    /// <summary>low, normal, high or urgent.</summary>
+    string Priority = ProjectRules.Normal,
+
+    /// <summary>One of the project's milestones, if it has any.</summary>
+    string? MilestoneId = null,
+
+    /// <summary>Where the owner dragged it inside its column or list.</summary>
+    double Position = 0)
 {
     /// <summary>The day it was finished, by the server's timestamp, or null while it is not done.</summary>
     public DateOnly? CompletedDay =>
