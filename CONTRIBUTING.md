@@ -32,6 +32,8 @@ Changing a contract: edit the vector file in `contracts/vectors/`, then both imp
 commit. `contracts/vectors/release-manifest.json` is regenerated with
 `python tools/generate_manifest_vectors.py`.
 
+Known traps, and what they cost: [docs/pitfalls.md](docs/pitfalls.md).
+
 ## Change shape
 
 - Keep each commit to one coherent behavior or repository change.
