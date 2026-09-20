@@ -24,6 +24,7 @@ habits and projects.
 | `vectors/habits.json` | Habit cadences, periods, streaks, the heatmap, rings, check-in ids and check-ins toward goals ([habits](../docs/habits.md)) | `HabitRulesContractTest` | `HabitRulesContractTests` |
 | `vectors/stats.json` | The stats numbers and the review look back ([stats](../docs/stats.md)) | `StatsRulesContractTest` | `StatsRulesContractTests` |
 | `vectors/projects.json` | Project boards: new items, moves, order ([projects](../docs/projects.md)) | `ProjectRulesContractTest` | `ProjectRulesContractTests` |
+| `vectors/backup.json` | The export's format, what a restore refuses, and which row wins ([backup](../docs/backup.md)) | `BackupRulesContractTest` | `BackupRulesContractTests` |
 | `vectors/calendar.json` | The week and month grids and what lands on a day ([calendar](../docs/calendar.md)) | `CalendarRulesContractTest` | `CalendarRulesContractTests` |
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |
 | `schemas/synced-tables.json` | Every synced column once, for both replicas and the JSON mapping | (`tools/check_synced_tables.py`) | (`tools/check_synced_tables.py`) |

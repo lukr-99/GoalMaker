@@ -1,0 +1,240 @@
+{
+  "schema": 1,
+  "description": "The versioned export both apps write and read (docs/backup.md, spec story 91). 'current': the format name and version this build writes. 'order': the tables an export carries, in the order a restore applies them, which is the synced-tables order, so a row is written after whatever it points at. 'checks': what a reader makes of a file's header and rows before it changes anything; null means the file is fine, and any other value is the one reason it is refused, nothing being written either way. 'takesFile': whether a restore takes the file's row over the local one, by the server updated_at both carry, which is the rule sync already uses; a row that is not there locally is always taken. 'golden': one small export as the document and as the exact text both apps write, so a file from the phone reads on the PC and the other way around. Tombstones are left out of an export, so a row may point at something the file does not carry; that is not an error.",
+  "current": {
+    "format": "goalmaker.backup",
+    "version": 1
+  },
+  "order": [
+    "areas",
+    "tags",
+    "goals",
+    "goal_entries",
+    "habits",
+    "habit_checkins",
+    "habit_pauses",
+    "projects",
+    "project_milestones",
+    "tasks",
+    "task_steps",
+    "task_tags",
+    "reminders",
+    "ritual_runs",
+    "reviews"
+  ],
+  "checks": [
+    {
+      "name": "a file this build wrote is fine",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {
+          "areas": [
+            {
+              "id": "aaaaaaaa-0000-4000-8000-000000000001"
+            }
+          ]
+        }
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": null
+    },
+    {
+      "name": "an older version this build still reads is fine",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {}
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": null
+    },
+    {
+      "name": "another kind of JSON file is not a backup",
+      "file": {
+        "format": "something.else",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {}
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "notABackup"
+    },
+    {
+      "name": "a file with no format at all is not a backup",
+      "file": {
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {}
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "notABackup"
+    },
+    {
+      "name": "a file from a newer GoalMaker is refused, not guessed at",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 2,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {}
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "tooNew"
+    },
+    {
+      "name": "someone else's export is refused",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "tables": {}
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "anotherOwner"
+    },
+    {
+      "name": "a table this build does not know is refused",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {
+          "sprints": []
+        }
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "unknownTable"
+    },
+    {
+      "name": "a row with no id is refused",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {
+          "areas": [
+            {
+              "name": "Health"
+            }
+          ]
+        }
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "rowWithoutId"
+    },
+    {
+      "name": "a row belonging to someone else is refused",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {
+          "areas": [
+            {
+              "id": "aaaaaaaa-0000-4000-8000-000000000001",
+              "owner_id": "22222222-2222-4222-8222-222222222222"
+            }
+          ]
+        }
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "anotherOwner"
+    },
+    {
+      "name": "a row that points at something the file leaves out is fine: it may be a tombstone",
+      "file": {
+        "format": "goalmaker.backup",
+        "version": 1,
+        "owner": "11111111-1111-4111-8111-111111111111",
+        "tables": {
+          "tasks": [
+            {
+              "id": "cccccccc-0000-4000-8000-000000000001",
+              "area_id": "aaaaaaaa-0000-4000-8000-00000000ffff"
+            }
+          ]
+        }
+      },
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": null
+    }
+  ],
+  "takesFile": [
+    {
+      "name": "a row that is not here yet is taken",
+      "local": null,
+      "file": "2026-09-18T10:00:00.000000Z",
+      "expect": true
+    },
+    {
+      "name": "a newer row in the file wins",
+      "local": "2026-09-18T10:00:00.000000Z",
+      "file": "2026-09-19T08:00:00.000000Z",
+      "expect": true
+    },
+    {
+      "name": "an older row in the file is kept out, so a restore never undoes newer work",
+      "local": "2026-09-19T08:00:00.000000Z",
+      "file": "2026-09-18T10:00:00.000000Z",
+      "expect": false
+    },
+    {
+      "name": "the same row changes nothing",
+      "local": "2026-09-19T08:00:00.000000Z",
+      "file": "2026-09-19T08:00:00.000000Z",
+      "expect": false
+    },
+    {
+      "name": "a file row with no timestamp never wins",
+      "local": "2026-09-19T08:00:00.000000Z",
+      "file": null,
+      "expect": false
+    },
+    {
+      "name": "a local row with no timestamp gives way",
+      "local": null,
+      "file": null,
+      "expect": true
+    }
+  ],
+  "golden": {
+    "description": "One small export: the document both apps build and the exact text both write. Keys keep the order below, tables keep the order of 'order', the text is indented with two spaces, and text outside ASCII is written as itself.",
+    "document": {
+      "format": "goalmaker.backup",
+      "version": 1,
+      "exportedAt": "2026-09-20T19:52:08.500000Z",
+      "app": "windows",
+      "appVersion": "1.0.0",
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "tables": {
+        "areas": [
+          {
+            "id": "aaaaaaaa-0000-4000-8000-000000000001",
+            "owner_id": "11111111-1111-4111-8111-111111111111",
+            "name": "Zdraví",
+            "color": "violet",
+            "position": 0,
+            "archived_at": null,
+            "updated_at": "2026-09-18T10:00:00.000000Z"
+          }
+        ],
+        "tasks": [
+          {
+            "id": "cccccccc-0000-4000-8000-000000000001",
+            "owner_id": "11111111-1111-4111-8111-111111111111",
+            "title": "Běhat",
+            "area_id": "aaaaaaaa-0000-4000-8000-000000000001",
+            "top_priority": true,
+            "moved_count": 2,
+            "planned_date": "2026-09-20",
+            "planned_time": null,
+            "updated_at": "2026-09-19T08:00:00.000000Z"
+          }
+        ]
+      }
+    },
+    "text": "{\n  \"format\": \"goalmaker.backup\",\n  \"version\": 1,\n  \"exportedAt\": \"2026-09-20T19:52:08.500000Z\",\n  \"app\": \"windows\",\n  \"appVersion\": \"1.0.0\",\n  \"owner\": \"11111111-1111-4111-8111-111111111111\",\n  \"tables\": {\n    \"areas\": [\n      {\n        \"id\": \"aaaaaaaa-0000-4000-8000-000000000001\",\n        \"owner_id\": \"11111111-1111-4111-8111-111111111111\",\n        \"name\": \"Zdraví\",\n        \"color\": \"violet\",\n        \"position\": 0,\n        \"archived_at\": null,\n        \"updated_at\": \"2026-09-18T10:00:00.000000Z\"\n      }\n    ],\n    \"tasks\": [\n      {\n        \"id\": \"cccccccc-0000-4000-8000-000000000001\",\n        \"owner_id\": \"11111111-1111-4111-8111-111111111111\",\n        \"title\": \"Běhat\",\n        \"area_id\": \"aaaaaaaa-0000-4000-8000-000000000001\",\n        \"top_priority\": true,\n        \"moved_count\": 2,\n        \"planned_date\": \"2026-09-20\",\n        \"planned_time\": null,\n        \"updated_at\": \"2026-09-19T08:00:00.000000Z\"\n      }\n    ]\n  }\n}\n"
+  }
+}
