@@ -74,6 +74,7 @@ pinnable mini windows, share to GoalMaker, Add to Startup Profiles. Issues:
 Backup and restore (a versioned JSON export both apps read, a checked restore that merges and never
 wipes, and the weekly automatic export on Windows), updates through the channel proved end to end on
 both apps, the accessibility pass, hardening, and the first release with the owner's one-time setup.
+Where a problem shows (one place in Settings with a quiet mark, not across the top of Today).
 Issues: `.scratch/m6-backup-updates-and-v1/`.
 
 ### M7: quick chat
