@@ -118,7 +118,7 @@ public sealed class ListFilterTests : IDisposable
     private ListViewModel List(ListKind kind)
     {
         var composer = new ComposerViewModel(
-            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, planner.Time, _ => null, day => day, action => action());
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, planner.Strings, planner.Time, _ => null, day => day, action => action());
         return new ListViewModel(
             kind,
             planner.Tasks,

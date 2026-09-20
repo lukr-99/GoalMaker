@@ -130,7 +130,7 @@ fun PlanScreen(viewModel: PlanViewModel, onClose: () -> Unit) {
                 val draft = remember(line) { viewModel.preview(line) }
                 ComposerBar(
                     state = composer,
-                    chips = composerChips(line, draft, state.today, state.areas, state.tagNames),
+                    chips = composerChips(line, draft, state.today, state.areas, state.tagNames, state.projects),
                     canSend = (draft.title.isNotBlank() && draft.command == null) || draft.command?.name == PlanRules.COMMAND,
                     onSubmit = { if (viewModel.submit(draft)) composer.clearText() },
                     onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },

@@ -156,6 +156,7 @@ class RepeatingTaskTest {
             rows,
             AreaList(test.replica, rows, listOf("violet", "blue"), {}),
             TagList(test.replica, rows, {}),
+            ProjectList(test.replica, rows, {}),
             {},
             { PlanningDay.of(now.atOffset(ZoneOffset.UTC).toLocalDateTime()) },
         )

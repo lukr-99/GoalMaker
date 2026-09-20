@@ -7,6 +7,7 @@ import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.StepList
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.TagList
@@ -49,7 +50,7 @@ class TaskAndArchiveViewModelTest {
         tags = TagList(test.replica, rows, {})
         steps = StepList(test.replica, rows, {})
         goals = GoalList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, {}) { LocalDate.parse("2026-09-18") }
+        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
     }
 
     @After

@@ -53,5 +53,5 @@ public sealed class QuickAddTests : IDisposable
     }
 
     private ComposerViewModel QuickAdd() => new(
-        planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, planner.Time, _ => null, _ => null, action => action());
+        planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, planner.Strings, planner.Time, _ => null, _ => null, action => action());
 }

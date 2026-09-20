@@ -28,7 +28,7 @@ class ProjectListTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-20T12:00:00Z") })
         val areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), {})
         projects = ProjectList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-20") }
+        tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-20") }
     }
 
     @After

@@ -32,7 +32,7 @@ class AreasAndTagsTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T12:00:00Z") })
         areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), {})
         tags = TagList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, {}) { LocalDate.parse("2026-09-18") }
+        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
     }
 
     @After

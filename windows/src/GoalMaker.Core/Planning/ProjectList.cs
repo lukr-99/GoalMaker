@@ -46,8 +46,19 @@ public sealed class ProjectList
             .ThenBy(project => project.Position)
             .ThenBy(project => project.Name, StringComparer.OrdinalIgnoreCase)];
 
-    public ProjectItem? Find(string id) =>
+    /// <summary>The project with this id, or null when it is gone.</summary>
+    public ProjectItem? Get(string id) =>
         replica.Get(Table, id) is { } row && ToItem(row) is { Deleted: false } project ? project : null;
+
+    /// <summary>The project with this name, whatever the case; null when there is none.</summary>
+    public ProjectItem? Find(string name) =>
+        All().FirstOrDefault(project => string.Equals(project.Name.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The project the composer's <c>+Project</c> names, made if it isn't there yet, the way
+    /// <c>@Area</c> makes an area (docs/composer.md). Null when the name is blank.
+    /// </summary>
+    public ProjectItem? FindOrCreate(string name) => Find(name) ?? Add(new ProjectDraft(name));
 
     /// <summary>Every milestone that isn't deleted, in the order each project keeps them.</summary>
     public IReadOnlyList<ProjectMilestone> Milestones() =>
@@ -99,7 +110,7 @@ public sealed class ProjectList
     public ProjectMilestone? AddMilestone(string projectId, string name)
     {
         var clean = Clip(name, MaxName);
-        if (clean is null || Find(projectId) is null)
+        if (clean is null || Get(projectId) is null)
         {
             return null;
         }

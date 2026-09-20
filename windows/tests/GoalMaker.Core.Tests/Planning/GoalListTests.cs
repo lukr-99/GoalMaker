@@ -19,7 +19,7 @@ public sealed class GoalListTests : IDisposable
         var rows = new NewRows(test.Catalog, () => TestReplica.Owner, time);
         var areas = new AreaList(test.Replica, rows, ["violet"], () => { });
         goals = new GoalList(test.Replica, rows, () => { });
-        tasks = new TaskList(test.Replica, rows, areas, new TagList(test.Replica, rows, () => { }), () => { }, () => new DateOnly(2026, 9, 18));
+        tasks = new TaskList(test.Replica, rows, areas, new TagList(test.Replica, rows, () => { }), new ProjectList(test.Replica, rows, () => { }), () => { }, () => new DateOnly(2026, 9, 18));
     }
 
     public void Dispose() => test.Dispose();

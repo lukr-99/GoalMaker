@@ -31,14 +31,14 @@ internal sealed class TestPlanner : IDisposable
         var rows = new NewRows(catalog, () => Owner, Time);
         Areas = new AreaList(replica, rows, ["violet", "blue"], () => { });
         Tags = new TagList(replica, rows, () => { });
-        Tasks = new TaskList(replica, rows, Areas, Tags, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
+        Projects = new ProjectList(replica, rows, () => { });
+        Tasks = new TaskList(replica, rows, Areas, Tags, Projects, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
         Reminders = new ReminderList(replica, rows, () => { }, () => TimeZoneInfo.Utc);
         Steps = new StepList(replica, rows, () => { });
         Rituals = new RitualRunList(replica, rows, () => { });
         Goals = new GoalList(replica, rows, () => { });
         Habits = new HabitList(replica, rows, () => { });
         Reviews = new ReviewList(replica, rows, () => { });
-        Projects = new ProjectList(replica, rows, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));

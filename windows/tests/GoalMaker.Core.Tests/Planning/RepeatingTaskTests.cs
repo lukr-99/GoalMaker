@@ -157,7 +157,7 @@ public sealed class RepeatingTaskTests : IDisposable
             this.time = time;
             var rows = new NewRows(Replica.Catalog, () => TestReplica.Owner, time);
             var areas = new AreaList(Replica.Replica, rows, ["violet", "blue"], () => { });
-            Tasks = new TaskList(Replica.Replica, rows, areas, new TagList(Replica.Replica, rows, () => { }), () => { }, () => PlanningDay.Of(time.GetLocalNow().DateTime));
+            Tasks = new TaskList(Replica.Replica, rows, areas, new TagList(Replica.Replica, rows, () => { }), new ProjectList(Replica.Replica, rows, () => { }), () => { }, () => PlanningDay.Of(time.GetLocalNow().DateTime));
             engine = new SyncEngine(Replica.Catalog, Replica.Replica, server, time);
         }
 

@@ -123,7 +123,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
         if (!IsEditing)
         {
-            var project = chosen is null ? null : projects.Find(chosen);
+            var project = chosen is null ? null : projects.Get(chosen);
             ProjectName = project?.Name ?? string.Empty;
             ProjectDescription = project?.Description ?? string.Empty;
             ProjectRepository = project?.RepositoryUrl ?? string.Empty;

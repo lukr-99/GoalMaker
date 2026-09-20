@@ -118,7 +118,6 @@
     <string name="composer_priority">Top priority</string>
     <string name="composer_idea">Idea</string>
     <string name="composer_new">new</string>
-    <string name="composer_later">later</string>
     <string name="composer_soon">coming soon</string>
     <string name="composer_opens_plan">opens Plan tomorrow</string>
     <string name="composer_unknown_command">unknown command</string>
@@ -688,4 +687,13 @@
     <string name="activity_skipped">%1$s skipped %2$s</string>
     <string name="activity_paused">%1$s paused %2$s</string>
     <string name="activity_resumed">%1$s resumed %2$s</string>
+    <string name="share_target">Add to GoalMaker</string>
+    <string name="share_title">Add to GoalMaker</string>
+    <string name="share_notes">Kept in the notes</string>
+    <string name="share_project">Project</string>
+    <string name="share_area">Area</string>
+    <string name="share_cancel">Cancel</string>
+    <string name="share_saved">Added to GoalMaker</string>
+    <string name="share_signed_out">Sign in to GoalMaker before saving this.</string>
+    <string name="share_open_app">Open GoalMaker</string>
 </resources>

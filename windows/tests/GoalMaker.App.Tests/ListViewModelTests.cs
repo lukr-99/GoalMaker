@@ -173,7 +173,7 @@ public sealed class ListViewModelTests : IDisposable
             _ => _ => null,
         };
         var composer = new ComposerViewModel(
-            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, planner.Time, _ => null, defaultDay, action => action());
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, planner.Strings, planner.Time, _ => null, defaultDay, action => action());
         return new ListViewModel(
             kind,
             planner.Tasks,

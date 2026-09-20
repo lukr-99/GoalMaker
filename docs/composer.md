@@ -12,7 +12,7 @@ Kotlin and C# implement it separately and both must pass
 |---|---|
 | `#tag` | A tag. Starts with a letter; letters, digits, `_` and `-` follow. Any number of tags. |
 | `@Area` | The area. `_` stands for a space: `@Deep_work` is "Deep work". |
-| `+Project` | The project, with the same naming as areas. |
+| `+Project` | The project, with the same naming as areas. A project nobody has made yet is made, the way `@Area` makes an area. |
 | `!` | Top priority (a lone `!`; `Call mom!` is just punctuation). |
 | `?` | An idea rather than a task (a lone `?`). |
 | a date | `today`, `tomorrow` (`tmrw`, `tmr`), a weekday (`monday`, `mon`), `next monday`, `next week`, `next month`, `in 3 days`, `in a week`, `in 2 months`, `2026-10-05`, `21.9.`, `21.9.2027`, `sep 25`, `25 october`. `on` may come first: `on monday`. |

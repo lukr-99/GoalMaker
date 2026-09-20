@@ -255,7 +255,6 @@
     <sys:String x:Key="Composer.Priority">Top priority</sys:String>
     <sys:String x:Key="Composer.Idea">Idea</sys:String>
     <sys:String x:Key="Composer.New">new</sys:String>
-    <sys:String x:Key="Composer.Later">later</sys:String>
     <sys:String x:Key="Composer.Soon">coming soon</sys:String>
     <sys:String x:Key="Composer.OpensPlan">opens Plan tomorrow</sys:String>
     <sys:String x:Key="Composer.UnknownCommand">unknown command</sys:String>

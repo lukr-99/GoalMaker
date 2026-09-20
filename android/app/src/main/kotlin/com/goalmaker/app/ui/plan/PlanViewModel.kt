@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.PlanDecision
 import com.goalmaker.app.application.planning.PlanRules
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -33,6 +35,7 @@ class PlanViewModel(
     private val tasks: TaskList,
     areas: AreaList,
     tags: TagList,
+    projects: ProjectList,
     private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -52,8 +55,9 @@ class PlanViewModel(
         tasks.watchAll().flowOn(io),
         areas.watch().flowOn(io),
         tags.watchNames().flowOn(io),
+        projects.watch().flowOn(io).map { it.projects },
         step,
-    ) { all, areaList, tagNames, current ->
+    ) { all, areaList, tagNames, projectList, current ->
         PlanRules.review(all, today).forEach { reviewed += it.id }
         val byId = all.associateBy(TaskItem::id)
         PlanUiState(
@@ -66,6 +70,7 @@ class PlanViewModel(
             priorities = PlanRules.priorities(all, today),
             areas = areaList,
             tagNames = tagNames,
+            projects = projectList,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PlanUiState(today = today))
 

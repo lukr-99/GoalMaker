@@ -24,7 +24,8 @@ class ProjectList(
     /** Every project that isn't deleted, active ones first, in the owner's order. */
     fun all(): List<ProjectItem> = replica.all(TABLE).map(::toItem).filterNot(ProjectItem::deleted).sortedWith(ORDER)
 
-    fun find(id: String): ProjectItem? = replica.get(TABLE, id)?.let(::toItem)?.takeUnless(ProjectItem::deleted)
+    /** The project with this id, or null when it is gone. */
+    fun get(id: String): ProjectItem? = replica.get(TABLE, id)?.let(::toItem)?.takeUnless(ProjectItem::deleted)
 
     /** The projects with every milestone that isn't deleted. */
     fun read(): ProjectData = ProjectData(
@@ -35,6 +36,18 @@ class ProjectList(
 
     /** [read], again after every change to a project or a milestone. Collect it off the main thread. */
     fun watch(): Flow<ProjectData> = combine(replica.watch(TABLE), replica.watch(MILESTONES)) { _, _ -> read() }
+
+    /** The project with this name, whatever the case; null when there is none. */
+    fun find(name: String): ProjectItem? {
+        val wanted = name.trim().lowercase(Locale.ROOT)
+        return all().firstOrNull { it.name.trim().lowercase(Locale.ROOT) == wanted }
+    }
+
+    /**
+     * The project the composer's `+Project` names, made if it isn't there yet, the way `@Area` makes
+     * an area (docs/composer.md). Null when the name is blank.
+     */
+    fun findOrCreate(name: String): ProjectItem? = find(name) ?: add(ProjectDraft(name = name))
 
     /** Adds a project at the end. Null when it has no name. */
     fun add(draft: ProjectDraft): ProjectItem? {
@@ -66,7 +79,7 @@ class ProjectList(
     /** Adds a milestone at the end of a project's list. Null when it has no name or the project is gone. */
     fun addMilestone(projectId: String, name: String): ProjectMilestone? {
         val clean = name.trim().take(MAX_NAME)
-        if (clean.isEmpty() || find(projectId) == null) return null
+        if (clean.isEmpty() || get(projectId) == null) return null
         val position = (read().milestonesOf(projectId).maxOfOrNull(ProjectMilestone::position) ?: -1.0) + 1.0
         val row = rows.create(
             MILESTONES,

@@ -18,6 +18,7 @@ public sealed partial class ComposerViewModel : ObservableObject
     private readonly TaskList tasks;
     private readonly AreaList areas;
     private readonly TagList tags;
+    private readonly ProjectList projects;
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
@@ -39,6 +40,7 @@ public sealed partial class ComposerViewModel : ObservableObject
         TaskList tasks,
         AreaList areas,
         TagList tags,
+        ProjectList projects,
         ISettingsStore settings,
         IStrings strings,
         TimeProvider time,
@@ -51,6 +53,7 @@ public sealed partial class ComposerViewModel : ObservableObject
         this.tasks = tasks;
         this.areas = areas;
         this.tags = tags;
+        this.projects = projects;
         this.settings = settings;
         this.strings = strings;
         this.time = time;
@@ -99,7 +102,7 @@ public sealed partial class ComposerViewModel : ObservableObject
     {
         draft = Parse(NewTaskTitle);
         Chips.Clear();
-        foreach (var chip in ComposerChips.Build(NewTaskTitle, draft, Today(), areas.All(), tags.Names(), strings, areaBrush, Remove))
+        foreach (var chip in ComposerChips.Build(NewTaskTitle, draft, Today(), areas.All(), tags.Names(), projects.All(), strings, areaBrush, Remove))
         {
             Chips.Add(chip);
         }

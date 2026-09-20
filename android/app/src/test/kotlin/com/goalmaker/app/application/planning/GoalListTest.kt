@@ -33,7 +33,7 @@ class GoalListTest {
         val areas = AreaList(test.replica, rows, listOf("violet"), {})
         val tags = TagList(test.replica, rows, {})
         goals = GoalList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, {}) { LocalDate.parse("2026-09-18") }
+        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
     }
 
     @After

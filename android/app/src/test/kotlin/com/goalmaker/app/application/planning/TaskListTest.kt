@@ -30,7 +30,7 @@ class TaskListTest {
     private fun tasks(owner: String? = TestReplica.OWNER): TaskList {
         val rows = NewRows(test.catalog, { owner }, { now })
         val areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), { syncRequests++ })
-        return TaskList(test.replica, rows, areas, TagList(test.replica, rows, { syncRequests++ }), { syncRequests++ }) {
+        return TaskList(test.replica, rows, areas, TagList(test.replica, rows, { syncRequests++ }), ProjectList(test.replica, rows, { syncRequests++ }), { syncRequests++ }) {
             LocalDate.parse("2026-09-18")
         }
     }

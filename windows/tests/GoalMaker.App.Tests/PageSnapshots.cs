@@ -46,7 +46,7 @@ public sealed class PageSnapshots
         using var theme = Theme(planner);
         PlanViewModel? plan = null;
         var composer = new ComposerViewModel(
-            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day.AddDays(1), action => action(), () => plan?.Start());
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day.AddDays(1), action => action(), () => plan?.Start());
         plan = new PlanViewModel(
             planner.Tasks, planner.Areas, composer, planner.Settings, strings, planner.Time, theme.AreaBrush, planner.Tick, _ => { }, action => action());
         var page = new PlanPage(plan);
@@ -79,7 +79,7 @@ public sealed class PageSnapshots
         var reminders = new ReminderService(planner.Reminders, planner.Tasks, new Unarmed(), planner.Settings, planner.Time);
         reminders.AddBefore(planner.Task("Call the bank").Id, 15);
         var composer = new ComposerViewModel(
-            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
         var today = new ListViewModel(
             ListKind.Today,
             planner.Tasks,
@@ -113,7 +113,7 @@ public sealed class PageSnapshots
         Save(new Shell.TrayFlyout(flyout), folder, "tray-flyout", new Size(340, 420));
 
         var composer = new ComposerViewModel(
-            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, _ => null, action => action());
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, _ => null, action => action());
         composer.NewTaskTitle = "Look up train times tomorrow 9:00 #travel";
         var box = new Shell.QuickAddWindow(composer, strings);
         var content = (FrameworkElement)box.Content;
@@ -138,7 +138,7 @@ public sealed class PageSnapshots
         var filter = new ListFilterState();
         filter.SetArea(planner.Areas.Find("Home")!.Id);
         var composer = new ComposerViewModel(
-            planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
         var today = new ListViewModel(
             ListKind.Today,
             planner.Tasks,

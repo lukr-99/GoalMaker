@@ -16,7 +16,7 @@ public sealed class TaskListTests : IDisposable
         var rows = new NewRows(test.Catalog, () => owner, time);
         var areas = new AreaList(test.Replica, rows, ["violet", "blue", "cyan"], () => syncRequests++);
         return new TaskList(
-            test.Replica, rows, areas, new TagList(test.Replica, rows, () => syncRequests++), () => syncRequests++, () => PlanningDay.Of(time.GetLocalNow().DateTime));
+            test.Replica, rows, areas, new TagList(test.Replica, rows, () => syncRequests++), new ProjectList(test.Replica, rows, () => syncRequests++), () => syncRequests++, () => PlanningDay.Of(time.GetLocalNow().DateTime));
     }
 
     private static ComposerDraft Draft(string line) => ComposerParser.Parse(line, new DateTime(2026, 9, 18, 14, 5, 0));
@@ -82,6 +82,45 @@ public sealed class TaskListTests : IDisposable
 
         Assert.Single(test.Replica.All("areas"));
         Assert.Equal(first.AreaId, second.AreaId);
+    }
+
+    [Fact]
+    public void AComposerLineFilesTheTaskIntoItsProject()
+    {
+        var tasks = Tasks();
+        var projects = new ProjectList(test.Replica, new NewRows(test.Catalog, () => TestReplica.Owner, time), () => syncRequests++);
+        projects.Add(new ProjectDraft("GoalMaker"));
+
+        var item = tasks.Add(Draft("Ship the share target +goalmaker"))!;
+        var idea = tasks.Add(Draft("Cache the manifest +GoalMaker ?"))!;
+
+        Assert.Single(projects.All());
+        Assert.Equal(projects.Find("GoalMaker")!.Id, item.ProjectId);
+        Assert.Equal(ProjectRules.Task, item.ItemType);
+        Assert.Equal(ProjectRules.Todo, item.BoardColumn);
+        Assert.Equal(ProjectRules.Idea, idea.ItemType);
+        Assert.Equal(ProjectRules.Backlog, idea.BoardColumn);
+    }
+
+    [Fact]
+    public void AProjectTheLineNamesButNobodyMadeYetIsMadeWithIt()
+    {
+        var tasks = Tasks();
+        var task = tasks.Add(Draft("Sign the installer +Signing"))!;
+
+        var project = test.Replica.All("projects").Single();
+        Assert.Equal("Signing", (string?)project["name"]);
+        Assert.Equal((string?)project["id"], task.ProjectId);
+        Assert.Equal(["projects", "tasks"], test.Replica.Outbox().Select(entry => entry.Entity));
+    }
+
+    [Fact]
+    public void ATaskOutsideAProjectKeepsNoColumn()
+    {
+        var task = Tasks().Add(Draft("Call the dentist ?"))!;
+
+        Assert.Null(task.BoardColumn);
+        Assert.Equal(ProjectRules.Idea, task.ItemType);
     }
 
     [Fact]

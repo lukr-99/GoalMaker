@@ -93,8 +93,9 @@ public sealed class AppGraph : IDisposable
         var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
         Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
         Tags = new TagList(replica, newRows, Sync.Request);
+        Projects = new ProjectList(replica, newRows, Sync.Request);
         Tasks = new TaskList(
-            replica, newRows, Areas, Tags, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
+            replica, newRows, Areas, Tags, Projects, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
 
         // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
         // carries the next one, and toasts show them with the same buttons as the phone.
@@ -150,7 +151,7 @@ public sealed class AppGraph : IDisposable
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
         ComposerViewModel Composer(Func<DateOnly, DateOnly?> defaultDay) =>
-            new(Tasks, Areas, Tags, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan);
+            new(Tasks, Areas, Tags, Projects, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan);
         ListViewModel List(ListKind kind, Func<DateOnly, DateOnly?> defaultDay) => new(
             kind,
             Tasks,
@@ -188,7 +189,6 @@ public sealed class AppGraph : IDisposable
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits);
         HabitsPage = new HabitsViewModel(Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
         Reviews = new ReviewList(replica, newRows, Sync.Request);
-        Projects = new ProjectList(replica, newRows, Sync.Request);
         Review = new ReviewViewModel(
             ReviewRules.Weekly,
             ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),

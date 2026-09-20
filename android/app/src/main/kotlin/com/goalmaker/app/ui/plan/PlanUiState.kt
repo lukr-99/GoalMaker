@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.plan
 
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.PlanDecision
 import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.TaskItem
@@ -16,6 +17,7 @@ data class PlanUiState(
     val priorities: Int = 0,
     val areas: List<AreaItem> = emptyList(),
     val tagNames: List<String> = emptyList(),
+    val projects: List<ProjectItem> = emptyList(),
 ) {
     val undecided: Int get() = review.count { it.decision == PlanDecision.UNDECIDED }
 

@@ -38,7 +38,7 @@ class ReminderServiceTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T10:00:00Z") })
         val areas = AreaList(test.replica, rows, listOf("violet"), {})
         val tags = TagList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, {}) { LocalDate.parse("2026-09-18") }
+        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
         rituals = RitualRunList(test.replica, rows, {})
         service = ReminderService(
             reminders = ReminderList(test.replica, rows, {}),

@@ -7,6 +7,7 @@ import androidx.compose.ui.res.stringResource
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.PlanRules
+import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.composer.ComposerSpan
 import com.goalmaker.app.domain.composer.SpanKind
@@ -19,12 +20,18 @@ import java.util.Locale
 
 /** The preview chips for [draft], in the order the item reads: when, how often, where, tags, flags. */
 @Composable
-fun composerChips(line: String, draft: ComposerDraft, today: LocalDate, areas: List<AreaItem>, tagNames: List<String>): List<ComposerChip> {
+fun composerChips(
+    line: String,
+    draft: ComposerDraft,
+    today: LocalDate,
+    areas: List<AreaItem>,
+    tagNames: List<String>,
+    projects: List<ProjectItem> = emptyList(),
+): List<ComposerChip> {
     val locale = LocalConfiguration.current.locales[0]
     val spans = draft.spans
     fun of(kind: SpanKind) = spans.filter { it.kind == kind }
     val newNote = stringResource(R.string.composer_new)
-    val laterNote = stringResource(R.string.composer_later)
     val chips = mutableListOf<ComposerChip>()
 
     draft.command?.let { command ->
@@ -68,10 +75,12 @@ fun composerChips(line: String, draft: ComposerDraft, today: LocalDate, areas: L
         chips += ComposerChip(SpanKind.PRIORITY, stringResource(R.string.composer_priority), null, false, null, of(SpanKind.PRIORITY))
     }
     draft.project?.let { name ->
-        chips += ComposerChip(SpanKind.PROJECT, "+$name", laterNote, true, null, of(SpanKind.PROJECT))
+        val existing = projects.firstOrNull { it.name.trim().lowercase(Locale.ROOT) == name.trim().lowercase(Locale.ROOT) }
+        val label = "+${existing?.name ?: name}"
+        chips += ComposerChip(SpanKind.PROJECT, label, if (existing == null) newNote else null, false, null, of(SpanKind.PROJECT))
     }
     if (draft.idea) {
-        chips += ComposerChip(SpanKind.IDEA, stringResource(R.string.composer_idea), laterNote, true, null, of(SpanKind.IDEA))
+        chips += ComposerChip(SpanKind.IDEA, stringResource(R.string.composer_idea), null, false, null, of(SpanKind.IDEA))
     }
     return chips
 }

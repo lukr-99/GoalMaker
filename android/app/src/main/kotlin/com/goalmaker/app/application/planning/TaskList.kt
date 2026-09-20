@@ -28,6 +28,7 @@ class TaskList(
     private val rows: NewRows,
     private val areas: AreaList,
     private val tags: TagList,
+    private val projects: ProjectList,
     private val requestSync: () -> Unit,
     private val today: () -> LocalDate,
 ) {
@@ -52,21 +53,23 @@ class TaskList(
     fun add(title: String): TaskItem? = add(ComposerDraft(title = title))
 
     /**
-     * Saves what a composer line says (docs/composer.md): the task, a new area or tags it names, and
-     * the tag links, in one transaction. Projects and ideas arrive with M5, so those parts aren't
-     * saved yet. Null when the title is blank or nobody is signed in.
+     * Saves what a composer line says (docs/composer.md): the task, a new area, project or tags it
+     * names, and the tag links, in one transaction. A `?` item is an idea, which lands in the
+     * backlog when it has a project. Null when the title is blank or nobody is signed in.
      */
-    fun add(draft: ComposerDraft): TaskItem? {
+    fun add(draft: ComposerDraft, notes: String = ""): TaskItem? {
         val title = draft.title.trim()
         if (title.isEmpty() || rows.owner() == null) return null
         val item = replica.inTransaction {
             val areaId = draft.area?.let { areas.findOrCreate(it)?.id }
+            val projectId = draft.project?.let { projects.findOrCreate(it)?.id }
+            val itemType = if (draft.idea) ProjectRules.IDEA else ProjectRules.TASK
             val tagIds = draft.tags.mapNotNull { tags.findOrCreate(it) }.distinct()
             val task = rows.create(
                 TABLE,
                 mapOf(
                     "title" to JsonPrimitive(title.take(MAX_TITLE)),
-                    "notes" to JsonPrimitive(""),
+                    "notes" to JsonPrimitive(notes.take(MAX_NOTES)),
                     "top_priority" to JsonPrimitive(draft.topPriority),
                     "status" to JsonPrimitive("open"),
                     "position" to JsonPrimitive(0.0),
@@ -75,6 +78,11 @@ class TaskList(
                     "planned_time" to (draft.plannedTime?.format(TIME)?.let(::JsonPrimitive) ?: JsonNull),
                     "area_id" to (areaId?.let(::JsonPrimitive) ?: JsonNull),
                     "recurrence" to (draft.repeat?.let(::JsonPrimitive) ?: JsonNull),
+                    "project_id" to (projectId?.let(::JsonPrimitive) ?: JsonNull),
+                    "item_type" to JsonPrimitive(itemType),
+                    "board_column" to (
+                        projectId?.let { JsonPrimitive(ProjectRules.columnFor(itemType)) } ?: JsonNull
+                        ),
                 ),
             ) ?: return@inTransaction null
             val placed = if (draft.repeat != null) JsonObject(task + (SERIES_ID to task.getValue(SyncedTable.ID))) else task

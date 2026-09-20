@@ -187,6 +187,7 @@ public sealed class PlanViewModelTests : IDisposable
             planner.Tasks,
             planner.Areas,
             planner.Tags,
+            planner.Projects,
             planner.Settings,
             planner.Strings,
             planner.Time,

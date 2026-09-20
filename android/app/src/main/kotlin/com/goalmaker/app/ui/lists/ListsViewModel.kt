@@ -7,6 +7,7 @@ import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.planning.ReminderState
@@ -50,6 +51,7 @@ class ListsViewModel(
     private val tasks: TaskList,
     areas: AreaList,
     private val tags: TagList,
+    projects: ProjectList,
     goals: GoalList,
     private val habits: HabitList,
     private val settings: SettingsStore,
@@ -92,7 +94,13 @@ class ListsViewModel(
             .toSet()
     }
 
-    private val rows = combine(areas.watch().flowOn(io), tags.watch().flowOn(io), reminded, ::RowContext)
+    private val rows = combine(
+        areas.watch().flowOn(io),
+        tags.watch().flowOn(io),
+        reminded,
+        projects.watch().flowOn(io).map { it.projects },
+        ::RowContext,
+    )
 
     // Today's habits for the ring row, and this week's goals with where they stand (habit check-ins
     // included) for Today's folded section (design spec, Today).
@@ -118,6 +126,7 @@ class ListsViewModel(
             reminded = context.reminded,
             filter = narrowed,
             tags = context.tags,
+            projects = context.projects,
             weekGoals = goalRows,
             habits = habitRows,
             habitMilestones = HabitBoard.milestones(habitRows),

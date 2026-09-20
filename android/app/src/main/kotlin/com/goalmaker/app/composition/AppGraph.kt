@@ -192,7 +192,7 @@ class AppGraph(context: Context) {
     val habits = HabitList(replica, newRows, sync::request)
     val reviews = ReviewList(replica, newRows, sync::request)
     val projects = ProjectList(replica, newRows, sync::request)
-    val tasks = TaskList(replica, newRows, areas, tags, sync::request, ::today)
+    val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 
     /** The planning day it is now, by the owner's day start (docs/lists.md). */
     fun today(): LocalDate = PlanningDay.of(LocalDateTime.now(), settings.dayStartHour.value)

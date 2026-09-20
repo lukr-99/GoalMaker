@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.data.replica.TestReplica
@@ -36,7 +37,7 @@ class WidgetContentTest {
         test = TestReplica()
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-20T12:00:00Z") })
         val areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), {})
-        tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), {}) { today }
+        tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), ProjectList(test.replica, rows, {}), {}) { today }
         habits = HabitList(test.replica, rows, {})
     }
 

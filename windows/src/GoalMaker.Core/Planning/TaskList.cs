@@ -23,16 +23,18 @@ public sealed class TaskList
     private readonly NewRows rows;
     private readonly AreaList areas;
     private readonly TagList tags;
+    private readonly ProjectList projects;
     private readonly Action requestSync;
     private readonly Func<DateOnly> today;
 
-    public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, Action requestSync, Func<DateOnly> today)
+    public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, ProjectList projects, Action requestSync, Func<DateOnly> today)
     {
         this.today = today;
         this.replica = replica;
         this.rows = rows;
         this.areas = areas;
         this.tags = tags;
+        this.projects = projects;
         this.requestSync = requestSync;
         replica.Changed += (_, changed) =>
         {
@@ -62,11 +64,11 @@ public sealed class TaskList
     public TaskItem? Add(string title) => Add(new ComposerDraft(title, null, null, [], null, null, false, false, null, null, []));
 
     /// <summary>
-    /// Saves what a composer line says (docs/composer.md): the task, a new area or tags it names, and
-    /// the tag links, in one transaction. Projects and ideas arrive with M5, so those parts aren't
-    /// saved yet. Null when the title is blank or nobody is signed in.
+    /// Saves what a composer line says (docs/composer.md): the task, a new area, project or tags it
+    /// names, and the tag links, in one transaction. A <c>?</c> item is an idea, which lands in the
+    /// backlog when it has a project. Null when the title is blank or nobody is signed in.
     /// </summary>
-    public TaskItem? Add(ComposerDraft draft)
+    public TaskItem? Add(ComposerDraft draft, string notes = "")
     {
         var title = draft.Title.Trim();
         if (title.Length == 0 || rows.Owner() is null)
@@ -78,11 +80,13 @@ public sealed class TaskList
         replica.InTransaction(() =>
         {
             var areaId = draft.Area is { } area ? areas.FindOrCreate(area)?.Id : null;
+            var projectId = draft.Project is { } named ? projects.FindOrCreate(named)?.Id : null;
+            var itemType = draft.Idea ? ProjectRules.Idea : ProjectRules.Task;
             var tagIds = draft.Tags.Select(tags.FindOrCreate).OfType<string>().Distinct(StringComparer.Ordinal).ToList();
             var task = rows.Create(Table, new Dictionary<string, JsonNode?>
             {
                 ["title"] = title.Length > MaxTitle ? title[..MaxTitle] : title,
-                ["notes"] = string.Empty,
+                ["notes"] = notes.Length > MaxNotes ? notes[..MaxNotes] : notes,
                 ["top_priority"] = draft.TopPriority,
                 ["status"] = "open",
                 ["position"] = 0.0,
@@ -91,6 +95,9 @@ public sealed class TaskList
                 ["planned_time"] = draft.PlannedTime?.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                 ["area_id"] = areaId,
                 ["recurrence"] = draft.Repeat,
+                ["project_id"] = projectId,
+                ["item_type"] = itemType,
+                ["board_column"] = projectId is null ? null : ProjectRules.ColumnFor(itemType),
             });
             if (task is null)
             {

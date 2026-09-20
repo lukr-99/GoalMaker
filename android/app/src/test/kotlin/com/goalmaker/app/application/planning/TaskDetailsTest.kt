@@ -35,7 +35,7 @@ class TaskDetailsTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { now })
         areas = AreaList(test.replica, rows, listOf("violet", "blue"), {})
         tags = TagList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, {}) { LocalDate.parse("2026-09-18") }
+        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
         steps = StepList(test.replica, rows, {})
     }
 

@@ -10,6 +10,7 @@ import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.PlanDecision
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewRules
@@ -62,7 +63,7 @@ class ReviewViewModelTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-21T09:00:00Z") })
         areas = AreaList(test.replica, rows, listOf("violet", "blue"), {})
         val tags = TagList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, {}) { today }
+        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { today }
         goals = GoalList(test.replica, rows, {})
         habits = HabitList(test.replica, rows, {})
         reviews = ReviewList(test.replica, rows, {})

@@ -21,6 +21,7 @@ public static partial class ComposerChips
         DateOnly today,
         IReadOnlyList<AreaItem> areas,
         IReadOnlyList<string> tagNames,
+        IReadOnlyList<ProjectItem> projects,
         IStrings strings,
         Func<string, Brush?> areaBrush,
         Action<ComposerChipViewModel> remove)
@@ -85,12 +86,13 @@ public static partial class ComposerChips
 
         if (draft.Project is { } project)
         {
-            Add(SpanKind.Project, "+" + project, strings.Get("Composer.Later"), SymbolRegular.Folder24, Of(SpanKind.Project), muted: true);
+            var existing = projects.FirstOrDefault(one => Key(one.Name) == Key(project));
+            Add(SpanKind.Project, "+" + (existing?.Name ?? project), existing is null ? strings.Get("Composer.New") : null, SymbolRegular.Folder24, Of(SpanKind.Project));
         }
 
         if (draft.Idea)
         {
-            Add(SpanKind.Idea, strings.Get("Composer.Idea"), strings.Get("Composer.Later"), SymbolRegular.Lightbulb24, Of(SpanKind.Idea), muted: true);
+            Add(SpanKind.Idea, strings.Get("Composer.Idea"), null, SymbolRegular.Lightbulb24, Of(SpanKind.Idea));
         }
 
         return chips;
