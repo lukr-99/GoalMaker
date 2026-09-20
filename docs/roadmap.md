@@ -15,8 +15,12 @@ and each has markdown issues under `.scratch/<milestone>/`.
 7. **M3: connector** (built 2026-09-19: the MCP Edge Function with tools and ritual prompts, links
    and the activity log with undo in both apps, weekly summaries; checked on both apps and through
    the endpoint against the local stack)
-8. M4 to M6, then v1.0
-9. M7 and the post-v1 list
+8. **M4: goals, habits, reviews, stats** (built 2026-09-20: the goal cascade and progress, habits
+   with check-ins, streaks and the heatmap, the guided weekly and monthly review with the prompt
+   library and the data-reactive prompts, review reminders, the stats screen, and goals and habits
+   through the connector; checked on both apps and through the endpoint against the local stack)
+9. M5 and M6, then v1.0
+10. M7 and the post-v1 list
 
 ## Milestones
 
