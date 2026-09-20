@@ -432,6 +432,10 @@ public sealed class TaskList
             ["status"] = "open",
             ["position"] = 0.0,
             ["moved_count"] = 0,
+            // The next occurrence is a plain task at this one's priority; every column the server
+            // needs a value in gets one, or the push would be refused.
+            ["item_type"] = ProjectRules.Task,
+            ["priority"] = current.Priority,
             ["planned_date"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["planned_time"] = row["planned_time"]?.DeepClone(),
             ["area_id"] = current.AreaId,

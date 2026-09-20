@@ -11,9 +11,14 @@ with `23502: null value in column "priority" violates not-null constraint`. **A 
 defeats the column's default**: the default only applies to a column the insert leaves out, and the
 replica sends every column the synced-tables contract names.
 
-Adding a column to a synced table means giving it a value wherever a row is created, in both apps and
-the connector. The test that checks a new row is complete also checks that every column the server
-has as not null carries a value.
+This is now closed off rather than remembered: `contracts/schemas/synced-tables.json` says which
+columns the server needs a value in, `tools/check_synced_tables.py` keeps that equal to the server
+and lets the replica be laxer but never stricter, and `NewRows` refuses to create a row that misses
+one, so the failure lands at the write with a message naming the column instead of at the push.
+`RequiredColumnsTest` (and `RequiredColumnsTests`) walk every list and every synced table.
+
+Closing it found a second live case the one-column fix had missed: a repeating task's next
+occurrence carried no `item_type` or `priority` either, so every repeat would have been refused.
 
 ## The apps' tests never meet the server
 

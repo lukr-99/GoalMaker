@@ -1,49 +1,59 @@
 {
   "schema": 1,
-  "description": "The tables both apps replicate, in push and pull order (parents first), with each column's kind. Both apps load this file to build their replica SQL and their JSON mapping, so a column is added in one place. tools/check_synced_tables.py keeps it equal to replica/migrations and to the server schema. Kinds: text, integer, real, boolean (INTEGER 0/1 locally, JSON true/false on the wire), timestamp (UTC text with 6 fractional digits locally, see sync-merge.json normalizeTimestamp), date (YYYY-MM-DD), time (HH:MM:SS), json (the value's JSON text locally, the value itself on the wire).",
+  "description": "The tables both apps replicate, in push and pull order (parents first), with each column's kind and whether the server needs a value in it. Both apps load this file to build their replica SQL and their JSON mapping, so a column is added in one place. 'required' means the server has the column NOT NULL: a row carries every column, so a null in a required one is refused on the push, whatever default the column has. The replica may be laxer, never stricter. tools/check_synced_tables.py keeps it equal to replica/migrations and to the server schema. Kinds: text, integer, real, boolean (INTEGER 0/1 locally, JSON true/false on the wire), timestamp (UTC text with 6 fractional digits locally, see sync-merge.json normalizeTimestamp), date (YYYY-MM-DD), time (HH:MM:SS), json (the value's JSON text locally, the value itself on the wire).",
   "tables": [
     {
       "name": "areas",
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "name",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "color",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "emoji",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "archived_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -52,27 +62,33 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "name",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -81,67 +97,83 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "title",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "emoji",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "horizon",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "period_start",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "parent_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "progress_mode",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "target",
-          "kind": "real"
+          "kind": "real",
+          "required": false
         },
         {
           "name": "unit",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "status",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "completed_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -150,35 +182,43 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "goal_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "day",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "amount",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -187,71 +227,88 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "name",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "emoji",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "cadence",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "weekdays",
-          "kind": "integer"
+          "kind": "integer",
+          "required": false
         },
         {
           "name": "times",
-          "kind": "integer"
+          "kind": "integer",
+          "required": false
         },
         {
           "name": "measure",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "target",
-          "kind": "real"
+          "kind": "real",
+          "required": false
         },
         {
           "name": "unit",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "goal_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "starts_on",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "archived_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -260,39 +317,48 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "habit_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "day",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "value",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "skipped",
-          "kind": "boolean"
+          "kind": "boolean",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -301,35 +367,43 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "habit_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "starts_on",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "ends_on",
-          "kind": "date"
+          "kind": "date",
+          "required": false
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -338,55 +412,68 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "name",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "description",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "area_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "status",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "repository_url",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "local_folder",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "notes",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -395,35 +482,43 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "project_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "name",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -432,99 +527,123 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "title",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "notes",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "planned_date",
-          "kind": "date"
+          "kind": "date",
+          "required": false
         },
         {
           "name": "planned_time",
-          "kind": "time"
+          "kind": "time",
+          "required": false
         },
         {
           "name": "moved_count",
-          "kind": "integer"
+          "kind": "integer",
+          "required": true
         },
         {
           "name": "deadline",
-          "kind": "date"
+          "kind": "date",
+          "required": false
         },
         {
           "name": "top_priority",
-          "kind": "boolean"
+          "kind": "boolean",
+          "required": true
         },
         {
           "name": "status",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "completed_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "area_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "recurrence",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "series_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "goal_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "project_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "item_type",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "board_column",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "priority",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "milestone_id",
-          "kind": "text"
+          "kind": "text",
+          "required": false
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -533,39 +652,48 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "task_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "title",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "done",
-          "kind": "boolean"
+          "kind": "boolean",
+          "required": true
         },
         {
           "name": "position",
-          "kind": "real"
+          "kind": "real",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -574,31 +702,38 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "task_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "tag_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -607,47 +742,58 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "task_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "fire_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "offset_minutes",
-          "kind": "integer"
+          "kind": "integer",
+          "required": false
         },
         {
           "name": "important",
-          "kind": "boolean"
+          "kind": "boolean",
+          "required": true
         },
         {
           "name": "state",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "snoozed_until",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -656,35 +802,43 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "ritual",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "day",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "outcome",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     },
@@ -693,47 +847,58 @@
       "columns": [
         {
           "name": "id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "owner_id",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "kind",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "period_start",
-          "kind": "date"
+          "kind": "date",
+          "required": true
         },
         {
           "name": "mood",
-          "kind": "integer"
+          "kind": "integer",
+          "required": false
         },
         {
           "name": "energy",
-          "kind": "integer"
+          "kind": "integer",
+          "required": false
         },
         {
           "name": "summary",
-          "kind": "text"
+          "kind": "text",
+          "required": true
         },
         {
           "name": "reflections",
-          "kind": "json"
+          "kind": "json",
+          "required": true
         },
         {
           "name": "created_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "updated_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": true
         },
         {
           "name": "deleted_at",
-          "kind": "timestamp"
+          "kind": "timestamp",
+          "required": false
         }
       ]
     }

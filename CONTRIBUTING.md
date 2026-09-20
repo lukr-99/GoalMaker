@@ -28,6 +28,11 @@ Adding a migration: write `supabase/migrations/NNNN_description.sql`, add
 `supabase/tests/database/`, run the harness, then `python tools/supabase_migrations.py lock` and
 commit the lock file with the migration. Never edit a locked migration.
 
+Adding a column to a synced table: add it to `contracts/schemas/synced-tables.json` with its kind
+and whether the server needs a value in it, to the Supabase migration and to the replica migration,
+then give it a value wherever a row is created. `python tools/check_synced_tables.py --server` keeps
+the three in step.
+
 Changing a contract: edit the vector file in `contracts/vectors/`, then both implementations, in one
 commit. `contracts/vectors/release-manifest.json` is regenerated with
 `python tools/generate_manifest_vectors.py`.

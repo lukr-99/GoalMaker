@@ -5,6 +5,9 @@ data class SyncedTable(
     val name: String,
     val columns: List<SyncedColumn>,
 ) {
+    /** The columns the server needs a value in, so a new row has to carry all of them. */
+    val required: List<String> = columns.filter(SyncedColumn::required).map(SyncedColumn::name)
+
     companion object {
         const val ID = "id"
         const val OWNER_ID = "owner_id"

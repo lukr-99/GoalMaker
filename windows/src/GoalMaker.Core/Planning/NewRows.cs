@@ -16,7 +16,12 @@ public sealed class NewRows(SyncedTableCatalog catalog, Func<string?> ownerId, T
 
     public string Timestamp() => SyncRules.Format(time.GetUtcNow());
 
-    /// <summary>A new row of <paramref name="table"/> with <paramref name="values"/> set, or null when nobody is signed in.</summary>
+    /// <summary>
+    /// A new row of <paramref name="table"/> with <paramref name="values"/> set, or null when nobody
+    /// is signed in. A column the server needs a value in must have one: a null there would be
+    /// refused on the push, so it fails here at the write, where the test that covers the write can
+    /// see it.
+    /// </summary>
     public JsonObject? Create(string table, IReadOnlyDictionary<string, JsonNode?> values)
     {
         if (ownerId() is not { } owner)
@@ -24,8 +29,9 @@ public sealed class NewRows(SyncedTableCatalog catalog, Func<string?> ownerId, T
             return null;
         }
 
+        var described = catalog[table];
         var row = new JsonObject();
-        foreach (var column in catalog[table].Columns)
+        foreach (var column in described.Columns)
         {
             row[column.Name] = null;
         }
@@ -37,6 +43,12 @@ public sealed class NewRows(SyncedTableCatalog catalog, Func<string?> ownerId, T
         foreach (var (name, value) in values)
         {
             row[name] = value?.DeepClone();
+        }
+
+        var missing = described.Required.Where(column => row[column] is null).ToList();
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException($"a new {table} row needs a value in {string.Join(", ", missing)}");
         }
 
         return row;

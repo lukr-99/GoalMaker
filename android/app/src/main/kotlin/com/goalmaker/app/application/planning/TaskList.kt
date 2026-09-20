@@ -256,6 +256,10 @@ class TaskList(
                 "status" to JsonPrimitive("open"),
                 "position" to JsonPrimitive(0.0),
                 "moved_count" to JsonPrimitive(0),
+                // The next occurrence is a plain task at this one's priority; every column the
+                // server needs a value in gets one, or the push would be refused.
+                "item_type" to JsonPrimitive(ProjectRules.TASK),
+                "priority" to JsonPrimitive(current.priority),
                 "planned_date" to JsonPrimitive(day.toString()),
                 "planned_time" to (row["planned_time"] ?: JsonNull),
                 "area_id" to (current.areaId?.let(::JsonPrimitive) ?: JsonNull),

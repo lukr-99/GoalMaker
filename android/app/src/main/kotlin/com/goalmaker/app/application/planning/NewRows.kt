@@ -25,15 +25,22 @@ class NewRows(
 
     fun timestamp(): String = SyncRules.format(now())
 
-    /** A new row of [table] with [values] set, or null when nobody is signed in. */
+    /**
+     * A new row of [table] with [values] set, or null when nobody is signed in. A column the server
+     * needs a value in must have one: a null there would be refused on the push, so it fails here at
+     * the write, where the test that covers the write can see it.
+     */
     fun create(table: String, values: Map<String, JsonElement>): JsonObject? {
         val owner = ownerId() ?: return null
-        val row = catalog[table].columns.associateTo(LinkedHashMap<String, JsonElement>()) { it.name to JsonNull }
+        val described = catalog[table]
+        val row = described.columns.associateTo(LinkedHashMap<String, JsonElement>()) { it.name to JsonNull }
         row[SyncedTable.ID] = JsonPrimitive(newId())
         row[SyncedTable.OWNER_ID] = JsonPrimitive(owner)
         row[SyncedTable.CREATED_AT] = JsonPrimitive(timestamp())
         row[SyncedTable.UPDATED_AT] = JsonPrimitive("")
         row.putAll(values)
+        val missing = described.required.filter { column -> row[column].let { it == null || it == JsonNull } }
+        check(missing.isEmpty()) { "a new $table row needs a value in ${missing.joinToString()}" }
         return JsonObject(row)
     }
 }

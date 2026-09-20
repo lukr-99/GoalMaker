@@ -57,8 +57,8 @@ class TaskListTest {
         assertEquals("2026-09-18T12:00:00.000000Z", row.text("created_at"))
         assertEquals(test.catalog["tasks"].columns.size, row.size)
         // The server refuses a row that carries a null where its column is not null, and a null
-        // defeats the column's default (Supabase migrations 0003 and 0013).
-        REQUIRED.forEach { column ->
+        // defeats the column's default. RequiredColumnsTest walks every list this way.
+        test.catalog["tasks"].required.forEach { column ->
             assertTrue("$column needs a value", row[column].let { it != null && it != JsonNull })
         }
         assertEquals(1, test.replica.outbox().size)
@@ -194,21 +194,5 @@ class TaskListTest {
         tasks.add("Run")
 
         assertEquals(listOf("Run"), tasks.watchOpen().first().map(TaskItem::title))
-    }
-
-    private companion object {
-        /** The columns the server's tasks table has as not null. */
-        val REQUIRED = listOf(
-            "id",
-            "owner_id",
-            "title",
-            "notes",
-            "top_priority",
-            "status",
-            "position",
-            "moved_count",
-            "item_type",
-            "priority",
-        )
     }
 }

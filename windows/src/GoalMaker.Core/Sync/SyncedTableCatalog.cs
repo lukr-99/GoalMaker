@@ -27,7 +27,8 @@ public sealed class SyncedTableCatalog
                 table.GetProperty("name").GetString()!,
                 [.. table.GetProperty("columns").EnumerateArray().Select(column => new SyncedColumn(
                     column.GetProperty("name").GetString()!,
-                    Enum.Parse<ColumnKind>(column.GetProperty("kind").GetString()!, ignoreCase: true)))]))
+                    Enum.Parse<ColumnKind>(column.GetProperty("kind").GetString()!, ignoreCase: true),
+                    column.TryGetProperty("required", out var required) && required.GetBoolean()))]))
             .ToList();
         return new SyncedTableCatalog(tables);
     }

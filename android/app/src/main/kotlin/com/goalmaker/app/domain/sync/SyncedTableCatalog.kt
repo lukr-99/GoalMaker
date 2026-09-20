@@ -3,6 +3,7 @@ package com.goalmaker.app.domain.sync
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
 /** The synced tables in push and pull order, read from contracts/schemas/synced-tables.json. */
@@ -25,6 +26,7 @@ class SyncedTableCatalog(
                         SyncedColumn(
                             name = column.jsonObject.getValue("name").jsonPrimitive.content,
                             kind = ColumnKind.parse(column.jsonObject.getValue("kind").jsonPrimitive.content),
+                            required = column.jsonObject["required"]?.jsonPrimitive?.booleanOrNull == true,
                         )
                     },
                 )
