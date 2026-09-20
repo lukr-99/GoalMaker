@@ -17,6 +17,19 @@ import {
   periodStart as goalPeriodStart,
 } from "../rules/goals.ts";
 import { checkinId, type HabitCheckin, type HabitItem } from "../rules/habits.ts";
+import {
+  type BoardColumn,
+  columnFor,
+  COLUMNS,
+  finishedIn,
+  type ItemType,
+  matchProject,
+  moved,
+  PRIORITIES,
+  type Priority,
+  type ProjectItem,
+  type ProjectMilestone,
+} from "../rules/projects.ts";
 import { colorForNewArea } from "./palette.ts";
 
 export interface Area {
@@ -58,6 +71,11 @@ export interface TaskFields {
   tags?: string[];
   topPriority?: boolean;
   repeat?: string | null;
+  /** The project the task is an item of, and what the board says about it (docs/projects.md). */
+  projectId?: string | null;
+  itemType?: string;
+  priority?: string;
+  milestoneId?: string | null;
 }
 
 /** What a new goal or an edit says. Undefined leaves a field alone; null clears it. */
@@ -225,13 +243,18 @@ export class Planner {
     const day = fields.day ?? null;
     const time = cleanTime(fields.time ?? null, day);
     const areaId = fields.area ? (await this.findOrCreateArea(fields.area)).id : null;
+    const projectId = fields.projectId ?? null;
+    const itemType = cleanItemType(fields.itemType);
     const id = crypto.randomUUID();
     await this.db`
       insert into public.tasks
-        (id, title, notes, top_priority, status, position, planned_date, planned_time, deadline, area_id, recurrence, series_id)
+        (id, title, notes, top_priority, status, position, planned_date, planned_time, deadline, area_id, recurrence,
+         series_id, project_id, item_type, board_column, priority, milestone_id)
       values
         (${id}, ${title}, ${cleanNotes(fields.notes ?? "")}, ${fields.topPriority ?? false}, 'open', 0, ${day}, ${time},
-         ${fields.deadline ?? null}, ${areaId}, ${repeat}, ${repeat === null ? null : id})`;
+         ${fields.deadline ?? null}, ${areaId}, ${repeat}, ${repeat === null ? null : id},
+         ${projectId}, ${itemType}, ${projectId === null ? null : columnFor(itemType)},
+         ${cleanPriority(fields.priority)}, ${projectId === null ? null : fields.milestoneId ?? null})`;
     for (const tag of fields.tags ?? []) await this.link(id, (await this.findOrCreateTag(tag)).id);
     return (await this.task(id))!;
   }
@@ -247,6 +270,19 @@ export class Planner {
       : fields.area === null
       ? null
       : (await this.findOrCreateArea(fields.area)).id;
+    const projectId = fields.projectId === undefined ? task.projectId ?? null : fields.projectId;
+    const itemType = fields.itemType === undefined ? cleanItemType(task.itemType) : cleanItemType(fields.itemType);
+    // A task out of a project keeps neither a column nor a milestone; one that joins a project lands
+    // in the column its type calls for, and one that stays put keeps where it sits (docs/projects.md).
+    const same = projectId !== null && projectId === (task.projectId ?? null);
+    const column = projectId === null ? null : same && task.boardColumn ? task.boardColumn : columnFor(itemType);
+    const milestoneId = projectId === null
+      ? null
+      : fields.milestoneId !== undefined
+      ? fields.milestoneId
+      : same
+      ? task.milestoneId ?? null
+      : null;
     await this.db`
       update public.tasks set
         title = ${fields.title === undefined ? task.title : cleanTitle(fields.title)},
@@ -258,7 +294,12 @@ export class Planner {
         area_id = ${areaId},
         top_priority = ${fields.topPriority ?? task.topPriority},
         recurrence = ${repeat},
-        series_id = ${repeat === null ? task.seriesId : task.seriesId ?? task.id}
+        series_id = ${repeat === null ? task.seriesId : task.seriesId ?? task.id},
+        project_id = ${projectId},
+        item_type = ${itemType},
+        board_column = ${column},
+        priority = ${fields.priority === undefined ? cleanPriority(task.priority) : cleanPriority(fields.priority)},
+        milestone_id = ${milestoneId}
       where id = ${id}`;
     if (fields.tags !== undefined) await this.setTags(id, fields.tags);
     return (await this.task(id))!;
@@ -268,7 +309,8 @@ export class Planner {
   async finish(id: string, status: "done" | "dropped"): Promise<{ task: TaskItem; next: TaskItem | null }> {
     const task = await this.live(id);
     await this.db`
-      update public.tasks set status = ${status}, completed_at = ${status === "done" ? this.db`now()` : null}
+      update public.tasks set status = ${status}, completed_at = ${status === "done" ? this.db`now()` : null},
+        board_column = ${columnAfter(task, status)}
       where id = ${id}`;
     const next = task.state === "open" ? await this.moveOn({ ...task, state: status }) : null;
     return { task: (await this.task(id))!, next };
@@ -281,7 +323,8 @@ export class Planner {
     await this.db`
       update public.tasks set status = 'open', completed_at = null, planned_date = ${planned},
         moved_count = ${moves(task.plannedDate, planned, task.movedCount ?? 0)},
-        planned_time = ${planned === null ? null : task.plannedTime}
+        planned_time = ${planned === null ? null : task.plannedTime},
+        board_column = ${columnAfter(task, "open")}
       where id = ${id}`;
     if (task.state !== "open") {
       const next = await this.task(await successorId(id));
@@ -616,6 +659,75 @@ export class Planner {
     return habit;
   }
 
+  /** Every project that isn't deleted, active first, then paused, then done, in the owner's order. */
+  async projects(): Promise<ProjectItem[]> {
+    const rows = await this.db`
+      select id::text, name, description, area_id::text, status, repository_url, local_folder, notes, position
+      from public.projects where deleted_at is null
+      order by (status = 'done'), (status = 'paused'), position, lower(name)`;
+    return rows.map(toProject);
+  }
+
+  /** Every milestone that isn't deleted, in the order its project lists them. */
+  async milestones(): Promise<ProjectMilestone[]> {
+    const rows = await this.db`
+      select id::text, project_id::text, name, position from public.project_milestones
+      where deleted_at is null order by position, lower(name)`;
+    return rows.map((row) => ({
+      id: row.id,
+      projectId: row.project_id,
+      name: row.name,
+      position: row.position,
+      deleted: false,
+    }));
+  }
+
+  /**
+   * The project a reference points at: its id, its repository URL, a folder inside it, or its name
+   * (docs/projects.md, story 76). Throws when nothing matches, naming what the owner has.
+   */
+  async findProject(reference: string): Promise<ProjectItem> {
+    const projects = await this.projects();
+    const project = matchProject(projects, reference);
+    if (project !== null) return project;
+    const known = projects.length === 0
+      ? "There are no projects yet."
+      : `The owner's projects are: ${projects.map((one) => one.name).join(", ")}.`;
+    throw new PlannerError(`No project matches "${reference}" by id, repository, folder or name. ${known}`);
+  }
+
+  /** A milestone of this project by id or by name; null when the reference is empty. */
+  async findMilestone(projectId: string, reference: string | null): Promise<ProjectMilestone | null> {
+    if (reference === null || reference.trim() === "") return null;
+    const own = (await this.milestones()).filter((milestone) => milestone.projectId === projectId);
+    const text = reference.trim().toLowerCase();
+    const found = own.find((milestone) => milestone.id === reference.trim()) ??
+      own.find((milestone) => milestone.name.trim().toLowerCase() === text);
+    if (found !== undefined) return found;
+    const known = own.length === 0
+      ? "That project has no milestones."
+      : `Its milestones are: ${own.map((milestone) => milestone.name).join(", ")}.`;
+    throw new PlannerError(`No milestone "${reference}" in that project. ${known}`);
+  }
+
+  /**
+   * Moves an item to a board column, the way dragging its card does: the done column completes the
+   * task (so a repeating one moves on), any other column reopens a done one, and a dropped item
+   * keeps its state wherever it sits (docs/projects.md).
+   */
+  async moveItem(id: string, column: BoardColumn): Promise<{ task: TaskItem; next: TaskItem | null }> {
+    const task = await this.live(id);
+    if (!task.projectId) throw new PlannerError(`"${task.title}" is not a project item, so it has no board column.`);
+    const wanted = moved(column, task.state);
+    let next: TaskItem | null = null;
+    if (wanted !== task.state) {
+      if (wanted === "done") next = (await this.finish(id, "done")).next;
+      else await this.reopen(id);
+    }
+    await this.db`update public.tasks set board_column = ${column} where id = ${id}`;
+    return { task: (await this.task(id))!, next };
+  }
+
   /** Skips the habit's period holding this day, or takes the skip back. */
   async skipHabit(habitId: string, day: Day, skipped = true): Promise<Habit> {
     const habit = await this.habit(habitId);
@@ -635,7 +747,8 @@ export class Planner {
     return this.db`
       select id::text, title, notes, status, top_priority, planned_date::text,
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
-             series_id::text, goal_id::text, moved_count,
+             series_id::text, goal_id::text, moved_count, position,
+             project_id::text, item_type, board_column, priority, milestone_id::text,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
@@ -727,6 +840,22 @@ function toGoal(row: any): GoalItem {
 }
 
 // deno-lint-ignore no-explicit-any
+function toProject(row: any): ProjectItem {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    areaId: row.area_id,
+    status: row.status,
+    repositoryUrl: row.repository_url,
+    localFolder: row.local_folder,
+    notes: row.notes,
+    position: row.position,
+    deleted: false,
+  };
+}
+
+// deno-lint-ignore no-explicit-any
 function toTask(row: any): TaskItem {
   return {
     id: row.id,
@@ -745,6 +874,12 @@ function toTask(row: any): TaskItem {
     completedAt: row.completed_at,
     goalId: row.goal_id,
     movedCount: row.moved_count ?? 0,
+    projectId: row.project_id,
+    itemType: row.item_type ?? "task",
+    boardColumn: row.board_column,
+    priority: row.priority ?? "normal",
+    milestoneId: row.milestone_id,
+    position: row.position ?? 0,
   };
 }
 
@@ -756,6 +891,31 @@ function cleanTitle(text: string): string {
   const title = text.trim();
   if (title.length === 0) throw new PlannerError("A task needs a title.");
   return title.slice(0, MAX_TITLE);
+}
+
+// The column a project item sits in once the task reaches this state; null for a task outside a project.
+function columnAfter(task: TaskItem, state: TaskState): string | null {
+  return task.boardColumn ? finishedIn(state, task.boardColumn) : null;
+}
+
+function cleanItemType(text: string | undefined): ItemType {
+  const type = (text ?? "task").trim().toLowerCase();
+  if (type !== "task" && type !== "idea" && type !== "bug") {
+    throw new PlannerError("An item is a task, an idea or a bug.");
+  }
+  return type;
+}
+
+function cleanPriority(text: string | undefined): Priority {
+  const priority = (text ?? "normal").trim().toLowerCase() as Priority;
+  if (!PRIORITIES.includes(priority)) throw new PlannerError("A priority is low, normal, high or urgent.");
+  return priority;
+}
+
+export function cleanColumn(text: string): BoardColumn {
+  const column = text.trim().toLowerCase() as BoardColumn;
+  if (!COLUMNS.includes(column)) throw new PlannerError("A board column is backlog, todo, doing or done.");
+  return column;
 }
 
 function cleanNotes(text: string): string {

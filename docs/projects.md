@@ -47,6 +47,14 @@ Windows shows the four columns side by side as a board, Android the same items a
 one group per column with a move action. Both offer the project list with its status, area,
 repository and folder, and the milestones of the project on show.
 
+## Through the connector
+
+Claude reads the projects and one project's board, adds and edits items with their type, priority,
+milestone and column, and moves an item between columns, over these same rules
+([connector](connector.md)). It names the project by id, repository URL, the folder it is working in
+or the project's name, so Claude Code drops an idea into the right backlog without being told which
+one it is.
+
 ## Storage
 
 `projects` and `project_milestones` are synced tables (Supabase migration 0013, replica migration

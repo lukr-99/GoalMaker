@@ -1,5 +1,5 @@
 import { z } from "../deps.ts";
-import { type GoalFields, type Planner, PlannerError, type TaskFields } from "../planner/planner.ts";
+import { cleanColumn, type GoalFields, type Planner, PlannerError, type TaskFields } from "../planner/planner.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
 import { addDays, type Day, mondayOf } from "../rules/day.ts";
 import {
@@ -11,6 +11,7 @@ import {
 } from "../rules/goals.ts";
 import { goalAmounts, habitPeriodStart, habitState, ring, streak } from "../rules/habits.ts";
 import { lists } from "../rules/listRules.ts";
+import { board, COLUMNS, PRIORITIES, type ProjectItem } from "../rules/projects.ts";
 import { byCreation } from "../rules/task.ts";
 import * as format from "./format.ts";
 
@@ -45,7 +46,7 @@ async function dayFrom(planner: Planner, text: string | null | undefined): Promi
 }
 
 async function namesOf(planner: Planner): Promise<format.Names> {
-  return format.names(await planner.areas(), await planner.tags(), await planner.tagLinks());
+  return format.names(await planner.areas(), await planner.tags(), await planner.tagLinks(), await planner.projects());
 }
 
 async function taskFields(planner: Planner, args: Record<string, unknown>): Promise<TaskFields> {
@@ -59,7 +60,28 @@ async function taskFields(planner: Planner, args: Record<string, unknown>): Prom
     tags: args.tags as string[] | undefined,
     topPriority: args.top_priority as boolean | undefined,
     repeat: args.repeat as string | null | undefined,
+    priority: args.priority as string | undefined,
   };
+}
+
+const projectRef = z.string().describe(
+  "The project: its id, its repository URL, a folder inside it (the one you are working in), or its name.",
+);
+const itemId = z.string().describe("The item's id, from a board or a search; a project item is an ordinary task.");
+const itemType = z.enum(["task", "idea", "bug"]).describe("What kind of item it is. A new idea lands in the backlog.");
+const priority = z.enum(PRIORITIES as [string, ...string[]]).describe(
+  "How important it is: urgent, high, normal or low. Items sit in a column in this order.",
+);
+const column = z.enum(COLUMNS as [string, ...string[]]).describe("A board column: backlog, todo, doing or done.");
+
+/** What a board column is called in a sentence. */
+function columnName(column: string | null | undefined): string {
+  return format.COLUMN_NAMES[column ?? ""] ?? column ?? "no column";
+}
+
+/** A project's milestones, for the board and for the item lines. */
+async function milestonesOf(planner: Planner, project: ProjectItem) {
+  return (await planner.milestones()).filter((milestone) => milestone.projectId === project.id);
 }
 
 const goalId = z.string().describe("The goal's id, from get_goals.");
@@ -158,6 +180,7 @@ export const tools: Tool[] = [
         await namesOf(planner),
         await planner.steps(task.id),
         await planner.reminders(task.id),
+        await planner.milestones(),
       );
     },
   },
@@ -255,6 +278,7 @@ export const tools: Tool[] = [
       top_priority: z.boolean().optional().describe("One of the day's top priorities."),
       notes: z.string().optional().describe("Notes; light Markdown: **bold**, *italic*, - lists, links."),
       repeat: repeat.optional(),
+      priority: priority.optional().describe("low, normal, high or urgent; normal by default."),
     },
     readOnly: false,
     destructive: false,
@@ -280,6 +304,7 @@ export const tools: Tool[] = [
       top_priority: z.boolean().optional(),
       notes: z.string().optional(),
       repeat: repeat.optional(),
+      priority: priority.optional().describe("low, normal, high or urgent."),
     },
     readOnly: false,
     destructive: false,
@@ -664,6 +689,178 @@ export const tools: Tool[] = [
       const skipped = args.skipped !== false;
       const habit = await planner.skipHabit(args.id, day, skipped);
       return skipped ? `${habit.name} skipped for ${day}.` : `${habit.name} is no longer skipped on ${day}.`;
+    },
+  },
+  {
+    name: "get_projects",
+    title: "Projects",
+    description:
+      "The owner's projects as the Projects screen lists them: name, status, area, how much is still open, and the " +
+      "repository and folder each one lives in. Paused and done projects come last.",
+    input: {
+      include_done: z.boolean().optional().describe("Also show projects that are paused or done. On by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const projects = (await planner.projects()).filter((project) =>
+        args.include_done !== false || project.status === "active"
+      );
+      if (projects.length === 0) return "There are no projects yet.";
+      const names = await namesOf(planner);
+      const tasks = await planner.tasks();
+      return ["Projects:", ...projects.map((project) => format.projectLine(project, names, tasks))].join("\n");
+    },
+  },
+  {
+    name: "get_project_board",
+    title: "A project's board",
+    description:
+      "One project's board as the apps show it: Backlog, To do, Doing and Done, each with its items in the order " +
+      "the board puts them (priority first, then where they were dragged), plus the project's milestones and notes.",
+    input: { project: projectRef },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const project = await planner.findProject(args.project);
+      const items = (await planner.tasks()).filter((task) => task.projectId === project.id);
+      return format.board(project, board(items), await namesOf(planner), await milestonesOf(planner, project));
+    },
+  },
+  {
+    name: "find_project",
+    title: "Find a project",
+    description:
+      "The project a repository URL or a folder belongs to, so a tool working in a checkout can drop an idea or a " +
+      "bug into the right backlog without asking. A folder inside the project's folder counts, and a repository " +
+      "matches however it is written (https, ssh, with or without .git).",
+    input: {
+      repository: z.string().optional().describe("The repository URL, like https://github.com/me/goalmaker."),
+      folder: z.string().optional().describe("The folder being worked in, like F:\\GoalMaker."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const reference = (args.repository as string | undefined) ?? (args.folder as string | undefined) ?? "";
+      if (reference.trim() === "") throw new PlannerError("Give a repository URL or a folder to look for.");
+      const project = await planner.findProject(reference);
+      const milestones = await milestonesOf(planner, project);
+      return [
+        format.projectLine(project, await namesOf(planner), await planner.tasks()),
+        milestones.length === 0
+          ? "It has no milestones."
+          : `Milestones: ${
+            milestones.map((milestone) => `${milestone.name} (milestone id ${milestone.id})`).join(", ")
+          }.`,
+      ].join("\n");
+    },
+  },
+  {
+    name: "add_project_item",
+    title: "Add a project item",
+    description:
+      "Adds an item to a project's board. An idea lands in the backlog, a task or a bug in To do. An item is an " +
+      "ordinary task, so it can have a day, a time, an area, tags and a deadline, and a planned day puts it in " +
+      "Today next to everything else.",
+    input: {
+      project: projectRef,
+      title: z.string().describe("What the item is."),
+      type: itemType.optional().describe("task, idea or bug; task by default."),
+      priority: priority.optional().describe("normal by default."),
+      milestone: z.string().optional().describe("A milestone of this project, by name or id."),
+      column: column.optional().describe("Where to put it; the type decides by default."),
+      day: day.optional(),
+      time: z.string().optional().describe("A time of day like 17:30; needs a day."),
+      deadline: day.optional(),
+      area: z.string().optional().describe("An area's name, like Work."),
+      tags: z.array(z.string()).optional().describe("Tag names, without #."),
+      notes: z.string().optional().describe("Notes; light Markdown. A link the idea came from belongs here."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const project = await planner.findProject(args.project);
+      const milestone = await planner.findMilestone(project.id, args.milestone ?? null);
+      const item = await planner.addTask({
+        ...(await taskFields(planner, args)),
+        projectId: project.id,
+        itemType: args.type ?? "task",
+        milestoneId: milestone?.id ?? null,
+      });
+      if (args.column !== undefined && args.column !== item.boardColumn) {
+        await planner.moveItem(item.id, cleanColumn(args.column));
+      }
+      const placed = (await planner.task(item.id))!;
+      return [
+        `Added to ${project.name}, ${columnName(placed.boardColumn)}:`,
+        format.itemLine(placed, await namesOf(planner), await milestonesOf(planner, project)),
+      ].join("\n");
+    },
+  },
+  {
+    name: "update_project_item",
+    title: "Edit a project item",
+    description:
+      "Changes what an item is and where it belongs: its type, its priority, its milestone, or the project it is " +
+      "in. Everything else about it is edited with update_task, and move_project_item moves it between columns. " +
+      "An empty milestone takes it off one; an empty project makes it a plain task again.",
+    input: {
+      id: itemId,
+      type: itemType.optional(),
+      priority: priority.optional(),
+      milestone: z.string().optional().describe("A milestone of its project, by name or id; empty for none."),
+      project: z.string().optional().describe("Move it to this project, or empty to take it out of one."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const task = await planner.task(args.id);
+      if (task === null || task.deleted) throw new PlannerError(`No task with id ${args.id}.`);
+      if (args.project === undefined && !task.projectId) {
+        throw new PlannerError(
+          `"${task.title}" is not in a project. Name a project to put it in, or use update_task for a plain task.`,
+        );
+      }
+      const wanted = args.project === undefined ? task.projectId! : (args.project as string).trim();
+      const project = wanted === "" ? null : await planner.findProject(wanted);
+      const milestone = args.milestone === undefined || project === null
+        ? undefined
+        : (await planner.findMilestone(project.id, (args.milestone as string).trim() === "" ? null : args.milestone))
+          ?.id ?? null;
+      await planner.updateTask(args.id, {
+        projectId: project?.id ?? null,
+        itemType: args.type,
+        priority: args.priority,
+        milestoneId: milestone,
+      });
+      const item = (await planner.task(args.id))!;
+      const names = await namesOf(planner);
+      if (project === null) return `Out of its project, a plain task again:\n${format.taskLine(item, names)}`;
+      return [
+        `Updated in ${project.name}, ${columnName(item.boardColumn)}:`,
+        format.itemLine(item, names, await milestonesOf(planner, project)),
+      ].join("\n");
+    },
+  },
+  {
+    name: "move_project_item",
+    title: "Move an item on the board",
+    description:
+      "Moves an item to another column, the way dragging its card does: Done completes the task (a repeating one " +
+      "moves on), any other column reopens a done item, and a dropped item keeps its state wherever it sits.",
+    input: { id: itemId, column },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const { task, next } = await planner.moveItem(args.id, cleanColumn(args.column));
+      const project = await planner.findProject(task.projectId ?? "");
+      const names = await namesOf(planner);
+      const lines = [
+        `Moved to ${columnName(task.boardColumn)} in ${project.name}:`,
+        format.itemLine(task, names, await milestonesOf(planner, project)),
+      ];
+      if (next !== null) lines.push("Next occurrence:", format.taskLine(next, names, { showDay: true }));
+      return lines.join("\n");
     },
   },
   {

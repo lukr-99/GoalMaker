@@ -34,6 +34,10 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
 | `set_goal_status`, `log_goal_amount` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
+| `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order |
+| `find_project` | The project a repository URL or a working folder belongs to (story 76) |
+| `add_project_item`, `update_project_item` | An item with its type, priority, milestone and column; its project can change |
+| `move_project_item` | Moves an item between columns, which finishes or reopens the task with it |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
@@ -42,7 +46,20 @@ period's goals with their progress, how each habit held up, and what the period'
 same triggers the apps' reactive prompts use, [reviews](reviews.md)).
 
 Days are the owner's **planning days**: the profile's time zone and day start decide what "today"
-is, and both apps keep those in step with the device. Projects get their tools with their tables (M5).
+is, and both apps keep those in step with the device.
+
+A **project item is an ordinary task**, so `update_task`, reminders and steps work on it as on
+anything else, and an item with a planned day turns up in Today with its project's name after it.
+The board and the list never disagree: moving an item to Done completes the task, completing a task
+moves it to Done, and reopening a done item puts it back in To do ([projects](projects.md)).
+
+A project is named by whatever is at hand: its id, its repository URL (https or ssh, with or
+without `.git`), the folder being worked in (a folder inside the project's own counts), or its
+name. That is what lets Claude Code drop an idea into the right backlog from the checkout it is in
+(story 76):
+
+> Use GoalMaker. Add an idea to the project for the folder I'm working in: "Cache the release
+> manifest between checks", priority high, milestone M6.
 
 A goal or a habit Claude touches is the owner's own row, so it turns up on both apps after a sync and
 in the activity log as made by Claude. A check-in is named after its habit and day, exactly as the

@@ -268,6 +268,88 @@ Deno.test({
         assert(strangers.isError, strangers.text);
       });
 
+      await t.step("a project's board is read, added to and moved through the connector", async () => {
+        const projectId = "c0ffee00-0000-4000-8000-0000000000c1";
+        const milestoneId = "c0ffee00-0000-4000-8000-0000000000c2";
+        await sql`
+          insert into public.projects (id, owner_id, name, description, status, repository_url, local_folder)
+          values (${projectId}, ${OWNER}, 'GoalMaker', 'The planner itself', 'active',
+                  'https://github.com/owner/goalmaker.git', ${"F:\\GoalMaker"})`;
+        await sql`
+          insert into public.project_milestones (id, owner_id, project_id, name)
+          values (${milestoneId}, ${OWNER}, ${projectId}, 'M5')`;
+
+        const found = await client.tool("find_project", { folder: "F:\\GoalMaker\\supabase\\functions" });
+        assert(!found.isError, found.text);
+        assertStringIncludes(found.text, `(project id ${projectId})`);
+        assertStringIncludes(found.text, "Milestones: M5");
+
+        const idea = await client.tool("add_project_item", {
+          project: "git@github.com:owner/goalmaker.git",
+          title: "Share to GoalMaker",
+          type: "idea",
+          priority: "high",
+          milestone: "M5",
+        });
+        assert(!idea.isError, idea.text);
+        assertStringIncludes(idea.text, "Added to GoalMaker, Backlog:");
+        const itemId = /\(id ([0-9a-f-]{36})\)/.exec(idea.text)![1];
+        const [item] = await sql`
+          select project_id::text, item_type, board_column, priority, milestone_id::text
+          from public.tasks where id = ${itemId}`;
+        assertEquals(item, {
+          project_id: projectId,
+          item_type: "idea",
+          board_column: "backlog",
+          priority: "high",
+          milestone_id: milestoneId,
+        });
+        const [log] = await sql`
+          select actor from public.activity_log where entity = 'tasks' and entity_id = ${itemId} and action = 'create'`;
+        assertEquals(log.actor, "claude");
+
+        const board = await client.tool("get_project_board", { project: "GoalMaker" });
+        assertStringIncludes(board.text, "Backlog (1):");
+        assertStringIncludes(board.text, "[ ] Share to GoalMaker · idea · high · M5");
+        assertStringIncludes(board.text, "To do: nothing.");
+
+        const moved = await client.tool("move_project_item", { id: itemId, column: "done" });
+        assert(!moved.isError, moved.text);
+        assertStringIncludes(moved.text, "Moved to Done in GoalMaker:");
+        const [done] = await sql`select status, board_column from public.tasks where id = ${itemId}`;
+        assertEquals(done, { status: "done", board_column: "done" });
+
+        await client.tool("reopen_task", { id: itemId });
+        const [reopened] = await sql`select status, board_column from public.tasks where id = ${itemId}`;
+        assertEquals(reopened, { status: "open", board_column: "todo" }, "a done item reopened goes back to To do");
+
+        const bug = await client.tool("add_project_item", {
+          project: projectId,
+          title: "The ring flickers",
+          type: "bug",
+          day: "today",
+        });
+        assert(!bug.isError, bug.text);
+        assertStringIncludes(bug.text, "Added to GoalMaker, To do:");
+        const today = await client.tool("get_today");
+        assertStringIncludes(today.text, "The ring flickers · +GoalMaker · bug");
+
+        const out = await client.tool("update_project_item", { id: itemId, project: "" });
+        assert(!out.isError, out.text);
+        assertStringIncludes(out.text, "a plain task again");
+        const [plain] = await sql`
+          select project_id, board_column, milestone_id from public.tasks where id = ${itemId}`;
+        assertEquals(plain, { project_id: null, board_column: null, milestone_id: null });
+
+        const projects = await client.tool("get_projects");
+        assertStringIncludes(projects.text, "GoalMaker · active · 1 open of 1");
+        assertStringIncludes(projects.text, "folder F:\\GoalMaker");
+
+        const missing = await client.tool("add_project_item", { project: "F:\\Somewhere", title: "Nowhere" });
+        assert(missing.isError, missing.text);
+        assertStringIncludes(missing.text, "The owner's projects are: GoalMaker.");
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120

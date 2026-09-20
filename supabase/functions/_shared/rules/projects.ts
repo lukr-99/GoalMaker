@@ -84,3 +84,72 @@ export function board(items: TaskItem[]): Column[] {
     items: order(items.filter((item) => !item.deleted && item.boardColumn === column)),
   }));
 }
+
+/**
+ * A repository URL in the form every way of writing it shares: `github.com/owner/app` for
+ * `https://github.com/Owner/app.git`, `git@github.com:Owner/app` and `https://github.com/owner/app/`.
+ * Null when there is nothing to compare.
+ */
+export function repositoryKey(url: string | null | undefined): string | null {
+  const text = (url ?? "").trim();
+  if (text === "") return null;
+  const scp = /^[A-Za-z0-9._-]+@([A-Za-z0-9._-]+):(.+)$/.exec(text);
+  const rest = scp !== null
+    ? `${scp[1]}/${scp[2].replace(/^\/+/, "")}`
+    : text.replace(/^[A-Za-z][A-Za-z0-9+.-]*:\/\//, "").replace(/^[^/@]+@/, "");
+  return trimTail(rest.toLowerCase()) || null;
+}
+
+/** A folder in the form both slashes share: `f:/goalmaker` for `F:\GoalMaker\`. Null when empty. */
+export function folderKey(path: string | null | undefined): string | null {
+  const key = (path ?? "").trim().replace(/[\\/]+/g, "/").replace(/\/+$/, "").toLowerCase();
+  return key === "" ? null : key;
+}
+
+/**
+ * The project a reference points at: its id, its repository URL, a folder inside it, or its name
+ * (docs/projects.md). This is how Claude Code names the project of the folder it works in, without
+ * the owner having to say which one it is (spec, story 76).
+ */
+export function matchProject(projects: ProjectItem[], reference: string): ProjectItem | null {
+  const text = reference.trim();
+  if (text === "") return null;
+  const live = projects.filter((project) => !project.deleted);
+
+  const byId = live.find((project) => project.id === text);
+  if (byId !== undefined) return byId;
+
+  const repository = repositoryKey(text);
+  const byRepository = repository === null
+    ? undefined
+    : live.find((project) => repositoryKey(project.repositoryUrl) === repository);
+  if (byRepository !== undefined) return byRepository;
+
+  // The deepest folder that holds the reference wins, so a project inside another project's folder
+  // still gets its own items.
+  const folder = folderKey(text);
+  let inFolder: ProjectItem | null = null;
+  let depth = -1;
+  for (const project of live) {
+    const own = folderKey(project.localFolder);
+    if (folder === null || own === null) continue;
+    if ((folder === own || folder.startsWith(`${own}/`)) && own.length > depth) {
+      inFolder = project;
+      depth = own.length;
+    }
+  }
+  if (inFolder !== null) return inFolder;
+
+  const name = text.toLowerCase();
+  return live.find((project) => project.name.trim().toLowerCase() === name) ?? null;
+}
+
+// Trailing slashes and a trailing .git, however they are stacked up.
+function trimTail(text: string): string {
+  let out = text;
+  for (;;) {
+    const next = out.replace(/\/+$/, "").replace(/\.git$/, "");
+    if (next === out) return out;
+    out = next;
+  }
+}

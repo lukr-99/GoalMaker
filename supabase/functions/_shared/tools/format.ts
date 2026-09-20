@@ -3,6 +3,7 @@ import { type Day, weekday } from "../rules/day.ts";
 import type { GoalItem, GoalProgress } from "../rules/goals.ts";
 import type { HabitPeriodState } from "../rules/habits.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
+import type { Column, ProjectItem, ProjectMilestone } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -21,18 +22,25 @@ const MONTHS = [
   "December",
 ];
 
-/** Everything a task line can show besides the task: its area's name and its tags' names. */
+/** Everything a task line can show besides the task: the names of its area, its tags and its project. */
 export interface Names {
   areas: Map<string, Area>;
   tags: Map<string, Tag>;
   links: Map<string, string[]>;
+  projects: Map<string, ProjectItem>;
 }
 
-export function names(areas: Area[], tags: Tag[], links: Map<string, string[]>): Names {
+export function names(
+  areas: Area[],
+  tags: Tag[],
+  links: Map<string, string[]>,
+  projects: ProjectItem[] = [],
+): Names {
   return {
     areas: new Map(areas.map((area) => [area.id, area])),
     tags: new Map(tags.map((tag) => [tag.id, tag])),
     links,
+    projects: new Map(projects.map((project) => [project.id, project])),
   };
 }
 
@@ -46,7 +54,11 @@ export function longDay(day: Day): string {
  * One task on one line, the way Claude can quote it and act on it: a box, the title, what the apps
  * show next to it, and the id for follow-up calls.
  */
-export function taskLine(task: TaskItem, names: Names, options: { showDay?: boolean } = {}): string {
+export function taskLine(
+  task: TaskItem,
+  names: Names,
+  options: { showDay?: boolean; showProject?: boolean; milestone?: string } = {},
+): string {
   const box = task.state === "done" ? "[x]" : task.state === "dropped" ? "[-]" : "[ ]";
   const parts = [`${box} ${task.title}`];
   if (task.topPriority) parts.push("top priority");
@@ -56,6 +68,11 @@ export function taskLine(task: TaskItem, names: Names, options: { showDay?: bool
   if (area) parts.push(`@${area.name}`);
   const tags = (names.links.get(task.id) ?? []).map((id) => names.tags.get(id)).filter((tag) => tag !== undefined);
   if (tags.length > 0) parts.push(tags.map((tag) => `#${tag!.name}`).join(" "));
+  const project = task.projectId ? names.projects.get(task.projectId) : undefined;
+  if (project && options.showProject !== false) parts.push(`+${project.name}`);
+  if (task.itemType && task.itemType !== "task") parts.push(task.itemType);
+  if (task.priority && task.priority !== "normal") parts.push(task.priority);
+  if (options.milestone) parts.push(options.milestone);
   if (task.recurrence) parts.push(`repeats ${task.recurrence}`);
   if (task.deadline) parts.push(`due ${task.deadline}`);
   return `- ${parts.join(" · ")} (id ${task.id})`;
@@ -135,9 +152,81 @@ export function inbox(lists: PlanningLists, names: Names): string {
     .join("\n");
 }
 
+/** What a column is called on a board. */
+export const COLUMN_NAMES: Record<string, string> = {
+  backlog: "Backlog",
+  todo: "To do",
+  doing: "Doing",
+  done: "Done",
+};
+
+/** A project with its status, area, repository and folder, and how much of it is still open. */
+export function projectLine(project: ProjectItem, names: Names, items: TaskItem[]): string {
+  const own = items.filter((item) => item.projectId === project.id && !item.deleted);
+  const open = own.filter((item) => item.state === "open").length;
+  const parts = [project.name, project.status];
+  const area = project.areaId ? names.areas.get(project.areaId) : undefined;
+  if (area) parts.push(`@${area.name}`);
+  parts.push(own.length === 0 ? "no items yet" : `${open} open of ${own.length}`);
+  if (project.repositoryUrl) parts.push(`repo ${project.repositoryUrl}`);
+  if (project.localFolder) parts.push(`folder ${project.localFolder}`);
+  return `- ${parts.join(" · ")} (project id ${project.id})`;
+}
+
+/** One project's board: its four columns with their items in order, its milestones and its notes. */
+export function board(
+  project: ProjectItem,
+  columns: Column[],
+  names: Names,
+  milestones: ProjectMilestone[],
+): string {
+  const head = [project.name, project.status];
+  const area = project.areaId ? names.areas.get(project.areaId) : undefined;
+  if (area) head.push(`@${area.name}`);
+  if (project.repositoryUrl) head.push(`repo ${project.repositoryUrl}`);
+  if (project.localFolder) head.push(`folder ${project.localFolder}`);
+  const lines = [`${head.join(" · ")} (project id ${project.id})`];
+  if (project.description.trim().length > 0) lines.push(project.description.trim());
+  if (milestones.length > 0) {
+    lines.push(
+      "Milestones:",
+      ...milestones.map((milestone) => `- ${milestone.name} (milestone id ${milestone.id})`),
+    );
+  }
+  for (const { column, items } of columns) {
+    const name = COLUMN_NAMES[column] ?? column;
+    lines.push(
+      items.length === 0
+        ? `${name}: nothing.`
+        : [`${name} (${items.length}):`, ...items.map((item) => itemLine(item, names, milestones))].join("\n"),
+    );
+  }
+  if (project.notes.trim().length > 0) lines.push("Notes:", project.notes.trim());
+  return lines.join("\n");
+}
+
+/** A board item: its task line with the milestone it belongs to, and no project name to repeat. */
+export function itemLine(item: TaskItem, names: Names, milestones: ProjectMilestone[]): string {
+  const milestone = milestones.find((one) => one.id === item.milestoneId);
+  return taskLine(item, names, { showDay: true, showProject: false, milestone: milestone?.name });
+}
+
 /** One task in full: its line, notes, steps and reminders. */
-export function taskDetail(task: TaskItem, names: Names, steps: Step[], reminders: Reminder[]): string {
+export function taskDetail(
+  task: TaskItem,
+  names: Names,
+  steps: Step[],
+  reminders: Reminder[],
+  milestones: ProjectMilestone[] = [],
+): string {
   const lines = [taskLine(task, names, { showDay: true })];
+  if (task.boardColumn) {
+    const milestone = milestones.find((one) => one.id === task.milestoneId);
+    lines.push(
+      `On the board in ${COLUMN_NAMES[task.boardColumn] ?? task.boardColumn}` +
+        (milestone === undefined ? "." : `, milestone ${milestone.name}.`),
+    );
+  }
   if (task.deleted) lines.push("This task is deleted; restore_task brings it back.");
   if (task.state === "done" && task.completedAt) lines.push(`Completed ${task.completedAt}.`);
   if (task.notes.trim().length > 0) lines.push("Notes:", task.notes);
