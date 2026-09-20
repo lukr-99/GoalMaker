@@ -30,6 +30,8 @@ public sealed class MiniWindow : Window
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.CanResizeWithGrip;
         ShowInTaskbar = false;
+        // What the list template looks at to leave out what only the main window needs.
+        Tag = "mini";
         Width = DefaultSize.Width;
         Height = DefaultSize.Height;
         MinWidth = 260;

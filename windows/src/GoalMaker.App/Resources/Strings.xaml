@@ -441,6 +441,7 @@
     <sys:String x:Key="Settings.MiniWindowsHint">Small windows you can keep on the desktop while you work. Pin one to keep it above other apps; it remembers where you left it.</sys:String>
     <sys:String x:Key="Mini.Today">Today</sys:String>
     <sys:String x:Key="Mini.Habits">Habits</sys:String>
+    <sys:String x:Key="Mini.OpenThis">Open this in a mini window</sys:String>
     <sys:String x:Key="Mini.Pin">Keep on top</sys:String>
     <sys:String x:Key="Mini.Open">Open GoalMaker</sys:String>
     <sys:String x:Key="Mini.Close">Close</sys:String>

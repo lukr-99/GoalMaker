@@ -103,12 +103,25 @@
     <!-- Habits (docs/habits.md): today's rings, streaks and heatmaps; the editor and the log panel take the page. -->
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
                 <DockPanel Margin="0,0,0,12">
                     <ui:Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Appearance="Primary"
                                Command="{Binding NewHabitCommand}" Content="{DynamicResource Habits.Add}">
                         <ui:Button.Icon>
                             <ui:SymbolIcon Symbol="Add24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <ui:Button DockPanel.Dock="Right"
+                               Margin="0,0,8,0"
+                               VerticalAlignment="Bottom"
+                               Padding="8,6"
+                               Appearance="Transparent"
+                               Command="{Binding OpenMiniCommand}"
+                               Visibility="{Binding HasMini, Converter={StaticResource BoolToVisibility}}"
+                               ToolTip="{DynamicResource Mini.OpenThis}"
+                               AutomationProperties.Name="{DynamicResource Mini.OpenThis}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="PictureInPictureEnter20" />
                         </ui:Button.Icon>
                     </ui:Button>
                     <controls:HeadlineText Title="{DynamicResource Habits.Title}" FontSize="40" />

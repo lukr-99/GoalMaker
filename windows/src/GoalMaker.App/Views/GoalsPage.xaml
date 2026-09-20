@@ -87,7 +87,7 @@
     <!-- Goals (docs/goals.md): by period, or the cascade; the editor and the log panel take the page. -->
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
                 <DockPanel Margin="0,0,0,12">
                     <ui:Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Command="{Binding ToggleTreeCommand}"
                                Content="{DynamicResource Goals.ShowTree}"

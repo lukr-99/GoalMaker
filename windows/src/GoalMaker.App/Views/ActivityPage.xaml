@@ -11,11 +11,8 @@
     <!-- Recent changes by the owner and by Claude, with undo (docs/activity.md). Read online. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MaxWidth="760" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <StackPanel Margin="{DynamicResource GM.PagePadding}">
+            <!-- The reading column sits in the middle of a wide window rather than at its edge. -->
+            <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
                 <DockPanel Margin="0,0,0,8">
                     <ui:Button DockPanel.Dock="Right" VerticalAlignment="Center" Appearance="Transparent" Padding="6"
                                Command="{Binding RefreshCommand}"

@@ -185,14 +185,16 @@ public sealed class AppGraph : IDisposable
             () => PageRequested?.Invoke(this, AppPage.Goals),
             HabitsPage,
             Habits,
-            () => PageRequested?.Invoke(this, AppPage.Habits));
+            () => PageRequested?.Invoke(this, AppPage.Habits),
+            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null);
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
         Goals = new GoalList(replica, newRows, Sync.Request);
         Habits = new HabitList(replica, newRows, Sync.Request);
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits);
-        HabitsPage = new HabitsViewModel(Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi);
+        HabitsPage = new HabitsViewModel(
+            Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits));
         Reviews = new ReviewList(replica, newRows, Sync.Request);
         Review = new ReviewViewModel(
             ReviewRules.Weekly,

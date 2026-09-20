@@ -95,7 +95,29 @@ public sealed class MiniWindowTests : IDisposable
         planner.Time.Advance(TimeSpan.FromSeconds(1));
     }
 
-    private ListViewModel TodayList()
+    [Fact]
+    public void TodayAndHabitsOfferTheMiniWindow()
+    {
+        var asked = 0;
+        var today = TodayList(() => asked++);
+        Assert.True(today.HasMini);
+        today.OpenMiniCommand.Execute(null);
+        Assert.Equal(1, asked);
+
+        var habits = new HabitsViewModel(
+            planner.Habits, planner.Goals, planner.Settings, planner.Strings, planner.Time, () => true, action => action(), () => asked++);
+        habits.OpenMiniCommand.Execute(null);
+        Assert.Equal(2, asked);
+    }
+
+    [Fact]
+    public void ThereIsNoMiniWindowToOpenFromTheOtherLists()
+    {
+        Assert.False(TodayList().HasMini);
+        Assert.False(Habits().HasMini);
+    }
+
+    private ListViewModel TodayList(Action? openMini = null)
     {
         var composer = new ComposerViewModel(
             planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, planner.Strings, planner.Time, _ => null, day => day, action => action());
@@ -111,7 +133,8 @@ public sealed class MiniWindowTests : IDisposable
             _ => null,
             () => true,
             planner.Tick,
-            action => action());
+            action => action(),
+            openMini: openMini);
     }
 
     private HabitsViewModel Habits() => new(

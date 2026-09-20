@@ -28,6 +28,7 @@ public sealed partial class HabitsViewModel : ObservableObject
     private readonly IStrings strings;
     private readonly TimeProvider time;
     private readonly Func<bool> motionReduced;
+    private readonly Action? openMini;
     private HashSet<string>? milestones;
     private string? loggingId;
 
@@ -59,8 +60,9 @@ public sealed partial class HabitsViewModel : ObservableObject
     private bool isArchivedExpanded;
 
     public HabitsViewModel(
-        HabitList habits, GoalList goals, ISettingsStore settings, IStrings strings, TimeProvider time, Func<bool> motionReduced, Action<Action> runOnUi)
+        HabitList habits, GoalList goals, ISettingsStore settings, IStrings strings, TimeProvider time, Func<bool> motionReduced, Action<Action> runOnUi, Action? openMini = null)
     {
+        this.openMini = openMini;
         this.habits = habits;
         this.goals = goals;
         this.settings = settings;
@@ -79,6 +81,13 @@ public sealed partial class HabitsViewModel : ObservableObject
         goals.Changed += (_, _) => runOnUi(Refresh);
         Refresh();
     }
+
+    /// <summary>The page offers the mini window; the mini window itself has nothing to offer.</summary>
+    public bool HasMini => openMini is not null;
+
+    /// <summary>Habits on their own, small and out of the way (docs/mini-windows.md).</summary>
+    [RelayCommand]
+    private void OpenMini() => openMini?.Invoke();
 
     /// <summary>A habit's streak just reached a milestone: time for confetti.</summary>
     public event EventHandler? Celebrate;

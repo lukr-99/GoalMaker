@@ -30,7 +30,7 @@
 
     <!-- The areas and tags manager (M2-11). Fields save when they lose the keyboard. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Margin="0,0,0,12" Title="{DynamicResource Areas.Title}" FontSize="40" />
             <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Areas.Hint}" />
             <TextBlock Margin="0,0,0,12"

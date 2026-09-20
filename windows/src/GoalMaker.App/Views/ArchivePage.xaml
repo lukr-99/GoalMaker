@@ -10,13 +10,9 @@
       Foreground="{DynamicResource GM.TextBrush}">
     <!-- The archive of done tasks (M2-12): search as you type, open one, or reopen it. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <!-- As wide as the window allows, up to 760, from the left. -->
+        <!-- The reading column sits in the middle of a wide window rather than at its edge. -->
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" MaxWidth="760" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-        <StackPanel Margin="{DynamicResource GM.PagePadding}">
+        <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
             <controls:HeadlineText Margin="0,0,0,16" Title="{DynamicResource Archive.Title}" FontSize="40" />
             <ui:TextBox Margin="0,0,0,12" PlaceholderText="{DynamicResource Archive.Search}" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
                         AutomationProperties.Name="{DynamicResource Archive.Search}">

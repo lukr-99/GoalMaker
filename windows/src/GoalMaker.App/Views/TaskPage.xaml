@@ -29,7 +29,7 @@
 
     <!-- One task's details (M2-12). Fields save when they lose the keyboard or change. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
             <DockPanel Margin="0,0,0,16">
                 <ui:Button DockPanel.Dock="Left" Margin="0,0,12,0" Padding="8" Appearance="Transparent" Command="{Binding BackCommand}"
                            ToolTip="{DynamicResource Task.Back}" AutomationProperties.Name="{DynamicResource Task.Back}">

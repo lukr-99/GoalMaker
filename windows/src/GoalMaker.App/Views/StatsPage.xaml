@@ -75,7 +75,7 @@
 
     <!-- Stats (docs/stats.md): the long view of tasks, goals, habits and how the weeks felt. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Title="{DynamicResource Stats.Title}" FontSize="40" />
             <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,8" Text="{DynamicResource Stats.Hint}" />
 

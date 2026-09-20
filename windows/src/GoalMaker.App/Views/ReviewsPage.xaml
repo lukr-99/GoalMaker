@@ -47,7 +47,7 @@
 
     <!-- Reviews (docs/reviews.md): what is waiting, and what was written before. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Title="{DynamicResource Reviews.Title}" FontSize="40" />
             <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,8" Text="{DynamicResource Reviews.Hint}" />
 

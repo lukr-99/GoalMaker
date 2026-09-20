@@ -83,6 +83,7 @@ public sealed partial class ListViewModel : ObservableObject
 
     [ObservableProperty]
     private bool hasFilter;
+    private readonly Action? openMini;
 
     public ListViewModel(
         ListKind kind,
@@ -107,7 +108,8 @@ public sealed partial class ListViewModel : ObservableObject
         Action? openGoals = null,
         HabitsViewModel? habitsPage = null,
         HabitList? habitList = null,
-        Action? openHabits = null)
+        Action? openHabits = null,
+        Action? openMini = null)
     {
         this.openTask = openTask;
         this.goals = goals;
@@ -115,6 +117,7 @@ public sealed partial class ListViewModel : ObservableObject
         this.habitsPage = habitsPage;
         this.habitList = habitList;
         this.openHabits = openHabits;
+        this.openMini = openMini;
         Filters = filters;
         this.openPlan = openPlan;
         this.reminders = reminders;
@@ -323,8 +326,15 @@ public sealed partial class ListViewModel : ObservableObject
         }
     }
 
+    /// <summary>Only Today has a mini window, so only Today offers the button.</summary>
+    public bool HasMini => openMini is not null;
+
     [RelayCommand]
     private void OpenPlan() => openPlan?.Invoke();
+
+    /// <summary>Today on its own, small and out of the way (docs/mini-windows.md).</summary>
+    [RelayCommand]
+    private void OpenMini() => openMini?.Invoke();
 
     [RelayCommand]
     private void OpenGoals() => openGoals?.Invoke();

@@ -26,7 +26,7 @@
     </Page.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="760" HorizontalAlignment="Left">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Margin="0,0,0,24" Title="{DynamicResource Settings.Title}" FontSize="40" />
 
             <ui:Card Margin="0,0,0,12" Padding="20">

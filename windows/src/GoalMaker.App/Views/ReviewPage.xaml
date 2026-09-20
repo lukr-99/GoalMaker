@@ -76,7 +76,7 @@
             </StackPanel>
         </DockPanel>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxWidth="760" HorizontalAlignment="Left">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
             <StackPanel>
                 <!-- Look back. -->
                 <StackPanel Visibility="{Binding IsLookBack, Converter={StaticResource BoolToVisibility}}">

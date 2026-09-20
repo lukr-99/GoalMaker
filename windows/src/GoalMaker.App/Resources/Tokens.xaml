@@ -1,5 +1,6 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
 
     <!--
       GoalMaker's resources that don't depend on the theme. Everything themed (GM.*Brush and
@@ -10,4 +11,12 @@
     -->
     <!-- Half the composer's height, so it's a pill (WPF draws larger radii as an ellipse). -->
     <CornerRadius x:Key="GM.ComposerCorner">22</CornerRadius>
+
+    <!--
+      How wide a page's content grows before it stops and stays in the middle of the window, so a
+      wide screen does not leave everything hugging the sidebar. Reading and forms keep the narrower
+      measure; pages made of cards and charts take the wider one.
+    -->
+    <sys:Double x:Key="GM.PageWidth">760</sys:Double>
+    <sys:Double x:Key="GM.WidePageWidth">1040</sys:Double>
 </ResourceDictionary>
