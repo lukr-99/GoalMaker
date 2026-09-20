@@ -1,5 +1,7 @@
-import type { Area, Reminder, Step, Tag } from "../planner/planner.ts";
+import type { Area, Habit, Reminder, Step, Tag } from "../planner/planner.ts";
 import { type Day, weekday } from "../rules/day.ts";
+import type { GoalItem, GoalProgress } from "../rules/goals.ts";
+import type { HabitPeriodState } from "../rules/habits.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
 import type { TaskItem } from "../rules/task.ts";
 
@@ -57,6 +59,47 @@ export function taskLine(task: TaskItem, names: Names, options: { showDay?: bool
   if (task.recurrence) parts.push(`repeats ${task.recurrence}`);
   if (task.deadline) parts.push(`due ${task.deadline}`);
   return `- ${parts.join(" · ")} (id ${task.id})`;
+}
+
+/** A goal with where it stands, the way the goals screen reads out loud. */
+export function goalLine(goal: GoalItem, progress: GoalProgress, period: string): string {
+  const parts = [`${goal.emoji ? `${goal.emoji} ` : ""}${goal.title}`, `${goal.horizon} of ${period}`];
+  if (goal.mode === "number") {
+    parts.push(`${round(progress.value)} of ${round(progress.target)}${goal.unit ? ` ${goal.unit}` : ""}`);
+  } else if (goal.mode === "tasks") {
+    parts.push(`${round(progress.value)} of ${round(progress.target)} tasks done`);
+  }
+  parts.push(goal.status === "open" ? `${Math.round(progress.fraction * 100)}%` : goal.status);
+  if (goal.status === "open" && progress.hit) parts.push("reached, waiting to be marked done");
+  return `- ${parts.join(" · ")} (goal id ${goal.id})`;
+}
+
+/** A habit with what today asks of it and the run it is on. */
+export function habitLine(
+  habit: Habit,
+  state: HabitPeriodState,
+  done: number,
+  streak: number,
+): string {
+  const asks = habit.cadence === "per_week"
+    ? `${habit.times} times a week`
+    : habit.cadence === "per_month"
+    ? `${habit.times} times a month`
+    : habit.cadence === "weekdays"
+    ? "on chosen weekdays"
+    : "every day";
+  const parts = [`${habit.emoji ? `${habit.emoji} ` : ""}${habit.name}`, asks];
+  if (habit.measure !== "check") {
+    parts.push(`${round(done)} of ${round(habit.target ?? 0)}${habit.unit ? ` ${habit.unit}` : ""} this period`);
+  }
+  parts.push(state === "met" ? "done" : state === "none" ? "not due" : state);
+  if (streak > 0) parts.push(`streak ${streak}`);
+  return `- ${parts.join(" · ")} (habit id ${habit.id})`;
+}
+
+/** A number without a trailing .0, so "5 of 20 km" reads like a person wrote it. */
+export function round(value: number): string {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 function section(title: string, tasks: TaskItem[], names: Names, showDay = false): string[] {

@@ -176,7 +176,7 @@ private fun WeekBars(weeks: List<StatsDigest.Week>) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.Bottom,
-            modifier = Modifier.fillMaxWidth().height(96.dp),
+            modifier = Modifier.fillMaxWidth().height(84.dp),
         ) {
             weeks.forEach { week ->
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
@@ -186,7 +186,7 @@ private fun WeekBars(weeks: List<StatsDigest.Week>) {
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .height((6 + 62 * week.done / most).dp)
+                            .height((6 + 54 * week.done / most).dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(if (week.done > 0) AppTheme.colors.accent else AppTheme.colors.outline.copy(alpha = 0.3f)),
                     )

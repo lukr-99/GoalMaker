@@ -198,6 +198,76 @@ Deno.test({
         assertStringIncludes(read.text, "weekly review, from Monday 14 September 2026, mood 4/5:");
       });
 
+      await t.step("a goal is set, counted and marked, and a habit feeds it", async () => {
+        const added = await client.tool("add_goal", {
+          title: "Run 20 km",
+          horizon: "week",
+          day: "2026-09-18",
+          target: 20,
+          unit: "km",
+          emoji: "\u{1F3C3}",
+        });
+        assert(!added.isError, added.text);
+        const id = /\(goal id ([0-9a-f-]{36})\)/.exec(added.text)![1];
+        assertStringIncludes(added.text, "0 of 20 km");
+
+        const logged = await client.tool("log_goal_amount", { id, amount: 8, day: "2026-09-18" });
+        assert(!logged.isError, logged.text);
+        assertStringIncludes(logged.text, "8 of 20 km");
+
+        const changed = await client.tool("update_goal", { id, target: 10 });
+        assert(!changed.isError, changed.text);
+        assertStringIncludes(changed.text, "8 of 10 km · 80%");
+
+        const goals = await client.tool("get_goals", { day: "2026-09-18" });
+        assertStringIncludes(goals.text, "Week goals:");
+        assertStringIncludes(goals.text, "Run 20 km");
+
+        const marked = await client.tool("set_goal_status", { id, status: "done" });
+        assert(!marked.isError, marked.text);
+        const [row] = await sql`
+          select status, target, period_start::text, completed_at is not null as stamped
+          from public.goals where id = ${id}`;
+        assertEquals(row, { status: "done", target: 10, period_start: "2026-09-14", stamped: true });
+        const [log] = await sql`
+          select actor from public.activity_log where entity = 'goals' and entity_id = ${id} and action = 'create'`;
+        assertEquals(log.actor, "claude");
+      });
+
+      await t.step("a check-in Claude makes is the owner's own row, logged as Claude's", async () => {
+        const habitId = "c0ffee00-0000-4000-8000-0000000000b1";
+        await sql`
+          insert into public.habits (id, owner_id, name, cadence, measure, target, unit, starts_on)
+          values (${habitId}, ${OWNER}, 'Water', 'daily', 'count', 8, 'glasses', '2026-09-01')`;
+
+        const habits = await client.tool("get_habits", { day: "2026-09-18" });
+        assertStringIncludes(habits.text, "Water · every day · 0 of 8 glasses");
+
+        const first = await client.tool("check_in_habit", { id: habitId, day: "2026-09-18", amount: 3 });
+        assert(!first.isError, first.text);
+        const second = await client.tool("check_in_habit", { id: habitId, day: "2026-09-18", amount: 5 });
+        assertStringIncludes(second.text, "at 8 glasses");
+        assertStringIncludes(second.text, "8 of 8 glasses this period · done");
+
+        const [checkin] = await sql`
+          select owner_id::text, value, skipped from public.habit_checkins
+          where habit_id = ${habitId} and day = '2026-09-18'`;
+        assertEquals(checkin, { owner_id: OWNER, value: 8, skipped: false });
+        const [log] = await sql`
+          select actor, action from public.activity_log
+          where entity = 'habit_checkins' and actor = 'claude' order by id desc limit 1`;
+        assertEquals(log.actor, "claude");
+
+        const skipped = await client.tool("skip_habit", { id: habitId, day: "2026-09-17" });
+        assert(!skipped.isError, skipped.text);
+        const [rest] = await sql`
+          select skipped from public.habit_checkins where habit_id = ${habitId} and day = '2026-09-17'`;
+        assertEquals(rest.skipped, true);
+
+        const strangers = await client.tool("check_in_habit", { id: "c0ffee00-0000-4000-8000-0000000000ff" });
+        assert(strangers.isError, strangers.text);
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120

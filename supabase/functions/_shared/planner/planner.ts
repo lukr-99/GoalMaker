@@ -7,7 +7,16 @@ import { DEFAULT_START_HOUR, planningDay } from "../rules/planningDay.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { periodStart, reviewId, type ReviewKind } from "../rules/reviews.ts";
 import { compareText, type TaskItem, type TaskState } from "../rules/task.ts";
-import { type GoalHorizon, periodEnd } from "../rules/goals.ts";
+import {
+  type GoalEntryItem,
+  type GoalHorizon,
+  type GoalItem,
+  type GoalMode,
+  type GoalStatus,
+  periodEnd,
+  periodStart as goalPeriodStart,
+} from "../rules/goals.ts";
+import { checkinId, type HabitCheckin, type HabitItem } from "../rules/habits.ts";
 import { colorForNewArea } from "./palette.ts";
 
 export interface Area {
@@ -51,6 +60,36 @@ export interface TaskFields {
   repeat?: string | null;
 }
 
+/** What a new goal or an edit says. Undefined leaves a field alone; null clears it. */
+export interface GoalFields {
+  title?: string;
+  emoji?: string | null;
+  horizon?: GoalHorizon;
+  /** Any day in the period the goal belongs to; its first day is worked out from the horizon. */
+  day?: Day;
+  mode?: GoalMode;
+  target?: number | null;
+  unit?: string | null;
+}
+
+/** A habit as the connector shows it: the rules' habit with what it is called. */
+export interface Habit extends HabitItem {
+  name: string;
+  emoji: string | null;
+  archived: boolean;
+}
+
+/** A habit's rest, with the habit it belongs to. */
+export interface Pause {
+  habitId: string;
+  from: Day;
+  until: Day | null;
+  deleted: boolean;
+}
+
+/** A day's check-in, with the habit it belongs to. */
+export type Checkin = HabitCheckin & { habitId: string };
+
 export interface Review {
   kind: ReviewKind;
   periodStart: Day;
@@ -67,6 +106,9 @@ const MAX_NOTES = 20_000;
 const MAX_AREA = 60;
 const MAX_TAG = 40;
 const MAX_STEP = 300;
+const MAX_GOAL_TITLE = 200;
+const MAX_EMOJI = 16;
+const MAX_UNIT = 20;
 const TIMESTAMP = `'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`;
 
 /**
@@ -210,7 +252,7 @@ export class Planner {
         title = ${fields.title === undefined ? task.title : cleanTitle(fields.title)},
         notes = ${fields.notes === undefined ? task.notes : cleanNotes(fields.notes)},
         planned_date = ${day},
-        moved_count = ${moves(task.plannedDate, day, task.movedCount)},
+        moved_count = ${moves(task.plannedDate, day, task.movedCount ?? 0)},
         planned_time = ${time},
         deadline = ${fields.deadline === undefined ? task.deadline : fields.deadline},
         area_id = ${areaId},
@@ -238,7 +280,7 @@ export class Planner {
     const planned = day === undefined ? task.plannedDate : day;
     await this.db`
       update public.tasks set status = 'open', completed_at = null, planned_date = ${planned},
-        moved_count = ${moves(task.plannedDate, planned, task.movedCount)},
+        moved_count = ${moves(task.plannedDate, planned, task.movedCount ?? 0)},
         planned_time = ${planned === null ? null : task.plannedTime}
       where id = ${id}`;
     if (task.state !== "open") {
@@ -402,6 +444,193 @@ export class Planner {
     return { id, name: trimmed };
   }
 
+  /** Every goal that is not deleted, newest period first, in the order the apps keep them. */
+  async goals(): Promise<GoalItem[]> {
+    const rows = await this.db`
+      select id::text, title, emoji, horizon, period_start::text, parent_id::text, progress_mode, target, unit, status
+      from public.goals where deleted_at is null
+      order by period_start desc, position, created_at, id`;
+    return rows.map(toGoal);
+  }
+
+  /** The amounts logged by hand on each numeric goal, by goal id. */
+  async goalEntries(): Promise<Map<string, GoalEntryItem[]>> {
+    const rows = await this.db`
+      select goal_id::text, amount from public.goal_entries where deleted_at is null order by day, created_at, id`;
+    const entries = new Map<string, GoalEntryItem[]>();
+    for (const row of rows) {
+      entries.set(row.goal_id, [...(entries.get(row.goal_id) ?? []), { amount: row.amount, deleted: false }]);
+    }
+    return entries;
+  }
+
+  /** The goal with this id; it has to be the owner's and not deleted. */
+  async goal(id: string): Promise<GoalItem> {
+    if (!isUuid(id)) throw new PlannerError(`No goal with id ${id}.`);
+    const rows = await this.db`
+      select id::text, title, emoji, horizon, period_start::text, parent_id::text, progress_mode, target, unit, status
+      from public.goals where id = ${id} and deleted_at is null`;
+    if (rows.length === 0) throw new PlannerError(`No goal with id ${id}.`);
+    return toGoal(rows[0]);
+  }
+
+  /** Adds a goal to the period the day falls in, the way the goals screen does. */
+  async addGoal(fields: GoalFields): Promise<GoalItem> {
+    const title = (fields.title ?? "").trim().slice(0, MAX_GOAL_TITLE);
+    if (title.length === 0) throw new PlannerError("A goal needs a title.");
+    const horizon = fields.horizon ?? "week";
+    const start = goalPeriodStart(horizon, fields.day ?? (await this.now()).today);
+    const mode = fields.mode ?? (fields.target === undefined || fields.target === null ? "done" : "number");
+    const target = mode === "number" ? fields.target ?? null : null;
+    if (mode === "number" && (target === null || !(target > 0))) {
+      throw new PlannerError("A goal that counts a number needs a target above zero.");
+    }
+    const position = (await this.goals())
+      .filter((goal) => goal.horizon === horizon && goal.periodStart === start).length;
+    const id = crypto.randomUUID();
+    await this.db`
+      insert into public.goals (id, title, emoji, horizon, period_start, progress_mode, target, unit, position)
+      values (${id}, ${title}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${horizon}, ${start}, ${mode}, ${target},
+              ${mode === "number" ? clip(fields.unit ?? null, MAX_UNIT) : null}, ${position})`;
+    return await this.goal(id);
+  }
+
+  /** Changes a goal's title, emoji, target or unit; what is left out stays as it was. */
+  async updateGoal(id: string, fields: GoalFields): Promise<GoalItem> {
+    const goal = await this.goal(id);
+    const title = fields.title === undefined ? goal.title : fields.title.trim().slice(0, MAX_GOAL_TITLE);
+    if (title.length === 0) throw new PlannerError("A goal needs a title.");
+    const target = fields.target === undefined ? goal.target : fields.target;
+    if (goal.mode === "number" && (target === null || !(target > 0))) {
+      throw new PlannerError("A goal that counts a number needs a target above zero.");
+    }
+    const numeric = goal.mode === "number";
+    await this.db`
+      update public.goals set
+        title = ${title},
+        emoji = ${fields.emoji === undefined ? goal.emoji : clip(fields.emoji, MAX_EMOJI)},
+        target = ${numeric ? target : null},
+        unit = ${numeric ? (fields.unit === undefined ? goal.unit : clip(fields.unit, MAX_UNIT)) : null}
+      where id = ${id}`;
+    return await this.goal(id);
+  }
+
+  /** Marks a goal open, done or dropped, stamping when it was hit. */
+  async setGoalStatus(id: string, status: GoalStatus): Promise<GoalItem> {
+    await this.goal(id);
+    await this.db`
+      update public.goals set status = ${status},
+        completed_at = case when ${status}::text = 'done' then now() else null end
+      where id = ${id}`;
+    return await this.goal(id);
+  }
+
+  /** Logs an amount on a numeric goal, like "+5 km"; a negative amount takes one back. */
+  async logAmount(goalId: string, day: Day, amount: number): Promise<GoalItem> {
+    const goal = await this.goal(goalId);
+    if (goal.mode !== "number") {
+      throw new PlannerError(`"${goal.title}" does not count a number, so there is nothing to log on it.`);
+    }
+    if (!Number.isFinite(amount) || amount === 0) {
+      throw new PlannerError("An amount has to be something other than zero.");
+    }
+    await this.db`
+      insert into public.goal_entries (id, goal_id, day, amount)
+      values (${crypto.randomUUID()}, ${goalId}, ${day}, ${amount})`;
+    return goal;
+  }
+
+  /** Every habit that is not deleted, in the order the apps keep them. */
+  async habits(): Promise<Habit[]> {
+    const rows = await this.db`
+      select id::text, name, emoji, cadence, weekdays, times, measure, target, unit, goal_id::text,
+             starts_on::text, archived_at is not null as archived
+      from public.habits where deleted_at is null order by position, created_at, id`;
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      emoji: row.emoji,
+      cadence: row.cadence,
+      weekdays: row.weekdays,
+      times: row.times,
+      measure: row.measure,
+      target: row.target,
+      unit: row.unit,
+      goalId: row.goal_id,
+      startsOn: row.starts_on,
+      archived: row.archived,
+      deleted: false,
+    }));
+  }
+
+  /** Every check-in that is not deleted, with the habit it belongs to. */
+  async checkins(): Promise<Checkin[]> {
+    const rows = await this.db`
+      select habit_id::text, day::text, value, skipped from public.habit_checkins
+      where deleted_at is null order by day, habit_id`;
+    return rows.map((row) => ({
+      habitId: row.habit_id,
+      day: row.day,
+      value: row.value,
+      skipped: row.skipped,
+      deleted: false,
+    }));
+  }
+
+  /** Every pause that is not deleted. */
+  async pauses(): Promise<Pause[]> {
+    const rows = await this.db`
+      select habit_id::text, starts_on::text, ends_on::text from public.habit_pauses
+      where deleted_at is null order by starts_on, habit_id`;
+    return rows.map((row) => ({ habitId: row.habit_id, from: row.starts_on, until: row.ends_on, deleted: false }));
+  }
+
+  /** The habit with this id; it has to be the owner's and not deleted. */
+  async habit(id: string): Promise<Habit> {
+    if (!isUuid(id)) throw new PlannerError(`No habit with id ${id}.`);
+    const habit = (await this.habits()).find((row) => row.id === id);
+    if (habit === undefined) throw new PlannerError(`No habit with id ${id}.`);
+    return habit;
+  }
+
+  /**
+   * Checks a habit in on a day, like tapping its ring: a check is met, a count or an amount adds to
+   * whatever the day already had. The day's one check-in is named after the habit and the day, so a
+   * check-in written here and one written on a device are the same row.
+   */
+  async checkIn(habitId: string, day: Day, amount = 1): Promise<{ habit: Habit; value: number }> {
+    const habit = await this.habit(habitId);
+    if (!Number.isFinite(amount) || amount <= 0) throw new PlannerError("An amount has to be more than zero.");
+    const before = (await this.checkins()).find((checkin) => checkin.habitId === habitId && checkin.day === day);
+    const had = before === undefined || before.skipped ? 0 : before.value;
+    const value = habit.measure === "check" ? 1 : had + amount;
+    await this.writeCheckin(habitId, day, value, false);
+    return { habit, value };
+  }
+
+  /** Sets a day's value outright, which is how a check-in is taken back (a value of 0). */
+  async setCheckin(habitId: string, day: Day, value: number): Promise<Habit> {
+    const habit = await this.habit(habitId);
+    if (!Number.isFinite(value) || value < 0) throw new PlannerError("A value cannot be less than zero.");
+    await this.writeCheckin(habitId, day, value, false);
+    return habit;
+  }
+
+  /** Skips the habit's period holding this day, or takes the skip back. */
+  async skipHabit(habitId: string, day: Day, skipped = true): Promise<Habit> {
+    const habit = await this.habit(habitId);
+    await this.writeCheckin(habitId, day, 0, skipped);
+    return habit;
+  }
+
+  private async writeCheckin(habitId: string, day: Day, value: number, skipped: boolean) {
+    const id = await checkinId(habitId, day);
+    await this.db`
+      insert into public.habit_checkins (id, habit_id, day, value, skipped)
+      values (${id}, ${habitId}, ${day}, ${value}, ${skipped})
+      on conflict (id) do update set value = excluded.value, skipped = excluded.skipped, deleted_at = null`;
+  }
+
   private taskColumns() {
     return this.db`
       select id::text, title, notes, status, top_priority, planned_date::text,
@@ -472,6 +701,29 @@ export class Planner {
     }
     return await this.task(nextId);
   }
+}
+
+// Text that has to fit a column, or null when there is nothing left of it.
+function clip(text: string | null, length: number): string | null {
+  const trimmed = text?.trim().slice(0, length) ?? "";
+  return trimmed.length === 0 ? null : trimmed;
+}
+
+// deno-lint-ignore no-explicit-any
+function toGoal(row: any): GoalItem {
+  return {
+    id: row.id,
+    title: row.title,
+    horizon: row.horizon,
+    periodStart: row.period_start,
+    mode: row.progress_mode,
+    status: row.status,
+    emoji: row.emoji,
+    parentId: row.parent_id,
+    target: row.target,
+    unit: row.unit,
+    deleted: false,
+  };
 }
 
 // deno-lint-ignore no-explicit-any

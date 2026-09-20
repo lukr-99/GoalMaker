@@ -31,14 +31,22 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `add_step`, `check_step` | A task's checklist |
 | `finish_plan_tomorrow` | Records the ritual, which quiets the evening reminder on both devices |
 | `save_review_summary`, `get_review_summaries` | A weekly or monthly review's summary, mood and energy |
+| `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
+| `set_goal_status`, `log_goal_amount` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
+| `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
-ritual's steps, and Claude makes the changes through the tools.
+ritual's steps, and Claude makes the changes through the tools. The two review prompts also carry the
+period's goals with their progress, how each habit held up, and what the period's data asks about (the
+same triggers the apps' reactive prompts use, [reviews](reviews.md)).
 
 Days are the owner's **planning days**: the profile's time zone and day start decide what "today"
-is, and both apps keep those in step with the device. Goals, habits and projects get their tools
-with their tables (M4 and M5).
+is, and both apps keep those in step with the device. Projects get their tools with their tables (M5).
+
+A goal or a habit Claude touches is the owner's own row, so it turns up on both apps after a sync and
+in the activity log as made by Claude. A check-in is named after its habit and day, exactly as the
+apps name it, so checking in here and checking in on the phone are one row, never two.
 
 ## How it is built
 

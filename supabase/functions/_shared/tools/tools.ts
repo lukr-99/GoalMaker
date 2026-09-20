@@ -1,7 +1,15 @@
 import { z } from "../deps.ts";
-import { type Planner, PlannerError, type TaskFields } from "../planner/planner.ts";
+import { type GoalFields, type Planner, PlannerError, type TaskFields } from "../planner/planner.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
 import { addDays, type Day, mondayOf } from "../rules/day.ts";
+import {
+  type GoalHorizon,
+  type GoalItem,
+  goalProgress,
+  periodEnd as goalPeriodEnd,
+  periodStart as goalPeriodStart,
+} from "../rules/goals.ts";
+import { goalAmounts, habitPeriodStart, habitState, ring, streak } from "../rules/habits.ts";
 import { lists } from "../rules/listRules.ts";
 import { byCreation } from "../rules/task.ts";
 import * as format from "./format.ts";
@@ -52,6 +60,42 @@ async function taskFields(planner: Planner, args: Record<string, unknown>): Prom
     topPriority: args.top_priority as boolean | undefined,
     repeat: args.repeat as string | null | undefined,
   };
+}
+
+const goalId = z.string().describe("The goal's id, from get_goals.");
+const habitId = z.string().describe("The habit's id, from get_habits.");
+const horizon = z.enum(["year", "month", "week", "day"]).describe(
+  "How long the goal runs: year, month, week or day. A week starts on Monday, a month on the 1st.",
+);
+
+/** Where each goal stands, from the tasks that serve it and what was logged or checked in on it. */
+async function progressOf(planner: Planner) {
+  const tasks = await planner.tasks();
+  const entries = await planner.goalEntries();
+  const habits = await planner.habits();
+  const checkins = await planner.checkins();
+  return (goal: GoalItem) =>
+    goalProgress(
+      goal.mode,
+      goal.status,
+      goal.target,
+      tasks.filter((task) => task.goalId === goal.id && !task.deleted),
+      [
+        ...(entries.get(goal.id) ?? []),
+        ...(goal.mode === "number"
+          ? goalAmounts(goal, habits, checkins).map((amount) => ({ amount, deleted: false }))
+          : []),
+      ],
+    );
+}
+
+// "14 to 20 September 2026" for a week, "September 2026" for a month, "2026" for a year.
+function periodText(goal: GoalItem): string {
+  const end = goalPeriodEnd(goal.horizon, goal.periodStart);
+  if (goal.horizon === "year") return goal.periodStart.slice(0, 4);
+  if (goal.horizon === "month") return format.longDay(goal.periodStart).split(" ").slice(2).join(" ");
+  if (goal.horizon === "day") return format.longDay(goal.periodStart);
+  return `${goal.periodStart} to ${end}`;
 }
 
 async function line(planner: Planner, taskId: string): Promise<string> {
@@ -418,6 +462,208 @@ export const tools: Tool[] = [
       const { today } = await planner.now();
       await planner.recordRitual("plan_tomorrow", today);
       return `Plan tomorrow is recorded for ${format.longDay(today)}; the evening reminder stays quiet.`;
+    },
+  },
+  {
+    name: "get_goals",
+    title: "Goals",
+    description:
+      "The owner's goals with where each one stands, the way the Goals screen shows them: this week, this month " +
+      "and this year by default, or the periods a day falls in. A goal counts what its tasks and its habits did.",
+    input: {
+      day: z.string().optional().describe(
+        'Which periods to show, as "today", "tomorrow" or a date like 2026-09-21. Today by default.',
+      ),
+      include_past: z.boolean().optional().describe("Also show goals of earlier periods. Off by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const progress = await progressOf(planner);
+      const goals = (await planner.goals()).filter((goal) =>
+        args.include_past === true || goal.periodStart === goalPeriodStart(goal.horizon, day)
+      );
+      if (goals.length === 0) {
+        return args.include_past === true
+          ? "There are no goals yet. add_goal sets one for a week, a month or a year."
+          : `No goals for the periods ${day} falls in. add_goal sets one.`;
+      }
+      const order: GoalHorizon[] = ["year", "month", "week", "day"];
+      const lines = [];
+      for (const only of order) {
+        const rows = goals.filter((goal) => goal.horizon === only);
+        if (rows.length === 0) continue;
+        lines.push(`${only[0].toUpperCase()}${only.slice(1)} goals:`);
+        for (const goal of rows) lines.push(format.goalLine(goal, progress(goal), periodText(goal)));
+      }
+      return lines.join("\n");
+    },
+  },
+  {
+    name: "add_goal",
+    title: "Add a goal",
+    description:
+      "Sets a goal for a week, a month or a year. A goal is met by being marked done, by the tasks that serve it, " +
+      "or by a number it counts (a target and a unit, like 80 km), which habits and log_goal_amount add to.",
+    input: {
+      title: z.string().describe("What the goal is, in the owner's words."),
+      horizon: horizon.optional().describe("week by default."),
+      day: z.string().optional().describe("Any day in the period the goal belongs to. Today by default."),
+      emoji: z.string().optional().describe("One emoji for the goal."),
+      target: z.number().optional().describe("The number to reach, for a goal that counts something."),
+      unit: z.string().optional().describe('What the number counts, like "km" or "books".'),
+      counts_tasks: z.boolean().optional().describe("Met when every task that serves it is done."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const fields: GoalFields = {
+        title: args.title,
+        horizon: args.horizon,
+        day: (await dayFrom(planner, args.day)) ?? undefined,
+        emoji: args.emoji,
+        target: args.target,
+        unit: args.unit,
+        mode: args.counts_tasks === true ? "tasks" : args.target === undefined ? "done" : "number",
+      };
+      const goal = await planner.addGoal(fields);
+      const progress = await progressOf(planner);
+      return ["Goal set.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+    },
+  },
+  {
+    name: "update_goal",
+    title: "Change a goal",
+    description: "Changes a goal's title, emoji, target or unit. What is left out stays as it was.",
+    input: {
+      id: goalId,
+      title: z.string().optional(),
+      emoji: z.string().nullable().optional(),
+      target: z.number().optional().describe("The new target of a goal that counts a number."),
+      unit: z.string().nullable().optional(),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const goal = await planner.updateGoal(args.id, {
+        title: args.title,
+        emoji: args.emoji,
+        target: args.target,
+        unit: args.unit,
+      });
+      const progress = await progressOf(planner);
+      return ["Goal changed.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+    },
+  },
+  {
+    name: "set_goal_status",
+    title: "Mark a goal",
+    description:
+      "Marks a goal done when it is reached, dropped when it is let go, or open again. Dropping keeps the goal " +
+      "and its history; it is not a delete.",
+    input: { id: goalId, status: z.enum(["open", "done", "dropped"]) },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const goal = await planner.setGoalStatus(args.id, args.status);
+      const progress = await progressOf(planner);
+      return [`Goal marked ${args.status}.`, format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+    },
+  },
+  {
+    name: "log_goal_amount",
+    title: "Log an amount",
+    description:
+      'Logs an amount on a goal that counts a number, like "+5 km". A negative amount takes one back. Amounts ' +
+      "a habit checked in are counted already and must not be logged again.",
+    input: {
+      id: goalId,
+      amount: z.number().describe("How much to add, in the goal's unit. Negative takes an amount back."),
+      day: z.string().optional().describe("The day it belongs to. Today by default."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const goal = await planner.logAmount(args.id, day, args.amount);
+      const progress = await progressOf(planner);
+      return ["Amount logged.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+    },
+  },
+  {
+    name: "get_habits",
+    title: "Habits",
+    description:
+      "The owner's habits as the Habits screen shows them: what each one asks of the day, whether its period is " +
+      "met, how far today has got, and the streak it is on. Archived habits are left out.",
+    input: {
+      day: z.string().optional().describe('The day to look at, as "today" or a date. Today by default.'),
+      include_archived: z.boolean().optional().describe("Also show habits put away. Off by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const habits = (await planner.habits()).filter((habit) => args.include_archived === true || !habit.archived);
+      if (habits.length === 0) return "There are no habits yet.";
+      const checkins = await planner.checkins();
+      const pauses = await planner.pauses();
+      const lines = [`Habits on ${format.longDay(day)}:`];
+      for (const habit of habits) {
+        const own = checkins.filter((checkin) => checkin.habitId === habit.id);
+        const rests = pauses.filter((pause) => pause.habitId === habit.id);
+        const state = habitState(habit, habitPeriodStart(habit, day), day, own, rests);
+        const done = (ring(habit, day, own) ?? 0) * (habit.measure === "check" ? 1 : habit.target ?? 1);
+        lines.push(format.habitLine(habit, state, done, streak(habit, day, own, rests)));
+      }
+      return lines.join("\n");
+    },
+  },
+  {
+    name: "check_in_habit",
+    title: "Check a habit in",
+    description:
+      "Checks a habit in on a day, the way tapping its ring does. A habit that counts or measures adds the amount " +
+      "to whatever the day already had; leave the amount out for a plain check.",
+    input: {
+      id: habitId,
+      day: z.string().optional().describe("The day to check in on. Today by default."),
+      amount: z.number().optional().describe("How much, for a habit that counts or measures something."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const { habit, value } = await planner.checkIn(args.id, day, args.amount ?? 1);
+      const own = (await planner.checkins()).filter((checkin) => checkin.habitId === habit.id);
+      const rests = (await planner.pauses()).filter((pause) => pause.habitId === habit.id);
+      const state = habitState(habit, habitPeriodStart(habit, day), day, own, rests);
+      const amount = habit.measure === "check" ? "" : ` at ${format.round(value)}${habit.unit ? ` ${habit.unit}` : ""}`;
+      return [
+        `${habit.name} checked in for ${day}${amount}.`,
+        format.habitLine(habit, state, value, streak(habit, day, own, rests)),
+      ].join("\n");
+    },
+  },
+  {
+    name: "skip_habit",
+    title: "Skip a habit",
+    description:
+      "Skips a habit's period, which neither meets it nor breaks its streak: what the owner does on a day off. " +
+      "Set skipped to false to take the skip back.",
+    input: {
+      id: habitId,
+      day: z.string().optional().describe("A day in the period to skip. Today by default."),
+      skipped: z.boolean().optional().describe("True by default."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const skipped = args.skipped !== false;
+      const habit = await planner.skipHabit(args.id, day, skipped);
+      return skipped ? `${habit.name} skipped for ${day}.` : `${habit.name} is no longer skipped on ${day}.`;
     },
   },
   {

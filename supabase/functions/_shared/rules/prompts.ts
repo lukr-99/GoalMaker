@@ -96,26 +96,20 @@ export function rotation(library: PromptLibrary, kind: string, shown: string[], 
   return chosen;
 }
 
-/**
- * The triggered prompts `facts` call for, worst first within each trigger: a goal behind plan, a habit
- * mostly missed, a task that keeps moving, a long streak, a goal ahead of plan, a period without goals,
- * and a quiet or busy period (not in a yearly review).
- */
-export function reactive(library: PromptLibrary, kind: string, facts: PeriodFacts): ReviewQuestion[] {
-  const triggers = new Map<string, ReviewPrompt>();
-  for (const prompt of library.prompts) {
-    if (
-      prompt.trigger !== undefined && prompt.reviews.includes(kind as ReviewKindName) && !triggers.has(prompt.trigger)
-    ) {
-      triggers.set(prompt.trigger, prompt);
-    }
-  }
-  const questions: ReviewQuestion[] = [];
-  const ask = (trigger: string, subject: string | null = null) => {
-    const prompt = triggers.get(trigger);
-    if (prompt) questions.push({ promptId: prompt.id, text: promptText(prompt, kind, subject), subject });
-  };
+/** One thing a period's facts call for: the trigger and what it is about, if anything. */
+export interface Trigger {
+  trigger: string;
+  subject: string | null;
+}
 
+/**
+ * What `facts` call for, worst first within each trigger: a goal behind plan, a habit mostly missed, a
+ * task that keeps moving, a long streak, a goal ahead of plan, a period without goals, and a quiet or
+ * busy period. The prompt library turns these into questions; the connector's review prompts read them
+ * as they are (contracts/vectors/reviews.json, 'reactive').
+ */
+export function triggers(facts: PeriodFacts): Trigger[] {
+  const found: Trigger[] = [];
   const worst = <T>(
     items: T[],
     keep: (item: T) => boolean,
@@ -134,39 +128,60 @@ export function reactive(library: PromptLibrary, kind: string, facts: PeriodFact
     (goal) => goal.expected - goal.fraction,
     (goal) => goal.title,
   );
-  if (behind) ask("goal_behind", behind.title);
+  if (behind) found.push({ trigger: "goal_behind", subject: behind.title });
   const missed = worst(
     facts.habits,
     (habit) => habit.periods >= 2 && habit.missed >= Math.ceil(habit.periods / 2),
     (habit) => habit.missed,
     (habit) => habit.name,
   );
-  if (missed) ask("habit_missed", missed.name);
+  if (missed) found.push({ trigger: "habit_missed", subject: missed.name });
   const slipping = worst(
     facts.tasks,
     (task) => task.moves >= SLIPPING_MOVES,
     (task) => task.moves,
     (task) => task.title,
   );
-  if (slipping) ask("task_slipping", slipping.title);
+  if (slipping) found.push({ trigger: "task_slipping", subject: slipping.title });
   const streak = worst(
     facts.habits,
     (habit) => habit.streak >= LONG_STREAK,
     (habit) => habit.streak,
     (habit) => habit.name,
   );
-  if (streak) ask("habit_streak", streak.name);
+  if (streak) found.push({ trigger: "habit_streak", subject: streak.name });
   const ahead = worst(
     facts.goals,
     (goal) => goal.fraction - goal.expected >= GOAL_GAP,
     (goal) => goal.fraction - goal.expected,
     (goal) => goal.title,
   );
-  if (ahead) ask("goal_ahead", ahead.title);
-  if (facts.goals.length === 0) ask("no_goals");
+  if (ahead) found.push({ trigger: "goal_ahead", subject: ahead.title });
+  if (facts.goals.length === 0) found.push({ trigger: "no_goals", subject: null });
   if (facts.averageDone > 0) {
-    if (facts.doneTasks <= facts.averageDone / 2) ask("quiet_period");
-    if (facts.doneTasks >= facts.averageDone * 1.5) ask("busy_period");
+    if (facts.doneTasks <= facts.averageDone / 2) found.push({ trigger: "quiet_period", subject: null });
+    if (facts.doneTasks >= facts.averageDone * 1.5) found.push({ trigger: "busy_period", subject: null });
+  }
+  return found;
+}
+
+/**
+ * The triggered prompts `facts` call for, in the order `triggers` gives them; a review of `kind` that
+ * has no prompt for a trigger (a yearly one and the quiet or busy period) simply skips it.
+ */
+export function reactive(library: PromptLibrary, kind: string, facts: PeriodFacts): ReviewQuestion[] {
+  const prompts = new Map<string, ReviewPrompt>();
+  for (const prompt of library.prompts) {
+    if (
+      prompt.trigger !== undefined && prompt.reviews.includes(kind as ReviewKindName) && !prompts.has(prompt.trigger)
+    ) {
+      prompts.set(prompt.trigger, prompt);
+    }
+  }
+  const questions: ReviewQuestion[] = [];
+  for (const { trigger, subject } of triggers(facts)) {
+    const prompt = prompts.get(trigger);
+    if (prompt) questions.push({ promptId: prompt.id, text: promptText(prompt, kind, subject), subject });
   }
   return questions;
 }

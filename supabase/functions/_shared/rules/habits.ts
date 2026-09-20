@@ -109,6 +109,17 @@ export function habitState(
   return end >= today ? "open" : "missed";
 }
 
+/** The starts of the habit's periods that touch the days `from` to `to`, oldest first. */
+export function periodsBetween(habit: HabitItem, from: Day, to: Day): Day[] {
+  const starts: Day[] = [];
+  let start = habitPeriodStart(habit, from);
+  while (start <= to) {
+    if (start >= from || habitPeriodEnd(habit, start) >= from) starts.push(start);
+    start = addDays(habitPeriodEnd(habit, start), 1);
+  }
+  return starts;
+}
+
 /** Met periods back from the one holding `today`; open, paused, skipped and none pass, missed ends it. */
 export function streak(habit: HabitItem, today: Day, checkins: HabitCheckin[], pauses: HabitPause[]): number {
   let count = 0;
