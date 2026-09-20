@@ -1,6 +1,6 @@
 # M5-07: Add to Startup Profiles
 
-**Status:** todo · **Milestone:** M5
+**Status:** done · **Milestone:** M5
 
 ## Scope
 - A settings row, shown only when Startup Profiles is installed, that registers GoalMaker with it

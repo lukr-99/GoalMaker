@@ -6,7 +6,7 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 
 ## Status
 
-**M0 to M4 are built and M5 is under way.** What works today, on both apps unless it says otherwise:
+**M0 to M5 are built.** What works today, on both apps unless it says otherwise:
 
 - **Delivery (M0):** sign-in with an emailed 6-digit code, sessions kept across restarts, a signed
   update channel in Supabase Storage that both apps verify before installing, the migration chain
@@ -26,14 +26,15 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   ([docs/habits.md](docs/habits.md)), the guided weekly and monthly review with a rotating prompt
   library and prompts that react to the period's data ([docs/reviews.md](docs/reviews.md)), review
   reminders, and the stats screen ([docs/stats.md](docs/stats.md)).
-- **M5, in progress:** projects with a Backlog, To do, Doing and Done board
-  ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
-  ([docs/calendar.md](docs/calendar.md)), and Today and Habits widgets on Android
+- **Projects, calendar, widgets and the desktop (M5):** projects with a Backlog, To do, Doing and
+  Done board ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
+  ([docs/calendar.md](docs/calendar.md)), Today and Habits widgets on Android
   ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
-  project by the repository or folder it is working in
-  ([docs/connector.md](docs/connector.md)), sharing text or a link from any Android app into a task
-  ([docs/composer.md](docs/composer.md)), and the pinnable Today and Habits mini windows on Windows
-  ([docs/mini-windows.md](docs/mini-windows.md)). Still to come: Startup Profiles.
+  project by the repository or folder it is working in ([docs/connector.md](docs/connector.md)),
+  sharing text or a link from any Android app into a task ([docs/composer.md](docs/composer.md)),
+  the pinnable Today and Habits mini windows on Windows
+  ([docs/mini-windows.md](docs/mini-windows.md)), and starting with Windows, with Add to Startup
+  Profiles when that app is installed ([docs/startup.md](docs/startup.md)).
 
 No release has been published yet; the cloud project and the signing keys still need the one-time
 setup in [docs/setup/](docs/setup/).

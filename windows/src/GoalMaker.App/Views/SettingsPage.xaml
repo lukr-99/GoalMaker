@@ -226,6 +226,23 @@
                 </StackPanel>
             </ui:Card>
 
+            <!-- Startup: GoalMaker's own (story 81) and the ask that hands it to Startup Profiles (story 84). -->
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Startup}" />
+                    <ui:ToggleSwitch Content="{DynamicResource Settings.StartWithWindows}" IsChecked="{Binding StartsWithWindows}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.StartWithWindowsHint}" />
+                    <StackPanel Margin="0,16,0,0" Visibility="{Binding HasStartupProfiles, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4" Text="{DynamicResource Settings.StartupProfiles}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Settings.StartupProfilesHint}" />
+                        <ui:Button HorizontalAlignment="Left"
+                                   Content="{DynamicResource Settings.StartupProfilesAdd}"
+                                   Command="{Binding AddToStartupProfilesCommand}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding StartupProfilesStatus}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+
             <!-- The mini windows (spec, story 80); the tray and the mini switch open the same two. -->
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>

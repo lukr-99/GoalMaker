@@ -8,7 +8,8 @@ public sealed record BuildConfiguration(
     string Version,
     bool IsDevBuild,
     BackendEnvironment DefaultBackend,
-    string ManifestPublicKey)
+    string ManifestPublicKey,
+    string Publisher)
 {
     /// <summary>Distinct per build kind so a dev build and the installed release can run side by side.</summary>
     public string InstanceName => IsDevBuild ? "GoalMaker-dev" : "GoalMaker";
@@ -23,6 +24,7 @@ public sealed record BuildConfiguration(
             Version: version,
             IsDevBuild: !string.Equals(Metadata("GoalMaker.ReleaseBuild"), "true", StringComparison.OrdinalIgnoreCase),
             DefaultBackend: new BackendEnvironment(Metadata("GoalMaker.SupabaseUrl"), Metadata("GoalMaker.SupabaseKey")),
-            ManifestPublicKey: Metadata("GoalMaker.ManifestPublicKey"));
+            ManifestPublicKey: Metadata("GoalMaker.ManifestPublicKey"),
+            Publisher: assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company ?? string.Empty);
     }
 }

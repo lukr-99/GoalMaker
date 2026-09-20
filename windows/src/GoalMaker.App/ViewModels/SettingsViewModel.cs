@@ -11,6 +11,7 @@ using GoalMaker.Core.Backend;
 using GoalMaker.Core.Design;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
+using GoalMaker.Core.Startup;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 
@@ -32,6 +33,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly Action quietHoursChanged;
     private readonly Func<HotkeyGesture?, bool> applyQuickAddHotkey;
     private readonly Action<MiniPage> openMini;
+    private readonly ISignInStartup signInStartup;
+    private readonly IStartupProfiles startupProfiles;
+    private readonly StartupProfilesRequest startupProfilesRequest;
     private readonly Action restartApp;
 
     [ObservableProperty]
@@ -65,6 +69,11 @@ public sealed partial class SettingsViewModel : ObservableObject
     private UpdateCheckResult.Available? availableUpdate;
 
     [ObservableProperty]
+    private string startupProfilesStatus = string.Empty;
+
+    private bool startsWithWindows;
+
+    [ObservableProperty]
     private string backendUrlDraft;
 
     [ObservableProperty]
@@ -84,10 +93,18 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action quietHoursChanged,
         Func<HotkeyGesture?, bool> applyQuickAddHotkey,
         Action<MiniPage> openMini,
+        ISignInStartup signInStartup,
+        IStartupProfiles startupProfiles,
+        StartupProfilesRequest startupProfilesRequest,
         Action restartApp,
         Action<Action> runOnUi)
     {
         this.openMini = openMini;
+        this.signInStartup = signInStartup;
+        this.startupProfiles = startupProfiles;
+        this.startupProfilesRequest = startupProfilesRequest;
+        startsWithWindows = signInStartup.IsOn;
+        HasStartupProfiles = startupProfiles.Find() is not null;
         this.auth = auth;
         this.sync = sync;
         this.settings = settings;
@@ -322,6 +339,38 @@ public sealed partial class SettingsViewModel : ObservableObject
         ApplyQuickAddHotkey(gesture);
         return true;
     }
+
+    /// <summary>
+    /// GoalMaker starts in the tray when the owner signs in to Windows (spec, story 81), which is what
+    /// keeps PC reminders coming. The installer sets this too, and both write the same value.
+    /// </summary>
+    public bool StartsWithWindows
+    {
+        get => startsWithWindows;
+        set
+        {
+            if (startsWithWindows == value || !signInStartup.Set(value))
+            {
+                return;
+            }
+
+            startsWithWindows = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Whether Startup Profiles is installed; the row that hands GoalMaker to it hides when not.</summary>
+    public bool HasStartupProfiles { get; }
+
+    /// <summary>
+    /// Asks Startup Profiles to add GoalMaker (spec, story 84). It opens its own window, where the
+    /// owner picks the profiles; GoalMaker writes nothing of theirs and learns nothing of the answer.
+    /// </summary>
+    [RelayCommand]
+    private void AddToStartupProfiles() =>
+        StartupProfilesStatus = strings.Get(startupProfiles.Ask(startupProfilesRequest)
+            ? "Settings.StartupProfilesAsked"
+            : "Settings.StartupProfilesFailed");
 
     /// <summary>Opens the Today mini window (spec, story 80); the tray and `--mini today` do the same.</summary>
     [RelayCommand]

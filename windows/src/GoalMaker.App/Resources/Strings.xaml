@@ -408,6 +408,14 @@
     <!-- Habits (docs/habits.md) -->
     <sys:String x:Key="Nav.Habits">Habits</sys:String>
     <sys:String x:Key="Habits.Title">Habits</sys:String>
+    <sys:String x:Key="Settings.Startup">Startup</sys:String>
+    <sys:String x:Key="Settings.StartWithWindows">Start GoalMaker in the tray when I sign in</sys:String>
+    <sys:String x:Key="Settings.StartWithWindowsHint">Reminders on this PC need GoalMaker running, so leave this on unless you start it yourself.</sys:String>
+    <sys:String x:Key="Settings.StartupProfiles">Startup Profiles</sys:String>
+    <sys:String x:Key="Settings.StartupProfilesHint">Startup Profiles is installed on this PC. GoalMaker can ask it to add itself; Startup Profiles then asks you which profiles it belongs to.</sys:String>
+    <sys:String x:Key="Settings.StartupProfilesAdd">Add to Startup Profiles</sys:String>
+    <sys:String x:Key="Settings.StartupProfilesAsked">Startup Profiles has the request. Finish it in its window.</sys:String>
+    <sys:String x:Key="Settings.StartupProfilesFailed">Startup Profiles could not be reached. Open it once, then try again.</sys:String>
     <sys:String x:Key="Settings.MiniWindows">Mini windows</sys:String>
     <sys:String x:Key="Settings.MiniWindowsHint">Small windows you can keep on the desktop while you work. Pin one to keep it above other apps; it remembers where you left it.</sys:String>
     <sys:String x:Key="Mini.Today">Today</sys:String>

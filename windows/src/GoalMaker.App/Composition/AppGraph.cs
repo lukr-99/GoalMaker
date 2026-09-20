@@ -10,6 +10,7 @@ using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
+using GoalMaker.Core.Startup;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 using GoalMaker.Infrastructure.Activity;
@@ -20,6 +21,7 @@ using GoalMaker.Infrastructure.Postgrest;
 using GoalMaker.Infrastructure.Replica;
 using GoalMaker.Infrastructure.Settings;
 using GoalMaker.Infrastructure.Storage;
+using GoalMaker.Infrastructure.Startup;
 using GoalMaker.Infrastructure.Sync;
 using GoalMaker.Infrastructure.Updates;
 using Microsoft.Win32;
@@ -242,8 +244,22 @@ public sealed class AppGraph : IDisposable
         shownDay = PlanningDay.Of(DateTime.Now, Settings.DayStartHour);
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
+        // Startup: GoalMaker's own value under Run (story 81), and the ask that hands it to Startup
+        // Profiles through that app's own window when it is installed (story 84).
+        var executable = Environment.ProcessPath ?? string.Empty;
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm, gesture => ApplyQuickAddHotkey(gesture), OpenMini, restartApp, runOnUi);
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm,
+            gesture => ApplyQuickAddHotkey(gesture), OpenMini,
+            new WindowsSignInStartup(build.InstanceName, executable),
+            new WindowsStartupProfiles(),
+            new StartupProfilesRequest("com.goalmaker.app", strings.Get("App.Name"), executable)
+            {
+                Arguments = "--tray",
+                Publisher = build.Publisher,
+                SupportsMinimized = true,
+            },
+            restartApp,
+            runOnUi);
 
         // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
