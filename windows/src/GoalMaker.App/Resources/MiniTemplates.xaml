@@ -1,0 +1,63 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+                    xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
+    <!--
+        What a mini window shows (spec, story 80). Today uses the list template the main window uses,
+        so a task ticks the same way; habits get this shorter row: the ring, the name and where the
+        day stands, without the editor, the heatmap or the page's headline.
+    -->
+    <DataTemplate x:Key="MiniHabitsTemplate" DataType="{x:Type vm:HabitsViewModel}">
+        <Grid Margin="12,10,12,12">
+            <TextBlock Margin="4,0,0,0"
+                       Text="{DynamicResource Habits.Empty}"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                       Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:HabitRowViewModel}">
+                            <Border Margin="0,0,0,6" Padding="8,6" CornerRadius="10" Background="{DynamicResource GM.SurfaceBrush}">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Left"
+                                            Width="40" Height="40" Margin="0,0,10,0"
+                                            Padding="0"
+                                            VerticalAlignment="Center"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            Command="{Binding CheckInCommand}"
+                                            IsEnabled="{Binding CanCheckIn}"
+                                            ToolTip="{Binding CheckInText}"
+                                            AutomationProperties.Name="{Binding CheckInText}">
+                                        <Grid>
+                                            <controls:GoalRing Width="36" Height="36" Fraction="{Binding Fraction}" Thickness="4" />
+                                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RingText}" FontSize="13"
+                                                       Foreground="{DynamicResource GM.TextBrush}" />
+                                            <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Symbol="Checkmark20"
+                                                           Foreground="{DynamicResource GM.AccentBrush}"
+                                                           Visibility="{Binding ShowsCheck, Converter={StaticResource BoolToVisibility}}" />
+                                        </Grid>
+                                    </Button>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource GM.TextBrush}" />
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                        <TextBlock Text="{Binding StreakText}" FontSize="11"
+                                                   FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                                   Foreground="{DynamicResource GM.AccentBrush}"
+                                                   Visibility="{Binding HasStreak, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

@@ -124,6 +124,8 @@ internal sealed class TestPlanner : IDisposable
         public BackendEnvironment? BackendOverride { get; set; }
 
         public WindowPlacement? MainWindowPlacement { get; set; }
+
+        public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } = new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);
     }
 
     private sealed class NoRemote : IRemoteTables

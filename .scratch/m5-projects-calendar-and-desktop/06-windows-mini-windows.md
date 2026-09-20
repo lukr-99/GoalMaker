@@ -1,6 +1,6 @@
 # M5-06: Windows mini windows
 
-**Status:** todo · **Milestone:** M5
+**Status:** done · **Milestone:** M5
 
 ## Scope
 - Pinnable mini windows for Today and Habits: small always-on-top windows that remember their place

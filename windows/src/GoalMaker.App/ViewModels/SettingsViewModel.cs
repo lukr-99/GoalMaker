@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
 using GoalMaker.App.Shell;
+using GoalMaker.App.Startup;
 using GoalMaker.Core.About;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
@@ -30,6 +31,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly Action planningDayChanged;
     private readonly Action quietHoursChanged;
     private readonly Func<HotkeyGesture?, bool> applyQuickAddHotkey;
+    private readonly Action<MiniPage> openMini;
     private readonly Action restartApp;
 
     [ObservableProperty]
@@ -81,9 +83,11 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action planningDayChanged,
         Action quietHoursChanged,
         Func<HotkeyGesture?, bool> applyQuickAddHotkey,
+        Action<MiniPage> openMini,
         Action restartApp,
         Action<Action> runOnUi)
     {
+        this.openMini = openMini;
         this.auth = auth;
         this.sync = sync;
         this.settings = settings;
@@ -318,6 +322,14 @@ public sealed partial class SettingsViewModel : ObservableObject
         ApplyQuickAddHotkey(gesture);
         return true;
     }
+
+    /// <summary>Opens the Today mini window (spec, story 80); the tray and `--mini today` do the same.</summary>
+    [RelayCommand]
+    private void OpenTodayMini() => openMini(MiniPage.Today);
+
+    /// <summary>Opens the Habits mini window.</summary>
+    [RelayCommand]
+    private void OpenHabitsMini() => openMini(MiniPage.Habits);
 
     [RelayCommand]
     private void ResetQuickAddHotkey()

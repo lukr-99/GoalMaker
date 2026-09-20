@@ -3,19 +3,29 @@ using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
+using GoalMaker.App.Startup;
 using H.NotifyIcon;
 
 namespace GoalMaker.App.Shell;
 
 /// <summary>
-/// The tray icon (spec, stories 79 and 11): a left click shows the Today flyout, a double click opens
-/// GoalMaker, and the menu opens it, adds a task through the quick-add box, or quits.
+/// The tray icon (spec, stories 79, 80 and 11): a left click shows the Today flyout, a double click
+/// opens GoalMaker, and the menu opens it, opens a mini window, adds a task through the quick-add
+/// box, or quits.
 /// </summary>
 public sealed class TrayIcon : IDisposable
 {
     private readonly TaskbarIcon icon;
 
-    public TrayIcon(IStrings strings, bool isDevBuild, UIElement flyout, Action flyoutOpening, Action open, Action quickAdd, Action quit)
+    public TrayIcon(
+        IStrings strings,
+        bool isDevBuild,
+        UIElement flyout,
+        Action flyoutOpening,
+        Action open,
+        Action quickAdd,
+        Action<MiniPage> mini,
+        Action quit)
     {
         void Open()
         {
@@ -29,9 +39,18 @@ public sealed class TrayIcon : IDisposable
             quickAdd();
         }
 
+        void Mini(MiniPage page)
+        {
+            icon?.CloseTrayPopup();
+            mini(page);
+        }
+
         var menu = new ContextMenu();
         menu.Items.Add(new MenuItem { Header = strings.Get("Tray.Open"), Command = new RelayCommand(Open) });
         menu.Items.Add(new MenuItem { Header = strings.Get("Tray.QuickAdd"), Command = new RelayCommand(QuickAdd) });
+        menu.Items.Add(new Separator());
+        menu.Items.Add(new MenuItem { Header = strings.Get("Tray.MiniToday"), Command = new RelayCommand(() => Mini(MiniPage.Today)) });
+        menu.Items.Add(new MenuItem { Header = strings.Get("Tray.MiniHabits"), Command = new RelayCommand(() => Mini(MiniPage.Habits)) });
         menu.Items.Add(new Separator());
         menu.Items.Add(new MenuItem { Header = strings.Get("Tray.Quit"), Command = new RelayCommand(quit) });
 

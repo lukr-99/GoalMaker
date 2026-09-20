@@ -243,7 +243,7 @@ public sealed class AppGraph : IDisposable
         Theme.Applied += (_, _) => RefreshLists();
         dayCheck = TimeProvider.System.CreateTimer(_ => runOnUi(RefreshOnNewDay), null, DayCheckInterval, DayCheckInterval);
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm, gesture => ApplyQuickAddHotkey(gesture), restartApp, runOnUi);
+            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm, gesture => ApplyQuickAddHotkey(gesture), OpenMini, restartApp, runOnUi);
 
         // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
@@ -342,6 +342,12 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>Asks for the quick-add box (from the flyout); the app shows it.</summary>
     public event EventHandler? QuickAddRequested;
+
+    /// <summary>Settings asked for a mini window (spec, story 80); the shell opens it.</summary>
+    public event EventHandler<MiniPage>? MiniRequested;
+
+    /// <summary>Opens a mini window from inside the app.</summary>
+    public void OpenMini(MiniPage page) => MiniRequested?.Invoke(this, page);
 
     /// <summary>Registers the global quick-add shortcut; the app puts the real registration here at start-up.</summary>
     public Func<HotkeyGesture?, bool> ApplyQuickAddHotkey { get; set; } = _ => true;

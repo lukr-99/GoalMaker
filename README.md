@@ -31,9 +31,9 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   ([docs/calendar.md](docs/calendar.md)), and Today and Habits widgets on Android
   ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
   project by the repository or folder it is working in
-  ([docs/connector.md](docs/connector.md)), and sharing text or a link from any Android app into a
-  task ([docs/composer.md](docs/composer.md)). Still to come: the Windows mini windows and Startup
-  Profiles.
+  ([docs/connector.md](docs/connector.md)), sharing text or a link from any Android app into a task
+  ([docs/composer.md](docs/composer.md)), and the pinnable Today and Habits mini windows on Windows
+  ([docs/mini-windows.md](docs/mini-windows.md)). Still to come: Startup Profiles.
 
 No release has been published yet; the cloud project and the signing keys still need the one-time
 setup in [docs/setup/](docs/setup/).

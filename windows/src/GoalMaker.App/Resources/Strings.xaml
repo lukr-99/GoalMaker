@@ -408,6 +408,15 @@
     <!-- Habits (docs/habits.md) -->
     <sys:String x:Key="Nav.Habits">Habits</sys:String>
     <sys:String x:Key="Habits.Title">Habits</sys:String>
+    <sys:String x:Key="Settings.MiniWindows">Mini windows</sys:String>
+    <sys:String x:Key="Settings.MiniWindowsHint">Small windows you can keep on the desktop while you work. Pin one to keep it above other apps; it remembers where you left it.</sys:String>
+    <sys:String x:Key="Mini.Today">Today</sys:String>
+    <sys:String x:Key="Mini.Habits">Habits</sys:String>
+    <sys:String x:Key="Mini.Pin">Keep on top</sys:String>
+    <sys:String x:Key="Mini.Open">Open GoalMaker</sys:String>
+    <sys:String x:Key="Mini.Close">Close</sys:String>
+    <sys:String x:Key="Tray.MiniToday">Today mini window</sys:String>
+    <sys:String x:Key="Tray.MiniHabits">Habits mini window</sys:String>
     <sys:String x:Key="Habits.Hint">The things you keep doing: a click on a ring checks in, and the map shows the months behind you.</sys:String>
     <sys:String x:Key="Habits.Empty">No habits yet. Start with something small, like a glass of water or ten minutes of reading.</sys:String>
     <sys:String x:Key="Habits.Add">New habit</sys:String>

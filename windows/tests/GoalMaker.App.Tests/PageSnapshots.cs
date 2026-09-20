@@ -6,6 +6,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using GoalMaker.App.Localization;
+using GoalMaker.App.Shell;
+using GoalMaker.App.Startup;
 using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 using GoalMaker.App.Views;
@@ -489,6 +491,68 @@ public sealed class PageSnapshots
     });
 
     [Fact(Explicit = true)]
+    public void MiniWindowsInEveryTheme() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "File the receipts", Today.AddDays(-1));
+        Add(planner, "Stretch !", Today);
+        Add(planner, "Call the bank 17:00", Today);
+        Add(planner, "Buy milk @Home", Today);
+        planner.Habits.Add(new HabitDraft("Read before bed", Today.AddDays(-40)) { Emoji = "📖" });
+        var water = planner.Habits.Add(new HabitDraft("Drink water", Today.AddDays(-40)) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
+        planner.Habits.CheckIn(water.Id, Today, 5);
+        planner.Habits.Add(new HabitDraft("Walk 30 minutes", Today.AddDays(-40)) { Cadence = HabitRules.PerWeek, Times = 3 });
+        using var theme = Theme(planner);
+
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action());
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action());
+        var habits = new HabitsViewModel(
+            planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
+
+        // Each theme, in the mode the design spec gives it, so the pair can be compared side by side.
+        foreach (var option in ContractResources.Themes().Themes)
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = option.Id });
+            foreach (var (page, viewModel) in new (MiniPage, object)[] { (MiniPage.Today, today), (MiniPage.Habits, habits) })
+            {
+                var content = MiniWindowContent.For(page, today, habits);
+                Assert.Same(viewModel, content.ViewModel);
+                Save(Mini(content, strings), folder, $"mini-{content.Name}-{option.Id}", MiniWindow.DefaultSize);
+            }
+        }
+    });
+
+    // A mini window's content as the window lays it out, without opening a window on the desktop.
+    private static Border Mini(MiniWindowContent content, IStrings strings)
+    {
+        var host = new ContentControl
+        {
+            Content = content.ViewModel,
+            Focusable = false,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch,
+            VerticalContentAlignment = VerticalAlignment.Stretch,
+        };
+        host.SetResourceReference(ContentControl.ContentTemplateProperty, content.TemplateKey);
+        var title = new TextBlock { Text = strings.Get($"Mini.{content.Page}"), Margin = new Thickness(12, 8, 8, 8), FontSize = 13 };
+        title.SetResourceReference(TextBlock.FontFamilyProperty, "GM.BodyStrongFont");
+        var bar = new Border { Child = title, BorderThickness = new Thickness(0, 0, 0, 1) };
+        bar.SetResourceReference(Border.BackgroundProperty, "GM.SurfaceBrush");
+        bar.SetResourceReference(Border.BorderBrushProperty, "GM.OutlineBrush");
+        var layout = new DockPanel { LastChildFill = true };
+        DockPanel.SetDock(bar, Dock.Top);
+        layout.Children.Add(bar);
+        layout.Children.Add(host);
+        var frame = new Border { Child = layout, BorderThickness = new Thickness(1) };
+        frame.SetResourceReference(Border.BackgroundProperty, "GM.BackgroundBrush");
+        frame.SetResourceReference(Border.BorderBrushProperty, "GM.OutlineBrush");
+        return frame;
+    }
+
+    [Fact(Explicit = true)]
     public void LogoInEveryTheme() => OnUiThread(folder =>
     {
         var tokens = ContractResources.Themes();
@@ -610,7 +674,7 @@ public sealed class PageSnapshots
                 var resources = app.Resources.MergedDictionaries;
                 resources.Add(new ThemesDictionary { Theme = ApplicationTheme.Dark });
                 resources.Add(new ControlsDictionary());
-                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "ListTemplate" })
+                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "ListTemplate", "MiniTemplates" })
                 {
                     resources.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/GoalMaker;component/Resources/{name}.xaml") });
                 }

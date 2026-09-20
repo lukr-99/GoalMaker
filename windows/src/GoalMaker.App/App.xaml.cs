@@ -20,6 +20,7 @@ public partial class App : Application
     private MainWindow? window;
     private QuickAddWindow? quickAdd;
     private QuickAddHotkey? hotkey;
+    private readonly Dictionary<MiniPage, MiniWindow> miniWindows = [];
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -40,7 +41,8 @@ public partial class App : Application
         graph.Theme.Attach(window);
         graph.Theme.Apply(graph.Settings.Appearance);
         quickAdd = new QuickAddWindow(graph.QuickAdd, strings);
-        tray = new TrayIcon(strings, build.IsDevBuild, new TrayFlyout(graph.TrayFlyout), graph.TrayFlyout.Refresh, ShowMainWindow, SummonQuickAdd, Quit);
+        tray = new TrayIcon(
+            strings, build.IsDevBuild, new TrayFlyout(graph.TrayFlyout), graph.TrayFlyout.Refresh, ShowMainWindow, SummonQuickAdd, ShowMini, Quit);
         // The tray shows the logo in the theme's colors, like the window and the taskbar (GM.LogoIcon).
         tray.SetIcon(graph.Theme.LogoIconFile, graph.Paths.Root);
         graph.Theme.Applied += (_, _) => tray.SetIcon(graph.Theme.LogoIconFile, graph.Paths.Root);
@@ -51,6 +53,7 @@ public partial class App : Application
             window.Open(page);
         };
         graph.QuickAddRequested += (_, _) => SummonQuickAdd();
+        graph.MiniRequested += (_, page) => ShowMini(page);
 
         // The global quick-add shortcut (spec, story 11); Settings shows it and can change it.
         hotkey = new QuickAddHotkey(() => RunOnUi(SummonQuickAdd));
@@ -64,6 +67,11 @@ public partial class App : Application
 
     private void Handle(StartupOptions options, bool secondLaunch)
     {
+        if (options.Mini is { } mini)
+        {
+            ShowMini(mini);
+        }
+
         if (options.StartInTray)
         {
             return;
@@ -81,6 +89,34 @@ public partial class App : Application
     }
 
     private void ShowMainWindow() => ShowMainWindow(activate: true);
+
+    /// <summary>
+    /// Opens a mini window, or brings the one already there to the front (spec, story 80). Each kind
+    /// has one window; closing it puts it away until it is asked for again.
+    /// </summary>
+    private void ShowMini(MiniPage page)
+    {
+        if (graph is null)
+        {
+            return;
+        }
+
+        if (!miniWindows.TryGetValue(page, out var mini))
+        {
+            var content = MiniWindowContent.For(page, graph.Today, graph.HabitsPage);
+            mini = new MiniWindow(content, new ResourceStrings(this), graph.Settings, ShowMainWindow);
+            mini.Closed += (_, _) => miniWindows.Remove(page);
+            miniWindows[page] = mini;
+        }
+
+        mini.Show();
+        if (mini.WindowState == WindowState.Minimized)
+        {
+            mini.WindowState = WindowState.Normal;
+        }
+
+        mini.Activate();
+    }
 
     private void SummonQuickAdd()
     {
@@ -114,6 +150,11 @@ public partial class App : Application
         {
             window.AllowClose = true;
             window.Close();
+        }
+
+        foreach (var mini in miniWindows.Values.ToList())
+        {
+            mini.Close();
         }
 
         hotkey?.Dispose();

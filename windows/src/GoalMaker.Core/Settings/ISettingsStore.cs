@@ -42,4 +42,7 @@ public interface ISettingsStore
 
     /// <summary>The main window's last position, restored at start-up when it still fits a screen.</summary>
     WindowPlacement? MainWindowPlacement { get; set; }
+
+    /// <summary>Where each mini window was last and whether it was pinned, by its name.</summary>
+    IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; }
 }

@@ -226,6 +226,18 @@
                 </StackPanel>
             </ui:Card>
 
+            <!-- The mini windows (spec, story 80); the tray and the mini switch open the same two. -->
+            <ui:Card Margin="0,0,0,12" Padding="20">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.MiniWindows}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" Text="{DynamicResource Settings.MiniWindowsHint}" />
+                    <StackPanel Orientation="Horizontal">
+                        <ui:Button Content="{DynamicResource Mini.Today}" Command="{Binding OpenTodayMiniCommand}" />
+                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Mini.Habits}" Command="{Binding OpenHabitsMiniCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </ui:Card>
+
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />

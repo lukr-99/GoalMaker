@@ -44,4 +44,6 @@ public sealed record SettingsDocument
     public string? BackendKey { get; init; }
 
     public WindowPlacement? MainWindowPlacement { get; init; }
+
+    public Dictionary<string, MiniWindowState>? MiniWindows { get; init; }
 }

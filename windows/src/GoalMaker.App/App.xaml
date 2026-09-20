@@ -13,6 +13,7 @@
                 <ResourceDictionary Source="Resources/Converters.xaml" />
                 <ResourceDictionary Source="Resources/ComposerTemplate.xaml" />
                 <ResourceDictionary Source="Resources/ListTemplate.xaml" />
+                <ResourceDictionary Source="Resources/MiniTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

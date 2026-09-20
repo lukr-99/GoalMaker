@@ -112,6 +112,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { MainWindowPlacement = value });
     }
 
+    public IReadOnlyDictionary<string, MiniWindowState> MiniWindows
+    {
+        get => document.MiniWindows ?? [];
+        set => Save(document with { MiniWindows = new Dictionary<string, MiniWindowState>(value, StringComparer.Ordinal) });
+    }
+
     private static SettingsDocument Load(string path)
     {
         try

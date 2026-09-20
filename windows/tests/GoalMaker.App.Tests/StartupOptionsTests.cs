@@ -34,5 +34,25 @@ public sealed class StartupOptionsTests
 
     [Fact]
     public void UnknownValuesAreIgnored() =>
-        Assert.Equal(new StartupOptions(true, null), StartupOptions.Parse(["--tray", "--open", "nowhere", "--mini", "today"]));
+        Assert.Equal(new StartupOptions(true, null), StartupOptions.Parse(["--tray", "--open", "nowhere", "--sideways", "later"]));
+
+    [Theory]
+    [InlineData("today", MiniPage.Today)]
+    [InlineData("Habits", MiniPage.Habits)]
+    public void MiniOpensAMiniWindowAndLeavesTheMainWindowAlone(string page, MiniPage expected) =>
+        Assert.Equal(new StartupOptions(true, null, Mini: expected), StartupOptions.Parse(["--mini", page]));
+
+    [Fact]
+    public void LinksOpenMiniWindows() =>
+        Assert.Equal(new StartupOptions(true, null, Mini: MiniPage.Habits), StartupOptions.Parse(["goalmaker://mini/habits/"]));
+
+    [Fact]
+    public void AMiniWindowComesWithAPageWhenOneIsAskedFor() =>
+        Assert.Equal(
+            new StartupOptions(false, AppPage.Today, Mini: MiniPage.Habits),
+            StartupOptions.Parse(["--open", "today", "--mini", "habits"]));
+
+    [Fact]
+    public void AnUnknownMiniWindowIsIgnored() =>
+        Assert.Equal(new StartupOptions(false, null), StartupOptions.Parse(["--mini", "nowhere"]));
 }

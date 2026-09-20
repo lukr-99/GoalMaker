@@ -22,7 +22,7 @@ and each has markdown issues under `.scratch/<milestone>/`.
 9. **M5: projects, calendar, widgets, mini windows, share target** (under way since 2026-09-20:
    projects with their board, the week and month calendar with dragging, the Android Today and
    Habits widgets, projects through the connector (checked through the endpoint against the local
-   stack) and share to GoalMaker are built; the Windows mini windows and Startup Profiles remain)
+   stack), share to GoalMaker and the Windows mini windows are built; Startup Profiles remains)
 10. M6, then v1.0
 11. M7 and the post-v1 list
 
