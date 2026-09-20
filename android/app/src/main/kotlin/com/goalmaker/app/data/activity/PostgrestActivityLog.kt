@@ -18,7 +18,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.long
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /** [ActivityLog] over PostgREST: the `activity_log` table and the `undo_activity` function (0007). */
@@ -29,16 +29,17 @@ class PostgrestActivityLog(private val postgrest: PostgrestHttp) : ActivityLog {
             parameter("order", "id.desc")
             parameter("limit", limit)
         }
-        return (Json.parseToJsonElement(text) as? JsonArray).orEmpty().filterIsInstance<JsonObject>().map { row ->
+        // A row missing what an entry needs is passed over: a stranger's row never empties the screen.
+        return (Json.parseToJsonElement(text) as? JsonArray).orEmpty().filterIsInstance<JsonObject>().mapNotNull { row ->
             ActivityEntry(
-                id = (row.getValue("id") as JsonPrimitive).long,
-                entity = row.text("entity")!!,
-                entityId = row.text("entity_id")!!,
-                action = row.text("action")!!,
-                actor = row.text("actor")!!,
+                id = (row["id"] as? JsonPrimitive)?.longOrNull ?: return@mapNotNull null,
+                entity = row.text("entity") ?: return@mapNotNull null,
+                entityId = row.text("entity_id") ?: return@mapNotNull null,
+                action = row.text("action") ?: return@mapNotNull null,
+                actor = row.text("actor").orEmpty(),
                 before = row["before"] as? JsonObject,
                 after = row["after"] as? JsonObject ?: JsonObject(emptyMap()),
-                createdAt = SyncRules.instantOf(row.text("created_at")!!) ?: Instant.EPOCH,
+                createdAt = row.text("created_at")?.let(SyncRules::instantOf) ?: Instant.EPOCH,
                 undoneAt = row.text("undone_at")?.let(SyncRules::instantOf),
             )
         }

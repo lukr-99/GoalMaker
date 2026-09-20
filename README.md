@@ -79,8 +79,8 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
 - **Migrations:** immutable `supabase/migrations/0001_description.sql` files, locked by checksum in
   `supabase/migrations.lock.json`, each tested from `0001` and in isolation with fixtures.
 - **Local data:** the Windows app keeps its session (DPAPI-encrypted), settings and crash log in
-  `%LOCALAPPDATA%\GoalMaker` (`GoalMaker-dev` for dev builds); the Android app keeps its session and
-  settings in private app storage, excluded from Android backups.
+  `%LOCALAPPDATA%\GoalMaker` (`GoalMaker-dev` for dev builds); the Android app keeps its session,
+  settings and its own `files/crash.log` in private app storage, excluded from Android backups.
 - **Backup:** a versioned full export and a checked restore arrive in M6, before any destructive
   change is allowed. Until then, tasks live in the Supabase project (with its own backups on paid
   plans) and in each device's replica; there is no export yet.

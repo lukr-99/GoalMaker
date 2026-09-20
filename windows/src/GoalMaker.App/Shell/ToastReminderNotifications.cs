@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Windows.Media.Imaging;
 using System.Xml.Linq;
 using GoalMaker.App.Localization;
@@ -156,21 +157,36 @@ public sealed class ToastReminderNotifications
         }
     }
 
-    // Windows shows toasts from an unpackaged app once its AppUserModelID has a name under HKCU.
+    // Windows shows toasts from an unpackaged app once its AppUserModelID has a name under HKCU. The
+    // name and the icon are only how a toast looks, so a registry or a file that will not have them
+    // written (a locked icon while a second copy starts, a policy on HKCU) must not stop the app.
     private void Register(string displayName, string iconPath)
     {
-        using (var key = Registry.CurrentUser.CreateSubKey($@"Software\Classes\AppUserModelId\{appId}"))
+        try
         {
-            key.SetValue("DisplayName", displayName);
-            key.SetValue("IconUri", iconPath);
-        }
+            using (var key = Registry.CurrentUser.CreateSubKey($@"Software\Classes\AppUserModelId\{appId}"))
+            {
+                key.SetValue("DisplayName", displayName);
+                key.SetValue("IconUri", iconPath);
+            }
 
-        var decoder = new IconBitmapDecoder(new Uri("pack://application:,,,/Assets/GoalMaker.ico"), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(BitmapFrame.Create(decoder.Frames.OrderByDescending(frame => frame.PixelWidth).First()));
-        Directory.CreateDirectory(Path.GetDirectoryName(iconPath)!);
-        using var stream = File.Create(iconPath);
-        encoder.Save(stream);
+            var decoder = new IconBitmapDecoder(new Uri("pack://application:,,,/Assets/GoalMaker.ico"), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames.OrderByDescending(frame => frame.PixelWidth).FirstOrDefault();
+            if (frame is null)
+            {
+                return;
+            }
+
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(frame));
+            Directory.CreateDirectory(Path.GetDirectoryName(iconPath)!);
+            using var stream = File.Create(iconPath);
+            encoder.Save(stream);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or SecurityException or NotSupportedException or ArgumentException)
+        {
+            // The toast still shows, under whatever name and icon Windows already has for the app.
+        }
     }
 
     private XElement ReviewContent(string tag, bool monthly)

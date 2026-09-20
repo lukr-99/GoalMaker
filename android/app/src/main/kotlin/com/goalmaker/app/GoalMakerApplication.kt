@@ -3,6 +3,7 @@ package com.goalmaker.app
 import android.app.Application
 import androidx.work.Configuration
 import com.goalmaker.app.composition.AppGraph
+import com.goalmaker.app.data.diagnostics.CrashLog
 import com.goalmaker.app.data.sync.SyncWorkerFactory
 
 /**
@@ -15,6 +16,8 @@ class GoalMakerApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // Before the graph, so a crash while it is built is written down too.
+        CrashLog.install(filesDir)
         graph = AppGraph(this)
     }
 

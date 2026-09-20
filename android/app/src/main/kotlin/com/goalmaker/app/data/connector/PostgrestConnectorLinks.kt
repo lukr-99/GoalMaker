@@ -24,10 +24,11 @@ class PostgrestConnectorLinks(private val postgrest: PostgrestHttp) : ConnectorL
             parameter("select", "id,created_at,last_used_at,revoked_at")
             parameter("order", "created_at.desc")
         }
-        return (Json.parseToJsonElement(text) as? JsonArray).orEmpty().filterIsInstance<JsonObject>().map { row ->
+        // A row without an id is passed over rather than thrown on.
+        return (Json.parseToJsonElement(text) as? JsonArray).orEmpty().filterIsInstance<JsonObject>().mapNotNull { row ->
             ConnectorLink(
-                id = row.text("id")!!,
-                createdAt = SyncRules.instantOf(row.text("created_at")!!) ?: Instant.EPOCH,
+                id = row.text("id") ?: return@mapNotNull null,
+                createdAt = row.text("created_at")?.let(SyncRules::instantOf) ?: Instant.EPOCH,
                 lastUsedAt = row.text("last_used_at")?.let(SyncRules::instantOf),
                 revokedAt = row.text("revoked_at")?.let(SyncRules::instantOf),
             )
