@@ -109,6 +109,7 @@ fun ListsScreen(
     onOpenGoals: () -> Unit,
     onOpenHabits: () -> Unit,
     onOpenReviews: () -> Unit,
+    onOpenStats: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
@@ -188,7 +189,7 @@ fun ListsScreen(
                         IconButton(onClick = onOpenGoals) {
                             Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
                         }
-                        MoreMenu(onOpenArchive = onOpenArchive, onOpenReviews = onOpenReviews)
+                        MoreMenu(onOpenArchive = onOpenArchive, onOpenReviews = onOpenReviews, onOpenStats = onOpenStats)
                         IconButton(onClick = onOpenPlan) {
                             Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
                         }
@@ -371,9 +372,9 @@ private fun ListContent(
     }
 }
 
-/** What doesn't fit the top bar: the reviews and the archive. */
+/** What doesn't fit the top bar: the reviews, the stats and the archive. */
 @Composable
-private fun MoreMenu(onOpenArchive: () -> Unit, onOpenReviews: () -> Unit) {
+private fun MoreMenu(onOpenArchive: () -> Unit, onOpenReviews: () -> Unit, onOpenStats: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
@@ -385,6 +386,13 @@ private fun MoreMenu(onOpenArchive: () -> Unit, onOpenReviews: () -> Unit) {
                 onClick = {
                     open = false
                     onOpenReviews()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.stats_title)) },
+                onClick = {
+                    open = false
+                    onOpenStats()
                 },
             )
             DropdownMenuItem(

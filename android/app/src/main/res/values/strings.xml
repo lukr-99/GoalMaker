@@ -385,7 +385,6 @@
     <string name="goals_new">New goal</string>
     <string name="goals_edit">Edit the goal</string>
     <string name="goals_name">Goal</string>
-    <string name="goals_emoji">Emoji (optional)</string>
     <string name="goals_horizon">Horizon</string>
     <string name="goals_horizon_year">Year</string>
     <string name="goals_horizon_month">Month</string>
@@ -425,7 +424,6 @@
     <string name="goals_amount">%1$s of %2$s</string>
     <string name="goals_amount_unit">%1$s of %2$s %3$s</string>
     <string name="goals_serves">Serves %1$s</string>
-    <string name="goals_week_title">This week\'s goals</string>
     <plurals name="goals_week_count">
         <item quantity="one">This week\'s goal, %1$d of %2$d hit</item>
         <item quantity="other">This week\'s goals, %1$d of %2$d hit</item>
@@ -443,7 +441,6 @@
     <string name="habits_new">New habit</string>
     <string name="habits_edit">Edit the habit</string>
     <string name="habits_name">Habit</string>
-    <string name="habits_emoji">Emoji (optional)</string>
     <string name="habits_cadence">How often</string>
     <string name="habits_cadence_daily">Every day</string>
     <string name="habits_cadence_weekdays">Some days</string>
@@ -451,7 +448,6 @@
     <string name="habits_cadence_per_month">A month</string>
     <string name="habits_workdays">Monday to Friday</string>
     <string name="habits_weekend">Weekends</string>
-    <string name="habits_times">Times</string>
     <string name="habits_fewer">Fewer</string>
     <string name="habits_more_times">More</string>
     <plurals name="habits_times_week">
@@ -618,6 +614,23 @@
         <item quantity="one">%1$d task behind you, and %2$d answers written down.</item>
         <item quantity="other">%1$d tasks behind you, and %2$d answers written down.</item>
     </plurals>
+    <!-- Stats (docs/stats.md) -->
+    <string name="stats_title">Stats</string>
+    <string name="stats_empty">Nothing to show yet. Finish a few tasks and write a review, and the trends turn up here.</string>
+    <string name="stats_tasks_a_week">Tasks a week</string>
+    <string name="stats_goals_a_month">Goals a month</string>
+    <string name="stats_habits">Habits</string>
+    <string name="stats_ratings">Mood and energy</string>
+    <string name="stats_hero_done">Tasks done</string>
+    <string name="stats_hero_per_week">%1$s a week</string>
+    <string name="stats_hero_goals">Goals hit</string>
+    <string name="stats_hero_goals_value">%1$d/%2$d</string>
+    <string name="stats_hero_months">over %1$d months</string>
+    <string name="stats_hero_habits">Habits held</string>
+    <string name="stats_hero_habit_count">%1$d on the go</string>
+    <string name="stats_this_week">This week</string>
+    <string name="stats_month_hit">%1$d/%2$d</string>
+    <string name="stats_habit_met">%1$d of %2$d met, best run %3$d</string>
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
     <string name="activity_goal">goal “%1$s”</string>

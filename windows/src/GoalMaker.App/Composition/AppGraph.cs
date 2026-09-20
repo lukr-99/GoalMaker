@@ -202,6 +202,7 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             runOnUi);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
+        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
@@ -307,6 +308,9 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The Reviews page.</summary>
     public ReviewsViewModel ReviewsPage { get; private set; } = null!;
+
+    /// <summary>The Stats page (docs/stats.md).</summary>
+    public StatsViewModel StatsPage { get; private set; } = null!;
 
     /// <summary>The guided review, opened from the Reviews page.</summary>
     public ReviewViewModel Review { get; private set; } = null!;
@@ -577,6 +581,7 @@ public sealed class AppGraph : IDisposable
         GoalsPage.Refresh();
         HabitsPage.Refresh();
         ReviewsPage.Refresh();
+        StatsPage.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

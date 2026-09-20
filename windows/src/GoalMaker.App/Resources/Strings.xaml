@@ -474,6 +474,27 @@
     <sys:String x:Key="Habits.Left">{0} habits left</sys:String>
     <sys:String x:Key="Habits.Summary">{0}, {1}</sys:String>
 
+    <!-- Stats (docs/stats.md) -->
+    <sys:String x:Key="Nav.Stats">Stats</sys:String>
+    <sys:String x:Key="Stats.Title">Stats</sys:String>
+    <sys:String x:Key="Stats.Hint">The long view: what gets finished, how the goals end up, and how the weeks have felt.</sys:String>
+    <sys:String x:Key="Stats.Empty">Nothing to show yet. Finish a few tasks and write a review, and the trends turn up here.</sys:String>
+    <sys:String x:Key="Stats.TasksAWeek">Tasks a week</sys:String>
+    <sys:String x:Key="Stats.GoalsAMonth">Goals a month</sys:String>
+    <sys:String x:Key="Stats.HabitsSection">Habits</sys:String>
+    <sys:String x:Key="Stats.Ratings">Mood and energy</sys:String>
+    <sys:String x:Key="Stats.Done">Tasks done</sys:String>
+    <sys:String x:Key="Stats.PerWeek">{0} a week</sys:String>
+    <sys:String x:Key="Stats.Goals">Goals hit</sys:String>
+    <sys:String x:Key="Stats.GoalsValue">{0}/{1}</sys:String>
+    <sys:String x:Key="Stats.Months">over {0} months</sys:String>
+    <sys:String x:Key="Stats.Habits">Habits held</sys:String>
+    <sys:String x:Key="Stats.HabitCount">{0} on the go</sys:String>
+    <sys:String x:Key="Stats.ThisWeek">This week</sys:String>
+    <sys:String x:Key="Stats.MonthHit">{0}/{1}</sys:String>
+    <sys:String x:Key="Stats.HabitMet">{0} of {1} met, best run {2}</sys:String>
+    <sys:String x:Key="Stats.Streak">Periods met in a row right now</sys:String>
+
     <!-- Reviews (docs/reviews.md) -->
     <sys:String x:Key="Nav.Reviews">Reviews</sys:String>
     <sys:String x:Key="Reviews.Title">Reviews</sys:String>

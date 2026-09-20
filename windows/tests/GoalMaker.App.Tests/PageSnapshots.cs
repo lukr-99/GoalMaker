@@ -372,6 +372,18 @@ public sealed class PageSnapshots
 
         var list = new ReviewsViewModel(planner.Reviews, planner.Settings, strings, planner.Time, (_, _) => { }, action => action());
         Save(new ReviewsPage(list), folder, "reviews", new Size(900, 700));
+
+        // A few weeks of ratings behind the current one, so the chart has a line to draw.
+        foreach (var (back, mood, energy) in new[] { (4, 3, 2), (3, 4, 4), (2, 2, 3), (1, 5, 4) })
+        {
+            var past = planner.Reviews.Open(ReviewRules.Weekly, weekStart.AddDays(-7 * back))!;
+            planner.Reviews.SetMood(past.Id, mood);
+            planner.Reviews.SetEnergy(past.Id, energy);
+        }
+
+        var stats = new StatsViewModel(
+            planner.Tasks, planner.Goals, planner.Habits, planner.Reviews, planner.Settings, strings, planner.Time, action => action());
+        Save(new StatsPage(stats), folder, "stats", new Size(900, 1000));
     });
 
     // Controls made under one theme take the next theme's accent (in a window, where resource changes

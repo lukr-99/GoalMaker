@@ -14,6 +14,7 @@ public enum AppPage
     Goals,
     Habits,
     Reviews,
+    Stats,
 
     /// <summary>One period's guided review; opened from the Reviews page.</summary>
     Review,

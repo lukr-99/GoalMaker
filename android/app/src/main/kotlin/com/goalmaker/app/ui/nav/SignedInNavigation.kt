@@ -44,6 +44,9 @@ import com.goalmaker.app.ui.review.ReviewKey
 import com.goalmaker.app.ui.review.ReviewScreen
 import com.goalmaker.app.ui.review.ReviewViewModel
 import com.goalmaker.app.ui.review.ReviewsKey
+import com.goalmaker.app.ui.stats.StatsKey
+import com.goalmaker.app.ui.stats.StatsScreen
+import com.goalmaker.app.ui.stats.StatsViewModel
 import com.goalmaker.app.ui.review.ReviewsScreen
 import com.goalmaker.app.ui.review.ReviewsViewModel
 import com.goalmaker.app.ui.plan.PlanViewModel
@@ -118,6 +121,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenGoals = { backStack.add(GoalsKey) },
                             onOpenHabits = { backStack.add(HabitsKey) },
                             onOpenReviews = { backStack.add(ReviewsKey) },
+                            onOpenStats = { backStack.add(StatsKey) },
                         )
                     }
                     entry<GoalsKey> {
@@ -131,6 +135,20 @@ fun SignedInNavigation(graph: AppGraph) {
                             onBack = { backStack.removeLastOrNull() },
                             onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
                         )
+                    }
+                    entry<StatsKey> {
+                        val statsViewModel = viewModel {
+                            StatsViewModel(
+                                tasks = graph.tasks,
+                                goals = graph.goals,
+                                habits = graph.habits,
+                                reviews = graph.reviews,
+                                settings = graph.settings,
+                                io = graph.io,
+                                clock = LocalDateTime::now,
+                            )
+                        }
+                        StatsScreen(viewModel = statsViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ReviewKey> { key ->
                         val reviewViewModel = viewModel(key = "${key.kind}-${key.periodStart}") {
