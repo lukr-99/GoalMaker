@@ -1,5 +1,14 @@
 package com.goalmaker.app.ui.lists
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -61,6 +71,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
@@ -82,6 +93,7 @@ import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.ConfettiBurst
+import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
@@ -95,6 +107,7 @@ import com.goalmaker.app.ui.habits.HabitRow
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -114,6 +127,7 @@ fun ListsScreen(
     onOpenReviews: () -> Unit,
     onOpenStats: () -> Unit,
     onOpenProjects: () -> Unit,
+    onOpenCalendar: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
@@ -189,7 +203,7 @@ fun ListsScreen(
                             Text(subtitle(tab, it), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     },
-                    navigationIcon = { DayProgress(tab, state.lists) },
+                    navigationIcon = { DayMark(tab, state.lists) },
                     actions = {
                         SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
                         IconButton(onClick = onOpenHabits) {
@@ -203,6 +217,7 @@ fun ListsScreen(
                             onOpenReviews = onOpenReviews,
                             onOpenStats = onOpenStats,
                             onOpenProjects = onOpenProjects,
+                            onOpenCalendar = onOpenCalendar,
                         )
                         IconButton(onClick = onOpenPlan) {
                             Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
@@ -393,6 +408,7 @@ private fun MoreMenu(
     onOpenReviews: () -> Unit,
     onOpenStats: () -> Unit,
     onOpenProjects: () -> Unit,
+    onOpenCalendar: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -400,6 +416,13 @@ private fun MoreMenu(
             Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.lists_more_menu))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.calendar_title)) },
+                onClick = {
+                    open = false
+                    onOpenCalendar()
+                },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.projects_title)) },
                 onClick = {
@@ -433,25 +456,64 @@ private fun MoreMenu(
 }
 
 /**
-  * Today's tasks as a ring that fills: what the top bar used to spell out, so its one line of text
-  * never wraps and the bar keeps its height from tab to tab.
+  * The mark in the top bar: the GoalMaker logo, which turns into today's ring whenever a task is
+  * ticked off or the mark is tapped, holds for a moment and then draws itself again (the owner asked).
+  * Tomorrow and the Inbox keep the logo, since the ring is today's.
   */
 @Composable
-private fun DayProgress(tab: ListTab, lists: PlanningLists?) {
-    if (tab != ListTab.TODAY || lists == null || lists.summary.total == 0) return
-    val done = lists.summary.done
-    val total = lists.summary.total
-    val label = stringResource(R.string.lists_today_progress, done, total)
+private fun DayMark(tab: ListTab, lists: PlanningLists?) {
+    val motion = AppTheme.motion
+    val reduced = AppTheme.reduceMotion
+    val done = lists?.summary?.done ?: 0
+    val total = lists?.summary?.total ?: 0
+    val ringable = tab == ListTab.TODAY && total > 0
+    var pulse by remember { mutableIntStateOf(0) }
+    var ring by remember { mutableStateOf(false) }
+    // The first count is what the day already stood at, not something just finished.
+    var counted by remember { mutableIntStateOf(done) }
+    LaunchedEffect(done, ringable) {
+        if (done != counted) {
+            counted = done
+            if (ringable) pulse++
+        }
+    }
+    LaunchedEffect(pulse) {
+        if (pulse == 0) return@LaunchedEffect
+        ring = true
+        delay(RING_MOMENT)
+        ring = false
+    }
+
+    val label = if (ringable) stringResource(R.string.lists_today_progress, done, total) else stringResource(R.string.app_name)
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier.padding(start = 12.dp).semantics { contentDescription = label },
+        modifier = Modifier
+            .padding(start = 12.dp)
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(enabled = ringable) { pulse++ }
+            .semantics { contentDescription = label },
     ) {
-        ProgressRing(fraction = done.toFloat() / total, size = 34.dp, stroke = 3.dp) {
-            Text(
-                done.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (done == total) AppTheme.colors.accent else AppTheme.colors.text,
-            )
+        AnimatedContent(
+            targetState = ring && ringable,
+            transitionSpec = {
+                val enter = fadeIn(tween(motion.quick)) + if (reduced) EnterTransition.None else scaleIn(initialScale = 0.8f)
+                val exit = fadeOut(tween(motion.quick)) + if (reduced) ExitTransition.None else scaleOut(targetScale = 0.8f)
+                enter togetherWith exit
+            },
+            label = "day mark",
+        ) { showRing ->
+            if (showRing) {
+                ProgressRing(fraction = done.toFloat() / total, size = 34.dp, stroke = 3.dp) {
+                    Text(
+                        done.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (done == total) AppTheme.colors.accent else AppTheme.colors.text,
+                    )
+                }
+            } else {
+                GoalMakerLogo(size = 32.dp, intro = true)
+            }
         }
     }
 }
@@ -499,6 +561,9 @@ private fun subtitle(tab: ListTab, lists: PlanningLists): String {
         ListTab.INBOX -> pluralStringResource(R.plurals.lists_inbox_count, lists.inbox.size, lists.inbox.size)
     }
 }
+
+// How long the ring holds before the mark goes back to the logo.
+private const val RING_MOMENT = 2600L
 
 private fun ListTab.title() = when (this) {
     ListTab.TODAY -> R.string.lists_today
