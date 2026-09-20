@@ -211,7 +211,7 @@ class HabitList(
     private fun toItem(row: JsonObject) = HabitItem(
         id = row.text(SyncedTable.ID).orEmpty(),
         name = row.text("name").orEmpty(),
-        startsOn = row.text("starts_on")?.let(LocalDate::parse) ?: LocalDate.EPOCH,
+        startsOn = row.text("starts_on")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         cadence = row.text("cadence") ?: HabitRules.DAILY,
         weekdays = (row["weekdays"] as? JsonPrimitive)?.intOrNull,
         times = (row["times"] as? JsonPrimitive)?.intOrNull,
@@ -228,7 +228,7 @@ class HabitList(
     private fun toCheckin(row: JsonObject) = HabitCheckin(
         id = row.text(SyncedTable.ID).orEmpty(),
         habitId = row.text("habit_id").orEmpty(),
-        day = row.text("day")?.let(LocalDate::parse) ?: LocalDate.EPOCH,
+        day = row.text("day")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         value = (row["value"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         skipped = (row["skipped"] as? JsonPrimitive)?.let { it.booleanOrNull ?: (it.intOrNull == 1) } ?: false,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
@@ -237,7 +237,7 @@ class HabitList(
     private fun toPause(row: JsonObject) = HabitPause(
         id = row.text(SyncedTable.ID).orEmpty(),
         habitId = row.text("habit_id").orEmpty(),
-        from = row.text("starts_on")?.let(LocalDate::parse) ?: LocalDate.EPOCH,
+        from = row.text("starts_on")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         until = row.text("ends_on")?.let(LocalDate::parse),
         deleted = row.text(SyncedTable.DELETED_AT) != null,
     )

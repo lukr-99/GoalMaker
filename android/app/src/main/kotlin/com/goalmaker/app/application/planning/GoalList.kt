@@ -142,7 +142,7 @@ class GoalList(
         id = row.text(SyncedTable.ID).orEmpty(),
         title = row.text("title").orEmpty(),
         horizon = GoalHorizon.of(row.text("horizon")) ?: GoalHorizon.WEEK,
-        periodStart = row.text("period_start")?.let(LocalDate::parse) ?: LocalDate.EPOCH,
+        periodStart = row.text("period_start")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         mode = row.text("progress_mode") ?: GoalRules.MODE_DONE,
         status = row.text("status") ?: GoalRules.OPEN,
         emoji = row.text("emoji"),
@@ -157,7 +157,7 @@ class GoalList(
     private fun toEntry(row: JsonObject) = GoalEntryItem(
         id = row.text(SyncedTable.ID).orEmpty(),
         goalId = row.text("goal_id").orEmpty(),
-        day = row.text("day")?.let(LocalDate::parse) ?: LocalDate.EPOCH,
+        day = row.text("day")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         amount = (row["amount"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
     )

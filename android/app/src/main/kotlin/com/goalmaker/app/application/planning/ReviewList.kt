@@ -95,7 +95,7 @@ class ReviewList(
     private fun toItem(row: JsonObject) = ReviewItem(
         id = row.text(SyncedTable.ID).orEmpty(),
         kind = row.text("kind") ?: ReviewRules.WEEKLY,
-        periodStart = row.text("period_start")?.let(LocalDate::parse) ?: LocalDate.EPOCH,
+        periodStart = row.text("period_start")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         mood = (row["mood"] as? JsonPrimitive)?.intOrNull,
         energy = (row["energy"] as? JsonPrimitive)?.intOrNull,
         summary = row.text("summary").orEmpty(),
