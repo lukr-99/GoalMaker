@@ -1,6 +1,6 @@
 # M5-01: Projects: data and the board rules
 
-**Status:** todo · **Milestone:** M5
+**Status:** done · **Milestone:** M5
 
 ## Scope
 - Migration and replica migration: `projects` (name, description, area, status active, paused or
@@ -17,3 +17,14 @@
 ## Acceptance criteria
 - pgTAP row security and checks for both tables and the new columns; the migration harness passes.
 - Every vector case passes in all three implementations.
+
+## Result
+- Supabase migration 0013 (`projects`, `project_milestones`, the five task columns, 16 pgTAP checks,
+  fixtures) and replica migration 0008, with the synced-tables contract naming projects before tasks.
+- A project that is purged leaves its items behind as plain tasks: Postgres can only null the columns
+  of the foreign key itself, so a `before delete` trigger clears the project, the column and the
+  milestone together, which the item check constraint needs.
+- `contracts/vectors/projects.json` with `ProjectRules` in Kotlin and C# and `rules/projects.ts` in
+  the connector; all three pass. docs/projects.md.
+- Left for M5-02: reading and writing projects in the apps (a `ProjectList` beside `TaskList`), and
+  the screens.
