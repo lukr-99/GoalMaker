@@ -61,7 +61,8 @@ monthly reviews with the prompt library and data-reactive prompts, mood and ener
 ### M5: projects, calendar, widgets, mini windows, share target
 
 Projects with the board, milestones and priorities, the calendar view, Today and Habits widgets,
-pinnable mini windows, share to GoalMaker, Add to Startup Profiles.
+pinnable mini windows, share to GoalMaker, Add to Startup Profiles. Issues:
+`.scratch/m5-projects-calendar-and-desktop/`.
 
 ### M6: v1.0
 
