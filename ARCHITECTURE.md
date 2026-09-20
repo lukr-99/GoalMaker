@@ -36,9 +36,9 @@ composition root creates everything
 ### Android (`android/app`, package `com.goalmaker.app`)
 
 - `domain/`: `version/SemanticVersion`, `update/` (manifest, parser, update policy),
-  `notes/LightMarkdown`,
-  `account/` (email, sign-in code), `settings/ThemeMode`, `sync/` (`SyncRules`, the synced-table
-  catalog, outbox entries, cursors). Pure Kotlin.
+  `notes/LightMarkdown`, `share/SharedCapture` (what another app shared, as a composer line and
+  notes), `account/` (email, sign-in code), `settings/ThemeMode`, `sync/` (`SyncRules`, the
+  synced-table catalog, outbox entries, cursors). Pure Kotlin.
 - `application/`: ports and use cases: `auth/AuthGateway`, `update/UpdateService` with the
   `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
   `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
@@ -55,8 +55,8 @@ composition root creates everything
 - `ui/`: `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `components/`
   (the shared ring, chips, emoji field and logo), `signin/`, `lists/` (Today, Tomorrow, Inbox),
   `plan/`, `task/`, `goals/`, `habits/`, `review/`, `stats/`, `projects/`, `calendar/`, `archive/`,
-  `activity/`, `areas/`, `connector/`, `settings/`, `widget/` (the Glance home screen widgets),
-  `nav/` (Navigation 3 back stack).
+  `activity/`, `areas/`, `connector/`, `settings/`, `share/` (the sheet a share from another app
+  opens), `widget/` (the Glance home screen widgets), `nav/` (Navigation 3 back stack).
 - `composition/AppGraph` is the composition root, owned by `GoalMakerApplication`, which also hands
   WorkManager a worker factory wired to it.
 
@@ -64,16 +64,18 @@ composition root creates everything
 
 - `GoalMaker.Core` (net10.0): the same domain and application code as Android's, in C#
   (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`,
-  `Notes`).
+  `Notes`, `Startup` (starting with Windows and the Startup Profiles contract)).
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
   `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
-  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed` and `Planning/TimerReminderScheduler`.
+  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Planning/TimerReminderScheduler` and
+  `Startup/` (GoalMaker's own value under Run, and finding Startup Profiles).
 - `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
   `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon with the Today
   flyout, page provider, reminder toasts, the quick-add box and its global shortcut through NHotkey,
-  the sidebar's area and tag filters), `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm), `Startup/`
-  (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
+  the sidebar's area and tag filters, the Today and Habits mini windows),
+  `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm),
+  `Startup/` (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`.
 - `dotnetlib` was evaluated and is not referenced yet (ADR 0006).
 
