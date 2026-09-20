@@ -44,6 +44,9 @@ import com.goalmaker.app.ui.review.ReviewKey
 import com.goalmaker.app.ui.review.ReviewScreen
 import com.goalmaker.app.ui.review.ReviewViewModel
 import com.goalmaker.app.ui.review.ReviewsKey
+import com.goalmaker.app.ui.projects.ProjectsKey
+import com.goalmaker.app.ui.projects.ProjectsScreen
+import com.goalmaker.app.ui.projects.ProjectsViewModel
 import com.goalmaker.app.ui.stats.StatsKey
 import com.goalmaker.app.ui.stats.StatsScreen
 import com.goalmaker.app.ui.stats.StatsViewModel
@@ -122,6 +125,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenHabits = { backStack.add(HabitsKey) },
                             onOpenReviews = { backStack.add(ReviewsKey) },
                             onOpenStats = { backStack.add(StatsKey) },
+                            onOpenProjects = { backStack.add(ProjectsKey) },
                         )
                     }
                     entry<GoalsKey> {
@@ -134,6 +138,14 @@ fun SignedInNavigation(graph: AppGraph) {
                             viewModel = reviewsViewModel,
                             onBack = { backStack.removeLastOrNull() },
                             onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                        )
+                    }
+                    entry<ProjectsKey> {
+                        val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
+                        ProjectsScreen(
+                            viewModel = projectsViewModel,
+                            onBack = { backStack.removeLastOrNull() },
+                            onOpenTask = { id -> backStack.add(TaskKey(id)) },
                         )
                     }
                     entry<StatsKey> {

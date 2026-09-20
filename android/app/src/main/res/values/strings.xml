@@ -614,6 +614,37 @@
         <item quantity="one">%1$d task behind you, and %2$d answers written down.</item>
         <item quantity="other">%1$d tasks behind you, and %2$d answers written down.</item>
     </plurals>
+    <!-- Projects (docs/projects.md) -->
+    <string name="projects_title">Projects</string>
+    <string name="projects_empty">No projects yet. A project is where a piece of work keeps its own backlog.</string>
+    <string name="projects_add">New project</string>
+    <string name="projects_edit">Edit project</string>
+    <string name="projects_delete">Delete project</string>
+    <string name="projects_name">Name</string>
+    <string name="projects_description">Description</string>
+    <string name="projects_repository">Repository URL</string>
+    <string name="projects_folder">Local folder</string>
+    <string name="projects_active">Active</string>
+    <string name="projects_paused">Paused</string>
+    <string name="projects_finished">Done</string>
+    <string name="projects_add_item">Add an item</string>
+    <string name="projects_item_title">What is it?</string>
+    <string name="projects_item_menu">More</string>
+    <string name="projects_move_to">Move to %1$s</string>
+    <string name="projects_remove_item">Out of the project</string>
+    <string name="projects_column_empty">Nothing here yet.</string>
+    <string name="projects_backlog">Backlog</string>
+    <string name="projects_todo">To do</string>
+    <string name="projects_doing">Doing</string>
+    <string name="projects_done">Done</string>
+    <string name="projects_task">Task</string>
+    <string name="projects_idea">Idea</string>
+    <string name="projects_bug">Bug</string>
+    <string name="projects_urgent">Urgent</string>
+    <string name="projects_high">High</string>
+    <string name="projects_normal">Normal</string>
+    <string name="projects_low">Low</string>
+
     <!-- Stats (docs/stats.md) -->
     <string name="stats_title">Stats</string>
     <string name="stats_empty">Nothing to show yet. Finish a few tasks and write a review, and the trends turn up here.</string>

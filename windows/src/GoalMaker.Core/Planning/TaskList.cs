@@ -263,6 +263,73 @@ public sealed class TaskList
     }
 
     // Done or dropped; an open repeating task makes its next occurrence in the same transaction.
+    /// <summary>
+    /// Puts a task in a project, or takes it out of one (docs/projects.md). A new item lands in the
+    /// column its type calls for; taking it out leaves a plain task with no column and no milestone.
+    /// </summary>
+    public void SetProject(string id, string? projectId, string itemType = ProjectRules.Task) => Change(id, row =>
+    {
+        row["project_id"] = projectId;
+        if (projectId is null)
+        {
+            row["board_column"] = null;
+            row["milestone_id"] = null;
+            return;
+        }
+
+        row["item_type"] = itemType;
+        row["board_column"] = (string?)row["board_column"] ?? ProjectRules.ColumnFor(itemType);
+    });
+
+    /// <summary>Moves an item to a board column; the done column finishes the task and any other reopens it.</summary>
+    public void SetBoardColumn(string id, string column)
+    {
+        if (!ProjectRules.Columns.Contains(column) || Find(id) is not { ProjectId: not null } item)
+        {
+            return;
+        }
+
+        switch (ProjectRules.Moved(column, item.State))
+        {
+            case TaskState.Done when item.State != TaskState.Done:
+                SetDone(id, true);
+                break;
+            case TaskState.Open when item.State == TaskState.Done:
+                SetDone(id, false);
+                break;
+        }
+
+        Change(id, row => row["board_column"] = column);
+    }
+
+    /// <summary>What kind of item this is: a task, an idea or a bug.</summary>
+    public void SetItemType(string id, string itemType)
+    {
+        if (itemType is ProjectRules.Task or ProjectRules.Idea or ProjectRules.Bug)
+        {
+            Change(id, row => row["item_type"] = itemType);
+        }
+    }
+
+    /// <summary>How important the task is: low, normal, high or urgent.</summary>
+    public void SetPriority(string id, string priority)
+    {
+        if (ProjectRules.Priorities.Contains(priority))
+        {
+            Change(id, row => row["priority"] = priority);
+        }
+    }
+
+    /// <summary>The milestone of the item's own project, or none.</summary>
+    public void SetMilestone(string id, string? milestoneId) => Change(id, row => row["milestone_id"] = milestoneId);
+
+    private static TaskState StateOf(string status) => status switch
+    {
+        "done" => TaskState.Done,
+        "dropped" => TaskState.Dropped,
+        _ => TaskState.Open,
+    };
+
     private void Finish(string id, string status)
     {
         var changed = false;
@@ -276,6 +343,11 @@ public sealed class TaskList
             var wasOpen = (string?)row["status"] == "open";
             row["status"] = status;
             row["completed_at"] = status == "done" ? rows.Timestamp() : null;
+            if ((string?)row["board_column"] is { } column)
+            {
+                row["board_column"] = ProjectRules.FinishedIn(StateOf(status), column);
+            }
+
             replica.Queue(Table, row);
             if (wasOpen)
             {
@@ -304,6 +376,11 @@ public sealed class TaskList
             var wasFinished = (string?)row["status"] != "open";
             row["status"] = "open";
             row["completed_at"] = null;
+            if ((string?)row["board_column"] is { } column)
+            {
+                row["board_column"] = ProjectRules.FinishedIn(TaskState.Open, column);
+            }
+
             edit(row);
             replica.Queue(Table, row);
             if (wasFinished && replica.Get(Table, Occurrences.SuccessorId(id)) is { } next

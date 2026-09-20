@@ -110,6 +110,7 @@ fun ListsScreen(
     onOpenHabits: () -> Unit,
     onOpenReviews: () -> Unit,
     onOpenStats: () -> Unit,
+    onOpenProjects: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
@@ -189,7 +190,12 @@ fun ListsScreen(
                         IconButton(onClick = onOpenGoals) {
                             Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
                         }
-                        MoreMenu(onOpenArchive = onOpenArchive, onOpenReviews = onOpenReviews, onOpenStats = onOpenStats)
+                        MoreMenu(
+                            onOpenArchive = onOpenArchive,
+                            onOpenReviews = onOpenReviews,
+                            onOpenStats = onOpenStats,
+                            onOpenProjects = onOpenProjects,
+                        )
                         IconButton(onClick = onOpenPlan) {
                             Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
                         }
@@ -372,15 +378,27 @@ private fun ListContent(
     }
 }
 
-/** What doesn't fit the top bar: the reviews, the stats and the archive. */
+/** What doesn't fit the top bar: the projects, the reviews, the stats and the archive. */
 @Composable
-private fun MoreMenu(onOpenArchive: () -> Unit, onOpenReviews: () -> Unit, onOpenStats: () -> Unit) {
+private fun MoreMenu(
+    onOpenArchive: () -> Unit,
+    onOpenReviews: () -> Unit,
+    onOpenStats: () -> Unit,
+    onOpenProjects: () -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.lists_more_menu))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.projects_title)) },
+                onClick = {
+                    open = false
+                    onOpenProjects()
+                },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.reviews_title)) },
                 onClick = {

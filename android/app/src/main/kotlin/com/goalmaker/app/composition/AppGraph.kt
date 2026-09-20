@@ -16,6 +16,7 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -189,6 +190,7 @@ class AppGraph(context: Context) {
     val goals = GoalList(replica, newRows, sync::request)
     val habits = HabitList(replica, newRows, sync::request)
     val reviews = ReviewList(replica, newRows, sync::request)
+    val projects = ProjectList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, sync::request, ::today)
 
     /** The planning day it is now, by the owner's day start (docs/lists.md). */

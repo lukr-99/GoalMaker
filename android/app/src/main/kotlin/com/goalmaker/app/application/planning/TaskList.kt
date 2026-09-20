@@ -196,6 +196,9 @@ class TaskList(
             val values = LinkedHashMap(row)
             values["status"] = JsonPrimitive(status)
             values["completed_at"] = if (status == "done") JsonPrimitive(rows.timestamp()) else JsonNull
+            boardColumn(values)?.let { column ->
+                values["board_column"] = JsonPrimitive(ProjectRules.finished(stateOf(status), column))
+            }
             val finished = JsonObject(values)
             replica.queue(TABLE, finished)
             if (wasOpen) moveOn(finished)
@@ -212,6 +215,9 @@ class TaskList(
             val values = LinkedHashMap(row)
             values["status"] = JsonPrimitive("open")
             values["completed_at"] = JsonNull
+            boardColumn(values)?.let { column ->
+                values["board_column"] = JsonPrimitive(ProjectRules.finished(TaskState.OPEN, column))
+            }
             edit(values)
             replica.queue(TABLE, JsonObject(values))
             val next = if (wasFinished) replica.get(TABLE, Occurrences.successorId(id)) else null
@@ -271,6 +277,61 @@ class TaskList(
         val start = goal.text("period_start")?.let(LocalDate::parse) ?: return null
         return goalId.takeIf { !day.isBefore(start) && !day.isAfter(GoalRules.periodEnd(horizon, start)) }
     }
+
+    /**
+     * Puts a task in a project, or takes it out of one (docs/projects.md). A new item lands in the
+     * column its type calls for; taking it out leaves a plain task with no column and no milestone.
+     */
+    fun setProject(id: String, projectId: String?, itemType: String = ProjectRules.TASK) = change(id) { row ->
+        row["project_id"] = projectId?.let(::JsonPrimitive) ?: JsonNull
+        if (projectId == null) {
+            row["board_column"] = JsonNull
+            row["milestone_id"] = JsonNull
+        } else {
+            row["item_type"] = JsonPrimitive(itemType)
+            if (boardColumn(row) == null) row["board_column"] = JsonPrimitive(ProjectRules.columnFor(itemType))
+        }
+    }
+
+    /** Moves an item to a board column; the done column finishes the task and any other reopens it. */
+    fun setBoardColumn(id: String, column: String) {
+        if (column !in ProjectRules.COLUMNS) return
+        val current = find(id) ?: return
+        if (current.projectId == null) return
+        when (ProjectRules.moved(column, current.state)) {
+            TaskState.DONE -> if (current.state != TaskState.DONE) setDone(id, true)
+            TaskState.OPEN -> if (current.state == TaskState.DONE) setDone(id, false)
+            else -> Unit
+        }
+        change(id) { row -> row["board_column"] = JsonPrimitive(column) }
+    }
+
+    /** What kind of item this is: a task, an idea or a bug. */
+    fun setItemType(id: String, itemType: String) {
+        if (itemType !in setOf(ProjectRules.TASK, ProjectRules.IDEA, ProjectRules.BUG)) return
+        change(id) { row -> row["item_type"] = JsonPrimitive(itemType) }
+    }
+
+    /** How important the task is: low, normal, high or urgent. */
+    fun setPriority(id: String, priority: String) {
+        if (priority !in ProjectRules.PRIORITIES) return
+        change(id) { row -> row["priority"] = JsonPrimitive(priority) }
+    }
+
+    /** The milestone of the item's own project, or none. */
+    fun setMilestone(id: String, milestoneId: String?) = change(id) { row ->
+        row["milestone_id"] = milestoneId?.let(::JsonPrimitive) ?: JsonNull
+    }
+
+    private fun stateOf(status: String) = when (status) {
+        "done" -> TaskState.DONE
+        "dropped" -> TaskState.DROPPED
+        else -> TaskState.OPEN
+    }
+
+    // The column a row sits in, or null when it isn't a project item.
+    private fun boardColumn(values: Map<String, JsonElement>) =
+        (values["board_column"] as? JsonPrimitive)?.takeUnless { it == JsonNull }?.content
 
     private fun change(id: String, edit: (MutableMap<String, JsonElement>) -> Unit) {
         val row = replica.get(TABLE, id) ?: return
