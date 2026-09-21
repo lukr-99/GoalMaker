@@ -11,6 +11,7 @@ using GoalMaker.Core.About;
 using GoalMaker.Core.Backup;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Problems;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Startup;
 using GoalMaker.Core.Sync;
@@ -49,6 +50,7 @@ public sealed class AppGraph : IDisposable
     private readonly IProfileSettings profile;
     private readonly SyncedTableCatalog catalog;
     private readonly Action<Action> runOnUi;
+    private readonly IStrings strings;
     private readonly TickSound tick = new();
     private readonly ITimer dayCheck;
     private readonly TimerReminderScheduler reminderTimer;
@@ -65,6 +67,7 @@ public sealed class AppGraph : IDisposable
         Action restartApp)
     {
         this.runOnUi = runOnUi;
+        this.strings = strings;
         Paths = new AppDataPaths(build.IsDevBuild);
         Paths.EnsureRoot();
         Paths.ClearUpdates();
@@ -138,6 +141,19 @@ public sealed class AppGraph : IDisposable
                 runOnUi(SettleReminders);
             }
         };
+        // What would not sync belongs in Settings, where it can be read and acted on, rather than
+        // across the top of a list (docs/problems.md). A run that comes right clears it again.
+        Sync.StatusChanged += (_, status) => runOnUi(() =>
+        {
+            if (status.State == SyncState.NeedsAttention)
+            {
+                Problems.Report(ProblemRules.Sync, status.Problem);
+            }
+            else if (status.State == SyncState.Idle)
+            {
+                Problems.Clear(ProblemRules.Sync);
+            }
+        });
         changeFeed = new SupabaseChangeFeed(supabase, catalog, Sync.Request);
         Auth.SessionChanged += (_, session) => OnSessionChanged(session);
         NetworkChange.NetworkAvailabilityChanged += OnNetworkAvailabilityChanged;
@@ -155,7 +171,7 @@ public sealed class AppGraph : IDisposable
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
         SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null, devCode);
-        Shell = new ShellViewModel(Auth, SignIn, runOnUi);
+        Shell = new ShellViewModel(Auth, SignIn, Problems, runOnUi);
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
@@ -260,7 +276,7 @@ public sealed class AppGraph : IDisposable
         Weekly = new WeeklyBackup(Backup, Settings, TimeProvider.System, backupFolder);
         // One a week, looked at after every sync run, so a PC that was off for three weeks writes
         // one at its next start rather than three (story 92).
-        Sync.RunCompleted += (_, _) => Weekly.Run();
+        Sync.RunCompleted += (_, _) => runOnUi(() => OnWeeklyBackup(Weekly.Run()));
 
         // Startup: GoalMaker's own value under Run (story 81), and the ask that hands it to Startup
         // Profiles through that app's own window when it is installed (story 84).
@@ -279,6 +295,8 @@ public sealed class AppGraph : IDisposable
             },
             restartApp,
             runOnUi);
+
+        ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
 
         // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
@@ -429,6 +447,12 @@ public sealed class AppGraph : IDisposable
 
     public ShellViewModel Shell { get; }
 
+    /// <summary>What went wrong while nobody was watching (docs/problems.md).</summary>
+    public ProblemLog Problems { get; } = new(TimeProvider.System);
+
+    /// <summary>The problems card on the Settings page.</summary>
+    public ProblemsViewModel ProblemsPage { get; }
+
     public ListViewModel Today { get; }
 
     public ListViewModel Tomorrow { get; }
@@ -466,6 +490,24 @@ public sealed class AppGraph : IDisposable
         signatureKey?.Dispose();
         supabase.Auth.Shutdown();
         http.Dispose();
+    }
+
+    // The weekly export runs unattended, so a folder that has gone or a file that would not write is
+    // exactly what the problems area is for (docs/problems.md). Anything else is not worth a word.
+    private void OnWeeklyBackup(WeeklyBackupResult result)
+    {
+        switch (result)
+        {
+            case WeeklyBackupResult.FolderGone:
+                Problems.Report(ProblemRules.Backup, strings.Get("Problems.BackupFolderGone"));
+                break;
+            case WeeklyBackupResult.CouldNotWrite:
+                Problems.Report(ProblemRules.Backup, strings.Get("Problems.BackupCouldNotWrite"));
+                break;
+            case WeeklyBackupResult.Written:
+                Problems.Clear(ProblemRules.Backup);
+                break;
+        }
     }
 
     private void OnSessionChanged(AuthSession session)

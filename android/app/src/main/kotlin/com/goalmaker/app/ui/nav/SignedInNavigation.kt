@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.nav
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -16,6 +17,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import java.time.LocalDate
 import java.time.LocalDateTime
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
@@ -69,6 +71,8 @@ import com.goalmaker.app.ui.theme.AppTheme
 @Composable
 fun SignedInNavigation(graph: AppGraph) {
     val backStack = rememberNavBackStack(TodayKey)
+    // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
+    val problems by graph.problems.problems.collectAsStateWithLifecycle()
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
     val planRequested by graph.planRequested.collectAsState()
     LaunchedEffect(planRequested) {
@@ -121,6 +125,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         }
                         ListsScreen(
                             viewModel = listsViewModel,
+                            hasProblems = problems.any { it.unread },
                             onOpenPlan = { backStack.add(PlanKey) },
                             onOpenSettings = { backStack.add(SettingsKey) },
                             onOpenTask = { id -> backStack.add(TaskKey(id)) },
@@ -236,6 +241,8 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenAreas = { backStack.add(AreasKey) },
                             onOpenConnector = { backStack.add(ConnectorKey) },
                             onOpenActivity = { backStack.add(ActivityKey) },
+                            problems = problems,
+                            onProblemsRead = graph.problems::read,
                         )
                     }
                     entry<ConnectorKey> {

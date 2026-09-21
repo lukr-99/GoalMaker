@@ -57,7 +57,8 @@ fun syncStatusLabel(status: SyncStatus): String = when (status.state) {
         } else {
             pluralStringResource(R.plurals.sync_offline_waiting, status.pendingChanges, status.pendingChanges)
         }
-    SyncState.NEEDS_ATTENTION -> stringResource(R.string.sync_needs_attention, status.problem.orEmpty())
+    // The reason lives in Settings, where there is room to say what to do about it (docs/problems.md).
+    SyncState.NEEDS_ATTENTION -> stringResource(R.string.sync_needs_attention)
     SyncState.IDLE -> status.lastSyncedAt
         ?.let { stringResource(R.string.sync_synced_at, clock.format(it.atZone(ZoneId.systemDefault()))) }
         .orEmpty()

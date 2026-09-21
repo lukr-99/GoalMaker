@@ -15,6 +15,7 @@ import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.connector.ConnectorLinks
 import com.goalmaker.app.application.auth.DevSignIn
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.problems.ProblemLog
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
@@ -39,6 +40,7 @@ import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.activity.PostgrestActivityLog
 import com.goalmaker.app.data.auth.LocalMailbox
+import com.goalmaker.app.domain.problems.ProblemRules
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
 import com.goalmaker.app.data.connector.PostgrestConnectorLinks
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
@@ -257,8 +259,22 @@ class AppGraph(context: Context) {
 
     @Volatile private var visible = false
 
+    /** What went wrong while nobody was watching (docs/problems.md). */
+    val problems = ProblemLog()
+
     init {
         reminderNotifications.createChannels()
+        // What would not sync belongs in Settings, where it can be read and acted on, rather than in
+        // the top bar of a list (docs/problems.md). A run that comes right clears it again.
+        scope.launch {
+            sync.status.collect { status ->
+                when (status.state) {
+                    SyncState.NEEDS_ATTENTION -> problems.report(ProblemRules.SYNC, status.problem)
+                    SyncState.IDLE -> problems.clear(ProblemRules.SYNC)
+                    else -> Unit
+                }
+            }
+        }
         // A sync can leave a series with two open occurrences; every device settles it the same way.
         // A sync can also change when the next reminder is due, and settle reminders on screen here
         // that were handled on the other device, so the alarm is redone and stale ones come down.

@@ -270,10 +270,21 @@
     <sys:String x:Key="Repeat.MonthlyOn">Every month on day {0}</sys:String>
     <sys:String x:Key="Repeat.EveryNMonthsOn">Every {0} months on day {1}</sys:String>
 
+    <!-- What went wrong while nobody was watching, as Settings tells it (docs/problems.md). -->
+    <sys:String x:Key="Problems.Title">Problems</sys:String>
+    <sys:String x:Key="Problems.WhatHappened">What happened</sys:String>
+    <sys:String x:Key="Problems.Sync">Some changes have not reached the server</sys:String>
+    <sys:String x:Key="Problems.SyncAdvice">They are still here and safe. GoalMaker keeps trying, and this goes as soon as one gets through.</sys:String>
+    <sys:String x:Key="Problems.Backup">The weekly copy of your data was not written</sys:String>
+    <sys:String x:Key="Problems.BackupAdvice">Choose the folder again under Your data, or export one yourself.</sys:String>
+    <sys:String x:Key="Problems.Update">An update could not be installed</sys:String>
+    <sys:String x:Key="Problems.UpdateAdvice">Try again under About, or install it yourself from the release page.</sys:String>
+    <sys:String x:Key="Problems.BackupFolderGone">The folder chosen for the weekly copy is not there any more, so it was turned off.</sys:String>
+    <sys:String x:Key="Problems.BackupCouldNotWrite">The folder is there, but the file could not be written to it.</sys:String>
     <sys:String x:Key="Sync.Syncing">Syncing…</sys:String>
     <sys:String x:Key="Sync.SyncedAt">Synced at {0}</sys:String>
     <sys:String x:Key="Sync.Offline">Offline · {0} change(s) waiting</sys:String>
-    <sys:String x:Key="Sync.NeedsAttention">Some changes didn't sync: {0}</sys:String>
+    <sys:String x:Key="Sync.NeedsAttention">Not everything is on the server yet</sys:String>
 
     <sys:String x:Key="Settings.Title">Settings</sys:String>
     <sys:String x:Key="Settings.Appearance">Appearance</sys:String>

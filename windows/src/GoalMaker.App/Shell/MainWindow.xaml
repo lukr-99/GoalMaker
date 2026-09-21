@@ -111,6 +111,11 @@
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Settings24" />
                     </ui:NavigationViewItem.Icon>
+                    <!-- Something went wrong while nobody was watching (docs/problems.md). -->
+                    <ui:NavigationViewItem.InfoBadge>
+                        <ui:InfoBadge Severity="Attention"
+                                      Visibility="{Binding DataContext.HasProblems, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BoolToVisibility}}" />
+                    </ui:NavigationViewItem.InfoBadge>
                 </ui:NavigationViewItem>
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>

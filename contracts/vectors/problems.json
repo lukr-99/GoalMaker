@@ -1,0 +1,247 @@
+{
+  "schema": 1,
+  "description": "What the owner is told has gone wrong, and where (docs/problems.md). A problem belongs to a kind, and a kind holds one problem at a time: a newer one takes the place of the older, because what matters is what is wrong now rather than every time it has been. 'kinds': the kinds both apps know. 'runs': things that happen in order, and the problems left afterwards, newest first, each with whether it is still unread, and 'marked', whether anything is unread at all, which is the quiet mark on the Settings item. A step is 'report' (a kind went wrong, with the detail kept behind 'what happened' for a bug report), 'clear' (that kind came right by itself, so nothing is left to tell) or 'read' (the owner opened the problems).",
+  "kinds": [
+    "sync",
+    "backup",
+    "update"
+  ],
+  "runs": [
+    {
+      "name": "nothing has gone wrong",
+      "steps": [],
+      "expect": {
+        "problems": [],
+        "marked": false
+      }
+    },
+    {
+      "name": "a push that would not go is one problem, and marks the settings item",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "23502: null value in column \"priority\""
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "23502: null value in column \"priority\"",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "the same kind again keeps one problem, the newer one",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the first"
+        },
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:05:00Z",
+          "detail": "the second"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:05:00Z",
+            "detail": "the second",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "a sync that works later clears it and the mark, with nobody doing anything",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "clear": "sync"
+        }
+      ],
+      "expect": {
+        "problems": [],
+        "marked": false
+      }
+    },
+    {
+      "name": "reading them leaves them there and takes the mark off",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "read": true
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "the push that would not go",
+            "unread": false
+          }
+        ],
+        "marked": false
+      }
+    },
+    {
+      "name": "something new after reading marks again",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "read": true
+        },
+        {
+          "report": "backup",
+          "at": "2026-09-21T11:00:00Z",
+          "detail": "the folder would not take the file"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "backup",
+            "at": "2026-09-21T11:00:00Z",
+            "detail": "the folder would not take the file",
+            "unread": true
+          },
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "the push that would not go",
+            "unread": false
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "kinds sit side by side, the newest first",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "one"
+        },
+        {
+          "report": "update",
+          "at": "2026-09-21T10:01:00Z",
+          "detail": "two"
+        },
+        {
+          "report": "backup",
+          "at": "2026-09-21T10:02:00Z",
+          "detail": "three"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "backup",
+            "at": "2026-09-21T10:02:00Z",
+            "detail": "three",
+            "unread": true
+          },
+          {
+            "kind": "update",
+            "at": "2026-09-21T10:01:00Z",
+            "detail": "two",
+            "unread": true
+          },
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "one",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "one kind coming right leaves the others alone",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "one"
+        },
+        {
+          "report": "update",
+          "at": "2026-09-21T10:01:00Z",
+          "detail": "two"
+        },
+        {
+          "clear": "update"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "one",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "clearing a kind that never went wrong changes nothing",
+      "steps": [
+        {
+          "clear": "backup"
+        }
+      ],
+      "expect": {
+        "problems": [],
+        "marked": false
+      }
+    },
+    {
+      "name": "a problem with nothing to say behind it is still a problem",
+      "steps": [
+        {
+          "report": "update",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": null
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "update",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": null,
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    }
+  ]
+}

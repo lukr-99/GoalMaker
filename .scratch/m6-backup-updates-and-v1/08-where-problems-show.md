@@ -1,6 +1,6 @@
 # M6-08: Where problems show
 
-**Status:** todo · **Milestone:** M6
+**Status:** done · **Milestone:** M6
 
 ## Scope
 - A sync problem currently sits across the top of Today: "Some changes didn't sync: HTTP 404:
@@ -21,3 +21,12 @@
   successful sync clears both without the owner doing anything.
 - No string shown to an owner names an exception, a table, an HTTP code or a JSON body
   (docs/pitfalls.md, M6-06's string pass covers the rest).
+
+## Done
+
+2026-09-21. `contracts/vectors/problems.json` pins report, clear, read and the mark; `ProblemRules`
+and `ProblemLog` run it in both apps. Sync reports what would not go and clears it on the next run
+that works; on Windows the weekly backup reports a folder that has gone or a file that would not
+write. Settings shows them newest first with what to do and "What happened" folded away, opening it
+reads them, and the mark sits on the Settings item in the sidebar and on the gear in Today's top bar.
+The lists keep one quiet line and no status code. docs/problems.md has the whole picture.

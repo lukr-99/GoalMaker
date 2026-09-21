@@ -4,20 +4,27 @@ using GoalMaker.App.ViewModels;
 namespace GoalMaker.App.Views;
 
 /// <summary>
-/// Settings. All behavior is in <see cref="SettingsViewModel"/> and, for the Claude connector card,
-/// <see cref="ConnectorViewModel"/>; this only reads the keys for the quick-add shortcut.
+/// Settings. All behavior is in <see cref="SettingsViewModel"/> and, for the Claude connector and
+/// problems cards, <see cref="ConnectorViewModel"/> and <see cref="ProblemsViewModel"/>; this only
+/// reads the keys for the quick-add shortcut.
 /// </summary>
 public partial class SettingsPage
 {
     private readonly SettingsViewModel viewModel;
 
-    public SettingsPage(SettingsViewModel viewModel, ConnectorViewModel connector)
+    public SettingsPage(SettingsViewModel viewModel, ConnectorViewModel connector, ProblemsViewModel problems)
     {
         InitializeComponent();
         this.viewModel = viewModel;
         DataContext = viewModel;
         ConnectorCard.DataContext = connector;
-        Loaded += async (_, _) => await connector.RefreshAsync();
+        ProblemsCard.DataContext = problems;
+        // Opening Settings is reading them, so the mark on the item goes (docs/problems.md).
+        Loaded += async (_, _) =>
+        {
+            problems.Read();
+            await connector.RefreshAsync();
+        };
     }
 
     // Keys pressed together in the shortcut box become the shortcut; Tab still moves on.

@@ -41,6 +41,8 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.WbTwilight
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -128,8 +130,10 @@ fun ListsScreen(
     onOpenStats: () -> Unit,
     onOpenProjects: () -> Unit,
     onOpenCalendar: () -> Unit,
+    hasProblems: Boolean = false,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val waiting = stringResource(R.string.problems_waiting)
     var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val composer = rememberTextFieldState()
@@ -223,7 +227,12 @@ fun ListsScreen(
                             Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.today_settings))
+                            // Something went wrong while nobody was watching (docs/problems.md).
+                            BadgedBox(
+                                badge = { if (hasProblems) Badge(modifier = Modifier.semantics { contentDescription = waiting }) },
+                            ) {
+                                Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.today_settings))
+                            }
                         }
                     },
                     scrollBehavior = scrollBehavior,

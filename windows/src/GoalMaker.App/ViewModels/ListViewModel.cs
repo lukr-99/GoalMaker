@@ -422,7 +422,8 @@ public sealed partial class ListViewModel : ObservableObject
     {
         { State: SyncState.Syncing } => strings.Get("Sync.Syncing"),
         { State: SyncState.Offline } => strings.Get("Sync.Offline", status.PendingChanges),
-        { State: SyncState.NeedsAttention } => strings.Get("Sync.NeedsAttention", status.Problem ?? string.Empty),
+        // The reason lives in Settings, where there is room to say what to do about it (docs/problems.md).
+        { State: SyncState.NeedsAttention } => strings.Get("Sync.NeedsAttention"),
         { LastSyncedAt: { } at } => strings.Get("Sync.SyncedAt", at.ToLocalTime().ToString("t", CultureInfo.CurrentCulture)),
         _ => string.Empty,
     };

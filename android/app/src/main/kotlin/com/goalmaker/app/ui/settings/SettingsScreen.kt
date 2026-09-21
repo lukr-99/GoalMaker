@@ -35,7 +35,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -58,11 +62,16 @@ import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.ReduceMotion
+import com.goalmaker.app.domain.problems.Problem
+import com.goalmaker.app.domain.problems.ProblemRules
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.time.format.TextStyle
 import kotlin.math.roundToInt
 
@@ -73,8 +82,12 @@ fun SettingsScreen(
     onOpenAreas: () -> Unit,
     onOpenConnector: () -> Unit = {},
     onOpenActivity: () -> Unit = {},
+    problems: List<Problem> = emptyList(),
+    onProblemsRead: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // Opening Settings is reading them, so the mark on the gear goes (docs/problems.md).
+    LaunchedEffect(Unit) { onProblemsRead() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -98,6 +111,11 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (problems.isNotEmpty()) {
+                Section(stringResource(R.string.problems_title)) {
+                    problems.forEach { problem -> ProblemRow(problem) }
+                }
+            }
             Section(stringResource(R.string.settings_appearance)) {
                 // The mark takes on the theme's colors, and redraws itself when the theme changes.
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -261,6 +279,41 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+/** One problem: what happened in plain words, what to do, when, and the technical line folded away. */
+@Composable
+private fun ProblemRow(problem: Problem) {
+    val titles = mapOf(
+        ProblemRules.SYNC to (R.string.problems_sync to R.string.problems_sync_advice),
+        ProblemRules.BACKUP to (R.string.problems_backup to R.string.problems_backup_advice),
+        ProblemRules.UPDATE to (R.string.problems_update to R.string.problems_update_advice),
+    )
+    val (title, advice) = titles[problem.kind] ?: (R.string.problems_update to R.string.problems_update_advice)
+    var open by rememberSaveable(problem.kind, problem.at) { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(title), style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(advice), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
+        Text(
+            whenText(problem.at),
+            style = MaterialTheme.typography.labelSmall,
+            color = AppTheme.colors.textMuted,
+        )
+        problem.detail?.let { detail ->
+            TextButton(onClick = { open = !open }) { Text(stringResource(R.string.problems_what_happened)) }
+            if (open) {
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
+            }
+        }
+    }
+}
+
+// The day and time a problem happened, as this phone writes them.
+@Composable
+private fun whenText(at: Instant): String {
+    val format = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
+        .withLocale(LocalConfiguration.current.locales[0])
+    return format.format(at.atZone(ZoneId.systemDefault()))
 }
 
 @Composable

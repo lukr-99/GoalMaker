@@ -29,6 +29,39 @@
         <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Margin="0,0,0,24" Title="{DynamicResource Settings.Title}" FontSize="40" />
 
+            <!-- What went wrong while nobody was watching (docs/problems.md); the view model is set in code. -->
+            <ui:Card x:Name="ProblemsCard" Margin="0,0,0,12" Padding="20"
+                     Visibility="{Binding HasProblems, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Problems.Title}" />
+                    <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,0,0,16">
+                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding Advice}" />
+                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding When}" FontSize="12" />
+                                    <Expander Margin="0,8,0,0"
+                                              Header="{DynamicResource Problems.WhatHappened}"
+                                              Visibility="{Binding HasDetail, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBox Margin="0,8,0,0"
+                                                 Text="{Binding Detail, Mode=OneWay}"
+                                                 IsReadOnly="True"
+                                                 TextWrapping="Wrap"
+                                                 BorderThickness="0"
+                                                 Background="Transparent"
+                                                 FontSize="12"
+                                                 Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                 AutomationProperties.Name="{DynamicResource Problems.WhatHappened}" />
+                                    </Expander>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ui:Card>
+
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
                     <!-- The mark takes on the theme's colors, and redraws itself when the theme changes. -->

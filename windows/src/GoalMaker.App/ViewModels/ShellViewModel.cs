@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using GoalMaker.Core.Auth;
+using GoalMaker.Core.Problems;
 
 namespace GoalMaker.App.ViewModels;
 
@@ -13,10 +14,16 @@ public sealed partial class ShellViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsSignedOut))]
     private bool isSignedIn;
 
-    public ShellViewModel(IAuthGateway auth, SignInViewModel signIn, Action<Action> runOnUi)
+    [ObservableProperty]
+    private bool hasProblems;
+
+    public ShellViewModel(IAuthGateway auth, SignInViewModel signIn, ProblemLog problems, Action<Action> runOnUi)
     {
         SignIn = signIn;
         auth.SessionChanged += (_, session) => runOnUi(() => Apply(session));
+        // The quiet mark on the Settings item: something went wrong while nobody was watching.
+        problems.Changed += (_, _) => runOnUi(() => HasProblems = problems.IsMarked);
+        HasProblems = problems.IsMarked;
         Apply(auth.Session);
     }
 
