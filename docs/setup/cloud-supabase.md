@@ -3,9 +3,10 @@
 One free project holds the real data (ADR 0001). Do these steps once. The dashboard moves things
 around now and then; the setting names below are what to look for.
 
-Done on 2026-09-20: the project is `wkjnauxqwlqhsqrqnkhg` in eu-central-1, with the schema, the
-settings and two of the three repository secrets below. What is left is the secret key in step 4 and
-the sender in step 5.
+Done: the project is `wkjnauxqwlqhsqrqnkhg` in eu-central-1 with the schema and the settings
+(2026-09-20), and it sends through Resend, so the sign-in code templates are live (2026-09-21). What
+is left is the secret key in step 4, turning the unused SMS provider off in the dashboard, and
+creating the account in step 6.
 
 ## 1. Create the project
 
@@ -83,9 +84,9 @@ For release builds on your own PC, put the URL and publishable key in untracked 
 
 Never put the secret key in either file.
 
-## 5. Sign-in emails: the project needs its own sender
+## 5. Sign-in emails: the project's own sender
 
-**Not done yet, and sign-in on the cloud project cannot work until it is.** GoalMaker signs in with a
+**Done on 2026-09-21.** GoalMaker signs in with a
 6-digit code, which means both the **Magic link** and **Confirm signup** templates have to show
 `{{ .Token }}` instead of a link
 ([supabase/templates/sign-in-code.html](../../supabase/templates/sign-in-code.html)). Supabase
@@ -125,6 +126,13 @@ npx supabase config push --project-ref <project ref>
 
 The diff should show the SMTP settings and the two templates and nothing else. Send yourself a code
 from a release build afterwards: it should carry six digits, not a link.
+
+Two things the push cannot do, both one click in the dashboard:
+
+- **Turn the unused Twilio SMS provider off.** `config push` can switch between SMS providers but not
+  turn the active one off, so it says so and leaves it. It sends nothing without credentials;
+  **Authentication → Sign In / Providers → Phone** turns it off for good.
+- Change anything under the properties it lists as unmanaged, none of which GoalMaker sets.
 
 Keep the API key in your password manager. It is not needed again unless the settings are pushed
 from another machine.

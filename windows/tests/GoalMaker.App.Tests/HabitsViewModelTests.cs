@@ -277,6 +277,57 @@ public sealed class HabitsViewModelTests : IDisposable
         Assert.Equal(HabitRules.AtMost, editor.Direction!.Id);
     }
 
+    [Fact]
+    public void AnAmountIsLoggedFromTheRowItself()
+    {
+        var water = planner.Habits.Add(new HabitDraft("Water", Today)
+        {
+            Measure = HabitRules.Count,
+            Target = 8,
+            Unit = "glasses",
+        })!;
+        var page = Page();
+        var row = page.Rows.Single();
+        Assert.True(row.CanLog);
+        Assert.Equal("glasses", row.AmountHint);
+
+        row.LogOneCommand.Execute(null);
+
+        row = Page().Rows.Single();
+        Assert.Equal(1, row.Value);
+        Assert.Equal(0.125, row.Fraction, 9);
+
+        // The same check-in the panel writes: one row for the habit and the day, added to.
+        row.AmountText = "3";
+        row.LogAmountCommand.Execute(null);
+
+        row = Page().Rows.Single();
+        Assert.Equal(4, row.Value);
+        Assert.Equal(0.5, row.Fraction, 9);
+        Assert.Equal(water.Id, Assert.Single(planner.Habits.Checkins()).HabitId);
+    }
+
+    [Fact]
+    public void WhatIsNotANumberLeavesTheDayAlone()
+    {
+        planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" });
+        var page = Page();
+        var row = page.Rows.Single();
+
+        row.AmountText = "a few";
+        row.LogAmountCommand.Execute(null);
+
+        Assert.Equal(0, Page().Rows.Single().Value);
+    }
+
+    [Fact]
+    public void ACheckHabitHasNothingToLogFromTheRow()
+    {
+        planner.Habits.Add(new HabitDraft("Read", Today));
+
+        Assert.False(Page().Rows.Single().CanLog);
+    }
+
     private HabitsViewModel Page() =>
         new(planner.Habits, planner.Goals, planner.Settings, planner.Strings, planner.Time, () => motionReduced, action => action());
 }

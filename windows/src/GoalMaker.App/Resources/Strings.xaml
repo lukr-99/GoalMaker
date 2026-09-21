@@ -498,6 +498,9 @@
     <sys:String x:Key="Habits.Cancel">Cancel</sys:String>
     <sys:String x:Key="Habits.Delete">Delete</sys:String>
     <sys:String x:Key="Habits.CheckIn">Check in {0}</sys:String>
+    <sys:String x:Key="Habits.LogOne">One more of {0}</sys:String>
+    <sys:String x:Key="Habits.LogExact">Log this many of {0}</sys:String>
+    <sys:String x:Key="Habits.Amount">Amount</sys:String>
     <sys:String x:Key="Habits.Log">Log an amount</sys:String>
     <sys:String x:Key="Habits.LogTitle">Log on “{0}”</sys:String>
     <sys:String x:Key="Habits.LogAmount">Amount</sys:String>

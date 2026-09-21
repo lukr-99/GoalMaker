@@ -1,6 +1,6 @@
 # M6-09: Logging an amount without leaving the page
 
-**Status:** todo · **Milestone:** M6
+**Status:** done (Windows) · **Milestone:** M6
 
 ## Scope
 - A habit that counts or measures something (8 glasses, 30 minutes) is checked in by tapping its
@@ -19,3 +19,10 @@
   streak move with it.
 - The row form appears only when the window has room for it, and the panel still works when it does
   not.
+
+## Done
+
+2026-09-21, Windows. A habit that counts or measures takes its amount in the row: a plus for one
+more, and a small field with Enter or a tick for a number. The panel stays, reached by the ring or
+the menu, and the mini window keeps its own shorter row. Android keeps the panel: the phone has no
+room for a field beside the ring, and the ring is already one tap away.

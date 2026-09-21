@@ -55,11 +55,29 @@
                                    ToolTip="{DynamicResource Habits.Edit}" AutomationProperties.Name="{DynamicResource Habits.Edit}">
                             <ui:SymbolIcon Symbol="Edit24" />
                         </ui:Button>
-                        <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding LogCommand}"
-                                   Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}"
-                                   ToolTip="{DynamicResource Habits.Log}" AutomationProperties.Name="{DynamicResource Habits.Log}">
-                            <ui:SymbolIcon Symbol="Add24" />
-                        </ui:Button>
+                        <!-- Logging an amount from the row itself: one more, or exactly this many. -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
+                                    Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}">
+                            <ui:TextBox Width="76"
+                                        Margin="0,0,4,0"
+                                        VerticalAlignment="Center"
+                                        PlaceholderText="{Binding AmountHint}"
+                                        Text="{Binding AmountText, UpdateSourceTrigger=PropertyChanged}"
+                                        ToolTip="{Binding LogExactText}"
+                                        AutomationProperties.Name="{Binding LogExactText}">
+                                <ui:TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding LogAmountCommand}" />
+                                </ui:TextBox.InputBindings>
+                            </ui:TextBox>
+                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding LogAmountCommand}"
+                                       ToolTip="{Binding LogExactText}" AutomationProperties.Name="{Binding LogExactText}">
+                                <ui:SymbolIcon Symbol="Checkmark24" />
+                            </ui:Button>
+                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding LogOneCommand}"
+                                       ToolTip="{Binding LogOneText}" AutomationProperties.Name="{Binding LogOneText}">
+                                <ui:SymbolIcon Symbol="Add24" />
+                            </ui:Button>
+                        </StackPanel>
                         <Button DockPanel.Dock="Left"
                                 Width="48" Height="48" Margin="0,0,12,0"
                                 Padding="0"

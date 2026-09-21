@@ -81,7 +81,10 @@ after the habit resumes, so old streaks still read right.
 
 - **Today's ring** fills with the day's value against the target for a daily or weekday habit, and
   with the days met so far against N for a weekly or monthly one. A tap checks a check habit (and
-  takes it back), adds one to a count, and asks for the value of an amount. The ring fills with a
+  takes it back), adds one to a count, and asks for the value of an amount. On the Windows Habits
+  page, where there is room, the row takes the amount itself: a plus for one more and a field for a
+  number, which is the whole act for a glass of water. Both write the day's one check-in, so three
+  then five is eight. The ring fills with a
   spring and a small burst, and a streak reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods
   gets confetti; both are skipped under reduce motion.
 - **The heatmap** gives each day a value: nothing before the start or on a day that isn't due,

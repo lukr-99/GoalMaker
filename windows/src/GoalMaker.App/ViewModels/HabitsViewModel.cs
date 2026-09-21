@@ -173,6 +173,24 @@ public sealed partial class HabitsViewModel : ObservableObject
 
     internal void Delete(string id) => habits.Delete(id);
 
+    /// <summary>
+    /// One more of whatever the habit counts, straight from its row, which is the whole act for
+    /// a glass of water or a cigarette (docs/habits.md). The panel stays for anything else.
+    /// </summary>
+    internal void LogOne(HabitItem habit) => habits.CheckIn(habit.Id, Today());
+
+    /// <summary>The number typed beside the row. Anything that is not one is left alone.</summary>
+    internal bool LogTyped(HabitItem habit, string text)
+    {
+        if (GoalEditorViewModel.ParseAmount(text) is not { } amount || amount <= 0)
+        {
+            return false;
+        }
+
+        habits.CheckIn(habit.Id, Today(), amount);
+        return true;
+    }
+
     internal void StartLog(HabitItem habit)
     {
         loggingId = habit.Id;

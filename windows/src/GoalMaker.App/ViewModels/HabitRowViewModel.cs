@@ -50,8 +50,13 @@ public sealed class HabitRowViewModel
             _ => "Habits.SkipDay",
         });
         CheckInText = strings.Get("Habits.CheckIn", habit.Name);
+        LogOneText = strings.Get("Habits.LogOne", habit.Name);
+        LogExactText = strings.Get("Habits.LogExact", habit.Name);
+        AmountHint = habit.Unit ?? strings.Get("Habits.Amount");
         RingText = habit.Emoji ?? string.Empty;
         CheckInCommand = new RelayCommand(() => owner?.Tap(habit));
+        LogOneCommand = new RelayCommand(() => owner?.LogOne(habit));
+        LogAmountCommand = new RelayCommand(() => owner?.LogTyped(habit, AmountText));
         EditCommand = new RelayCommand(() => owner?.Edit(habit));
         LogCommand = new RelayCommand(() => owner?.StartLog(habit));
         ClearCommand = new RelayCommand(() => owner?.ClearToday(habit.Id));
@@ -124,6 +129,20 @@ public sealed class HabitRowViewModel
 
     public string CheckInText { get; }
 
+    /// <summary>What a press of the plus says it does, for a reader and a tooltip.</summary>
+    public string LogOneText { get; }
+
+    public string LogExactText { get; }
+
+    /// <summary>The unit, or the word for a number when the habit has none.</summary>
+    public string AmountHint { get; }
+
+    /// <summary>
+    /// The number typed beside the row (docs/habits.md). The rows are made again after every
+    /// check-in, so what was typed goes with the row it was typed in.
+    /// </summary>
+    public string AmountText { get; set; } = string.Empty;
+
     public string Serves { get; }
 
     public bool HasServes => Serves.Length > 0;
@@ -133,6 +152,12 @@ public sealed class HabitRowViewModel
     public IRelayCommand EditCommand { get; }
 
     public IRelayCommand LogCommand { get; }
+
+    /// <summary>One more of whatever this counts, without opening anything.</summary>
+    public IRelayCommand LogOneCommand { get; }
+
+    /// <summary>Exactly the number beside the row.</summary>
+    public IRelayCommand LogAmountCommand { get; }
 
     public IRelayCommand ClearCommand { get; }
 
