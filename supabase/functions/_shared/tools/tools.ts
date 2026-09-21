@@ -73,6 +73,9 @@ const priority = z.enum(PRIORITIES as [string, ...string[]]).describe(
   "How important it is: urgent, high, normal or low. Items sit in a column in this order.",
 );
 const column = z.enum(COLUMNS as [string, ...string[]]).describe("A board column: backlog, todo, doing or done.");
+const projectStatus = z.enum(["active", "paused", "done"]).describe(
+  "Where the project stands: active, paused or done.",
+);
 
 /** What a board column is called in a sentence. */
 function columnName(column: string | null | undefined): string {
@@ -753,6 +756,65 @@ export const tools: Tool[] = [
             milestones.map((milestone) => `${milestone.name} (milestone id ${milestone.id})`).join(", ")
           }.`,
       ].join("\n");
+    },
+  },
+  {
+    name: "create_project",
+    title: "Create a project",
+    description: "Makes a project with a board of its own, the way the Projects screen's new-project form does. The " +
+      "repository and the folder are worth filling in: they are what lets find_project reach this project later " +
+      "from the checkout being worked in. Items go on the board afterwards with add_project_item.",
+    input: {
+      name: z.string().describe("What the project is called, like GoalMaker."),
+      description: z.string().optional().describe("A sentence on what it is."),
+      area: z.string().optional().describe("An area's name, like Work."),
+      status: projectStatus.optional().describe("active by default."),
+      repository: z.string().optional().describe("The repository URL, like https://github.com/me/goalmaker."),
+      folder: z.string().optional().describe("The folder it lives in, like F:\\GoalMaker."),
+      notes: z.string().optional().describe("Notes; light Markdown."),
+      milestones: z.array(z.string()).optional().describe("Milestone names in the order they come, like M0, M1."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const project = await planner.addProject({
+        name: args.name,
+        description: args.description,
+        area: args.area,
+        status: args.status,
+        repository: args.repository,
+        folder: args.folder,
+        notes: args.notes,
+      });
+      for (const name of (args.milestones ?? []) as string[]) await planner.addMilestone(project.id, name);
+      const milestones = await milestonesOf(planner, project);
+      return [
+        "Created:",
+        format.projectLine(project, await namesOf(planner), await planner.tasks()),
+        milestones.length === 0
+          ? "It has no milestones yet."
+          : `Milestones: ${
+            milestones.map((milestone) => `${milestone.name} (milestone id ${milestone.id})`).join(", ")
+          }.`,
+      ].join("\n");
+    },
+  },
+  {
+    name: "create_milestone",
+    title: "Create a milestone",
+    description:
+      "Adds a milestone at the end of a project's list. Milestones are the project's own groupings, like M0 to " +
+      "M6, and an item may carry one.",
+    input: {
+      project: projectRef,
+      name: z.string().describe("What the milestone is called, like M2."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const project = await planner.findProject(args.project);
+      const milestone = await planner.addMilestone(project.id, args.name);
+      return `Added ${milestone.name} to ${project.name} (milestone id ${milestone.id}).`;
     },
   },
   {

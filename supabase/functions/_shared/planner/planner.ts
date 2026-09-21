@@ -22,6 +22,7 @@ import {
   columnFor,
   COLUMNS,
   finishedIn,
+  folderKey,
   type ItemType,
   matchProject,
   moved,
@@ -29,6 +30,8 @@ import {
   type Priority,
   type ProjectItem,
   type ProjectMilestone,
+  type ProjectStatus,
+  repositoryKey,
 } from "../rules/projects.ts";
 import { colorForNewArea } from "./palette.ts";
 
@@ -91,6 +94,17 @@ export interface GoalFields {
 }
 
 /** A habit as the connector shows it: the rules' habit with what it is called. */
+/** What a new project is made of; what is left out takes the column's default. */
+export interface ProjectFields {
+  name?: string;
+  description?: string;
+  area?: string | null;
+  status?: ProjectStatus;
+  repository?: string | null;
+  folder?: string | null;
+  notes?: string;
+}
+
 export interface Habit extends HabitItem {
   name: string;
   emoji: string | null;
@@ -127,6 +141,9 @@ const MAX_STEP = 300;
 const MAX_GOAL_TITLE = 200;
 const MAX_EMOJI = 16;
 const MAX_UNIT = 20;
+const MAX_PROJECT_NAME = 120;
+const MAX_DESCRIPTION = 2_000;
+const MAX_LOCATION = 500;
 const TIMESTAMP = `'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`;
 
 /**
@@ -709,6 +726,57 @@ export class Planner {
       ? "That project has no milestones."
       : `Its milestones are: ${own.map((milestone) => milestone.name).join(", ")}.`;
     throw new PlannerError(`No milestone "${reference}" in that project. ${known}`);
+  }
+
+  /**
+   * Adds a project with a board of its own, the way the Projects screen's new-project form does.
+   * The name has to be free, and so do the repository and the folder, because those are what
+   * findProject matches on: two projects sharing one would make the match a toss-up (story 76).
+   * A folder sitting inside another project's folder is fine, which is what lets checkouts nest.
+   */
+  async addProject(fields: ProjectFields): Promise<ProjectItem> {
+    const name = (fields.name ?? "").trim().slice(0, MAX_PROJECT_NAME);
+    if (name.length === 0) throw new PlannerError("A project needs a name.");
+    const repository = clip(fields.repository ?? null, MAX_LOCATION);
+    const folder = clip(fields.folder ?? null, MAX_LOCATION);
+    const repositoryMatch = repositoryKey(repository);
+    const folderMatch = folderKey(folder);
+    const projects = await this.projects();
+    for (const project of projects) {
+      if (project.name.trim().toLowerCase() === name.toLowerCase()) {
+        throw new PlannerError(`There is already a project called ${project.name} (project id ${project.id}).`);
+      }
+      if (repositoryMatch !== null && repositoryKey(project.repositoryUrl) === repositoryMatch) {
+        throw new PlannerError(`${project.name} is already that repository (project id ${project.id}).`);
+      }
+      if (folderMatch !== null && folderKey(project.localFolder) === folderMatch) {
+        throw new PlannerError(`${project.name} is already that folder (project id ${project.id}).`);
+      }
+    }
+    const area = clip(fields.area ?? null, MAX_AREA) === null ? null : await this.findOrCreateArea(fields.area!);
+    const id = crypto.randomUUID();
+    await this.db`
+      insert into public.projects
+        (id, name, description, area_id, status, repository_url, local_folder, notes, position)
+      values (${id}, ${name}, ${clip(fields.description ?? null, MAX_DESCRIPTION) ?? ""}, ${area?.id ?? null},
+              ${fields.status ?? "active"}, ${repository}, ${folder},
+              ${clip(fields.notes ?? null, MAX_NOTES) ?? ""}, ${projects.length})`;
+    return await this.findProject(id);
+  }
+
+  /** Adds a milestone at the end of a project's list; its name has to be free within that project. */
+  async addMilestone(projectId: string, name: string): Promise<ProjectMilestone> {
+    const trimmed = name.trim().slice(0, MAX_PROJECT_NAME);
+    if (trimmed.length === 0) throw new PlannerError("A milestone needs a name.");
+    const own = (await this.milestones()).filter((milestone) => milestone.projectId === projectId);
+    if (own.some((milestone) => milestone.name.trim().toLowerCase() === trimmed.toLowerCase())) {
+      throw new PlannerError(`That project already has a milestone called ${trimmed}.`);
+    }
+    const id = crypto.randomUUID();
+    await this.db`
+      insert into public.project_milestones (id, project_id, name, position)
+      values (${id}, ${projectId}, ${trimmed}, ${own.length})`;
+    return { id, projectId, name: trimmed, position: own.length, deleted: false };
   }
 
   /**
