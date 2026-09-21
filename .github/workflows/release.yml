@@ -105,7 +105,9 @@ jobs:
       - name: Test and build the release APK
         run: |
           chmod +x gradlew
-          ./gradlew testReleaseUnitTest assembleRelease --stacktrace
+          # The unit tests are the same code either way, and this Android plugin only makes the
+          # task for the test build type, which is debug.
+          ./gradlew testDebugUnitTest assembleRelease --stacktrace
 
       - name: Verify the signature and name the file
         run: |
