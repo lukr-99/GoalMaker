@@ -151,7 +151,7 @@ public sealed class AppGraph : IDisposable
 
         Theme = new ThemeApplier(design, appResources, ContractResources.Logo());
         // A dev build against the local stack reads the code the stack caught (docs/sign-in.md).
-        var mailbox = build.IsDevBuild ? DevMailbox.Of(backend.Url) : null;
+        var mailbox = build.IsDevBuild ? DevSignIn.MailboxOf(backend.Url) : null;
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
         SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null, devCode);

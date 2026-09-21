@@ -68,6 +68,46 @@ public sealed class SignInViewModelTests
         Assert.False(viewModel.IsCodeStep);
     }
 
+    [Fact]
+    public async Task TheDevAccountSignsInWithoutAnyMail()
+    {
+        var mailbox = 0;
+        var viewModel = new SignInViewModel(auth, new KeyStrings(), devBackend: "http://127.0.0.1:55321", devCode: (_, _) =>
+        {
+            mailbox++;
+            return Task.FromResult<string?>(null);
+        });
+        Assert.True(viewModel.HasDevSignIn);
+
+        await viewModel.SignInAsDevCommand.ExecuteAsync(null);
+
+        Assert.Equal(DevSignIn.Email, viewModel.Email);
+        Assert.Equal([DevSignIn.Email], auth.Sent);
+        Assert.Equal([(DevSignIn.Email, DevSignIn.Code)], auth.Verified);
+        Assert.Equal(0, mailbox);
+    }
+
+    [Fact]
+    public async Task ADevBuildFillsTheCodeItReadsInTheStacksMailbox()
+    {
+        var viewModel = new SignInViewModel(
+            auth,
+            new KeyStrings(),
+            devBackend: "http://127.0.0.1:55321",
+            devCode: (email, _) => Task.FromResult<string?>(email == "me@example.com" ? "654321" : null));
+
+        viewModel.Email = "me@example.com";
+        await viewModel.SendCodeCommand.ExecuteAsync(null);
+
+        Assert.Equal([("me@example.com", "654321")], auth.Verified);
+    }
+
+    [Fact]
+    public void AReleaseBuildHasNeitherDoor()
+    {
+        Assert.False(Create().HasDevSignIn);
+    }
+
     private sealed class KeyStrings : IStrings
     {
         public string Get(string key, params object[] arguments) => key;

@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.signin
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthResult
 import com.goalmaker.app.application.auth.AuthSession
+import com.goalmaker.app.application.auth.DevSignIn
 import com.goalmaker.app.domain.account.EmailAddress
 import com.goalmaker.app.domain.account.SignInCode
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +16,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -87,6 +89,36 @@ class SignInViewModelTest {
         viewModel.onCodeChange("000000")
         assertEquals(SignInError.WRONG_CODE, viewModel.uiState.value.error)
         assertEquals("", viewModel.uiState.value.code)
+    }
+
+    @Test
+    fun `the dev account signs in without any mail`() {
+        var mailbox = 0
+        val viewModel = SignInViewModel(auth) {
+            mailbox++
+            null
+        }
+        assertTrue(viewModel.uiState.value.hasDevSignIn)
+
+        viewModel.signInAsDev()
+
+        assertEquals(DevSignIn.EMAIL, viewModel.uiState.value.email)
+        assertEquals(listOf(DevSignIn.EMAIL), auth.sent)
+        assertEquals(listOf(DevSignIn.EMAIL to DevSignIn.CODE), auth.verified)
+        assertEquals(0, mailbox)
+    }
+
+    @Test
+    fun `a dev build fills the code it reads in the stack's mailbox`() {
+        val viewModel = SignInViewModel(auth) { email -> "654321".takeIf { email == "me@example.com" } }
+        viewModel.onEmailChange("me@example.com")
+        viewModel.sendCode()
+        assertEquals(listOf("me@example.com" to "654321"), auth.verified)
+    }
+
+    @Test
+    fun `a release build has neither door`() {
+        assertFalse(SignInViewModel(auth).uiState.value.hasDevSignIn)
     }
 
     @Test

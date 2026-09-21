@@ -41,6 +41,11 @@
                                    Content="{DynamicResource SignIn.SendCode}"
                                    Command="{Binding SendCodeCommand}"
                                    IsEnabled="{Binding IsIdle}" />
+                        <!-- Dev builds on the local stack: the account that needs no email at all. -->
+                        <ui:HyperlinkButton Margin="0,8,0,0"
+                                            Content="{Binding DevAccountText}"
+                                            Command="{Binding SignInAsDevCommand}"
+                                            Visibility="{Binding HasDevSignIn, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
 
                     <StackPanel Visibility="{Binding IsCodeStep, Converter={StaticResource BoolToVisibility}}">
@@ -69,7 +74,7 @@
                             <!-- Dev builds on the local stack: the code is in the stack's own mailbox. -->
                             <ui:HyperlinkButton Content="{DynamicResource SignIn.FillCode}"
                                                 Command="{Binding FillCodeCommand}"
-                                                Visibility="{Binding HasDevCode, Converter={StaticResource BoolToVisibility}}" />
+                                                Visibility="{Binding HasDevSignIn, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </StackPanel>
 

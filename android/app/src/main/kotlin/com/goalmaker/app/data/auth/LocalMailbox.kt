@@ -1,6 +1,6 @@
 package com.goalmaker.app.data.auth
 
-import com.goalmaker.app.application.auth.DevMailbox
+import com.goalmaker.app.application.auth.DevSignIn
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -13,7 +13,7 @@ import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Reads the sign-in code out of the mailbox the local Supabase stack catches its mail in
- * (docs/sign-in.md). Dev builds only, and only against that stack, which [DevMailbox.of] decides.
+ * (docs/sign-in.md). Dev builds only, and only against that stack, which [DevSignIn.mailboxOf] decides.
  * Nothing here ever reaches the cloud project, and a mailbox that is not there, is slow, or holds no
  * code is simply no code: the owner types it themselves.
  */
@@ -39,10 +39,10 @@ class LocalMailbox(private val http: HttpClient, private val mailbox: String) {
         }
 
     private suspend fun codeIn(message: JsonObject): String? {
-        DevMailbox.codeIn(message["Snippet"]?.jsonPrimitive?.content)?.let { return it }
+        DevSignIn.codeIn(message["Snippet"]?.jsonPrimitive?.content)?.let { return it }
         val id = message["ID"]?.jsonPrimitive?.content ?: return null
         val body = json.parseToJsonElement(http.get("$mailbox/api/v1/message/$id").bodyAsText()).jsonObject
-        return DevMailbox.codeIn(body["Text"]?.jsonPrimitive?.content)
-            ?: DevMailbox.codeIn(body["HTML"]?.jsonPrimitive?.content)
+        return DevSignIn.codeIn(body["Text"]?.jsonPrimitive?.content)
+            ?: DevSignIn.codeIn(body["HTML"]?.jsonPrimitive?.content)
     }
 }

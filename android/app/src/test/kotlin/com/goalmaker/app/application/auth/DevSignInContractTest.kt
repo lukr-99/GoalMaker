@@ -9,24 +9,31 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-/** Runs contracts/vectors/dev-mailbox.json, which the Windows app passes too. */
-class DevMailboxContractTest {
-    private val vectors = ContractFiles.load("vectors/dev-mailbox.json")
+/** Runs contracts/vectors/dev-sign-in.json, which the Windows app passes too. */
+class DevSignInContractTest {
+    private val vectors = ContractFiles.load("vectors/dev-sign-in.json")
 
     private fun JsonObject.text(name: String) = this[name]?.takeUnless { it == JsonNull }?.jsonPrimitive?.content
     private fun cases(name: String) = vectors.getValue(name).jsonArray.map { it.jsonObject }
 
     @Test
+    fun `the dev account is the one the contract names`() {
+        val account = vectors.getValue("account").jsonObject
+        assertEquals(account.text("email"), DevSignIn.EMAIL)
+        assertEquals(account.text("code"), DevSignIn.CODE)
+    }
+
+    @Test
     fun `every backend finds its mailbox or none`() {
         cases("mailbox").forEach { case ->
-            assertEquals(case.text("name"), case.text("expect"), DevMailbox.of(case.text("backend")))
+            assertEquals(case.text("name"), case.text("expect"), DevSignIn.mailboxOf(case.text("backend")))
         }
     }
 
     @Test
     fun `every message gives up its code or none`() {
         cases("codes").forEach { case ->
-            assertEquals(case.text("name"), case.text("expect"), DevMailbox.codeIn(case.text("text")))
+            assertEquals(case.text("name"), case.text("expect"), DevSignIn.codeIn(case.text("text")))
         }
     }
 }

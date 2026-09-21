@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthResult
+import com.goalmaker.app.application.auth.DevSignIn
 import com.goalmaker.app.domain.account.EmailAddress
 import com.goalmaker.app.domain.account.SignInCode
 import kotlinx.coroutines.delay
@@ -15,16 +16,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Drives the two-step email code sign-in. Success is observed through [AuthGateway.session]. A dev
- * build against the local stack is also handed [devCode], a way to read the code out of the stack's
- * own mailbox, and fills it in itself, so a reset stack does not cost six digits of typing
- * (docs/sign-in.md).
+ * build against the local stack gets two ways past the post: the dev account, which the stack lets in
+ * with a code it never sends, and [devCode], which reads the code for any other address out of the
+ * stack's own mailbox (docs/sign-in.md).
  */
 class SignInViewModel(
     private val auth: AuthGateway,
     private val devCode: (suspend (String) -> String?)? = null,
 ) : ViewModel() {
 
-    private val state = MutableStateFlow(SignInUiState(hasDevCode = devCode != null))
+    private val state = MutableStateFlow(SignInUiState(hasDevSignIn = devCode != null))
     val uiState: StateFlow<SignInUiState> = state.asStateFlow()
 
     fun onEmailChange(value: String) = state.update { it.copy(email = value, error = null) }
@@ -72,7 +73,22 @@ class SignInViewModel(
         run(onSuccess = { it }) { auth.verifyCode(email, code) }
     }
 
-    fun useAnotherEmail() = state.update { SignInUiState(email = it.email, hasDevCode = devCode != null) }
+    fun useAnotherEmail() = state.update { SignInUiState(email = it.email, hasDevSignIn = devCode != null) }
+
+    /**
+     * The dev account: the local stack takes its code without sending anything, so one press signs in.
+     * It is its own account with its own data, kept apart from the one the owner signs in as.
+     */
+    fun signInAsDev() {
+        if (devCode == null || state.value.busy) return
+        val email = EmailAddress.parse(DevSignIn.EMAIL) ?: return
+        state.update { it.copy(email = DevSignIn.EMAIL) }
+        // A full code verifies itself, so filling it in is the whole sign-in.
+        run(
+            onSuccess = { it.copy(step = SignInStep.CODE, code = "") },
+            then = { onCodeChange(DevSignIn.CODE) },
+        ) { auth.sendCode(email) }
+    }
 
     private fun run(
         onSuccess: (SignInUiState) -> SignInUiState,

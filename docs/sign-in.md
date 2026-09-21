@@ -27,18 +27,25 @@ Both templates Supabase can send for this, **Magic link** and **Confirm signup**
   code. Until the project has its own SMTP the code sign-in cannot work there; the step is written
   out in [docs/setup/cloud-supabase.md](setup/cloud-supabase.md).
 
-## Dev builds fill the code in
+## Dev builds get past the post
 
-A dev build talking to the local stack reads the code out of the stack's mailbox and fills it in
-itself, so resetting the stack does not cost six digits of typing every time. The rules are in
-[`contracts/vectors/dev-mailbox.json`](../contracts/vectors/dev-mailbox.json) and hold both apps to
-the same two things:
+Developing against the local stack means signing in again every time the stack is reset, so a dev
+build has two ways through, both only ever against that stack: the plain-http backend on port 55321,
+whose mailbox is on 55324. Any other backend, the cloud project above all, has neither, and the code
+is typed as it always was. Release builds carry none of it. Both rules are pinned by
+[`contracts/vectors/dev-sign-in.json`](../contracts/vectors/dev-sign-in.json).
 
-- the mailbox is only ever the local stack's, which is the plain-http backend on port 55321, read on
-  port 55324. Any other backend, the cloud project above all, has no mailbox and the app asks for
-  the code as usual;
-- the code in a message is the first run of exactly six digits.
+**The dev account.** `dev@goalmaker.test` signs in with a fixed code, `424242`, which no mail ever
+carries: the local stack is told to take it under `[auth.email.test_otp]` in `supabase/config.toml`,
+so nothing is sent at all. One press on the sign-in screen and the app is in. It is an account of its
+own with its own data, kept apart from the one the owner signs in as, which is the point: it is for
+trying things out. `[remotes.production]` has no such block, so the cloud project has no such door.
 
-It runs when the code is sent and can be asked for again from the sign-in screen. A mailbox that is
-not there, is slow, or holds no code is simply no code, and the owner types it. Release builds carry
-none of this: the way in is the email, wherever the owner reads it.
+**The mailbox.** For any other address on the local stack, including the owner's own, the app reads
+the code out of the mailbox the stack caught it in and fills it in, which signs in, because a full
+code verifies itself. The code in a message is the first run of exactly six digits. It runs when the
+code is sent and can be asked for again from the sign-in screen. A mailbox that is not there, is
+slow, or holds no code is simply no code, and the owner types it.
+
+Changing `config.toml` needs the stack restarted (`npx supabase stop` then `npx supabase start`)
+before the dev account works.

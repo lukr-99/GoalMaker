@@ -7,7 +7,7 @@ namespace GoalMaker.Infrastructure.Auth;
 /// <summary>
 /// Reads the sign-in code out of the mailbox the local Supabase stack catches its mail in
 /// (docs/sign-in.md). Dev builds only, and only against that stack, which
-/// <see cref="DevMailbox.Of"/> decides. Nothing here ever reaches the cloud project, and a mailbox
+/// <see cref="DevSignIn.MailboxOf"/> decides. Nothing here ever reaches the cloud project, and a mailbox
 /// that is not there, is slow, or holds no code is simply no code: the owner types it themselves.
 /// </summary>
 public sealed class LocalMailbox(HttpClient http, string mailbox)
@@ -46,7 +46,7 @@ public sealed class LocalMailbox(HttpClient http, string mailbox)
 
     private async Task<string?> CodeInAsync(JsonObject message, CancellationToken cancellationToken)
     {
-        if (DevMailbox.CodeIn((string?)message["Snippet"]) is { } fromList)
+        if (DevSignIn.CodeIn((string?)message["Snippet"]) is { } fromList)
         {
             return fromList;
         }
@@ -59,6 +59,6 @@ public sealed class LocalMailbox(HttpClient http, string mailbox)
 
         var body = await http.GetFromJsonAsync<JsonNode>($"{mailbox}/api/v1/message/{id}", cancellationToken)
             .ConfigureAwait(false);
-        return DevMailbox.CodeIn((string?)body?["Text"]) ?? DevMailbox.CodeIn((string?)body?["HTML"]);
+        return DevSignIn.CodeIn((string?)body?["Text"]) ?? DevSignIn.CodeIn((string?)body?["HTML"]);
     }
 }

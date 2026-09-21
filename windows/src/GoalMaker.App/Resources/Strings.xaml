@@ -41,6 +41,7 @@
     <sys:String x:Key="SignIn.CodeSent">We sent a code to {0}. It works for 10 minutes.</sys:String>
     <sys:String x:Key="SignIn.Verify">Sign in</sys:String>
     <sys:String x:Key="SignIn.Resend">Send a new code</sys:String>
+    <sys:String x:Key="SignIn.DevAccount">Sign in as {0}</sys:String>
     <sys:String x:Key="SignIn.FillCode">Fill it in from the local mailbox</sys:String>
     <sys:String x:Key="SignIn.UseAnotherEmail">Use another email</sys:String>
     <sys:String x:Key="SignIn.Error.InvalidEmail">Enter a valid email address.</sys:String>

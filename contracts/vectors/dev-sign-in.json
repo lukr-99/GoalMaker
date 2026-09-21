@@ -1,6 +1,10 @@
 {
   "schema": 1,
-  "description": "Where a dev build finds the sign-in code it was just sent (docs/sign-in.md). A build marked dev, talking to the local Supabase stack, can read the mail the stack caught and fill the code in, so nobody types six digits out of a mailbox on every reset. 'mailbox': the mailbox behind a backend URL, or null when the backend is not the local stack, which is the only place any build may read mail from. The local stack serves its API on 55321 and its mailbox on 55324 over plain http (supabase/config.toml), so those two ports are the whole test. 'codes': the sign-in code inside a message, the first run of exactly six digits, or null when the message holds none.",
+  "description": "How a dev build gets past the sign-in screen without a mailbox in the way (docs/sign-in.md). 'account': the address the local stack takes a fixed code for, set up under [auth.email.test_otp] in supabase/config.toml, which sends no mail at all. It is its own account with its own data, and it exists only on the local stack: the cloud project has no such door. 'mailbox': the mailbox behind a backend URL, where the mail for any other address is caught, or null when the backend is not the local stack, which is the only place any build may read mail from or offer the dev account on. The local stack serves its API on 55321 and its mailbox on 55324 over plain http (supabase/config.toml), so those two ports are the whole test. 'codes': the sign-in code inside a message, the first run of exactly six digits, or null when the message holds none.",
+  "account": {
+    "email": "dev@goalmaker.test",
+    "code": "424242"
+  },
   "mailbox": [
     {
       "name": "the local stack on this machine",

@@ -13,7 +13,7 @@ import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.activity.ActivityLog
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.connector.ConnectorLinks
-import com.goalmaker.app.application.auth.DevMailbox
+import com.goalmaker.app.application.auth.DevSignIn
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
@@ -163,7 +163,7 @@ class AppGraph(context: Context) {
      * not cost six digits of typing (docs/sign-in.md). Null on any other build or backend.
      */
     val devCode: (suspend (String) -> String?)? =
-        (if (BuildConfig.IS_DEV_BUILD) DevMailbox.of(backend.url) else null)
+        (if (BuildConfig.IS_DEV_BUILD) DevSignIn.mailboxOf(backend.url) else null)
             ?.let { mailbox -> LocalMailbox(http, mailbox)::codeFor }
 
     private val postgrest = PostgrestHttp(http, backend.url, backend.publishableKey) {

@@ -3,10 +3,19 @@ using GoalMaker.Core.Auth;
 
 namespace GoalMaker.Core.Tests.Auth;
 
-/// <summary>contracts/vectors/dev-mailbox.json, the same file the Android tests read.</summary>
-public sealed class DevMailboxContractTests
+/// <summary>contracts/vectors/dev-sign-in.json, the same file the Android tests read.</summary>
+public sealed class DevSignInContractTests
 {
-    private readonly JsonElement vectors = ContractFiles.Load("vectors/dev-mailbox.json").RootElement;
+    private readonly JsonElement vectors = ContractFiles.Load("vectors/dev-sign-in.json").RootElement;
+
+    [Fact]
+    public void TheDevAccountIsTheOneTheContractNames()
+    {
+        var account = vectors.GetProperty("account");
+        Assert.Equal(
+            (account.GetProperty("email").GetString(), account.GetProperty("code").GetString()),
+            (DevSignIn.Email, DevSignIn.Code));
+    }
 
     [Fact]
     public void EveryBackendFindsItsMailboxOrNone()
@@ -17,7 +26,7 @@ public sealed class DevMailboxContractTests
             var expected = testCase.GetProperty("expect");
             Assert.Equal(
                 $"{name}: {(expected.ValueKind == JsonValueKind.Null ? null : expected.GetString())}",
-                $"{name}: {DevMailbox.Of(testCase.GetProperty("backend").GetString())}");
+                $"{name}: {DevSignIn.MailboxOf(testCase.GetProperty("backend").GetString())}");
         }
     }
 
@@ -30,7 +39,7 @@ public sealed class DevMailboxContractTests
             var expected = testCase.GetProperty("expect");
             Assert.Equal(
                 $"{name}: {(expected.ValueKind == JsonValueKind.Null ? null : expected.GetString())}",
-                $"{name}: {DevMailbox.CodeIn(testCase.GetProperty("text").GetString())}");
+                $"{name}: {DevSignIn.CodeIn(testCase.GetProperty("text").GetString())}");
         }
     }
 }

@@ -20,6 +20,29 @@ one, so the failure lands at the write with a message naming the column instead 
 Closing it found a second live case the one-column fix had missed: a repeating task's next
 occurrence carried no `item_type` or `priority` either, so every repeat would have been refused.
 
+## Docker Desktop leaves a socket it cannot open again
+
+Docker Desktop keeps its pipes and sockets in `%LOCALAPPDATA%\Docker\run`. Killed or crashed, it can
+leave entries there that Windows lists but will not open: every delete and rename fails with "The
+file cannot be accessed by the system", from Explorer, `del`, `rm` and .NET alike. The next start
+then dies with
+
+```
+starting services: initializing Ingest server: listening on unix://...sailor-ingest.sock:
+rename ...: The file cannot be accessed by the system.
+```
+
+and no amount of clearing helps, because the files are exactly what cannot be cleared. A directory,
+though, can be renamed while its children cannot be touched, so leaving the whole folder behind lets
+Docker Desktop make a clean one. `tools/fix-docker.ps1` does that and starts it again:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\fix-docker.ps1
+```
+
+The folders left behind stay until a restart of Windows clears the orphans, which is also the one
+thing that always fixes this; the script removes the old ones once they have become deletable.
+
 ## The apps' tests never meet the server
 
 The same bug: both apps' tests run against a test replica with a fake remote, so nothing there can

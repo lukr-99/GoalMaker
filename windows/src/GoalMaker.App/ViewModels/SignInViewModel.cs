@@ -8,8 +8,9 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// Drives the two-step email code sign-in. Success is observed through the auth session. A dev build
-/// against the local stack is also handed a way to read the code out of the stack's own mailbox, and
-/// fills it in itself, so a reset stack does not cost six digits of typing (docs/sign-in.md).
+/// against the local stack gets two ways past the post: the dev account, which the stack lets in with
+/// a code it never sends, and reading the code for any other address out of the stack's own mailbox
+/// (docs/sign-in.md).
 /// </summary>
 public sealed partial class SignInViewModel : ObservableObject
 {
@@ -62,8 +63,32 @@ public sealed partial class SignInViewModel : ObservableObject
 
     public string? DevBackendText { get; }
 
-    /// <summary>The dev build can fetch the code itself, so the button to do it is worth showing.</summary>
-    public bool HasDevCode => devCode is not null;
+    /// <summary>This build is a dev one on the local stack, which is where both dev doors are.</summary>
+    public bool HasDevSignIn => devCode is not null;
+
+    /// <summary>"Sign in as dev@goalmaker.test", so the address is never a surprise.</summary>
+    public string DevAccountText => strings.Get("SignIn.DevAccount", DevSignIn.Email);
+
+    /// <summary>
+    /// The dev account: the local stack takes its code without sending anything, so one press signs
+    /// in. It is its own account with its own data, kept apart from the one the owner signs in as.
+    /// </summary>
+    [RelayCommand]
+    private async Task SignInAsDevAsync()
+    {
+        if (!HasDevSignIn || IsBusy || EmailAddress.Parse(DevSignIn.Email) is not { } address)
+        {
+            return;
+        }
+
+        Email = DevSignIn.Email;
+        if (await RunAsync(() => auth.SendCodeAsync(address, CancellationToken.None)))
+        {
+            IsCodeStep = true;
+            // A full code verifies itself, so this is the whole sign-in.
+            Code = DevSignIn.Code;
+        }
+    }
 
     [RelayCommand]
     private async Task SendCodeAsync()

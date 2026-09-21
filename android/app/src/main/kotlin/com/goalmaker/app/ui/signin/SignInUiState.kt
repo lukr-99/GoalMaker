@@ -8,6 +8,6 @@ data class SignInUiState(
     val busy: Boolean = false,
     val error: SignInError? = null,
     val errorDetail: String = "",
-    /** A dev build on the local stack can fetch the code itself, so it offers to. */
-    val hasDevCode: Boolean = false,
+    /** A dev build on the local stack has the dev account and can fetch a code, so it offers both. */
+    val hasDevSignIn: Boolean = false,
 )

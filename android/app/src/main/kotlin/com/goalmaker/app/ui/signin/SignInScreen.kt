@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.R
+import com.goalmaker.app.application.auth.DevSignIn
 
 /** The signed-out screen: email, then the 6-digit code. */
 @Composable
@@ -117,6 +118,12 @@ private fun EmailStep(state: SignInUiState, viewModel: SignInViewModel) {
         modifier = Modifier.fillMaxWidth(),
     )
     PrimaryAction(label = stringResource(R.string.sign_in_send_code), busy = state.busy, onClick = viewModel::sendCode)
+    // Dev builds on the local stack: the account that needs no email at all.
+    if (state.hasDevSignIn) {
+        TextButton(onClick = viewModel::signInAsDev, enabled = !state.busy) {
+            Text(stringResource(R.string.sign_in_dev_account, DevSignIn.EMAIL))
+        }
+    }
 }
 
 @Composable
@@ -145,7 +152,7 @@ private fun CodeStep(state: SignInUiState, viewModel: SignInViewModel) {
             Text(stringResource(R.string.sign_in_use_other_email))
         }
         // Dev builds on the local stack: the code is in the stack's own mailbox.
-        if (state.hasDevCode) {
+        if (state.hasDevSignIn) {
             TextButton(onClick = viewModel::fillCode, enabled = !state.busy) {
                 Text(stringResource(R.string.sign_in_fill_code))
             }
