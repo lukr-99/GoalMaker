@@ -7,7 +7,7 @@ import { Planner, PlannerError } from "../_shared/planner/planner.ts";
 import { prompts } from "../_shared/prompts/prompts.ts";
 import { tools } from "../_shared/tools/tools.ts";
 
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 3, idle_timeout: 20 });
 
 function server(ownerId: string): McpServer {
