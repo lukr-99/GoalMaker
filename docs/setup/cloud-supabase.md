@@ -113,10 +113,9 @@ more than one owner needs, and `config.toml` already carries the block to uncomm
 
 ### Tell the project about it
 
-In `supabase/config.toml`, in the `[remotes.production]` block at the bottom: uncomment
-`[remotes.production.auth.email.smtp]`, put your sending address in `admin_email`, and swap the two
-template blocks for the two commented ones below them. Then, with the key in the environment so it
-never lands in a file or your shell history:
+`supabase/config.toml` already carries it, at the bottom under `[remotes.production]`: the SMTP
+block and the two sign-in code templates. Change `admin_email` only if you send from a domain of
+your own. Then, with the key in the environment so it never lands in a file or your shell history:
 
 ```powershell
 $env:RESEND_API_KEY = Read-Host 'Resend API key' -AsSecureString | ConvertFrom-SecureString -AsPlainText
@@ -129,6 +128,10 @@ from a release build afterwards: it should carry six digits, not a link.
 
 Keep the API key in your password manager. It is not needed again unless the settings are pushed
 from another machine.
+
+**The address has to match.** Resend's shared sender will only deliver to the address the Resend
+account itself is registered with. If you sign up as one address and sign in to GoalMaker as
+another, the code is accepted by Resend and never arrives. A domain of your own lifts that.
 
 ## 6. Create your account, then close the door
 

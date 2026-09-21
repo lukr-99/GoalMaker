@@ -453,34 +453,29 @@ otp_expiry = 600
 
 # The project's own sender, which is what lets the sign-in code template go out at all: a free
 # project on Supabase's own email service refuses any template change ("Email template modification
-# is not available for free tier projects using the default email provider"). Fill in admin_email
-# with the address Resend is allowed to send from, set RESEND_API_KEY in the environment, and
-# uncomment this block together with the two templates below. Steps in docs/setup/cloud-supabase.md.
-# [remotes.production.auth.email.smtp]
-# enabled = true
-# host = "smtp.resend.com"
-# port = 587
-# user = "resend"
-# pass = "env(RESEND_API_KEY)"
-# admin_email = "onboarding@resend.dev"
-# sender_name = "GoalMaker"
-
-# Until that sender exists these keep Supabase's built-in templates, so nothing tries to push a
-# change it would refuse. With SMTP on, swap them for the two blocks under them.
-[remotes.production.auth.email.template.magic_link]
-subject = "Your sign-in link"
-
-[remotes.production.auth.email.template.confirmation]
-subject = "Confirm your email address"
+# is not available for free tier projects using the default email provider"). The key is read from
+# the environment at push time and never written here. Steps in docs/setup/cloud-supabase.md.
+#
+# onboarding@resend.dev is Resend's shared sender, which may only send to the address the Resend
+# account itself is registered with. That is the one account GoalMaker has, so it is enough; a
+# domain of your own in Resend would lift it.
+[remotes.production.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 587
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "onboarding@resend.dev"
+sender_name = "GoalMaker"
 
 # The sign-in code, the same template the local stack uses (supabase/templates/sign-in-code.html).
-# [remotes.production.auth.email.template.magic_link]
-# subject = "Your GoalMaker sign-in code"
-# content_path = "./supabase/templates/sign-in-code.html"
+[remotes.production.auth.email.template.magic_link]
+subject = "Your GoalMaker sign-in code"
+content_path = "./supabase/templates/sign-in-code.html"
 
-# [remotes.production.auth.email.template.confirmation]
-# subject = "Your GoalMaker sign-in code"
-# content_path = "./supabase/templates/sign-in-code.html"
+[remotes.production.auth.email.template.confirmation]
+subject = "Your GoalMaker sign-in code"
+content_path = "./supabase/templates/sign-in-code.html"
 
 [remotes.production.storage.analytics]
 enabled = true
