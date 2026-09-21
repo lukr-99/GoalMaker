@@ -8,9 +8,10 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 
 **M0 to M5 are built.** What works today, on both apps unless it says otherwise:
 
-- **Delivery (M0):** sign-in with an emailed 6-digit code, sessions kept across restarts, a signed
-  update channel in Supabase Storage that both apps verify before installing, the migration chain
-  with full-chain, isolated and row-security tests, CI for every part and a tag-driven release.
+- **Delivery (M0):** sign-in with an emailed 6-digit code ([docs/sign-in.md](docs/sign-in.md)),
+  sessions kept across restarts, a signed update channel in Supabase Storage that both apps verify
+  before installing, the migration chain with full-chain, isolated and row-security tests, CI for
+  every part and a tag-driven release.
 - **Sync (M1):** a SQLite replica with an outbox on each device, offline work, Realtime refresh
   ([docs/sync.md](docs/sync.md)).
 - **Tasks (M2):** Today, Tomorrow and Inbox, the composer with shortcuts and a live preview, Plan
@@ -23,9 +24,10 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   the activity log and undo ([docs/connector.md](docs/connector.md)).
 - **Goals, habits, reviews, stats (M4):** the year to day goal cascade with three progress modes
   ([docs/goals.md](docs/goals.md)), habits with cadences, check-ins, streaks and a heatmap
-  ([docs/habits.md](docs/habits.md)), the guided weekly and monthly review with a rotating prompt
-  library and prompts that react to the period's data ([docs/reviews.md](docs/reviews.md)), review
-  reminders, and the stats screen ([docs/stats.md](docs/stats.md)).
+  ([docs/habits.md](docs/habits.md)), which can also be limits to stay under, the guided weekly and
+  monthly review with a rotating prompt library and prompts that react to the period's data
+  ([docs/reviews.md](docs/reviews.md)), review reminders, and the stats screen
+  ([docs/stats.md](docs/stats.md)).
 - **Projects, calendar, widgets and the desktop (M5):** projects with a Backlog, To do, Doing and
   Done board ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
   ([docs/calendar.md](docs/calendar.md)), Today, Habits and quick-add widgets on Android

@@ -36,7 +36,7 @@ fun GoalMakerApp(graph: AppGraph) {
                             LoadingIndicator(Modifier.size(64.dp))
                         }
                         AuthSession.SignedOut -> SignInScreen(
-                            viewModel = viewModel { SignInViewModel(graph.auth) },
+                            viewModel = viewModel { SignInViewModel(graph.auth, graph.devCode) },
                             backendLabel = graph.appInfo.backend.url.takeIf { graph.appInfo.isDevBuild },
                         )
                         is AuthSession.SignedIn -> SignedInNavigation(graph = graph)

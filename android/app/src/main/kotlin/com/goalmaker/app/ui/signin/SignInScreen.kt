@@ -144,6 +144,12 @@ private fun CodeStep(state: SignInUiState, viewModel: SignInViewModel) {
         TextButton(onClick = viewModel::useAnotherEmail, enabled = !state.busy) {
             Text(stringResource(R.string.sign_in_use_other_email))
         }
+        // Dev builds on the local stack: the code is in the stack's own mailbox.
+        if (state.hasDevCode) {
+            TextButton(onClick = viewModel::fillCode, enabled = !state.busy) {
+                Text(stringResource(R.string.sign_in_fill_code))
+            }
+        }
     }
 }
 

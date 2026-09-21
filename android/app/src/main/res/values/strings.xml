@@ -10,6 +10,7 @@
     <string name="sign_in_code_label">6-digit code</string>
     <string name="sign_in_code_sent">We sent a code to %1$s. It works for 10 minutes.</string>
     <string name="sign_in_verify">Sign in</string>
+    <string name="sign_in_fill_code">Fill it in from the local mailbox</string>
     <string name="sign_in_use_other_email">Use another email</string>
     <string name="sign_in_resend">Send a new code</string>
     <string name="sign_in_error_email">Enter a valid email address.</string>

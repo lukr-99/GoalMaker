@@ -6,11 +6,20 @@ using GoalMaker.Core.Auth;
 
 namespace GoalMaker.App.ViewModels;
 
-/// <summary>Drives the two-step email code sign-in. Success is observed through the auth session.</summary>
+/// <summary>
+/// Drives the two-step email code sign-in. Success is observed through the auth session. A dev build
+/// against the local stack is also handed a way to read the code out of the stack's own mailbox, and
+/// fills it in itself, so a reset stack does not cost six digits of typing (docs/sign-in.md).
+/// </summary>
 public sealed partial class SignInViewModel : ObservableObject
 {
     private readonly IAuthGateway auth;
     private readonly IStrings strings;
+    private readonly Func<string, CancellationToken, Task<string?>>? devCode;
+
+    // The mail lands within a second or so on a local stack; after this the owner types it.
+    private static readonly TimeSpan Wait = TimeSpan.FromMilliseconds(600);
+    private const int Attempts = 6;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmailStep))]
@@ -31,10 +40,15 @@ public sealed partial class SignInViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasError))]
     private string errorText = string.Empty;
 
-    public SignInViewModel(IAuthGateway auth, IStrings strings, string? devBackend)
+    public SignInViewModel(
+        IAuthGateway auth,
+        IStrings strings,
+        string? devBackend,
+        Func<string, CancellationToken, Task<string?>>? devCode = null)
     {
         this.auth = auth;
         this.strings = strings;
+        this.devCode = devCode;
         DevBackendText = devBackend is null ? null : strings.Get("SignIn.DevBackend", devBackend);
     }
 
@@ -47,6 +61,9 @@ public sealed partial class SignInViewModel : ObservableObject
     public string CodeSentText => strings.Get("SignIn.CodeSent", Email.Trim());
 
     public string? DevBackendText { get; }
+
+    /// <summary>The dev build can fetch the code itself, so the button to do it is worth showing.</summary>
+    public bool HasDevCode => devCode is not null;
 
     [RelayCommand]
     private async Task SendCodeAsync()
@@ -62,6 +79,36 @@ public sealed partial class SignInViewModel : ObservableObject
         {
             Code = string.Empty;
             IsCodeStep = true;
+            await FillCodeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Reads the code out of the local stack's mailbox and fills it in, which signs in, since a full
+    /// code verifies itself. The mail takes a moment to land, so it asks a few times before giving up
+    /// and leaving the owner to type it.
+    /// </summary>
+    [RelayCommand]
+    private async Task FillCodeAsync()
+    {
+        if (devCode is null || IsBusy)
+        {
+            return;
+        }
+
+        var address = Email.Trim();
+        for (var attempt = 0; attempt < Attempts && IsCodeStep && Code.Length == 0; attempt++)
+        {
+            if (attempt > 0)
+            {
+                await Task.Delay(Wait).ConfigureAwait(true);
+            }
+
+            if (await devCode(address, CancellationToken.None).ConfigureAwait(true) is { } code)
+            {
+                Code = code;
+                return;
+            }
         }
     }
 

@@ -66,6 +66,10 @@
                         <StackPanel Orientation="Horizontal">
                             <ui:HyperlinkButton Content="{DynamicResource SignIn.Resend}" Command="{Binding SendCodeCommand}" />
                             <ui:HyperlinkButton Content="{DynamicResource SignIn.UseAnotherEmail}" Command="{Binding UseAnotherEmailCommand}" />
+                            <!-- Dev builds on the local stack: the code is in the stack's own mailbox. -->
+                            <ui:HyperlinkButton Content="{DynamicResource SignIn.FillCode}"
+                                                Command="{Binding FillCodeCommand}"
+                                                Visibility="{Binding HasDevCode, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </StackPanel>
 

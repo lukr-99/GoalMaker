@@ -13,6 +13,7 @@ import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.activity.ActivityLog
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.connector.ConnectorLinks
+import com.goalmaker.app.application.auth.DevMailbox
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
@@ -37,6 +38,7 @@ import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.activity.PostgrestActivityLog
+import com.goalmaker.app.data.auth.LocalMailbox
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
 import com.goalmaker.app.data.connector.PostgrestConnectorLinks
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
@@ -156,6 +158,14 @@ class AppGraph(context: Context) {
             requestTimeoutMillis = 30_000
         }
     }
+    /**
+     * A dev build against the local stack reads the sign-in code the stack caught, so a reset does
+     * not cost six digits of typing (docs/sign-in.md). Null on any other build or backend.
+     */
+    val devCode: (suspend (String) -> String?)? =
+        (if (BuildConfig.IS_DEV_BUILD) DevMailbox.of(backend.url) else null)
+            ?.let { mailbox -> LocalMailbox(http, mailbox)::codeFor }
+
     private val postgrest = PostgrestHttp(http, backend.url, backend.publishableKey) {
         supabase.auth.currentAccessTokenOrNull()
     }

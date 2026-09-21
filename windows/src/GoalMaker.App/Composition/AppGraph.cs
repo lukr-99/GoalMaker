@@ -150,7 +150,11 @@ public sealed class AppGraph : IDisposable
         });
 
         Theme = new ThemeApplier(design, appResources, ContractResources.Logo());
-        SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null);
+        // A dev build against the local stack reads the code the stack caught (docs/sign-in.md).
+        var mailbox = build.IsDevBuild ? DevMailbox.Of(backend.Url) : null;
+        Func<string, CancellationToken, Task<string?>>? devCode =
+            mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
+        SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null, devCode);
         Shell = new ShellViewModel(Auth, SignIn, runOnUi);
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).

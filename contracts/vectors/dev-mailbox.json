@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "description": "Where a dev build finds the sign-in code it was just sent (docs/sign-in.md). A build marked dev, talking to the local Supabase stack, can read the mail the stack caught and fill the code in, so nobody types six digits out of a mailbox on every reset. 'mailbox': the mailbox behind a backend URL, or null when the backend is not the local stack, which is the only place any build may read mail from. The local stack serves its API on 55321 and its mailbox on 55324 over plain http (supabase/config.toml), so those two ports are the whole test. 'codes': the sign-in code inside a message, the first run of exactly six digits, or null when the message holds none.",
+  "mailbox": [
+    {
+      "name": "the local stack on this machine",
+      "backend": "http://127.0.0.1:55321",
+      "expect": "http://127.0.0.1:55324"
+    },
+    {
+      "name": "the same stack as a phone on the network reaches it",
+      "backend": "http://192.168.1.20:55321",
+      "expect": "http://192.168.1.20:55324"
+    },
+    {
+      "name": "the host as an emulator reaches it",
+      "backend": "http://10.0.2.2:55321",
+      "expect": "http://10.0.2.2:55324"
+    },
+    {
+      "name": "a trailing slash is the same stack",
+      "backend": "http://127.0.0.1:55321/",
+      "expect": "http://127.0.0.1:55324"
+    },
+    {
+      "name": "the cloud project has no mailbox to read",
+      "backend": "https://wkjnauxqwlqhsqrqnkhg.supabase.co",
+      "expect": null
+    },
+    {
+      "name": "https on the stack's port is not the local stack either",
+      "backend": "https://127.0.0.1:55321",
+      "expect": null
+    },
+    {
+      "name": "another port is not the stack",
+      "backend": "http://127.0.0.1:54321",
+      "expect": null
+    },
+    {
+      "name": "nothing at all",
+      "backend": "",
+      "expect": null
+    },
+    {
+      "name": "not an address",
+      "backend": "the local one",
+      "expect": null
+    }
+  ],
+  "codes": [
+    {
+      "name": "the code in the message",
+      "text": "Your GoalMaker sign-in code\n\n123456\n\nIt is good for ten minutes.",
+      "expect": "123456"
+    },
+    {
+      "name": "the code in the markup",
+      "text": "<html><body><p class=\"code\">908070</p></body></html>",
+      "expect": "908070"
+    },
+    {
+      "name": "the first code wins",
+      "text": "111111 and then 222222",
+      "expect": "111111"
+    },
+    {
+      "name": "a longer run of digits is not a code",
+      "text": "Order 1234567 is on its way",
+      "expect": null
+    },
+    {
+      "name": "a year is not a code",
+      "text": "Sent on 21 September 2026",
+      "expect": null
+    },
+    {
+      "name": "nothing to find",
+      "text": "Hello there",
+      "expect": null
+    }
+  ]
+}
