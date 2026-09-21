@@ -459,6 +459,11 @@ otp_expiry = 600
 # onboarding@resend.dev is Resend's shared sender, which may only send to the address the Resend
 # account itself is registered with. That is the one account GoalMaker has, so it is enough; a
 # domain of your own in Resend would lift it.
+# Two emails an hour is the local stack's number, where nothing is ever sent. With a real sender the
+# limit is real: a few tries in a row would lock the owner out of their own account.
+[remotes.production.auth.rate_limit]
+email_sent = 30
+
 [remotes.production.auth.email.smtp]
 enabled = true
 host = "smtp.resend.com"
