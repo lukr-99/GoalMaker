@@ -214,7 +214,13 @@ private fun HabitCard(
                     row.done -> Icon(Icons.Outlined.Check, contentDescription = null, tint = AppTheme.colors.accent, modifier = Modifier.size(22.dp))
                 }
             }
-            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+            // The name, how often it runs, where today stands and the streak read as one thing (M6-05).
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+                    .semantics(mergeDescendants = true) {},
+            ) {
                 Text(habit.name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     stringResource(R.string.habits_line, cadenceText(habit), statusText(row)),

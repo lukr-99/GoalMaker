@@ -35,6 +35,9 @@ jobs:
       - name: The review prompt library is sound
         run: python tools/check_prompts.py
 
+      - name: Every control has something a screen reader can read
+        run: python tools/check_accessibility.py
+
       - name: Check PowerShell syntax
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1

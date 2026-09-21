@@ -131,7 +131,13 @@ fun TaskRow(
                         }
                     },
                 )
-                Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
+                // The title and what is under it are one thing to read, not three (M6-05).
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .padding(vertical = 10.dp)
+                        .semantics(mergeDescendants = true) {},
+                ) {
                     Text(task.title, style = MaterialTheme.typography.bodyLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     TaskDetails(task, area, showDay)
                 }
