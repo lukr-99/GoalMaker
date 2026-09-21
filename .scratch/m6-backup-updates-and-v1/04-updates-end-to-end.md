@@ -1,6 +1,6 @@
 # M6-04: Updates through the channel, end to end
 
-**Status:** todo · **Milestone:** M6
+**Status:** in progress · **Milestone:** M6
 
 ## Scope
 - The update seams and the signed manifest are M0-06 and were checked on Windows against the local
@@ -20,3 +20,12 @@
   in afterwards, with the check, the download and the install seen in the logs.
 - A manifest signed with the wrong key, a corrupted artifact and an older version are each refused,
   with the owner told plainly.
+
+## Progress
+
+2026-09-21. The channel is real: the tag built the signed APK and the installer, published both with
+a signed manifest, and the manifest verifies against the public key the apps build in. On the phone,
+a 0.1.0 release build signed in to the cloud project, found 1.0.0, verified and installed it.
+
+Left: the same on Windows, the manual download when the updater cannot finish (story 94), and an
+update the owner postpones.

@@ -1,6 +1,6 @@
 # M6-07: The owner's setup and the first release
 
-**Status:** todo · **Milestone:** M6
+**Status:** in progress · **Milestone:** M6
 
 ## Scope
 - The one-time setup the roadmap has carried since M0, following `docs/setup/`: create the cloud
@@ -19,3 +19,11 @@
 - The manifest in the bucket verifies with the committed public key, and an older build offered the
   update (M6-04).
 - Nothing secret is in the repository; the keys are backed up where the setup guide says.
+
+## Progress
+
+2026-09-21. 1.0.0 is tagged, built and published: https://github.com/lukr-99/GoalMaker/releases/tag/v1.0.0.
+The cloud project has its schema, settings, sender and the connector; the phone is signed in and
+updated to it.
+
+Left: the PC from the installer, and closing signups once both are in.
