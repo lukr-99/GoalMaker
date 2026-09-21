@@ -8,10 +8,12 @@ import { nameBasedUuid } from "./nameBasedUuid.ts";
  */
 export type HabitCadence = "daily" | "weekdays" | "per_week" | "per_month";
 export type HabitMeasure = "check" | "count" | "amount";
+/** at_least: the target is something to reach. at_most: it is a limit and going over breaks the day. */
+export type HabitDirection = "at_least" | "at_most";
 export type HabitPeriodState = "none" | "met" | "paused" | "skipped" | "open" | "missed";
 
 /** A heatmap day: nothing (null), paused, skipped, or the day's value against its target from 0 to 1. */
-export type HabitHeat = null | "paused" | "skipped" | number;
+export type HabitHeat = null | "paused" | "skipped" | "over" | number;
 
 export interface HabitItem {
   id: string;
@@ -21,6 +23,7 @@ export interface HabitItem {
   times: number | null;
   measure: HabitMeasure;
   target: number | null;
+  direction: HabitDirection;
   unit: string | null;
   goalId: string | null;
   startsOn: Day;
@@ -80,8 +83,35 @@ export function habitPeriodEnd(habit: HabitItem, start: Day): Day {
   }
 }
 
-/** Whether a check-in meets its day: checked, or the day's value reaching the target. Skipped never does. */
+/** Whether the habit's number is a limit rather than something to reach (docs/habits.md). */
+export function isLimit(habit: HabitItem): boolean {
+  return habit.direction === "at_most";
+}
+
+/** A limit habit's number: the target, or none at all for a check ("not once"). */
+export function limit(habit: HabitItem): number {
+  return habit.measure === "check" ? 0 : habit.target ?? 0;
+}
+
+/** Whether a value goes over a limit habit's number. A habit to build is never over. */
+export function isOver(habit: HabitItem, value: number): boolean {
+  return isLimit(habit) && value > limit(habit);
+}
+
+/** Whether the day went over the limit: what turns the ring and the day red. */
+export function wentOver(habit: HabitItem, day: Day, checkins: HabitCheckin[]): boolean {
+  return isLimit(habit) &&
+    checkins.some((checkin) =>
+      !checkin.deleted && !checkin.skipped && checkin.day === day && isOver(habit, checkin.value)
+    );
+}
+
+/**
+ * Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit, a day
+ * nobody logged is met, because nothing was had. Skipped never meets a day.
+ */
 export function dayMet(habit: HabitItem, checkin: HabitCheckin | undefined): boolean {
+  if (isLimit(habit)) return !checkin || checkin.deleted || (!checkin.skipped && !isOver(habit, checkin.value));
   if (!checkin || checkin.deleted || checkin.skipped) return false;
   return habit.measure === "check" ? checkin.value >= 1 : checkin.value >= (habit.target ?? Infinity);
 }
@@ -103,6 +133,14 @@ export function habitState(
   if (end < habit.startsOn) return "none";
   if ((habit.cadence === "daily" || habit.cadence === "weekdays") && !isDue(habit, start)) return "none";
   const inPeriod = checkins.filter((checkin) => !checkin.deleted && checkin.day >= start && checkin.day <= end);
+  if (isLimit(habit)) {
+    // A limit is kept by default, so a pause or a skip comes before the day is judged, and a day over
+    // the number is missed the moment it happens, today included.
+    if (pauses.some((pause) => covers(pause, start, end))) return "paused";
+    if (inPeriod.some((checkin) => checkin.skipped)) return "skipped";
+    if (inPeriod.some((checkin) => isOver(habit, checkin.value))) return "missed";
+    return end >= today ? "open" : "met";
+  }
   if (inPeriod.filter((checkin) => dayMet(habit, checkin)).length >= required(habit)) return "met";
   if (pauses.some((pause) => covers(pause, start, end))) return "paused";
   if (inPeriod.some((checkin) => checkin.skipped)) return "skipped";
@@ -133,13 +171,16 @@ export function streak(habit: HabitItem, today: Day, checkins: HabitCheckin[], p
   return count;
 }
 
-/** A day of the heatmap: null, paused, skipped, or the day's value against its target. */
+/** A day of the heatmap: null, paused, skipped, over a limit, or the day's value against its target. */
 export function heat(habit: HabitItem, day: Day, checkins: HabitCheckin[], pauses: HabitPause[]): HabitHeat {
   if (day < habit.startsOn || !isDue(habit, day)) return null;
   if (pauses.some((pause) => covers(pause, day, day))) return "paused";
   const checkin = checkins.find((checkin) => !checkin.deleted && checkin.day === day);
   if (checkin?.skipped) return "skipped";
-  return share(habit, checkin?.value ?? 0);
+  const value = checkin?.value ?? 0;
+  // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
+  if (isLimit(habit)) return isOver(habit, value) ? "over" : 1 - share(habit, value);
+  return share(habit, value);
 }
 
 /** Today's ring: the day against the target, or the days met so far against N; null when today isn't due. */

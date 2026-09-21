@@ -459,6 +459,11 @@
     <string name="habits_measure_count">A count</string>
     <string name="habits_measure_amount">An amount</string>
     <string name="habits_target">Target a day</string>
+    <string name="habits_direction">The number is</string>
+    <string name="habits_at_least">Something to reach</string>
+    <string name="habits_at_most">A limit to stay under</string>
+    <string name="habits_limit_hint">Going over breaks the day. A day you log nothing on is a day you kept it.</string>
+    <string name="habits_limit_hint_check">Checking in means you had one, and that breaks the day.</string>
     <string name="habits_unit">Unit (optional)</string>
     <string name="habits_goal">Serves</string>
     <string name="habits_no_goal">No goal</string>
@@ -502,6 +507,10 @@
     <string name="habits_not_yet">Not yet today</string>
     <string name="habits_value">%1$s of %2$s today</string>
     <string name="habits_value_unit">%1$s of %2$s %3$s today</string>
+    <string name="habits_limit">%1$s of at most %2$s today</string>
+    <string name="habits_limit_unit">%1$s of at most %2$s %3$s today</string>
+    <string name="habits_none_today">None today</string>
+    <string name="habits_over_today">Over the line today</string>
     <plurals name="habits_met_week">
         <item quantity="one">%1$d of %2$d this week</item>
         <item quantity="other">%1$d of %2$d this week</item>

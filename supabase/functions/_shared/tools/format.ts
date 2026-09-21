@@ -106,8 +106,12 @@ export function habitLine(
     ? "on chosen weekdays"
     : "every day";
   const parts = [`${habit.emoji ? `${habit.emoji} ` : ""}${habit.name}`, asks];
+  const limit = habit.direction === "at_most";
   if (habit.measure !== "check") {
-    parts.push(`${round(done)} of ${round(habit.target ?? 0)}${habit.unit ? ` ${habit.unit}` : ""} this period`);
+    const of = limit ? "of at most" : "of";
+    parts.push(`${round(done)} ${of} ${round(habit.target ?? 0)}${habit.unit ? ` ${habit.unit}` : ""} this period`);
+  } else if (limit) {
+    parts.push("not once");
   }
   parts.push(state === "met" ? "done" : state === "none" ? "not due" : state);
   if (streak > 0) parts.push(`streak ${streak}`);

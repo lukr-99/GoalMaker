@@ -16,6 +16,8 @@ object HabitRules {
     const val CHECK = "check"
     const val COUNT = "count"
     const val AMOUNT = "amount"
+    const val AT_LEAST = "at_least"
+    const val AT_MOST = "at_most"
     private const val NAMESPACE = "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91"
 
     // A daily habit's streak can't reach back further than this many periods.
@@ -42,8 +44,25 @@ object HabitRules {
         else -> start
     }
 
-    /** Whether a check-in meets its day: checked, or the day's value reaching the target. Skipped never does. */
+    /** Whether the habit's number is a limit rather than something to reach (docs/habits.md). */
+    fun isLimit(habit: HabitItem): Boolean = habit.direction == AT_MOST
+
+    /** A limit habit's number: the target, or none at all for a check ("not once"). */
+    fun limit(habit: HabitItem): Double = if (habit.measure == CHECK) 0.0 else habit.target ?: 0.0
+
+    /** Whether a value goes over a limit habit's number. A habit to build is never over. */
+    fun isOver(habit: HabitItem, value: Double): Boolean = isLimit(habit) && value > limit(habit)
+
+    /** Whether the day went over the limit: what turns the ring and the day red. */
+    fun wentOver(habit: HabitItem, day: LocalDate, checkins: List<HabitCheckin>): Boolean =
+        isLimit(habit) && checkins.any { !it.deleted && !it.skipped && it.day == day && isOver(habit, it.value) }
+
+    /**
+     * Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit, a
+     * day nobody logged is met, because nothing was had. Skipped never meets a day.
+     */
     fun dayMet(habit: HabitItem, checkin: HabitCheckin?): Boolean {
+        if (isLimit(habit)) return checkin == null || checkin.deleted || (!checkin.skipped && !isOver(habit, checkin.value))
         if (checkin == null || checkin.deleted || checkin.skipped) return false
         return if (habit.measure == CHECK) checkin.value >= 1.0 else checkin.value >= (habit.target ?: Double.MAX_VALUE)
     }
@@ -57,6 +76,17 @@ object HabitRules {
         if (end.isBefore(habit.startsOn)) return HabitPeriodState.NONE
         if ((habit.cadence == DAILY || habit.cadence == WEEKDAYS) && !isDue(habit, start)) return HabitPeriodState.NONE
         val inPeriod = checkins.filter { !it.deleted && !it.day.isBefore(start) && !it.day.isAfter(end) }
+        if (isLimit(habit)) {
+            // A limit is kept by default, so a pause or a skip comes before the day is judged, and a day
+            // over the number is missed the moment it happens, today included.
+            return when {
+                pauses.any { !it.deleted && !it.from.isAfter(end) && (it.until == null || !it.until.isBefore(start)) } -> HabitPeriodState.PAUSED
+                inPeriod.any { it.skipped } -> HabitPeriodState.SKIPPED
+                inPeriod.any { isOver(habit, it.value) } -> HabitPeriodState.MISSED
+                !end.isBefore(today) -> HabitPeriodState.OPEN
+                else -> HabitPeriodState.MET
+            }
+        }
         return when {
             inPeriod.count { dayMet(habit, it) } >= required(habit) -> HabitPeriodState.MET
             pauses.any { !it.deleted && !it.from.isAfter(end) && (it.until == null || !it.until.isBefore(start)) } -> HabitPeriodState.PAUSED
@@ -93,13 +123,16 @@ object HabitRules {
         return starts
     }
 
-    /** A day of the heatmap: none, paused, skipped, or the day's value against its target. */
+    /** A day of the heatmap: none, paused, skipped, over a limit, or the day's value against its target. */
     fun heat(habit: HabitItem, day: LocalDate, checkins: List<HabitCheckin>, pauses: List<HabitPause>): HabitHeat {
         if (day.isBefore(habit.startsOn) || !isDue(habit, day)) return HabitHeat.None
         if (pauses.any { !it.deleted && !it.from.isAfter(day) && (it.until == null || !it.until.isBefore(day)) }) return HabitHeat.Paused
         val checkin = checkins.firstOrNull { !it.deleted && it.day == day }
         if (checkin?.skipped == true) return HabitHeat.Skipped
-        return HabitHeat.Share(share(habit, checkin?.value ?: 0.0))
+        val value = checkin?.value ?: 0.0
+        // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
+        if (isLimit(habit)) return if (isOver(habit, value)) HabitHeat.Over else HabitHeat.Share(1.0 - share(habit, value))
+        return HabitHeat.Share(share(habit, value))
     }
 
     /** Today's ring: the day against the target, or the days met so far against N; null when today isn't due. */

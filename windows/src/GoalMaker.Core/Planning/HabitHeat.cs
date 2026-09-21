@@ -12,5 +12,8 @@ public readonly record struct HabitHeat(HabitHeatKind Kind, double Fraction = 0)
 
     public static HabitHeat Skipped => new(HabitHeatKind.Skipped);
 
+    /// <summary>A day that went over a limit habit's number.</summary>
+    public static HabitHeat Over => new(HabitHeatKind.Over);
+
     public static HabitHeat Share(double fraction) => new(HabitHeatKind.Share, fraction);
 }

@@ -14,6 +14,7 @@ data class HabitDraft(
     val times: Int? = null,
     val measure: String = HabitRules.CHECK,
     val target: Double? = null,
+    val direction: String = HabitRules.AT_LEAST,
     val unit: String? = null,
     val emoji: String? = null,
     val goalId: String? = null,

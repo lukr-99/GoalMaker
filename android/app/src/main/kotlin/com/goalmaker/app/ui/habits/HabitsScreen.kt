@@ -203,6 +203,7 @@ private fun HabitCard(
             val active = !habit.archived && !row.paused && row.ring != null
             HabitRing(
                 fraction = (row.ring ?: 0.0).toFloat(),
+                color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.accent,
                 modifier = Modifier
                     .clip(CircleShape)
                     .clickable(enabled = active, role = Role.Button, onClick = onTap)
@@ -218,7 +219,7 @@ private fun HabitCard(
                 Text(
                     stringResource(R.string.habits_line, cadenceText(habit), statusText(row)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = AppTheme.colors.textMuted,
+                    color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.textMuted,
                 )
                 streakText(row)?.let { streak ->
                     Row(verticalAlignment = Alignment.CenterVertically) {

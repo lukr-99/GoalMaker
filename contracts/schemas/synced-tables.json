@@ -271,6 +271,11 @@
           "required": false
         },
         {
+          "name": "direction",
+          "kind": "text",
+          "required": true
+        },
+        {
           "name": "unit",
           "kind": "text",
           "required": false

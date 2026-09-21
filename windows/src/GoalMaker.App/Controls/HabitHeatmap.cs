@@ -7,8 +7,9 @@ namespace GoalMaker.App.Controls;
 
 /// <summary>
 /// A habit's heatmap (spec, story 42): a column per week, Monday at the top, each day in the accent as
-/// strong as its share of the target. A paused day is an outline, a skipped one a dash, and a day that
-/// isn't due stays empty. It shows the last weeks that fit the width.
+/// strong as its share of the target. A paused day is an outline, a skipped one a dash, a day over a
+/// limit is solid danger, and a day that isn't due stays empty. It shows the last weeks that fit the
+/// width.
 /// </summary>
 public sealed class HabitHeatmap : FrameworkElement
 {
@@ -24,6 +25,9 @@ public sealed class HabitHeatmap : FrameworkElement
     public static readonly DependencyProperty MutedBrushProperty = DependencyProperty.Register(
         nameof(MutedBrush), typeof(Brush), typeof(HabitHeatmap), new FrameworkPropertyMetadata(Brushes.DimGray, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty OverBrushProperty = DependencyProperty.Register(
+        nameof(OverBrush), typeof(Brush), typeof(HabitHeatmap), new FrameworkPropertyMetadata(Brushes.IndianRed, FrameworkPropertyMetadataOptions.AffectsRender));
+
     private const double Cell = 12;
     private const double Gap = 3;
 
@@ -32,6 +36,7 @@ public sealed class HabitHeatmap : FrameworkElement
         SetResourceReference(AccentBrushProperty, "GM.AccentBrush");
         SetResourceReference(OutlineBrushProperty, "GM.OutlineBrush");
         SetResourceReference(MutedBrushProperty, "GM.TextMutedBrush");
+        SetResourceReference(OverBrushProperty, "GM.DangerBrush");
     }
 
     /// <summary>The days from a Monday to today, as <see cref="HabitRules.Heat"/> reads them.</summary>
@@ -57,6 +62,13 @@ public sealed class HabitHeatmap : FrameworkElement
     {
         get => (Brush)GetValue(MutedBrushProperty);
         set => SetValue(MutedBrushProperty, value);
+    }
+
+    /// <summary>A day that went over a limit habit's number.</summary>
+    public Brush OverBrush
+    {
+        get => (Brush)GetValue(OverBrushProperty);
+        set => SetValue(OverBrushProperty, value);
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -92,6 +104,9 @@ public sealed class HabitHeatmap : FrameworkElement
                     break;
                 case HabitHeatKind.Paused:
                     drawingContext.DrawRoundedRectangle(null, paused, box, Cell / 4, Cell / 4);
+                    break;
+                case HabitHeatKind.Over:
+                    drawingContext.DrawRoundedRectangle(OverBrush, null, box, Cell / 4, Cell / 4);
                     break;
                 case HabitHeatKind.Skipped:
                     drawingContext.DrawRoundedRectangle(track, null, box, Cell / 4, Cell / 4);

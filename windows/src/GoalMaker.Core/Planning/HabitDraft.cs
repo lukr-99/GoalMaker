@@ -16,6 +16,8 @@ public sealed record HabitDraft(string Name, DateOnly StartsOn)
 
     public double? Target { get; init; }
 
+    public string Direction { get; init; } = HabitRules.AtLeast;
+
     public string? Unit { get; init; }
 
     public string? Emoji { get; init; }

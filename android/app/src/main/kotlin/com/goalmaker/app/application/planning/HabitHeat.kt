@@ -9,6 +9,9 @@ sealed interface HabitHeat {
 
     data object Skipped : HabitHeat
 
+    /** A day that went over a limit habit's number. */
+    data object Over : HabitHeat
+
     /** The day's value against its target, 0 to 1. */
     data class Share(val fraction: Double) : HabitHeat
 }

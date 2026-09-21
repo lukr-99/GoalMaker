@@ -40,7 +40,7 @@ internal fun streakText(row: HabitRow): String? {
     }
 }
 
-/** Where today stands: "Paused", "Skipped", "4 of 8 glasses", "2 of 3 this week", "Done", "Not yet". */
+/** Where today stands: "Paused", "4 of 8 glasses", "1 of at most 2 snacks", "Done", "Not yet". */
 @Composable
 internal fun statusText(row: HabitRow): String {
     val habit = row.habit
@@ -51,11 +51,19 @@ internal fun statusText(row: HabitRow): String {
         habit.cadence == HabitRules.PER_WEEK -> pluralStringResource(R.plurals.habits_met_week, habit.times ?: 1, row.met, habit.times ?: 1)
         habit.cadence == HabitRules.PER_MONTH -> pluralStringResource(R.plurals.habits_met_month, habit.times ?: 1, row.met, habit.times ?: 1)
         row.ring == null -> stringResource(R.string.habits_not_due)
+        row.isLimit && habit.measure == HabitRules.CHECK ->
+            stringResource(if (row.value >= 1.0) R.string.habits_over_today else R.string.habits_none_today)
         habit.measure == HabitRules.CHECK -> stringResource(if (row.done) R.string.habits_done else R.string.habits_not_yet)
         else -> {
             val value = amountText(row.value, locale)
             val target = amountText(habit.target ?: 0.0, locale)
-            habit.unit?.let { stringResource(R.string.habits_value_unit, value, target, it) } ?: stringResource(R.string.habits_value, value, target)
+            val unit = habit.unit
+            when {
+                row.isLimit && unit != null -> stringResource(R.string.habits_limit_unit, value, target, unit)
+                row.isLimit -> stringResource(R.string.habits_limit, value, target)
+                unit != null -> stringResource(R.string.habits_value_unit, value, target, unit)
+                else -> stringResource(R.string.habits_value, value, target)
+            }
         }
     }
 }

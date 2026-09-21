@@ -175,11 +175,15 @@ class HabitList(
         val counted = draft.measure != HabitRules.CHECK
         val target = draft.target?.takeIf { counted }
         if (counted && (target == null || target <= 0.0 || !target.isFinite())) return null
+        // Only a day can be a limit (supabase/migrations/0014_habit_limits.sql).
+        val onDays = draft.cadence == HabitRules.DAILY || draft.cadence == HabitRules.WEEKDAYS
+        val direction = if (draft.direction == HabitRules.AT_MOST && onDays) HabitRules.AT_MOST else HabitRules.AT_LEAST
         return draft.copy(
             name = name,
             weekdays = weekdays,
             times = times,
             target = target,
+            direction = direction,
             unit = draft.unit?.trim()?.takeIf { counted && it.isNotEmpty() }?.take(MAX_UNIT),
             emoji = draft.emoji?.trim()?.takeIf(String::isNotEmpty)?.take(MAX_EMOJI),
             goalId = draft.goalId?.takeIf(String::isNotEmpty),
@@ -194,6 +198,7 @@ class HabitList(
         "times" to (draft.times?.let(::JsonPrimitive) ?: JsonNull),
         "measure" to JsonPrimitive(draft.measure),
         "target" to (draft.target?.let(::JsonPrimitive) ?: JsonNull),
+        "direction" to JsonPrimitive(draft.direction),
         "unit" to (draft.unit?.let(::JsonPrimitive) ?: JsonNull),
         "goal_id" to (draft.goalId?.let(::JsonPrimitive) ?: JsonNull),
     )
@@ -217,6 +222,7 @@ class HabitList(
         times = (row["times"] as? JsonPrimitive)?.intOrNull,
         measure = row.text("measure") ?: HabitRules.CHECK,
         target = (row["target"] as? JsonPrimitive)?.doubleOrNull,
+        direction = row.text("direction") ?: HabitRules.AT_LEAST,
         unit = row.text("unit"),
         emoji = row.text("emoji"),
         goalId = row.text("goal_id"),

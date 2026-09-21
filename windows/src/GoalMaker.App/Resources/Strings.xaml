@@ -471,6 +471,11 @@
     <sys:String x:Key="Habits.MeasureCount">A count</sys:String>
     <sys:String x:Key="Habits.MeasureAmount">An amount</sys:String>
     <sys:String x:Key="Habits.Target">Target a day</sys:String>
+    <sys:String x:Key="Habits.Direction">The number is</sys:String>
+    <sys:String x:Key="Habits.AtLeast">Something to reach</sys:String>
+    <sys:String x:Key="Habits.AtMost">A limit to stay under</sys:String>
+    <sys:String x:Key="Habits.LimitHint">Going over breaks the day. A day you log nothing on is a day you kept it.</sys:String>
+    <sys:String x:Key="Habits.LimitHintCheck">Checking in means you had one, and that breaks the day.</sys:String>
     <sys:String x:Key="Habits.Unit">Unit (optional)</sys:String>
     <sys:String x:Key="Habits.Goal">Serves</sys:String>
     <sys:String x:Key="Habits.NoGoal">No goal</sys:String>
@@ -503,6 +508,10 @@
     <sys:String x:Key="Habits.NotYet">Not yet today</sys:String>
     <sys:String x:Key="Habits.Value">{0} of {1} today</sys:String>
     <sys:String x:Key="Habits.ValueUnit">{0} of {1} {2} today</sys:String>
+    <sys:String x:Key="Habits.Limit">{0} of at most {1} today</sys:String>
+    <sys:String x:Key="Habits.LimitUnit">{0} of at most {1} {2} today</sys:String>
+    <sys:String x:Key="Habits.NoneToday">None today</sys:String>
+    <sys:String x:Key="Habits.OverToday">Over the line today</sys:String>
     <sys:String x:Key="Habits.MetWeek">{0} of {1} this week</sys:String>
     <sys:String x:Key="Habits.MetMonth">{0} of {1} this month</sys:String>
     <sys:String x:Key="Habits.Serves">Serves {0}</sys:String>

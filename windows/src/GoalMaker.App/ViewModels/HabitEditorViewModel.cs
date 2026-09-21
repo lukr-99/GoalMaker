@@ -8,8 +8,9 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// Adds or edits a habit on the Habits page: name and emoji, how often it runs (weekdays get their own
-/// boxes, a week or a month a number of times), how it is measured, and the goal it serves. Save refuses
-/// what the habit list refuses and says why.
+/// boxes, a week or a month a number of times), how it is measured, whether the number is something to
+/// reach or a limit to stay under, and the goal it serves. Save refuses what the habit list refuses and
+/// says why.
 /// </summary>
 public sealed partial class HabitEditorViewModel : ObservableObject
 {
@@ -33,7 +34,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     private string emoji = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsWeekdays), nameof(IsTimes), nameof(TimesLabel))]
+    [NotifyPropertyChangedFor(nameof(IsWeekdays), nameof(IsTimes), nameof(TimesLabel), nameof(CanBeLimit), nameof(IsLimit), nameof(LimitHint))]
     private ChoiceViewModel? cadence;
 
     [ObservableProperty]
@@ -41,8 +42,12 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     private int times = 3;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsCounted))]
+    [NotifyPropertyChangedFor(nameof(IsCounted), nameof(LimitHint))]
     private ChoiceViewModel? measure;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLimit), nameof(LimitHint))]
+    private ChoiceViewModel? direction;
 
     [ObservableProperty]
     private string targetText = string.Empty;
@@ -83,6 +88,11 @@ public sealed partial class HabitEditorViewModel : ObservableObject
             new ChoiceViewModel(HabitRules.Count, strings.Get("Habits.MeasureCount")),
             new ChoiceViewModel(HabitRules.Amount, strings.Get("Habits.MeasureAmount")),
         ];
+        Directions =
+        [
+            new ChoiceViewModel(HabitRules.AtLeast, strings.Get("Habits.AtLeast")),
+            new ChoiceViewModel(HabitRules.AtMost, strings.Get("Habits.AtMost")),
+        ];
         Days = [.. Enumerable.Range(0, 7).Select(day => new HabitDayViewModel(
             day,
             CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7],
@@ -90,6 +100,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
         EmojiChoices = EmojiPalette.Choices(emoji => Emoji = Emoji == emoji ? string.Empty : emoji);
         Cadence = Cadences[0];
         Measure = Measures[0];
+        Direction = Directions[0];
     }
 
     /// <summary>The emoji to click instead of typing one (docs/habits.md).</summary>
@@ -99,6 +110,9 @@ public sealed partial class HabitEditorViewModel : ObservableObject
 
     public IReadOnlyList<ChoiceViewModel> Measures { get; }
 
+    /// <summary>Something to reach, or a limit to stay under (docs/habits.md).</summary>
+    public IReadOnlyList<ChoiceViewModel> Directions { get; }
+
     /// <summary>Monday to Sunday, for the weekdays cadence.</summary>
     public IReadOnlyList<HabitDayViewModel> Days { get; }
 
@@ -107,6 +121,18 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     public bool IsTimes => Cadence?.Id is HabitRules.PerWeek or HabitRules.PerMonth;
 
     public bool IsCounted => Measure?.Id != HabitRules.Check;
+
+    /// <summary>Only a day can be a limit: a week of "at most two on three days" says nothing to act on.</summary>
+    public bool CanBeLimit => Cadence?.Id is HabitRules.Daily or HabitRules.OnWeekdays;
+
+    public bool IsLimit => CanBeLimit && Direction?.Id == HabitRules.AtMost;
+
+    /// <summary>What a limit means, under the choice, so nobody has to find out by going over.</summary>
+    public string LimitHint => !IsLimit
+        ? string.Empty
+        : strings.Get(Measure?.Id == HabitRules.Check ? "Habits.LimitHintCheck" : "Habits.LimitHint");
+
+    public bool HasLimitHint => LimitHint.Length > 0;
 
     public bool HasError => Error.Length > 0;
 
@@ -135,6 +161,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
             Weekdays = cadenceId == HabitRules.OnWeekdays ? mask : null,
             Times = IsTimes ? Times : null,
             Measure = Measure?.Id ?? HabitRules.Check,
+            Direction = IsLimit ? HabitRules.AtMost : HabitRules.AtLeast,
             Target = GoalEditorViewModel.ParseAmount(TargetText),
             Unit = Unit,
             Emoji = Emoji,
@@ -181,6 +208,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
         Cadence = Cadences.FirstOrDefault(choice => choice.Id == habit.Cadence) ?? Cadences[0];
         Times = habit.Times ?? 3;
         Measure = Measures.FirstOrDefault(choice => choice.Id == habit.Measure) ?? Measures[0];
+        Direction = Directions.FirstOrDefault(choice => choice.Id == habit.Direction) ?? Directions[0];
         TargetText = habit.Target is { } target ? HabitRowViewModel.Amount(target) : string.Empty;
         Unit = habit.Unit ?? string.Empty;
         var mask = habit.Weekdays ?? 31;

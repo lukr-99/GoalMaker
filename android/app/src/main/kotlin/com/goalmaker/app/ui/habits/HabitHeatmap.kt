@@ -63,6 +63,8 @@ fun HabitHeatmap(row: HabitRow, modifier: Modifier = Modifier) {
                         // A day before the start or off duty: a hint of the grid, nothing more.
                         HabitHeat.None -> drawRoundRect(colors.outline.copy(alpha = 0.07f), topLeft, size, corner)
                         HabitHeat.Paused -> drawRoundRect(colors.textMuted.copy(alpha = 0.6f), topLeft, size, corner, style = Stroke(cell / 6))
+                        // A day over a limit: solid danger, so a slip is the one thing that stands out.
+                        HabitHeat.Over -> drawRoundRect(colors.danger, topLeft, size, corner)
                         HabitHeat.Skipped -> {
                             drawRoundRect(colors.outline.copy(alpha = 0.18f), topLeft, size, corner)
                             drawLine(

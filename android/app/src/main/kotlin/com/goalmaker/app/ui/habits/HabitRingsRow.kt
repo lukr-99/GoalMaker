@@ -53,7 +53,11 @@ fun HabitRingsRow(rows: List<HabitRow>, onTap: (HabitRow) -> Unit, onOpen: () ->
                     .semantics { contentDescription = label }
                     .padding(vertical = 8.dp),
             ) {
-                HabitRing(fraction = (row.ring ?: 0.0).toFloat(), size = 48.dp) {
+                HabitRing(
+                    fraction = (row.ring ?: 0.0).toFloat(),
+                    size = 48.dp,
+                    color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.accent,
+                ) {
                     when {
                         row.habit.emoji != null -> Text(row.habit.emoji, style = MaterialTheme.typography.titleMedium)
                         row.done -> Icon(Icons.Outlined.Check, contentDescription = null, tint = AppTheme.colors.accent, modifier = Modifier.size(22.dp))

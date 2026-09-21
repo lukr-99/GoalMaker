@@ -15,6 +15,8 @@ public static class HabitRules
     public const string Check = "check";
     public const string Count = "count";
     public const string Amount = "amount";
+    public const string AtLeast = "at_least";
+    public const string AtMost = "at_most";
     private const string Namespace = "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91";
 
     // A daily habit's streak can't reach back further than this many periods.
@@ -43,9 +45,30 @@ public static class HabitRules
         _ => start,
     };
 
-    /// <summary>Whether a check-in meets its day: checked, or the day's value reaching the target. Skipped never does.</summary>
+    /// <summary>Whether the habit's number is a limit rather than something to reach (docs/habits.md).</summary>
+    public static bool IsLimit(HabitItem habit) => habit.Direction == AtMost;
+
+    /// <summary>A limit habit's number: the target, or none at all for a check ("not once").</summary>
+    public static double Limit(HabitItem habit) => habit.Measure == Check ? 0 : habit.Target ?? 0;
+
+    /// <summary>Whether a value goes over a limit habit's number. A habit to build is never over.</summary>
+    public static bool IsOver(HabitItem habit, double value) => IsLimit(habit) && value > Limit(habit);
+
+    /// <summary>Whether the day went over the limit: what turns the ring and the day red.</summary>
+    public static bool WentOver(HabitItem habit, DateOnly day, IReadOnlyList<HabitCheckin> checkins) =>
+        IsLimit(habit) && checkins.Any(checkin => !checkin.Deleted && !checkin.Skipped && checkin.Day == day && IsOver(habit, checkin.Value));
+
+    /// <summary>
+    /// Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit,
+    /// a day nobody logged is met, because nothing was had. Skipped never meets a day.
+    /// </summary>
     public static bool DayMet(HabitItem habit, HabitCheckin? checkin)
     {
+        if (IsLimit(habit))
+        {
+            return checkin is null || checkin.Deleted || (!checkin.Skipped && !IsOver(habit, checkin.Value));
+        }
+
         if (checkin is null || checkin.Deleted || checkin.Skipped)
         {
             return false;
@@ -72,6 +95,28 @@ public static class HabitRules
         }
 
         var inPeriod = checkins.Where(checkin => !checkin.Deleted && checkin.Day >= start && checkin.Day <= end).ToList();
+        if (IsLimit(habit))
+        {
+            // A limit is kept by default, so a pause or a skip comes before the day is judged, and a
+            // day over the number is missed the moment it happens, today included.
+            if (pauses.Any(pause => Covers(pause, start, end)))
+            {
+                return HabitPeriodState.Paused;
+            }
+
+            if (inPeriod.Any(checkin => checkin.Skipped))
+            {
+                return HabitPeriodState.Skipped;
+            }
+
+            if (inPeriod.Any(checkin => IsOver(habit, checkin.Value)))
+            {
+                return HabitPeriodState.Missed;
+            }
+
+            return end >= today ? HabitPeriodState.Open : HabitPeriodState.Met;
+        }
+
         if (inPeriod.Count(checkin => DayMet(habit, checkin)) >= Required(habit))
         {
             return HabitPeriodState.Met;
@@ -112,7 +157,6 @@ public static class HabitRules
         return count;
     }
 
-    /// <summary>A day of the heatmap: none, paused, skipped, or the day's value against its target.</summary>
     /// <summary>The starts of the habit's periods that touch the days <paramref name="from"/> to <paramref name="to"/>, oldest first.</summary>
     public static IEnumerable<DateOnly> PeriodsBetween(HabitItem habit, DateOnly from, DateOnly to)
     {
@@ -128,6 +172,7 @@ public static class HabitRules
         }
     }
 
+    /// <summary>A day of the heatmap: none, paused, skipped, over a limit, or the day's value against its target.</summary>
     public static HabitHeat Heat(HabitItem habit, DateOnly day, IReadOnlyList<HabitCheckin> checkins, IReadOnlyList<HabitPause> pauses)
     {
         if (day < habit.StartsOn || !IsDue(habit, day))
@@ -141,7 +186,18 @@ public static class HabitRules
         }
 
         var checkin = checkins.FirstOrDefault(checkin => !checkin.Deleted && checkin.Day == day);
-        return checkin?.Skipped == true ? HabitHeat.Skipped : HabitHeat.Share(Share(habit, checkin?.Value ?? 0));
+        if (checkin?.Skipped == true)
+        {
+            return HabitHeat.Skipped;
+        }
+
+        if (IsLimit(habit))
+        {
+            // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
+            return IsOver(habit, checkin?.Value ?? 0) ? HabitHeat.Over : HabitHeat.Share(1 - Share(habit, checkin?.Value ?? 0));
+        }
+
+        return HabitHeat.Share(Share(habit, checkin?.Value ?? 0));
     }
 
     /// <summary>Today's ring: the day against the target, or the days met so far against N; null when today isn't due.</summary>

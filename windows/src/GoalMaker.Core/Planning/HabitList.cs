@@ -266,12 +266,15 @@ public sealed class HabitList
             return null;
         }
 
+        // Only a day can be a limit (supabase/migrations/0014_habit_limits.sql).
+        var onDays = draft.Cadence is HabitRules.Daily or HabitRules.OnWeekdays;
         return draft with
         {
             Name = name,
             Weekdays = weekdays,
             Times = times,
             Target = target,
+            Direction = draft.Direction == HabitRules.AtMost && onDays ? HabitRules.AtMost : HabitRules.AtLeast,
             Unit = counted ? Clip(draft.Unit, MaxUnit) : null,
             Emoji = Clip(draft.Emoji, MaxEmoji),
             GoalId = string.IsNullOrEmpty(draft.GoalId) ? null : draft.GoalId,
@@ -292,6 +295,7 @@ public sealed class HabitList
         ["times"] = draft.Times,
         ["measure"] = draft.Measure,
         ["target"] = draft.Target,
+        ["direction"] = draft.Direction,
         ["unit"] = draft.Unit,
         ["goal_id"] = draft.GoalId,
     };
@@ -321,6 +325,7 @@ public sealed class HabitList
         Times = Count(row["times"]),
         Measure = (string?)row["measure"] ?? HabitRules.Check,
         Target = Number(row["target"]),
+        Direction = (string?)row["direction"] ?? HabitRules.AtLeast,
         Unit = (string?)row["unit"],
         Emoji = (string?)row["emoji"],
         GoalId = (string?)row["goal_id"],

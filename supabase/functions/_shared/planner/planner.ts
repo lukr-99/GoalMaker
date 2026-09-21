@@ -586,8 +586,8 @@ export class Planner {
   /** Every habit that is not deleted, in the order the apps keep them. */
   async habits(): Promise<Habit[]> {
     const rows = await this.db`
-      select id::text, name, emoji, cadence, weekdays, times, measure, target, unit, goal_id::text,
-             starts_on::text, archived_at is not null as archived
+      select id::text, name, emoji, cadence, weekdays, times, measure, target, direction, unit,
+             goal_id::text, starts_on::text, archived_at is not null as archived
       from public.habits where deleted_at is null order by position, created_at, id`;
     return rows.map((row) => ({
       id: row.id,
@@ -598,6 +598,7 @@ export class Planner {
       times: row.times,
       measure: row.measure,
       target: row.target,
+      direction: row.direction,
       unit: row.unit,
       goalId: row.goal_id,
       startsOn: row.starts_on,

@@ -10,6 +10,9 @@ public enum HabitHeatKind
 
     Skipped,
 
+    /// <summary>A day over a limit habit's number.</summary>
+    Over,
+
     /// <summary>The day's value against its target.</summary>
     Share,
 }

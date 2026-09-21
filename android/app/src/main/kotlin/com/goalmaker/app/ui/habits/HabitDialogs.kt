@@ -57,7 +57,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Adds or edits a habit (spec, stories 36, 37 and 32): its name and emoji, how often it runs, how it is
- * measured and the goal it serves.
+ * measured, whether its number is something to reach or a limit to stay under, and the goal it serves.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -74,6 +74,7 @@ internal fun HabitDialog(
     var weekdays by remember { mutableIntStateOf(habit.weekdays ?: WORKDAYS) }
     var times by remember { mutableIntStateOf(habit.times ?: 3) }
     var measure by remember { mutableStateOf(habit.measure) }
+    var direction by remember { mutableStateOf(habit.direction) }
     var target by remember { mutableStateOf(habit.target?.let(::plainAmount).orEmpty()) }
     var unit by remember { mutableStateOf(habit.unit.orEmpty()) }
     var goalId by remember { mutableStateOf(habit.goalId) }
@@ -81,6 +82,8 @@ internal fun HabitDialog(
     val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
     val most = if (cadence == HabitRules.PER_MONTH) 31 else 7
+    // Only a day can be a limit (supabase/migrations/0014_habit_limits.sql).
+    val onDays = cadence == HabitRules.DAILY || cadence == HabitRules.WEEKDAYS
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -166,6 +169,34 @@ internal fun HabitDialog(
                         )
                     }
                 }
+                val limit = onDays && direction == HabitRules.AT_MOST
+                if (onDays) {
+                    Label(stringResource(R.string.habits_direction))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(
+                            HabitRules.AT_LEAST to R.string.habits_at_least,
+                            HabitRules.AT_MOST to R.string.habits_at_most,
+                        ).forEach { (id, label) ->
+                            ChoiceChip(
+                                selected = direction == id,
+                                onClick = {
+                                    direction = id
+                                    refused = false
+                                },
+                                label = stringResource(label),
+                            )
+                        }
+                    }
+                    if (limit) {
+                        Text(
+                            stringResource(
+                                if (measure == HabitRules.CHECK) R.string.habits_limit_hint_check else R.string.habits_limit_hint,
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = AppTheme.colors.textMuted,
+                        )
+                    }
+                }
                 if (measure != HabitRules.CHECK) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
@@ -204,6 +235,7 @@ internal fun HabitDialog(
                     weekdays = weekdays.takeIf { cadence == HabitRules.WEEKDAYS && it != 0 },
                     times = times.takeIf { cadence == HabitRules.PER_WEEK || cadence == HabitRules.PER_MONTH },
                     measure = measure,
+                    direction = if (onDays) direction else HabitRules.AT_LEAST,
                     target = parseAmount(target),
                     unit = unit,
                     emoji = emoji,

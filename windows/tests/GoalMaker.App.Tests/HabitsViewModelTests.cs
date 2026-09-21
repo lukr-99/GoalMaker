@@ -216,6 +216,67 @@ public sealed class HabitsViewModelTests : IDisposable
         Assert.Equal(0, parties);
     }
 
+    [Fact]
+    public void ALimitKeepsTheStreakUntilTheDayGoesOverIt()
+    {
+        var snacks = planner.Habits.Add(new HabitDraft("Snacks", Today.AddDays(-3))
+        {
+            Measure = HabitRules.Count,
+            Target = 2,
+            Unit = "snacks",
+            Direction = HabitRules.AtMost,
+        })!;
+        var page = Page();
+
+        // Three days nobody logged anything on are three days kept.
+        var row = page.Rows.Single();
+        Assert.Equal(3, row.Streak);
+        Assert.False(row.IsOver);
+        Assert.Equal("Habits.LimitUnit(0,2,snacks)", row.StatusText);
+
+        planner.Habits.CheckIn(snacks.Id, Today, 2);
+        row = Page().Rows.Single();
+        Assert.False(row.IsOver);
+        Assert.Equal(1, row.Fraction);
+        Assert.False(row.IsDone);
+        Assert.Equal(3, row.Streak);
+
+        planner.Habits.CheckIn(snacks.Id, Today, 1);
+        row = Page().Rows.Single();
+        Assert.True(row.IsOver);
+        Assert.Equal("Habits.LimitUnit(3,2,snacks)", row.StatusText);
+        Assert.Equal(0, row.Streak);
+    }
+
+    [Fact]
+    public void TheEditorSavesALimitAndOnlyOffersItOnDays()
+    {
+        var page = Page();
+        page.NewHabitCommand.Execute(null);
+        var editor = page.Editor;
+        editor.Name = "Snacks";
+        editor.Measure = editor.Measures.Single(choice => choice.Id == HabitRules.Count);
+        editor.Direction = editor.Directions.Single(choice => choice.Id == HabitRules.AtMost);
+        editor.TargetText = "2";
+        Assert.True(editor.IsLimit);
+        Assert.True(editor.HasLimitHint);
+
+        // A week cannot hold a limit, so the choice goes away and the habit is one to build again.
+        editor.Cadence = editor.Cadences.Single(choice => choice.Id == HabitRules.PerWeek);
+        Assert.False(editor.CanBeLimit);
+        Assert.False(editor.IsLimit);
+
+        editor.Cadence = editor.Cadences.Single(choice => choice.Id == HabitRules.Daily);
+        editor.SaveCommand.Execute(null);
+
+        Assert.False(editor.IsOpen);
+        var habit = planner.Habits.All().Single();
+        Assert.Equal((HabitRules.AtMost, 2.0), (habit.Direction, habit.Target!.Value));
+
+        page.Edit(habit);
+        Assert.Equal(HabitRules.AtMost, editor.Direction!.Id);
+    }
+
     private HabitsViewModel Page() =>
         new(planner.Habits, planner.Goals, planner.Settings, planner.Strings, planner.Time, () => motionReduced, action => action());
 }

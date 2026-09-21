@@ -62,10 +62,25 @@ public sealed class HabitRulesContractTests
             var expected = expect.ValueKind switch
             {
                 JsonValueKind.Null => HabitHeat.None,
-                JsonValueKind.String => expect.GetString() == "paused" ? HabitHeat.Paused : HabitHeat.Skipped,
+                JsonValueKind.String => expect.GetString() switch
+                {
+                    "paused" => HabitHeat.Paused,
+                    "over" => HabitHeat.Over,
+                    _ => HabitHeat.Skipped,
+                },
                 _ => HabitHeat.Share(expect.GetDouble()),
             };
             Assert.True(expected.Kind == heat.Kind && Math.Abs(expected.Fraction - heat.Fraction) < 1e-9, $"{Name(testCase)}: {heat}");
+        }
+    }
+
+    [Fact]
+    public void EveryDayOverALimit()
+    {
+        foreach (var testCase in vectors.GetProperty("over").EnumerateArray())
+        {
+            var over = HabitRules.WentOver(Habit(testCase), Day(testCase, "day"), Checkins(testCase));
+            Assert.True(testCase.GetProperty("expect").GetBoolean() == over, $"{Name(testCase)}: {over}");
         }
     }
 
@@ -137,6 +152,7 @@ public sealed class HabitRulesContractTests
             Times = habit.GetProperty("times").ValueKind == JsonValueKind.Null ? null : habit.GetProperty("times").GetInt32(),
             Measure = habit.GetProperty("measure").GetString()!,
             Target = habit.GetProperty("target").ValueKind == JsonValueKind.Null ? null : habit.GetProperty("target").GetDouble(),
+            Direction = habit.TryGetProperty("direction", out var direction) ? direction.GetString()! : HabitRules.AtLeast,
         };
     }
 

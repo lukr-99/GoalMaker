@@ -6,6 +6,8 @@ import java.time.LocalDate
  * A habit as the screens and rules see it (docs/habits.md). [cadence] is daily, weekdays, per_week or
  * per_month; [weekdays] is the weekday bitmask (Monday 1 ... Sunday 64) and [times] the days a week or
  * month needs. [measure] is check, count or amount; [target] and [unit] belong to a count or an amount.
+ * [direction] is at_least (the target is something to reach) or at_most (it is a limit: going over breaks
+ * the day), which only a daily or weekday habit can be.
  */
 data class HabitItem(
     val id: String,
@@ -16,6 +18,7 @@ data class HabitItem(
     val times: Int? = null,
     val measure: String = HabitRules.CHECK,
     val target: Double? = null,
+    val direction: String = HabitRules.AT_LEAST,
     val unit: String? = null,
     val emoji: String? = null,
     val goalId: String? = null,

@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
@@ -35,10 +36,11 @@ fun HabitRing(
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
     stroke: Dp = 4.dp,
+    color: Color = AppTheme.colors.accent,
     content: @Composable () -> Unit = {},
 ) {
     val reduceMotion = AppTheme.reduceMotion
-    val accent = AppTheme.colors.accent
+    val accent = color
     val emphasized = AppTheme.motion.emphasized
     val shown by animateFloatAsState(
         targetValue = fraction.coerceIn(0f, 1f),
@@ -69,6 +71,7 @@ fun HabitRing(
         fraction = shown,
         size = size,
         stroke = stroke,
+        color = color,
         modifier = modifier
             .graphicsLayer {
                 scaleX = pop.value

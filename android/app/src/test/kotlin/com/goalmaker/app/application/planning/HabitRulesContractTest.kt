@@ -34,6 +34,7 @@ class HabitRulesContractTest {
             times = habit["times"]?.takeUnless { it == JsonNull }?.jsonPrimitive?.int,
             measure = habit.text("measure")!!,
             target = habit.number("target"),
+            direction = habit.text("direction") ?: HabitRules.AT_LEAST,
         )
     }
 
@@ -96,7 +97,11 @@ class HabitRulesContractTest {
                 expect == JsonNull -> assertEquals(name, HabitHeat.None, heat)
                 expect.jsonPrimitive.isString -> assertEquals(
                     name,
-                    if (expect.jsonPrimitive.content == "paused") HabitHeat.Paused else HabitHeat.Skipped,
+                    when (expect.jsonPrimitive.content) {
+                        "paused" -> HabitHeat.Paused
+                        "over" -> HabitHeat.Over
+                        else -> HabitHeat.Skipped
+                    },
                     heat,
                 )
                 else -> assertEquals(name, expect.jsonPrimitive.double, (heat as HabitHeat.Share).fraction, 1e-9)
@@ -110,6 +115,14 @@ class HabitRulesContractTest {
             val ring = HabitRules.ring(case.habit(), case.day("today"), case.checkins())
             val expect = case.number("expect")
             if (expect == null) assertNull(case.text("name"), ring) else assertEquals(case.text("name"), expect, ring!!, 1e-9)
+        }
+    }
+
+    @Test
+    fun `every day over a limit`() {
+        vectors.cases("over").forEach { case ->
+            val over = HabitRules.wentOver(case.habit(), case.day("day"), case.checkins())
+            assertEquals(case.text("name"), case.getValue("expect").jsonPrimitive.boolean, over)
         }
     }
 

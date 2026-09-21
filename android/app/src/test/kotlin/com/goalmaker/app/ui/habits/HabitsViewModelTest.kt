@@ -97,6 +97,57 @@ class HabitsViewModelTest {
     }
 
     @Test
+    fun `a limit keeps the streak until the day goes over it`() = runTest {
+        val snacks = habits.add(
+            HabitDraft(
+                "Snacks",
+                today.minusDays(3),
+                measure = HabitRules.COUNT,
+                target = 2.0,
+                unit = "snacks",
+                direction = HabitRules.AT_MOST,
+            ),
+        )!!
+        idle()
+
+        // Three days nobody logged anything on are three days kept.
+        var row = viewModel.uiState.first { it.loaded && it.active.isNotEmpty() }.active.single()
+        assertEquals(3, row.streak)
+        assertFalse(row.isOver)
+
+        habits.checkIn(snacks.id, today, 2.0)
+        idle()
+        row = viewModel.uiState.first { it.active.single().value == 2.0 }.active.single()
+        assertFalse(row.isOver)
+        assertFalse(row.done)
+        assertEquals(3, row.streak)
+
+        habits.checkIn(snacks.id, today, 1.0)
+        idle()
+        row = viewModel.uiState.first { it.active.single().value == 3.0 }.active.single()
+        assertTrue(row.isOver)
+        assertEquals(0, row.streak)
+        assertEquals(HabitPeriodState.MISSED, row.state)
+    }
+
+    @Test
+    fun `only a day can be a limit`() = runTest {
+        val weekly = habits.add(
+            HabitDraft(
+                "Takeaway",
+                today,
+                cadence = HabitRules.PER_WEEK,
+                times = 2,
+                measure = HabitRules.COUNT,
+                target = 1.0,
+                direction = HabitRules.AT_MOST,
+            ),
+        )!!
+
+        assertEquals(HabitRules.AT_LEAST, weekly.direction)
+    }
+
+    @Test
     fun `a paused habit stays off today and comes back when it resumes`() = runTest {
         val read = habits.add(HabitDraft("Read", today.minusDays(5)))!!
 

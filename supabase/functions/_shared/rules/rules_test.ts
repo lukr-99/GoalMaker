@@ -21,6 +21,7 @@ import {
   isDue,
   ring,
   streak,
+  wentOver,
 } from "./habits.ts";
 import { lists } from "./listRules.ts";
 import { nameBasedUuid } from "./nameBasedUuid.ts";
@@ -265,6 +266,7 @@ Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids and
     unit: null,
     goalId: null,
     deleted: false,
+    direction: "at_least",
     ...fields,
   });
   const checkins = (vector: Json) =>
@@ -304,6 +306,9 @@ Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids and
     } else {
       assert(value !== null && Math.abs(value - vector.expect) < 1e-9, `${vector.name}: ${value}`);
     }
+  }
+  for (const vector of file.over) {
+    assertEquals(wentOver(habit(vector.habit), vector.day, checkins(vector)), vector.expect, vector.name);
   }
   for (const vector of file.checkinIds) {
     assertEquals(await checkinId(vector.habitId, vector.day), vector.expect, vector.habitId);

@@ -72,7 +72,17 @@
                                 ToolTip="{Binding CheckInText}"
                                 AutomationProperties.Name="{Binding CheckInText}">
                             <Grid>
-                                <controls:GoalRing Width="44" Height="44" Fraction="{Binding Fraction}" Thickness="4" />
+                                <controls:GoalRing Width="44" Height="44" Fraction="{Binding Fraction}" Thickness="4">
+                                    <controls:GoalRing.Style>
+                                        <Style TargetType="{x:Type controls:GoalRing}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsOver}" Value="True">
+                                                    <Setter Property="RingBrush" Value="{DynamicResource GM.DangerBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </controls:GoalRing.Style>
+                                </controls:GoalRing>
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RingText}" FontSize="15" />
                                 <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" Symbol="Checkmark20"
                                                Foreground="{DynamicResource GM.AccentBrush}"
@@ -84,7 +94,18 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding CadenceText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
                                 <TextBlock Margin="6,0" Text="·" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                                <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                <TextBlock Text="{Binding StatusText}" FontSize="12">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsOver}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                             </StackPanel>
                             <TextBlock Text="{Binding StreakText}" FontSize="12"
                                        FontFamily="{DynamicResource GM.BodyStrongFont}"
@@ -201,6 +222,13 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Measure}" />
                     <ComboBox ItemsSource="{Binding Measures}" SelectedItem="{Binding Measure}" DisplayMemberPath="Label"
                               AutomationProperties.Name="{DynamicResource Habits.Measure}" />
+                    <StackPanel Visibility="{Binding CanBeLimit, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Direction}" />
+                        <ComboBox ItemsSource="{Binding Directions}" SelectedItem="{Binding Direction}" DisplayMemberPath="Label"
+                                  AutomationProperties.Name="{DynamicResource Habits.Direction}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0" Text="{Binding LimitHint}"
+                                   Visibility="{Binding HasLimitHint, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
                     <Grid Visibility="{Binding IsCounted, Converter={StaticResource BoolToVisibility}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition />

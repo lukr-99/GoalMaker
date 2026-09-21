@@ -87,8 +87,14 @@ public sealed class HabitRowViewModel
 
     public bool IsArchived => Habit.Archived;
 
-    /// <summary>Today's part is done: the ring is full, or the period is skipped.</summary>
-    public bool IsDone => IsSkipped || Fraction >= 1;
+    /// <summary>The habit's number is a limit, so the ring fills with what has been had (docs/habits.md).</summary>
+    public bool IsLimit => HabitRules.IsLimit(Habit);
+
+    /// <summary>Today went over the limit: the ring, the number and the day turn to the danger colour.</summary>
+    public bool IsOver => !IsSkipped && HabitRules.IsOver(Habit, Value);
+
+    /// <summary>Today's part is done: the ring is full, or the period is skipped. A limit is never done.</summary>
+    public bool IsDone => IsSkipped || (!IsLimit && Fraction >= 1);
 
     /// <summary>The ring shows a check: done without an emoji.</summary>
     public bool ShowsCheck => IsDone && Habit.Emoji is null;
@@ -172,6 +178,11 @@ public sealed class HabitRowViewModel
         ({ Cadence: HabitRules.PerWeek }, _) => strings.Get("Habits.MetWeek", met, habit.Times ?? 1),
         ({ Cadence: HabitRules.PerMonth }, _) => strings.Get("Habits.MetMonth", met, habit.Times ?? 1),
         (_, null) => strings.Get("Habits.NotDue"),
+        ({ Direction: HabitRules.AtMost, Measure: HabitRules.Check }, _) =>
+            strings.Get(value >= 1 ? "Habits.OverToday" : "Habits.NoneToday"),
+        ({ Direction: HabitRules.AtMost, Unit: { } unit }, _) =>
+            strings.Get("Habits.LimitUnit", Amount(value), Amount(habit.Target ?? 0), unit),
+        ({ Direction: HabitRules.AtMost }, _) => strings.Get("Habits.Limit", Amount(value), Amount(habit.Target ?? 0)),
         ({ Measure: HabitRules.Check }, _) => strings.Get(ring >= 1 ? "Habits.Done" : "Habits.NotYet"),
         ({ Unit: { } unit }, _) => strings.Get("Habits.ValueUnit", Amount(value), Amount(habit.Target ?? 0), unit),
         _ => strings.Get("Habits.Value", Amount(value), Amount(habit.Target ?? 0)),
