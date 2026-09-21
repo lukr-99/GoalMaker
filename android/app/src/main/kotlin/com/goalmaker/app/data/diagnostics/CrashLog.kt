@@ -25,6 +25,11 @@ class CrashLog(private val file: File, private val next: Thread.UncaughtExceptio
     companion object {
         private const val MAX_BYTES = 64L * 1024
 
+        /** Writes one throwable, for a failure caught before the process goes. */
+        fun write(folder: File, error: Throwable) {
+            runCatching { CrashLog(File(folder, "crash.log"), null).uncaughtException(Thread.currentThread(), error) }
+        }
+
         /** Starts logging into [folder], keeping the handler Android already had. */
         fun install(folder: File) {
             val existing = Thread.getDefaultUncaughtExceptionHandler()

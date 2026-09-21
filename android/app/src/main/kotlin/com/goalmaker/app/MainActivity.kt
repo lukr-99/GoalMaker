@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.goalmaker.app.data.planning.ReminderAlarm
 import com.goalmaker.app.ui.GoalMakerApp
+import com.goalmaker.app.ui.StartupFailureScreen
 
 class MainActivity : ComponentActivity() {
     // Reminders are useless without notifications; from API 33 the owner has to allow them.
@@ -20,7 +21,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val graph = (application as GoalMakerApplication).graph
+        val app = application as GoalMakerApplication
+        if (app.startupFailure != null) {
+            setContent { StartupFailureScreen() }
+            return
+        }
+
+        val graph = app.graph
         requestNotifications()
         openedFromReminder(intent)
         setContent { GoalMakerApp(graph) }
@@ -33,7 +40,10 @@ class MainActivity : ComponentActivity() {
 
     private fun openedFromReminder(intent: Intent?) {
         if (intent == null) return
-        val graph = (application as GoalMakerApplication).graph
+        val app = application as GoalMakerApplication
+        // Nothing to open when the app could not start (M6-06).
+        if (app.startupFailure != null) return
+        val graph = app.graph
         val reviewKind = intent.getStringExtra(ReminderAlarm.EXTRA_REVIEW_KIND)
         val reviewPeriod = intent.getStringExtra(ReminderAlarm.EXTRA_REVIEW_PERIOD)
         if (reviewKind != null && reviewPeriod != null) {

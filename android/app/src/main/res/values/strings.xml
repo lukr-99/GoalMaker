@@ -19,6 +19,8 @@
     <string name="sign_in_error_wrong_code">That code is wrong or has expired. Try again or send a new one.</string>
     <string name="sign_in_error_rate">Too many attempts. Wait a minute, then try again.</string>
     <string name="sign_in_error_offline">No connection to GoalMaker\'s server. Check your internet and try again.</string>
+    <string name="startup_failed_title">GoalMaker cannot start</string>
+    <string name="startup_failed">It could not open its data on this phone. Your data is still there. Starting it again is worth a try; if that does not help, reinstall and restore from an export.</string>
     <string name="sign_in_error_other">That did not work. Try again in a moment.</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 

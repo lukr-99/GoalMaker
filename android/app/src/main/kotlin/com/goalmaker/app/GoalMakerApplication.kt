@@ -14,16 +14,28 @@ class GoalMakerApplication : Application(), Configuration.Provider {
     lateinit var graph: AppGraph
         private set
 
+    /**
+     * Why the app could not start, usually its data file. The screen says so rather than leaving
+     * Android to close a window that never appeared (M6-06).
+     */
+    var startupFailure: Throwable? = null
+        private set
+
     override fun onCreate() {
         super.onCreate()
         // Before the graph, so a crash while it is built is written down too.
         CrashLog.install(filesDir)
-        graph = AppGraph(this)
+        try {
+            graph = AppGraph(this)
+        } catch (error: Throwable) {
+            startupFailure = error
+            CrashLog.write(filesDir, error)
+        }
     }
 
     // Looks the graph up when a worker runs, so WorkManager may initialize before onCreate finishes.
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
-            .setWorkerFactory(SyncWorkerFactory { graph.syncInBackground() })
+            .setWorkerFactory(SyncWorkerFactory { startupFailure == null && graph.syncInBackground() })
             .build()
 }
