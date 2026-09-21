@@ -8,6 +8,7 @@ import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { periodStart, reviewId, type ReviewKind } from "../rules/reviews.ts";
 import { compareText, type TaskItem, type TaskState } from "../rules/task.ts";
 import {
+  canServe,
   type GoalEntryItem,
   type GoalHorizon,
   type GoalItem,
@@ -165,6 +166,7 @@ export interface Habit extends HabitItem {
 
 /** A habit's rest, with the habit it belongs to. */
 export interface Pause {
+  id: string;
   habitId: string;
   from: Day;
   until: Day | null;
@@ -206,6 +208,8 @@ const MAX_LOCATION = 500;
 const MAX_HABIT_NAME = 100;
 const MAX_DISPLAY_NAME = 80;
 const MAX_TIME_ZONE = 64;
+// Further off than any pause reaches, so an open ended one compares like every other.
+const FAR_OFF = "9999-12-31";
 const TIMESTAMP = `'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`;
 
 /**
@@ -631,7 +635,7 @@ export class Planner {
       insert into public.goals (id, title, emoji, horizon, period_start, parent_id, progress_mode, target, unit,
                                 position)
       values (${id}, ${title}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${horizon}, ${start},
-              ${await this.parentGoal(fields.parent, null)}, ${mode}, ${target},
+              ${await this.parentGoal(fields.parent, { id: null, horizon, periodStart: start })}, ${mode}, ${target},
               ${mode === "number" ? clip(fields.unit ?? null, MAX_UNIT) : null}, ${position})`;
     return await this.goal(id);
   }
@@ -650,7 +654,11 @@ export class Planner {
       update public.goals set
         title = ${title},
         emoji = ${fields.emoji === undefined ? goal.emoji : clip(fields.emoji, MAX_EMOJI)},
-        parent_id = ${fields.parent === undefined ? goal.parentId : await this.parentGoal(fields.parent, id)},
+        parent_id = ${
+      fields.parent === undefined
+        ? goal.parentId
+        : await this.parentGoal(fields.parent, { id, horizon: goal.horizon, periodStart: goal.periodStart })
+    },
         target = ${numeric ? target : null},
         unit = ${numeric ? (fields.unit === undefined ? goal.unit : clip(fields.unit, MAX_UNIT)) : null}
       where id = ${id}`;
@@ -723,9 +731,15 @@ export class Planner {
   /** Every pause that is not deleted. */
   async pauses(): Promise<Pause[]> {
     const rows = await this.db`
-      select habit_id::text, starts_on::text, ends_on::text from public.habit_pauses
+      select id::text, habit_id::text, starts_on::text, ends_on::text from public.habit_pauses
       where deleted_at is null order by starts_on, habit_id`;
-    return rows.map((row) => ({ habitId: row.habit_id, from: row.starts_on, until: row.ends_on, deleted: false }));
+    return rows.map((row) => ({
+      id: row.id,
+      habitId: row.habit_id,
+      from: row.starts_on,
+      until: row.ends_on,
+      deleted: false,
+    }));
   }
 
   /** The habit with this id; it has to be the owner's and not deleted. */
@@ -1202,23 +1216,41 @@ export class Planner {
    * counts, and it stays after the habit resumes so old streaks still read right.
    */
   async pauseHabit(habitId: string, from: Day, until: Day | null): Promise<Pause> {
-    await this.habit(habitId);
+    const habit = await this.habit(habitId);
     if (until !== null && until < from) throw new PlannerError("A pause cannot end before it starts.");
+    const last = until ?? FAR_OFF;
+    const clash = (await this.pauses()).filter((pause) => pause.habitId === habitId).find((pause) =>
+      // What the new stretch runs into, and the later open ended pause the apps refuse as well.
+      (pause.from <= last && (pause.until ?? FAR_OFF) >= from) || (pause.from > from && pause.until === null)
+    );
+    if (clash !== undefined) {
+      const reaches = clash.until === null ? "with no end yet" : `to ${clash.until}`;
+      throw new PlannerError(
+        `"${habit.name}" is already paused from ${clash.from} ${reaches}. Resume it before pausing it again.`,
+      );
+    }
+    const id = crypto.randomUUID();
     await this.db`
       insert into public.habit_pauses (id, habit_id, starts_on, ends_on)
-      values (${crypto.randomUUID()}, ${habitId}, ${from}, ${until})`;
-    return { habitId, from, until, deleted: false };
+      values (${id}, ${habitId}, ${from}, ${until})`;
+    return { id, habitId, from, until, deleted: false };
   }
 
-  /** Ends the pause a habit is on, with this day as its last paused day. */
+  /**
+   * Brings a habit back on a day: the pause covering it ends the day before, or goes away when it
+   * started that day, so the habit counts again from that day on (windows HabitList.Resume).
+   */
   async resumeHabit(habitId: string, day: Day): Promise<Habit> {
     const habit = await this.habit(habitId);
-    const rows = await this.db`
-      update public.habit_pauses set ends_on = ${day}
-      where habit_id = ${habitId} and deleted_at is null and starts_on <= ${day}::date
-        and (ends_on is null or ends_on > ${day}::date)
-      returning id`;
-    if (rows.length === 0) throw new PlannerError(`${habit.name} is not paused on ${day}.`);
+    const open = (await this.pauses()).filter((pause) => pause.habitId === habitId).find((pause) =>
+      (pause.from <= day && (pause.until === null || pause.until >= day)) || (pause.from > day && pause.until === null)
+    );
+    if (open === undefined) throw new PlannerError(`"${habit.name}" is not paused on ${day}.`);
+    if (open.from >= day) {
+      await this.db`update public.habit_pauses set deleted_at = now() where id = ${open.id}`;
+    } else {
+      await this.db`update public.habit_pauses set ends_on = ${addDays(day, -1)} where id = ${open.id}`;
+    }
     return habit;
   }
 
@@ -1228,15 +1260,27 @@ export class Planner {
     return (await this.goal(reference.trim())).id;
   }
 
-  /** The goal a parent reference points at, never the goal itself and never one of its own. */
-  private async parentGoal(reference: string | null | undefined, selfId: string | null): Promise<string | null> {
+  /**
+   * The goal a parent reference points at. It has to be able to hold the child, which is a longer
+   * horizon over a period that overlaps (rules/goals.ts canServe, the rule the apps offer parents
+   * by), and it can be neither the goal itself nor one of its own.
+   */
+  private async parentGoal(
+    reference: string | null | undefined,
+    child: { id: string | null; horizon: GoalHorizon; periodStart: Day },
+  ): Promise<string | null> {
     if (reference === undefined || reference === null || reference.trim() === "") return null;
     const parent = await this.goal(reference.trim());
-    if (selfId !== null) {
+    if (!canServe(child.horizon, child.periodStart, parent.horizon, parent.periodStart)) {
+      throw new PlannerError(
+        `"${parent.title}" cannot hold this goal: a parent needs a longer horizon and a period that overlaps it.`,
+      );
+    }
+    if (child.id !== null) {
       const goals = await this.goals();
       let walk: string | null = parent.id;
       while (walk !== null) {
-        if (walk === selfId) throw new PlannerError("A goal cannot sit under itself.");
+        if (walk === child.id) throw new PlannerError("A goal cannot sit under itself.");
         walk = goals.find((one) => one.id === walk)?.parentId ?? null;
       }
     }

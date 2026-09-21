@@ -23,7 +23,9 @@ import {
 import { goalAmounts, habitPeriodStart, habitState, ring, streak } from "../rules/habits.ts";
 import { lists } from "../rules/listRules.ts";
 import { board, COLUMNS, PRIORITIES, type ProjectItem } from "../rules/projects.ts";
-import { byCreation } from "../rules/task.ts";
+import { seriesOf } from "../rules/occurrences.ts";
+import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
+import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
 import * as format from "./format.ts";
 
 /**
@@ -124,6 +126,37 @@ function weekdayMask(days: string[] | undefined): number | undefined {
   return mask;
 }
 
+// A month grid is 42 days, so a repeat is followed at most this many times inside a range.
+const MAX_REPEATS = 60;
+
+/**
+ * The days each repeating task would come round to inside a range, by day. Only the current
+ * occurrence exists as a row, so these are worked out from the task's rule: an open task only, never
+ * the day it is already planned for, and never a day another occurrence of its series holds
+ * (docs/calendar.md, the same walk CalendarRules does).
+ */
+function projectedRepeats(tasks: TaskItem[], from: Day, to: Day): Map<Day, TaskItem[]> {
+  const taken = new Map<string, Set<Day>>();
+  for (const task of tasks.filter((task) => task.plannedDate !== null)) {
+    const series = seriesOf(task);
+    taken.set(series, (taken.get(series) ?? new Set<Day>()).add(task.plannedDate!));
+  }
+  const found = new Map<Day, TaskItem[]>();
+  for (const task of tasks) {
+    if (task.state !== "open" || task.recurrence === null || task.plannedDate === null) continue;
+    const rule = parseRecurrence(task.recurrence);
+    if (rule === null) continue;
+    const series = taken.get(seriesOf(task)) ?? new Set<Day>();
+    let day: Day | null = task.plannedDate;
+    for (let step = 0; step < MAX_REPEATS; step++) {
+      day = nextOccurrence(rule, day, day);
+      if (day === null || day > to) break;
+      if (day >= from && !series.has(day)) found.set(day, [...(found.get(day) ?? []), task]);
+    }
+  }
+  return found;
+}
+
 /** An area as one line: its name, color, emoji and whether it is put away. */
 function areaText(area: Area): string {
   const parts = [`@${area.name}`, area.color];
@@ -134,7 +167,7 @@ function areaText(area: Area): string {
 
 /** One entry of the activity log as one line, the way the Activity screen reads it. */
 function changeText(change: Change): string {
-  const who = change.actor === "claude" ? "Claude" : "the owner";
+  const who = change.actor === "claude" ? "Claude" : change.actor === "system" ? "GoalMaker" : "the owner";
   const what = change.label === null ? change.entity : `${change.label} (${change.entity})`;
   const undone = change.undone ? " · undone" : "";
   return `- ${change.action} ${what}, by ${who} at ${change.at}${undone} (change id ${change.id})`;
@@ -1009,7 +1042,8 @@ export const tools: Tool[] = [
     description:
       "Pauses a habit over a stretch of days, for a holiday or an injury. Paused days neither break a streak nor " +
       "count toward one, and the pause stays on the record afterwards so old streaks still read right. Leave the " +
-      "last day out for a pause with no end yet, and resume_habit ends it. skip_habit is for a single period.",
+      "last day out for a pause with no end yet, and resume_habit ends it. A habit already paused over those " +
+      "days has to be resumed first. skip_habit is for a single period.",
     input: {
       id: habitId,
       from: day.optional().describe("The first paused day; today by default."),
@@ -1030,17 +1064,19 @@ export const tools: Tool[] = [
   {
     name: "resume_habit",
     title: "Resume a habit",
-    description: "Ends the pause a habit is on, with the given day as its last paused day.",
+    description:
+      "Brings a habit back on a day: the pause covering it ends the day before, or goes away when it started " +
+      "that day, so the habit counts again from that day on.",
     input: {
       id: habitId,
-      day: day.optional().describe("The last paused day; today by default."),
+      day: day.optional().describe("The day it counts again from; today by default."),
     },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
       const on = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
       const habit = await planner.resumeHabit(args.id, on);
-      return `"${habit.name}" is back from ${format.longDay(addDays(on, 1))}.`;
+      return `"${habit.name}" counts again from ${format.longDay(on)}.`;
     },
   },
   {
@@ -1425,9 +1461,10 @@ export const tools: Tool[] = [
     name: "get_calendar",
     title: "The calendar",
     description:
-      "The plan across a stretch of days: what is planned on each one, what is due then, and which of those carry " +
-      "a reminder. A week or a month at a time reads best. Only open tasks appear, the way the apps' calendar " +
-      "shows them.",
+      "The plan across a stretch of days: what is planned on each one, what is due then, where a repeating task " +
+      "would come round to, and which of them carry a reminder. A week or a month at a time reads best. Each day " +
+      "runs earliest time first with untimed tasks after, the same order Today uses. A repeat has no row of its " +
+      "own yet, so it is worked out from the task's rule.",
     input: {
       from: day.optional().describe("The first day; today by default."),
       to: day.optional().describe("The last day; six days after the first by default."),
@@ -1440,20 +1477,26 @@ export const tools: Tool[] = [
       if (last < first) throw new PlannerError("The last day comes before the first one.");
       const names = await namesOf(planner);
       const reminded = await planner.remindedTasks();
-      const open = (await planner.tasks()).filter((task) => task.state === "open");
+      const live = await planner.tasks();
+      // A dropped task leaves the calendar; a done one still sits on the day it was planned for.
+      const planned = live.filter((task) => task.state !== "dropped" && task.plannedDate !== null);
+      const due = live.filter((task) => task.state === "open" && task.deadline !== null);
+      const repeats = projectedRepeats(live, first, last);
       const span = `${format.longDay(first)} to ${format.longDay(last)}`;
       const lines: string[] = [];
       for (let date = first; date <= last; date = addDays(date, 1)) {
-        const planned = open.filter((task) => task.plannedDate === date).sort(byCreation);
-        const due = open.filter((task) => task.deadline === date && task.plannedDate !== date).sort(byCreation);
-        if (planned.length === 0 && due.length === 0) continue;
+        const onDay = planned.filter((task) => task.plannedDate === date).sort(byTime);
+        const dueOn = due.filter((task) => task.deadline === date).sort(byTime);
+        const around = [...(repeats.get(date) ?? [])].sort(byTime);
+        if (onDay.length === 0 && dueOn.length === 0 && around.length === 0) continue;
         lines.push(`${format.longDay(date)}:`);
-        for (const task of planned) {
+        for (const task of onDay) {
           lines.push(format.taskLine(task, names) + (reminded.has(task.id) ? " · reminder" : ""));
         }
-        for (const task of due) lines.push(`${format.taskLine(task, names)} · due`);
+        for (const task of dueOn) lines.push(`${format.taskLine(task, names)} · due`);
+        for (const task of around) lines.push(`${format.taskLine(task, names)} · repeats`);
       }
-      return lines.length === 0 ? `Nothing planned or due from ${span}.` : [`From ${span}:`, ...lines].join("\n");
+      return lines.length === 0 ? `Nothing on the calendar from ${span}.` : [`From ${span}:`, ...lines].join("\n");
     },
   },
   {

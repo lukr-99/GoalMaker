@@ -37,7 +37,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
 | `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction and the goal it feeds |
-| `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts |
+| `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
 | `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
 | `create_project`, `create_milestone` | A project with its area, repository, folder and milestones; a milestone on one that already exists |
@@ -45,9 +45,9 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `move_project_item` | Moves an item between columns, which finishes or reopens the task with it |
 | `update_project`, `delete_project` | A project's own fields, its status, or the project itself; its items stay |
 | `update_milestone`, `delete_milestone` | Renames or removes a milestone; the items that carried it stay |
-| `get_activity`, `undo_change` | The latest changes with who made each, and undo over the apps' own rules |
+| `get_activity`, `undo_change` | The latest changes with who made each (owner, Claude or GoalMaker), and undo |
 | `get_settings`, `update_settings` | The time zone and day start every planning day is worked out from |
-| `get_calendar` | A stretch of days with what is planned, what is due and what carries a reminder |
+| `get_calendar` | A stretch of days with what is planned, what is due, and where a repeat would come round |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the

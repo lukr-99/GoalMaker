@@ -495,12 +495,27 @@ Deno.test({
         assertStringIncludes(edited.text, "Gym session");
 
         assertStringIncludes(
-          (await client.tool("pause_habit", { id: gymId, until: "2099-01-01" })).text,
+          (await client.tool("pause_habit", { id: gymId, from: "2026-10-01", until: "2026-10-10" })).text,
           "paused from",
         );
-        assertStringIncludes((await client.tool("resume_habit", { id: gymId })).text, "back from");
-        const [pause] = await sql`select ends_on from public.habit_pauses where habit_id = ${gymId}`;
-        assert(pause.ends_on !== null, "resuming closes the pause rather than dropping it");
+        for (
+          const overlapping of [
+            { id: gymId, from: "2026-10-05", until: "2026-10-20" },
+            { id: gymId, from: "2026-09-01" },
+          ]
+        ) {
+          const again = await client.tool("pause_habit", overlapping);
+          assert(again.isError, `a pause over paused days should be refused: ${again.text}`);
+        }
+        const [onlyOne] = await sql`select count(*)::int as n from public.habit_pauses where habit_id = ${gymId}`;
+        assertEquals(onlyOne.n, 1, "a refused pause writes nothing");
+
+        assertStringIncludes(
+          (await client.tool("resume_habit", { id: gymId, day: "2026-10-05" })).text,
+          "counts again from",
+        );
+        const [pause] = await sql`select ends_on::text from public.habit_pauses where habit_id = ${gymId}`;
+        assertEquals(pause.ends_on, "2026-10-04", "the pause ends the day before the habit counts again");
 
         await client.tool("check_in_habit", { id: gymId, amount: 1 });
         assert(!(await client.tool("delete_habit", { id: gymId })).isError);
@@ -552,7 +567,12 @@ Deno.test({
         const [child] = await sql`select parent_id::text from public.goals where id = ${weekId}`;
         assertEquals(child.parent_id, monthId, "a goal sits under a wider one");
         const loop = await client.tool("update_goal", { id: monthId, parent: weekId });
-        assert(loop.isError, loop.text);
+        assert(loop.isError, "a wider goal cannot sit under a narrower one: " + loop.text);
+        const far = await client.tool("add_goal", { title: "A week in 2027", horizon: "week", day: "2027-03-01" });
+        const farId = /\(goal id ([0-9a-f-]{36})\)/.exec(far.text)![1];
+        const apart = await client.tool("update_goal", { id: farId, parent: monthId });
+        assert(apart.isError, "periods that do not overlap cannot be linked: " + apart.text);
+        await client.tool("delete_goal", { id: farId });
         assert(!(await client.tool("delete_goal", { id: weekId })).isError);
 
         const saved = await client.tool("save_review_summary", {
@@ -593,13 +613,36 @@ Deno.test({
         assertEquals(back.title, "Rename me", "undo puts the row back the way the change found it");
         const twice = await client.tool("undo_change", { id: changeId });
         assert(twice.isError, twice.text);
+
+        await sql`
+          insert into public.activity_log (owner_id, entity, entity_id, action, actor, after)
+          values (${OWNER}, 'tasks', ${taskId}, 'update', 'system', '{"title": "Swept up"}'::jsonb)`;
+        assertStringIncludes(
+          (await client.tool("get_activity", { limit: 3 })).text,
+          "by GoalMaker",
+          "a change GoalMaker made is not reported as the owner's",
+        );
       });
 
       await t.step("the calendar and the settings read and change", async () => {
-        await client.tool("add_task", { title: "Deploy the connector", day: "today" });
-        const week = await client.tool("get_calendar", {});
+        await client.tool("add_task", { title: "Evening walk", day: "today", time: "19:00" });
+        await client.tool("add_task", { title: "Untimed errand", day: "today" });
+        await client.tool("add_task", { title: "Morning pages", day: "today", time: "07:00" });
+        const week = await client.tool("get_calendar", { to: "today" });
         assert(!week.isError, week.text);
-        assertStringIncludes(week.text, "Deploy the connector");
+        const order = ["Morning pages", "Evening walk", "Untimed errand"].map((one) => week.text.indexOf(one));
+        assert(
+          order.every((at) => at >= 0) && order[0] < order[1] && order[1] < order[2],
+          `a day runs earliest time first with untimed tasks after: ${week.text}`,
+        );
+        assert(!week.text.includes("repeats"), "a repeat is never drawn on the day it is already planned for");
+
+        await client.tool("add_task", { title: "Weekly tidy", day: "today", repeat: "FREQ=WEEKLY" });
+        const ahead = await client.tool("get_calendar", { to: "2026-12-31" });
+        assert(
+          (ahead.text.match(/Weekly tidy · repeats/g) ?? []).length >= 2,
+          `a repeating task is projected onto the days it comes round to: ${ahead.text}`,
+        );
         const backwards = await client.tool("get_calendar", { from: "tomorrow", to: "today" });
         assert(backwards.isError, backwards.text);
 
