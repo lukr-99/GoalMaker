@@ -25,20 +25,29 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat |
+| `add_area`, `update_area`, `delete_area` | An area with its palette color and emoji; archive it or bring it back |
+| `add_tag`, `update_tag`, `delete_tag` | A tag; renaming one reaches every task that carries it |
 | `complete_task`, `drop_task`, `reopen_task`, `move_task` | A repeating task moves on and back like in the apps |
 | `delete_task`, `restore_task` | Deletes are soft and need the owner's yes in the conversation first |
 | `add_reminder`, `remove_reminder` | At a local time, or minutes before the task's time |
-| `add_step`, `check_step` | A task's checklist |
-| `finish_plan_tomorrow` | Records the ritual, which quiets the evening reminder on both devices |
-| `save_review_summary`, `get_review_summaries` | A weekly or monthly review's summary, mood and energy |
+| `add_step`, `check_step`, `update_step`, `remove_step` | A task's checklist |
+| `finish_plan_tomorrow`, `finish_review` | Records a ritual, which quiets its reminder on both devices |
+| `save_review_summary`, `get_review_summaries` | A review's summary, mood, energy and the reflections written in it |
 | `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
-| `set_goal_status`, `log_goal_amount` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
+| `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
+| `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction and the goal it feeds |
+| `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts |
 | `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
 | `create_project`, `create_milestone` | A project with its area, repository, folder and milestones; a milestone on one that already exists |
 | `add_project_item`, `update_project_item` | An item with its type, priority, milestone and column; its project can change |
 | `move_project_item` | Moves an item between columns, which finishes or reopens the task with it |
+| `update_project`, `delete_project` | A project's own fields, its status, or the project itself; its items stay |
+| `update_milestone`, `delete_milestone` | Renames or removes a milestone; the items that carried it stay |
+| `get_activity`, `undo_change` | The latest changes with who made each, and undo over the apps' own rules |
+| `get_settings`, `update_settings` | The time zone and day start every planning day is worked out from |
+| `get_calendar` | A stretch of days with what is planned, what is due and what carries a reminder |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
