@@ -205,8 +205,9 @@ public sealed partial class SignInViewModel : ObservableObject
                 case AuthResult.Offline:
                     ErrorText = strings.Get("SignIn.Error.Offline");
                     break;
-                case AuthResult.Failed failed:
-                    ErrorText = strings.Get("SignIn.Error.Other", failed.Detail);
+                case AuthResult.Failed:
+                    // The server's own words say nothing anyone can act on (docs/problems.md).
+                    ErrorText = strings.Get("SignIn.Error.Other");
                     break;
             }
 

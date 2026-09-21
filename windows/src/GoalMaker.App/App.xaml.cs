@@ -5,6 +5,7 @@ using GoalMaker.App.Diagnostics;
 using GoalMaker.App.Localization;
 using GoalMaker.App.Shell;
 using GoalMaker.App.Startup;
+using GoalMaker.Infrastructure.Storage;
 
 namespace GoalMaker.App;
 
@@ -35,7 +36,19 @@ public partial class App : Application
         }
 
         var strings = new ResourceStrings(this);
-        graph = new AppGraph(build, strings, Resources, RunOnUi, () => RunOnUi(Quit), () => RunOnUi(Restart));
+        try
+        {
+            graph = new AppGraph(build, strings, Resources, RunOnUi, () => RunOnUi(Quit), () => RunOnUi(Restart));
+        }
+        catch (Exception error)
+        {
+            // Usually the replica: a file that will not open leaves the owner with a message and a
+            // place to look, rather than a window that never appears (M6-06).
+            StartupFailure.Show(error, strings, new AppDataPaths(build.IsDevBuild).Root);
+            Shutdown();
+            return;
+        }
+
         CrashLog.Install(this, graph.Paths.Root);
         window = new MainWindow(graph);
         graph.Theme.Attach(window);

@@ -49,7 +49,8 @@
     <sys:String x:Key="SignIn.Error.WrongCode">That code is wrong or has expired. Try again or send a new one.</sys:String>
     <sys:String x:Key="SignIn.Error.TooManyRequests">Too many attempts. Wait a minute, then try again.</sys:String>
     <sys:String x:Key="SignIn.Error.Offline">No connection to GoalMaker's server. Check your internet and try again.</sys:String>
-    <sys:String x:Key="SignIn.Error.Other">Sign-in failed: {0}</sys:String>
+    <sys:String x:Key="Startup.Failed">GoalMaker could not open its data on this PC, so it cannot start.&#10;&#10;Your data is still in {0}. Starting it again is worth a try. If that does not help, move that folder aside and restore from an export.</sys:String>
+    <sys:String x:Key="SignIn.Error.Other">That did not work. Try again in a moment.</sys:String>
     <sys:String x:Key="SignIn.DevBackend">Development build · {0}</sys:String>
 
     <!-- Plan tomorrow (docs/plan-tomorrow.md) -->

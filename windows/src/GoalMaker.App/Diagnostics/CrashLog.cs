@@ -19,7 +19,8 @@ public static class CrashLog
         TaskScheduler.UnobservedTaskException += (_, e) => Write(path, e.Exception);
     }
 
-    private static void Write(string path, Exception? error)
+    /// <summary>Writes one exception, for a failure that happens before anything is installed.</summary>
+    public static void Write(string path, Exception? error)
     {
         if (error is null)
         {

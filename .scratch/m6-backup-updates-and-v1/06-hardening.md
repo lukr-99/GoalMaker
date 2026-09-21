@@ -1,6 +1,6 @@
 # M6-06: Hardening before the release
 
-**Status:** todo · **Milestone:** M6
+**Status:** in progress · **Milestone:** M6
 
 ## Scope
 - The paths that only show up in real use: no network at sign-in and mid-sync, a session that
@@ -19,3 +19,18 @@
 - A test for each failure path above at the highest seam that can reach it, with fakes for the
   network, the clock and the disk.
 - No string in either app's resources names an exception, a table or an HTTP code.
+
+## Progress
+
+2026-09-21. The string pass found one leak and it is gone: a sign-in that failed for any other reason
+showed the server's own words, in both apps, and now says "That did not work. Try again in a moment."
+Nothing else in either app's strings names an exception, a code or a table; the dev-only backend hint
+names a localhost address, which is what it is for.
+
+A replica that will not open used to end the Windows app before a window appeared, which is what a
+migration this build did not know did earlier today. It now says so, names the folder the data is in,
+and writes the exception to logs/crash.log.
+
+Left: the rest of the real-use paths (no network mid-sync, an expired session, a full disk, a clock
+jump, a time zone change, the day rolling over while a screen is open), the same startup failure on
+Android, and sync under pressure.

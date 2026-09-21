@@ -84,7 +84,7 @@ fun SignInScreen(viewModel: SignInViewModel, backendLabel: String?) {
                             }
                             state.error?.let { error ->
                                 Text(
-                                    text = errorText(error, state.errorDetail),
+                                    text = errorText(error),
                                     color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
@@ -176,11 +176,12 @@ private fun PrimaryAction(label: String, busy: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun errorText(error: SignInError, detail: String): String = when (error) {
+private fun errorText(error: SignInError): String = when (error) {
     SignInError.INVALID_EMAIL -> stringResource(R.string.sign_in_error_email)
     SignInError.INVALID_CODE -> stringResource(R.string.sign_in_error_code)
     SignInError.WRONG_CODE -> stringResource(R.string.sign_in_error_wrong_code)
     SignInError.TOO_MANY_REQUESTS -> stringResource(R.string.sign_in_error_rate)
     SignInError.OFFLINE -> stringResource(R.string.sign_in_error_offline)
-    SignInError.OTHER -> stringResource(R.string.sign_in_error_other, detail)
+    // The server's own words say nothing anyone can act on (docs/problems.md).
+    SignInError.OTHER -> stringResource(R.string.sign_in_error_other)
 }
