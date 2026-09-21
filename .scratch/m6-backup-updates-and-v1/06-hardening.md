@@ -34,3 +34,19 @@ and writes the exception to logs/crash.log.
 Left: the rest of the real-use paths (no network mid-sync, an expired session, a full disk, a clock
 jump, a time zone change, the day rolling over while a screen is open), the same startup failure on
 Android, and sync under pressure.
+
+### Checked, already held
+
+- **The day rolling over while a screen is open, a clock jump, a time zone change.** Android rebuilds
+  its lists from `clock()` every minute; Windows has the day timer and listens for the system's time
+  and power events. Both pick a jump up on the next tick.
+- **A large first pull.** The engine pages at 500 with a cursor, and `SyncEngineTests` pulls 1,017
+  rows across three pages to prove it.
+- **No network mid-sync.** The run reports offline, the outbox keeps what it has, and the status says
+  so without a word from the server.
+
+### Left, and they want hands rather than a scan
+
+A full disk, a session the server refuses while the app is open, keyboard reach on Windows, and both
+apps at the largest system text size. Worth doing on the real devices during M6-07, not guessed at
+here.
