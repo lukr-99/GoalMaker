@@ -350,6 +350,73 @@ Deno.test({
         assertStringIncludes(missing.text, "The owner's projects are: GoalMaker.");
       });
 
+      await t.step("a project and its milestones are created through the connector", async () => {
+        const made = await client.tool("create_project", {
+          name: "Relay",
+          description: "Phone as a Stream Deck",
+          area: "Side projects",
+          repository: "https://github.com/owner/relay",
+          folder: "F:\\Relay",
+          notes: "The agent is the brain.",
+          milestones: ["M0", "M1"],
+        });
+        assert(!made.isError, made.text);
+        assertStringIncludes(made.text, "Relay · active · @Side projects · no items yet");
+        assertStringIncludes(made.text, "Milestones: M0");
+        const madeId = /\(project id ([0-9a-f-]{36})\)/.exec(made.text)![1];
+        const [row] = await sql`
+          select name, description, status, repository_url, local_folder, notes
+          from public.projects where id = ${madeId}`;
+        assertEquals(row, {
+          name: "Relay",
+          description: "Phone as a Stream Deck",
+          status: "active",
+          repository_url: "https://github.com/owner/relay",
+          local_folder: "F:\\Relay",
+          notes: "The agent is the brain.",
+        });
+        const [log] = await sql`
+          select actor from public.activity_log
+          where entity = 'projects' and entity_id = ${madeId} and action = 'create'`;
+        assertEquals(log.actor, "claude");
+        const milestones = await sql`
+          select name from public.project_milestones where project_id = ${madeId} order by position`;
+        assertEquals(milestones.map((one: Json) => one.name), ["M0", "M1"]);
+
+        // What the repository and the folder are for: a checkout reaches its own project.
+        const reached = await client.tool("find_project", { folder: "F:\\Relay\\agent\\src" });
+        assertStringIncludes(reached.text, `(project id ${madeId})`);
+
+        const milestone = await client.tool("create_milestone", { project: "F:\\Relay", name: "M2" });
+        assert(!milestone.isError, milestone.text);
+        assertStringIncludes(milestone.text, "Added M2 to Relay");
+        const twice = await client.tool("create_milestone", { project: madeId, name: "m2" });
+        assert(twice.isError, twice.text);
+
+        // A name, a repository or a folder already taken would make find_project a toss-up.
+        for (
+          const clash of [
+            { name: "relay", folder: "F:\\Elsewhere" },
+            { name: "Relay agent", repository: "git@github.com:owner/relay.git" },
+            { name: "Relay agent", folder: "F:\\Relay\\" },
+          ]
+        ) {
+          const refused = await client.tool("create_project", clash);
+          assert(refused.isError, `${JSON.stringify(clash)} should have clashed: ${refused.text}`);
+        }
+
+        // A project inside another project's folder is fine, and the deepest folder wins.
+        const nested = await client.tool("create_project", { name: "Relay agent", folder: "F:\\Relay\\agent" });
+        assert(!nested.isError, nested.text);
+        const nestedId = /\(project id ([0-9a-f-]{36})\)/.exec(nested.text)![1];
+        const inner = await client.tool("find_project", { folder: "F:\\Relay\\agent\\src" });
+        assertStringIncludes(inner.text, `(project id ${nestedId})`);
+
+        const nameless = await client.tool("create_project", { name: "  " });
+        assert(nameless.isError, nameless.text);
+        assertStringIncludes(nameless.text, "A project needs a name.");
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120

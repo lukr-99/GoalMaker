@@ -36,6 +36,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
 | `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
+| `create_project`, `create_milestone` | A project with its area, repository, folder and milestones; a milestone on one that already exists |
 | `add_project_item`, `update_project_item` | An item with its type, priority, milestone and column; its project can change |
 | `move_project_item` | Moves an item between columns, which finishes or reopens the task with it |
 

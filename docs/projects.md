@@ -55,6 +55,11 @@ milestone and column, and moves an item between columns, over these same rules
 or the project's name, so Claude Code drops an idea into the right backlog without being told which
 one it is.
 
+Claude also makes a project, with its milestones in one go, and adds a milestone to one that already
+exists. A new project's name, repository and folder each have to be free, because those are what the
+match above reads and two projects sharing one would make it a toss-up. A folder sitting inside
+another project's folder is fine, since the deepest folder wins.
+
 ## Storage
 
 `projects` and `project_milestones` are synced tables (Supabase migration 0013, replica migration
