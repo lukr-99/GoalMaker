@@ -4,7 +4,8 @@ One free project holds the real data (ADR 0001). Do these steps once. The dashbo
 around now and then; the setting names below are what to look for.
 
 Done on 2026-09-20: the project is `wkjnauxqwlqhsqrqnkhg` in eu-central-1, with the schema, the
-settings and the repository secrets below. What is left is in "5. Sign-in emails".
+settings and two of the three repository secrets below. What is left is the secret key in step 4 and
+the sender in step 5.
 
 ## 1. Create the project
 
@@ -82,7 +83,7 @@ For release builds on your own PC, put the URL and publishable key in untracked 
 
 Never put the secret key in either file.
 
-## 5. Sign-in emails: the project needs its own SMTP
+## 5. Sign-in emails: the project needs its own sender
 
 **Not done yet, and sign-in on the cloud project cannot work until it is.** GoalMaker signs in with a
 6-digit code, which means both the **Magic link** and **Confirm signup** templates have to show
@@ -93,13 +94,41 @@ refuses that on a free project using its own email service:
 > Email template modification is not available for free tier projects using the default email
 > provider. Please upgrade your plan or configure a custom SMTP provider.
 
-So the project needs its own SMTP before the templates can go out. A free tier from Resend, Brevo or
-Mailgun is enough for one owner. Put the host, port, user and password under `[auth.email.smtp]` in
-the `[remotes.production]` block (the password as `env(...)`, never in the file), then uncomment the
-two template blocks in `config.toml` and run `config push` again.
+So the project sends through its own SMTP instead. Resend's free tier (3,000 emails a month) is far
+more than one owner needs, and `config.toml` already carries the block to uncomment.
 
-Until then the built-in service sends Supabase's own templates, which carry a link rather than a
-code, and only to your organization's own members.
+### Resend, once
+
+1. **Sign up** at <https://resend.com> with the address you sign in to GoalMaker with. That matters
+   for step 2.
+2. **Pick the address to send from.**
+   - *No domain of your own:* use `onboarding@resend.dev`, the shared sender every account gets. It
+     may only send to the address the Resend account itself is registered with, which is exactly the
+     one account GoalMaker has, so it is enough. Anyone else who tried to sign in would get nothing.
+   - *A domain of your own:* **Domains → Add Domain**, put the DKIM, SPF and DMARC records it shows
+     into your DNS, and wait for it to go green. Then send from something like
+     `goalmaker@yourdomain`, which works for any address.
+3. **API Keys → Create API Key**, permission **Sending access**. Copy it once; Resend never shows it
+   again.
+
+### Tell the project about it
+
+In `supabase/config.toml`, in the `[remotes.production]` block at the bottom: uncomment
+`[remotes.production.auth.email.smtp]`, put your sending address in `admin_email`, and swap the two
+template blocks for the two commented ones below them. Then, with the key in the environment so it
+never lands in a file or your shell history:
+
+```powershell
+$env:RESEND_API_KEY = Read-Host 'Resend API key' -AsSecureString | ConvertFrom-SecureString -AsPlainText
+npx supabase config diff --project-ref <project ref>   # read this first
+npx supabase config push --project-ref <project ref>
+```
+
+The diff should show the SMTP settings and the two templates and nothing else. Send yourself a code
+from a release build afterwards: it should carry six digits, not a link.
+
+Keep the API key in your password manager. It is not needed again unless the settings are pushed
+from another machine.
 
 ## 6. Create your account, then close the door
 

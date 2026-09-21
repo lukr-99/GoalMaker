@@ -451,15 +451,36 @@ max_frequency = "1m0s"
 otp_length = 6
 otp_expiry = 600
 
-# The sign-in code template cannot go out yet: a free project on Supabase's own email service
-# refuses any template change ("Email template modification is not available for free tier projects
-# using the default email provider"). Until the project has its own SMTP, these keep the built-in
-# templates, so nothing tries to push them. See docs/setup/cloud-supabase.md.
+# The project's own sender, which is what lets the sign-in code template go out at all: a free
+# project on Supabase's own email service refuses any template change ("Email template modification
+# is not available for free tier projects using the default email provider"). Fill in admin_email
+# with the address Resend is allowed to send from, set RESEND_API_KEY in the environment, and
+# uncomment this block together with the two templates below. Steps in docs/setup/cloud-supabase.md.
+# [remotes.production.auth.email.smtp]
+# enabled = true
+# host = "smtp.resend.com"
+# port = 587
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "onboarding@resend.dev"
+# sender_name = "GoalMaker"
+
+# Until that sender exists these keep Supabase's built-in templates, so nothing tries to push a
+# change it would refuse. With SMTP on, swap them for the two blocks under them.
 [remotes.production.auth.email.template.magic_link]
 subject = "Your sign-in link"
 
 [remotes.production.auth.email.template.confirmation]
 subject = "Confirm your email address"
+
+# The sign-in code, the same template the local stack uses (supabase/templates/sign-in-code.html).
+# [remotes.production.auth.email.template.magic_link]
+# subject = "Your GoalMaker sign-in code"
+# content_path = "./supabase/templates/sign-in-code.html"
+
+# [remotes.production.auth.email.template.confirmation]
+# subject = "Your GoalMaker sign-in code"
+# content_path = "./supabase/templates/sign-in-code.html"
 
 [remotes.production.storage.analytics]
 enabled = true
