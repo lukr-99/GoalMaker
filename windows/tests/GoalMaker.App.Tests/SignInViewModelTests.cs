@@ -69,22 +69,20 @@ public sealed class SignInViewModelTests
     }
 
     [Fact]
-    public async Task TheDevAccountSignsInWithoutAnyMail()
+    public async Task OnePressSignsInAsTheDevAccount()
     {
-        var mailbox = 0;
-        var viewModel = new SignInViewModel(auth, new KeyStrings(), devBackend: "http://127.0.0.1:55321", devCode: (_, _) =>
-        {
-            mailbox++;
-            return Task.FromResult<string?>(null);
-        });
+        var viewModel = new SignInViewModel(
+            auth,
+            new KeyStrings(),
+            devBackend: "http://127.0.0.1:55321",
+            devCode: (email, _) => Task.FromResult<string?>(email == DevSignIn.Email ? "112233" : null));
         Assert.True(viewModel.HasDevSignIn);
 
         await viewModel.SignInAsDevCommand.ExecuteAsync(null);
 
         Assert.Equal(DevSignIn.Email, viewModel.Email);
         Assert.Equal([DevSignIn.Email], auth.Sent);
-        Assert.Equal([(DevSignIn.Email, DevSignIn.Code)], auth.Verified);
-        Assert.Equal(0, mailbox);
+        Assert.Equal([(DevSignIn.Email, "112233")], auth.Verified);
     }
 
     [Fact]

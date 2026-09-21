@@ -9,13 +9,8 @@ public sealed class DevSignInContractTests
     private readonly JsonElement vectors = ContractFiles.Load("vectors/dev-sign-in.json").RootElement;
 
     [Fact]
-    public void TheDevAccountIsTheOneTheContractNames()
-    {
-        var account = vectors.GetProperty("account");
-        Assert.Equal(
-            (account.GetProperty("email").GetString(), account.GetProperty("code").GetString()),
-            (DevSignIn.Email, DevSignIn.Code));
-    }
+    public void TheDevAccountIsTheOneTheContractNames() =>
+        Assert.Equal(DevSignIn.Email, vectors.GetProperty("account").GetProperty("email").GetString());
 
     [Fact]
     public void EveryBackendFindsItsMailboxOrNone()

@@ -232,12 +232,6 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour). GoalMaker codes live 10 minutes.
 otp_expiry = 600
 
-# The dev sign-in (docs/sign-in.md): the local stack takes this code for this address and sends no
-# mail at all, so a dev build signs in with one press and a reset stack costs nothing. It is a local
-# setting: [remotes.production] below has none, so the cloud project has no such door.
-[auth.email.test_otp]
-"dev@goalmaker.test" = "424242"
-
 # Use a production-ready SMTP server
 # [auth.email.smtp]
 # enabled = true

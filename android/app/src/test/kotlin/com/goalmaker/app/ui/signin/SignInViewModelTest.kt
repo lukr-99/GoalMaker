@@ -92,20 +92,15 @@ class SignInViewModelTest {
     }
 
     @Test
-    fun `the dev account signs in without any mail`() {
-        var mailbox = 0
-        val viewModel = SignInViewModel(auth) {
-            mailbox++
-            null
-        }
+    fun `one press signs in as the dev account`() {
+        val viewModel = SignInViewModel(auth) { email -> "112233".takeIf { email == DevSignIn.EMAIL } }
         assertTrue(viewModel.uiState.value.hasDevSignIn)
 
         viewModel.signInAsDev()
 
         assertEquals(DevSignIn.EMAIL, viewModel.uiState.value.email)
         assertEquals(listOf(DevSignIn.EMAIL), auth.sent)
-        assertEquals(listOf(DevSignIn.EMAIL to DevSignIn.CODE), auth.verified)
-        assertEquals(0, mailbox)
+        assertEquals(listOf(DevSignIn.EMAIL to "112233"), auth.verified)
     }
 
     @Test

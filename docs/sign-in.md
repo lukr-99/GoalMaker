@@ -35,17 +35,16 @@ whose mailbox is on 55324. Any other backend, the cloud project above all, has n
 is typed as it always was. Release builds carry none of it. Both rules are pinned by
 [`contracts/vectors/dev-sign-in.json`](../contracts/vectors/dev-sign-in.json).
 
-**The dev account.** `dev@goalmaker.test` signs in with a fixed code, `424242`, which no mail ever
-carries: the local stack is told to take it under `[auth.email.test_otp]` in `supabase/config.toml`,
-so nothing is sent at all. One press on the sign-in screen and the app is in. It is an account of its
-own with its own data, kept apart from the one the owner signs in as, which is the point: it is for
-trying things out. `[remotes.production]` has no such block, so the cloud project has no such door.
+**The mailbox.** The local stack catches every message it sends in a mailbox of its own, so the app
+reads the code out of there and fills it in, which signs in, because a full code verifies itself. The
+code in a message is the first run of exactly six digits. It happens when the code is sent and can be
+asked for again from the sign-in screen. A mailbox that is not there, is slow, or holds no code is
+simply no code, and the owner types it.
 
-**The mailbox.** For any other address on the local stack, including the owner's own, the app reads
-the code out of the mailbox the stack caught it in and fills it in, which signs in, because a full
-code verifies itself. The code in a message is the first run of exactly six digits. It runs when the
-code is sent and can be asked for again from the sign-in screen. A mailbox that is not there, is
-slow, or holds no code is simply no code, and the owner types it.
+**The dev account.** `dev@goalmaker.test` is that in one press: the screen fills the address in, asks
+for the code and reads it back. It is an account of its own with its own data, so trying things out
+never touches the one the owner signs in as, which is the point.
 
-Changing `config.toml` needs the stack restarted (`npx supabase stop` then `npx supabase start`)
-before the dev account works.
+The Supabase CLI can pin a fixed code for an address, but only for SMS (`[auth.sms.test_otp]`), so
+there is no way to skip the message itself. Going through the mailbox costs about a second and needs
+nothing set up.

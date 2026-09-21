@@ -16,9 +16,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Drives the two-step email code sign-in. Success is observed through [AuthGateway.session]. A dev
- * build against the local stack gets two ways past the post: the dev account, which the stack lets in
- * with a code it never sends, and [devCode], which reads the code for any other address out of the
- * stack's own mailbox (docs/sign-in.md).
+ * build against the local stack reads the code out of the stack's own mailbox through [devCode] and
+ * fills it in, and offers the dev account, which is that in one press (docs/sign-in.md).
  */
 class SignInViewModel(
     private val auth: AuthGateway,
@@ -76,18 +75,14 @@ class SignInViewModel(
     fun useAnotherEmail() = state.update { SignInUiState(email = it.email, hasDevSignIn = devCode != null) }
 
     /**
-     * The dev account: the local stack takes its code without sending anything, so one press signs in.
-     * It is its own account with its own data, kept apart from the one the owner signs in as.
+     * The dev account in one press: its code goes to the stack's mailbox like any other, and is read
+     * back from there. It is an account of its own with its own data, so trying things out never
+     * touches the one the owner signs in as.
      */
     fun signInAsDev() {
         if (devCode == null || state.value.busy) return
-        val email = EmailAddress.parse(DevSignIn.EMAIL) ?: return
-        state.update { it.copy(email = DevSignIn.EMAIL) }
-        // A full code verifies itself, so filling it in is the whole sign-in.
-        run(
-            onSuccess = { it.copy(step = SignInStep.CODE, code = "") },
-            then = { onCodeChange(DevSignIn.CODE) },
-        ) { auth.sendCode(email) }
+        state.update { it.copy(email = DevSignIn.EMAIL, error = null) }
+        sendCode()
     }
 
     private fun run(

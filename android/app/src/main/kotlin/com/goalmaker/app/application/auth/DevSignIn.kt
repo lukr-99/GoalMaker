@@ -4,17 +4,13 @@ import java.net.URI
 
 /**
  * How a dev build gets past the sign-in screen without a mailbox in the way (docs/sign-in.md,
- * contracts/vectors/dev-sign-in.json). Only the local Supabase stack has these doors: it takes [CODE]
- * for [EMAIL] without sending anything, and it keeps the mail for every other address where a build
- * may read it, on 55324 beside its API on 55321, both over plain http. Anything else, the cloud
- * project above all, has neither.
+ * contracts/vectors/dev-sign-in.json). Only the local Supabase stack has this door: it catches every
+ * message it sends in a mailbox on 55324, beside its API on 55321, where a build may read the code and
+ * fill it in. Anything else, the cloud project above all, has no mailbox and no dev account.
  */
 object DevSignIn {
-    /** The address the local stack lets in with a fixed code (supabase/config.toml). */
+    /** The account a dev build offers, so trying things out never costs the owner's own. */
     const val EMAIL = "dev@goalmaker.test"
-
-    /** The code it takes for that address, which no mail ever carries. */
-    const val CODE = "424242"
 
     /** The port the local stack's API listens on (supabase/config.toml). */
     const val API_PORT = 55321

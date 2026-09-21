@@ -4,18 +4,14 @@ namespace GoalMaker.Core.Auth;
 
 /// <summary>
 /// How a dev build gets past the sign-in screen without a mailbox in the way (docs/sign-in.md,
-/// contracts/vectors/dev-sign-in.json). Only the local Supabase stack has these doors: it takes
-/// <see cref="Code"/> for <see cref="Email"/> without sending anything, and it keeps the mail for
-/// every other address where a build may read it, on 55324 beside its API on 55321, both over plain
-/// http. Anything else, the cloud project above all, has neither.
+/// contracts/vectors/dev-sign-in.json). Only the local Supabase stack has this door: it catches every
+/// message it sends in a mailbox on 55324, beside its API on 55321, where a build may read the code
+/// and fill it in. Anything else, the cloud project above all, has no mailbox and no dev account.
 /// </summary>
 public static partial class DevSignIn
 {
-    /// <summary>The address the local stack lets in with a fixed code (supabase/config.toml).</summary>
+    /// <summary>The account a dev build offers, so trying things out never costs the owner's own.</summary>
     public const string Email = "dev@goalmaker.test";
-
-    /// <summary>The code it takes for that address, which no mail ever carries.</summary>
-    public const string Code = "424242";
 
     /// <summary>The port the local stack's API listens on (supabase/config.toml).</summary>
     public const int ApiPort = 55321;

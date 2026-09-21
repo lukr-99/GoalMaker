@@ -18,9 +18,7 @@ class DevSignInContractTest {
 
     @Test
     fun `the dev account is the one the contract names`() {
-        val account = vectors.getValue("account").jsonObject
-        assertEquals(account.text("email"), DevSignIn.EMAIL)
-        assertEquals(account.text("code"), DevSignIn.CODE)
+        assertEquals(vectors.getValue("account").jsonObject.text("email"), DevSignIn.EMAIL)
     }
 
     @Test

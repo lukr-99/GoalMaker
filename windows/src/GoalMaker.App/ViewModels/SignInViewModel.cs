@@ -8,9 +8,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// Drives the two-step email code sign-in. Success is observed through the auth session. A dev build
-/// against the local stack gets two ways past the post: the dev account, which the stack lets in with
-/// a code it never sends, and reading the code for any other address out of the stack's own mailbox
-/// (docs/sign-in.md).
+/// against the local stack reads the code out of the stack's own mailbox and fills it in, and offers
+/// the dev account, which is that in one press (docs/sign-in.md).
 /// </summary>
 public sealed partial class SignInViewModel : ObservableObject
 {
@@ -70,24 +69,20 @@ public sealed partial class SignInViewModel : ObservableObject
     public string DevAccountText => strings.Get("SignIn.DevAccount", DevSignIn.Email);
 
     /// <summary>
-    /// The dev account: the local stack takes its code without sending anything, so one press signs
-    /// in. It is its own account with its own data, kept apart from the one the owner signs in as.
+    /// The dev account in one press: its code goes to the stack's mailbox like any other, and is read
+    /// back from there. It is an account of its own with its own data, so trying things out never
+    /// touches the one the owner signs in as.
     /// </summary>
     [RelayCommand]
     private async Task SignInAsDevAsync()
     {
-        if (!HasDevSignIn || IsBusy || EmailAddress.Parse(DevSignIn.Email) is not { } address)
+        if (!HasDevSignIn || IsBusy)
         {
             return;
         }
 
         Email = DevSignIn.Email;
-        if (await RunAsync(() => auth.SendCodeAsync(address, CancellationToken.None)))
-        {
-            IsCodeStep = true;
-            // A full code verifies itself, so this is the whole sign-in.
-            Code = DevSignIn.Code;
-        }
+        await SendCodeCommand.ExecuteAsync(null);
     }
 
     [RelayCommand]
