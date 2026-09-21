@@ -1,5 +1,16 @@
 import { z } from "../deps.ts";
-import { cleanColumn, type GoalFields, type Planner, PlannerError, type TaskFields } from "../planner/planner.ts";
+import {
+  type Area,
+  type Change,
+  cleanColumn,
+  type GoalFields,
+  type Habit,
+  type HabitFields,
+  type Planner,
+  PlannerError,
+  type TaskFields,
+} from "../planner/planner.ts";
+import { AREA_COLORS } from "../planner/palette.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
 import { addDays, type Day, mondayOf } from "../rules/day.ts";
 import {
@@ -85,6 +96,76 @@ function columnName(column: string | null | undefined): string {
 /** A project's milestones, for the board and for the item lines. */
 async function milestonesOf(planner: Planner, project: ProjectItem) {
   return (await planner.milestones()).filter((milestone) => milestone.projectId === project.id);
+}
+
+const areaId = z.string().describe("The area's id, from list_areas_and_tags.");
+const tagId = z.string().describe("The tag's id, from list_areas_and_tags.");
+const stepId = z.string().describe("The step's id, from get_task.");
+const milestoneId = z.string().describe("The milestone's id, from get_project_board or find_project.");
+const areaColor = z.enum(AREA_COLORS as [string, ...string[]]).describe("The area's color, from the palette.");
+const cadence = z.enum(["daily", "weekdays", "per_week", "per_month"]).describe(
+  "How often it runs: every day, on chosen weekdays, or so many times a week or a month.",
+);
+const measure = z.enum(["check", "count", "amount"]).describe(
+  "How a day is measured: ticked off, counted, or an amount against a target.",
+);
+const direction = z.enum(["at_least", "at_most"]).describe(
+  "at_least reaches the target; at_most keeps at or under it, which is a habit to keep down.",
+);
+const weekday = z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
+
+const WEEKDAY_BITS: Record<string, number> = { mon: 1, tue: 2, wed: 4, thu: 8, fri: 16, sat: 32, sun: 64 };
+
+/** Weekday names as the bitmask the habits table keeps: Monday 1, Tuesday 2 ... Sunday 64. */
+function weekdayMask(days: string[] | undefined): number | undefined {
+  if (days === undefined) return undefined;
+  let mask = 0;
+  for (const name of days) mask |= WEEKDAY_BITS[name] ?? 0;
+  return mask;
+}
+
+/** An area as one line: its name, color, emoji and whether it is put away. */
+function areaText(area: Area): string {
+  const parts = [`@${area.name}`, area.color];
+  if (area.emoji) parts.push(area.emoji);
+  if (area.archived) parts.push("archived");
+  return `${parts.join(" · ")} (area id ${area.id})`;
+}
+
+/** One entry of the activity log as one line, the way the Activity screen reads it. */
+function changeText(change: Change): string {
+  const who = change.actor === "claude" ? "Claude" : "the owner";
+  const what = change.label === null ? change.entity : `${change.label} (${change.entity})`;
+  const undone = change.undone ? " · undone" : "";
+  return `- ${change.action} ${what}, by ${who} at ${change.at}${undone} (change id ${change.id})`;
+}
+
+/** A habit's fields from a tool's arguments, with the weekdays turned into the mask they are kept as. */
+async function habitFields(planner: Planner, args: Record<string, unknown>): Promise<HabitFields> {
+  return {
+    name: args.name as string | undefined,
+    emoji: args.emoji as string | null | undefined,
+    cadence: args.cadence as HabitFields["cadence"],
+    weekdays: weekdayMask(args.weekdays as string[] | undefined),
+    times: args.times as number | undefined,
+    measure: args.measure as HabitFields["measure"],
+    target: args.target as number | undefined,
+    unit: args.unit as string | null | undefined,
+    direction: args.direction as HabitFields["direction"],
+    goal: args.goal as string | null | undefined,
+    startsOn: (await dayFrom(planner, args.starts_on as string | undefined)) ?? undefined,
+    archived: args.archived as boolean | undefined,
+  };
+}
+
+/** One habit as the Habits screen shows it today, for the line after a change. */
+async function habitLineFor(planner: Planner, habit: Habit): Promise<string> {
+  const today = (await planner.now()).today;
+  const own = (await planner.checkins()).filter((checkin) => checkin.habitId === habit.id);
+  const rests = (await planner.pauses()).filter((pause) => pause.habitId === habit.id);
+  const state = habitState(habit, habitPeriodStart(habit, today), today, own, rests);
+  const done = (ring(habit, today, own) ?? 0) * (habit.measure === "check" ? 1 : habit.target ?? 1);
+  return format.habitLine(habit, state, done, streak(habit, today, own, rests));
 }
 
 const goalId = z.string().describe("The goal's id, from get_goals.");
@@ -205,6 +286,92 @@ export const tools: Tool[] = [
         tags.length === 0 ? "No tags yet." : "Tags:",
         ...tags.map((tag) => `- #${tag.name}`),
       ].join("\n");
+    },
+  },
+  {
+    name: "add_area",
+    title: "Add an area",
+    description:
+      "Adds an area, one of the few parts of life the owner sorts tasks by, with a color from the palette and an " +
+      "emoji. Naming an area that is already there brings that one back rather than making a second.",
+    input: {
+      name: z.string().describe("The area's name, like Work."),
+      color: areaColor.optional(),
+      emoji: z.string().optional().describe("One emoji for the area."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => `Area ${areaText(await planner.addArea(args))}.`,
+  },
+  {
+    name: "update_area",
+    title: "Edit an area",
+    description:
+      "Renames an area, recolors it, gives it an emoji, or archives it and brings it back. An archived area keeps " +
+      "its tasks and simply drops out of the lists that offer areas.",
+    input: {
+      id: areaId,
+      name: z.string().optional().describe("A new name."),
+      color: areaColor.optional(),
+      emoji: z.string().optional().describe("One emoji, or empty for none."),
+      archived: z.boolean().optional().describe("true puts it away, false brings it back."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => `Area ${areaText(await planner.updateArea(args.id, { ...args, id: undefined }))}.`,
+  },
+  {
+    name: "delete_area",
+    title: "Delete an area",
+    description:
+      "Deletes an area. The tasks and projects in it keep everything else and simply have no area, so nothing is " +
+      "lost with it. Ask the owner first. To put one aside instead, archive it with update_area.",
+    input: { id: areaId },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => {
+      const area = await planner.deleteArea(args.id);
+      return `Deleted the area @${area.name}. What was in it kept everything but the area.`;
+    },
+  },
+  {
+    name: "add_tag",
+    title: "Add a tag",
+    description:
+      "Adds a tag. Naming one that is already there brings that one back, so tags never double up. Tags are also " +
+      "made by naming them on a task.",
+    input: { name: z.string().describe("The tag's name, without #.") },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const tag = await planner.findOrCreateTag(args.name);
+      return `Tag #${tag.name} (tag id ${tag.id}).`;
+    },
+  },
+  {
+    name: "update_tag",
+    title: "Rename a tag",
+    description: "Renames a tag everywhere it is used, so every task that carries it reads the new name.",
+    input: { id: tagId, name: z.string().describe("The new name, without #.") },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const tag = await planner.updateTag(args.id, args.name);
+      return `Tag #${tag.name} (tag id ${tag.id}).`;
+    },
+  },
+  {
+    name: "delete_tag",
+    title: "Delete a tag",
+    description:
+      "Deletes a tag and takes it off every task that carried it. The tasks themselves stay as they are. Ask the " +
+      "owner first.",
+    input: { id: tagId },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => {
+      const tag = await planner.deleteTag(args.id);
+      return `Deleted the tag #${tag.name} and took it off everything that carried it.`;
     },
   },
   {
@@ -478,6 +645,27 @@ export const tools: Tool[] = [
     },
   },
   {
+    name: "update_step",
+    title: "Rename a step",
+    description: "Changes what a step of a task's checklist says. check_step is what ticks one off.",
+    input: { step_id: stepId, title: z.string().describe("What the step should say.") },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const step = await planner.renameStep(args.step_id, args.title);
+      return `${step.done ? "[x]" : "[ ]"} ${step.title}`;
+    },
+  },
+  {
+    name: "remove_step",
+    title: "Remove a step",
+    description: "Takes a step off a task's checklist. The task itself stays as it is.",
+    input: { step_id: stepId },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => `Removed the step "${(await planner.removeStep(args.step_id)).title}".`,
+  },
+  {
     name: "finish_plan_tomorrow",
     title: "Record Plan tomorrow as done",
     description:
@@ -490,6 +678,30 @@ export const tools: Tool[] = [
       const { today } = await planner.now();
       await planner.recordRitual("plan_tomorrow", today);
       return `Plan tomorrow is recorded for ${format.longDay(today)}; the evening reminder stays quiet.`;
+    },
+  },
+  {
+    name: "finish_review",
+    title: "Finish a review",
+    description:
+      "Records that the weekly or monthly review was done, which quiets the reminder for it on both devices the " +
+      "way finish_plan_tomorrow does for the evening ritual. save_review_summary is what writes down what came " +
+      "out of it.",
+    input: {
+      kind: z.enum(["weekly", "monthly"]).describe("weekly or monthly."),
+      day: day.optional().describe("A day in the period reviewed; today by default."),
+      skipped: z.boolean().optional().describe("true records that the owner passed on it this time."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const on = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const ritual = args.kind === "weekly" ? "weekly_review" : "monthly_review";
+      await planner.recordRitual(ritual, on, args.skipped === true);
+      const what = `${args.kind} review`;
+      return args.skipped === true
+        ? `Noted that the ${what} was passed on for ${format.longDay(on)}.`
+        : `The ${what} for ${format.longDay(on)} is done.`;
     },
   },
   {
@@ -542,6 +754,9 @@ export const tools: Tool[] = [
       target: z.number().optional().describe("The number to reach, for a goal that counts something."),
       unit: z.string().optional().describe('What the number counts, like "km" or "books".'),
       counts_tasks: z.boolean().optional().describe("Met when every task that serves it is done."),
+      parent: z.string().optional().describe(
+        "A wider goal this one sits under, by id, like a month goal over a week one.",
+      ),
     },
     readOnly: false,
     destructive: false,
@@ -554,6 +769,7 @@ export const tools: Tool[] = [
         target: args.target,
         unit: args.unit,
         mode: args.counts_tasks === true ? "tasks" : args.target === undefined ? "done" : "number",
+        parent: args.parent,
       };
       const goal = await planner.addGoal(fields);
       const progress = await progressOf(planner);
@@ -563,13 +779,18 @@ export const tools: Tool[] = [
   {
     name: "update_goal",
     title: "Change a goal",
-    description: "Changes a goal's title, emoji, target or unit. What is left out stays as it was.",
+    description:
+      "Changes a goal's title, emoji, target, unit, or the wider goal it sits under. What is left out stays " +
+      "as it was.",
     input: {
       id: goalId,
       title: z.string().optional(),
       emoji: z.string().nullable().optional(),
       target: z.number().optional().describe("The new target of a goal that counts a number."),
       unit: z.string().nullable().optional(),
+      parent: z.string().nullable().optional().describe(
+        "A wider goal this one sits under, by id; empty to stand on its own.",
+      ),
     },
     readOnly: false,
     destructive: false,
@@ -579,6 +800,7 @@ export const tools: Tool[] = [
         emoji: args.emoji,
         target: args.target,
         unit: args.unit,
+        parent: args.parent,
       });
       const progress = await progressOf(planner);
       return ["Goal changed.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
@@ -617,6 +839,21 @@ export const tools: Tool[] = [
       const goal = await planner.logAmount(args.id, day, args.amount);
       const progress = await progressOf(planner);
       return ["Amount logged.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+    },
+  },
+  {
+    name: "delete_goal",
+    title: "Delete a goal",
+    description:
+      "Deletes a goal. The tasks and habits that served it, and any goals under it, simply stop serving one and " +
+      "are otherwise untouched. Ask the owner first. To close one off instead, set_goal_status marks it done or " +
+      "dropped and keeps it in the period's record.",
+    input: { id: goalId },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => {
+      const goal = await planner.deleteGoal(args.id);
+      return `Deleted the goal "${goal.title}". What served it kept everything but the goal.`;
     },
   },
   {
@@ -692,6 +929,118 @@ export const tools: Tool[] = [
       const skipped = args.skipped !== false;
       const habit = await planner.skipHabit(args.id, day, skipped);
       return skipped ? `${habit.name} skipped for ${day}.` : `${habit.name} is no longer skipped on ${day}.`;
+    },
+  },
+  {
+    name: "add_habit",
+    title: "Add a habit",
+    description:
+      "Adds a habit: what it asks of a day and how often. It runs daily, on chosen weekdays, or so many times a " +
+      "week or a month, and is measured as a check, a count or an amount against a target. A limit habit (at_most) " +
+      "is something to keep down, and only a daily or weekdays habit can be one. A habit may serve a numeric goal, " +
+      "and its check-ins then count toward that goal.",
+    input: {
+      name: z.string().describe("What the habit is, in the owner's words."),
+      emoji: z.string().optional().describe("One emoji for the habit."),
+      cadence: cadence.optional().describe("daily by default."),
+      weekdays: z.array(weekday).optional().describe("For the weekdays cadence: which days, like [mon, wed, fri]."),
+      times: z.number().int().optional().describe("For per_week (1 to 7) or per_month (1 to 31): how many days."),
+      measure: measure.optional().describe("check by default."),
+      target: z.number().optional().describe("What a day needs, for a count or an amount."),
+      unit: z.string().optional().describe('What the amount counts, like "km" or "pages".'),
+      direction: direction.optional().describe("at_least by default; at_most makes the target a limit."),
+      goal: z.string().optional().describe("A numeric goal's id, for a habit that feeds one."),
+      starts_on: day.optional().describe(
+        "The first day it counts from; today by default. Streaks never reach back past it.",
+      ),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const habit = await planner.addHabit(await habitFields(planner, args));
+      return ["Habit added.", await habitLineFor(planner, habit)].join("\n");
+    },
+  },
+  {
+    name: "update_habit",
+    title: "Edit a habit",
+    description:
+      "Changes a habit's name, emoji, cadence, measure, target, unit, direction, the goal it serves or the day it " +
+      "starts from, and archives it or brings it back. What is left out stays as it was. Its check-ins are kept.",
+    input: {
+      id: habitId,
+      name: z.string().optional(),
+      emoji: z.string().optional().describe("One emoji, or empty for none."),
+      cadence: cadence.optional(),
+      weekdays: z.array(weekday).optional().describe("For the weekdays cadence: which days, like [mon, wed, fri]."),
+      times: z.number().int().optional(),
+      measure: measure.optional(),
+      target: z.number().optional(),
+      unit: z.string().optional(),
+      direction: direction.optional(),
+      goal: z.string().optional().describe("A numeric goal's id, or empty to serve none."),
+      starts_on: day.optional(),
+      archived: z.boolean().optional().describe("true puts it away, false brings it back."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const habit = await planner.updateHabit(args.id, await habitFields(planner, args));
+      return ["Habit updated.", await habitLineFor(planner, habit)].join("\n");
+    },
+  },
+  {
+    name: "delete_habit",
+    title: "Delete a habit",
+    description:
+      "Deletes a habit with its check-ins and its pauses, so its history goes with it. Ask the owner first. To " +
+      "stop one without losing what it recorded, archive it with update_habit.",
+    input: { id: habitId },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => {
+      const habit = await planner.deleteHabit(args.id);
+      return `Deleted the habit "${habit.name}" with its check-ins and pauses.`;
+    },
+  },
+  {
+    name: "pause_habit",
+    title: "Pause a habit",
+    description:
+      "Pauses a habit over a stretch of days, for a holiday or an injury. Paused days neither break a streak nor " +
+      "count toward one, and the pause stays on the record afterwards so old streaks still read right. Leave the " +
+      "last day out for a pause with no end yet, and resume_habit ends it. skip_habit is for a single period.",
+    input: {
+      id: habitId,
+      from: day.optional().describe("The first paused day; today by default."),
+      until: day.optional().describe("The last paused day; leave it out for no end yet."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const from = (await dayFrom(planner, args.from)) ?? (await planner.now()).today;
+      const until = (await dayFrom(planner, args.until)) ?? null;
+      const habit = await planner.habit(args.id);
+      await planner.pauseHabit(args.id, from, until);
+      return until === null
+        ? `"${habit.name}" is paused from ${format.longDay(from)} until it is resumed.`
+        : `"${habit.name}" is paused from ${format.longDay(from)} to ${format.longDay(until)}.`;
+    },
+  },
+  {
+    name: "resume_habit",
+    title: "Resume a habit",
+    description: "Ends the pause a habit is on, with the given day as its last paused day.",
+    input: {
+      id: habitId,
+      day: day.optional().describe("The last paused day; today by default."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const on = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const habit = await planner.resumeHabit(args.id, on);
+      return `"${habit.name}" is back from ${format.longDay(addDays(on, 1))}.`;
     },
   },
   {
@@ -926,6 +1275,188 @@ export const tools: Tool[] = [
     },
   },
   {
+    name: "update_project",
+    title: "Edit a project",
+    description:
+      "Changes a project's name, description, area, status, repository, folder or notes. What is left out stays " +
+      "as it was. Marking it paused or done is what takes it off the working list without losing the board. A new " +
+      "name, repository or folder has to be free, for the same reason create_project asks.",
+    input: {
+      project: projectRef,
+      name: z.string().optional().describe("A new name."),
+      description: z.string().optional(),
+      area: z.string().optional().describe("An area's name, or empty for none."),
+      status: projectStatus.optional(),
+      repository: z.string().optional().describe("The repository URL, or empty for none."),
+      folder: z.string().optional().describe("The folder it lives in, or empty for none."),
+      notes: z.string().optional(),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const found = await planner.findProject(args.project);
+      const project = await planner.updateProject(found.id, { ...args, project: undefined });
+      return ["Updated:", format.projectLine(project, await namesOf(planner), await planner.tasks())].join("\n");
+    },
+  },
+  {
+    name: "delete_project",
+    title: "Delete a project",
+    description:
+      "Deletes a project with its milestones. Its items stay behind as plain tasks rather than going with it, so " +
+      "no work is lost. Ask the owner first. To put one aside instead, update_project marks it paused or done.",
+    input: { project: projectRef },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => {
+      const found = await planner.findProject(args.project);
+      const items = (await planner.tasks()).filter((task) => task.projectId === found.id && !task.deleted).length;
+      await planner.deleteProject(found.id);
+      return items === 0
+        ? `Deleted the project ${found.name}.`
+        : `Deleted the project ${found.name}. Its ${items} item(s) stayed as plain tasks.`;
+    },
+  },
+  {
+    name: "update_milestone",
+    title: "Rename a milestone",
+    description: "Renames one of a project's milestones. Its items keep it.",
+    input: { id: milestoneId, name: z.string().describe("The new name, like M2.") },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const milestone = await planner.renameMilestone(args.id, args.name);
+      return `Milestone ${milestone.name} (milestone id ${milestone.id}).`;
+    },
+  },
+  {
+    name: "delete_milestone",
+    title: "Delete a milestone",
+    description:
+      "Removes a milestone from its project. The items that carried it stay on the board without one. Ask the " +
+      "owner first.",
+    input: { id: milestoneId },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => {
+      const milestone = await planner.removeMilestone(args.id);
+      return `Removed the milestone ${milestone.name}. Its items kept their place on the board.`;
+    },
+  },
+  {
+    name: "get_activity",
+    title: "Recent changes",
+    description:
+      "The latest changes to the owner's rows, newest first, with who made each one (the owner, Claude through " +
+      "this connector, or GoalMaker itself) and whether it was already undone. This is what the apps' Activity " +
+      "screen shows, and undo_change is what takes one back.",
+    input: {
+      limit: z.number().int().min(1).max(60).optional().describe("How many; 20 by default, 60 at most."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const changes = await planner.changes(args.limit ?? 20);
+      if (changes.length === 0) return "Nothing has changed yet.";
+      return ["Recent changes, newest first:", ...changes.map(changeText)].join("\n");
+    },
+  },
+  {
+    name: "undo_change",
+    title: "Undo a change",
+    description: "Puts a row back the way a change found it: an edit gets its old values, a deletion comes back, and " +
+      "something added is deleted softly. Only the latest change to a row can be undone, and the server refuses " +
+      "one the row has moved on from, so later work is never thrown away. The undo is itself a change, so undoing " +
+      "it again takes a mistaken undo back. Ask the owner before undoing anything they did themselves.",
+    input: { id: z.string().describe("The change's id, from get_activity.") },
+    readOnly: false,
+    destructive: true,
+    run: async (planner, args) => ["Undone:", changeText(await planner.undo(args.id))].join("\n"),
+  },
+  {
+    name: "get_settings",
+    title: "The owner's settings",
+    description:
+      "The name the owner goes by, their time zone, and the hour a planning day starts. Every day this connector " +
+      "talks about is worked out from these two: at 01:30 with a 04:00 start it is still yesterday.",
+    input: {},
+    readOnly: true,
+    destructive: false,
+    run: async (planner) => {
+      const settings = await planner.settings();
+      const now = await planner.now();
+      return [
+        settings.displayName === null ? "No display name set." : `Display name: ${settings.displayName}.`,
+        `Time zone: ${settings.timeZone}.`,
+        `A planning day starts at ${String(settings.dayStartHour).padStart(2, "0")}:00.`,
+        `It is ${now.local} there, so today is ${format.longDay(now.today)}.`,
+      ].join("\n");
+    },
+  },
+  {
+    name: "update_settings",
+    title: "Change the settings",
+    description:
+      "Changes the name the owner goes by, their time zone, or the hour a planning day starts. The last two move " +
+      "what every list means by today on both devices, so check with the owner before changing them.",
+    input: {
+      display_name: z.string().optional().describe("The name to go by, or empty for none."),
+      time_zone: z.string().optional().describe("A time zone like Europe/Prague."),
+      day_start_hour: z.number().int().min(0).max(23).optional().describe("The hour a planning day starts, 0 to 23."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const settings = await planner.updateSettings({
+        displayName: args.display_name,
+        timeZone: args.time_zone,
+        dayStartHour: args.day_start_hour,
+      });
+      const today = (await planner.now()).today;
+      return [
+        `Time zone ${settings.timeZone}, a planning day starts at ${
+          String(settings.dayStartHour).padStart(2, "0")
+        }:00.`,
+        `Today is now ${format.longDay(today)}.`,
+      ].join("\n");
+    },
+  },
+  {
+    name: "get_calendar",
+    title: "The calendar",
+    description:
+      "The plan across a stretch of days: what is planned on each one, what is due then, and which of those carry " +
+      "a reminder. A week or a month at a time reads best. Only open tasks appear, the way the apps' calendar " +
+      "shows them.",
+    input: {
+      from: day.optional().describe("The first day; today by default."),
+      to: day.optional().describe("The last day; six days after the first by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const first = (await dayFrom(planner, args.from)) ?? (await planner.now()).today;
+      const last = (await dayFrom(planner, args.to)) ?? addDays(first, 6);
+      if (last < first) throw new PlannerError("The last day comes before the first one.");
+      const names = await namesOf(planner);
+      const reminded = await planner.remindedTasks();
+      const open = (await planner.tasks()).filter((task) => task.state === "open");
+      const span = `${format.longDay(first)} to ${format.longDay(last)}`;
+      const lines: string[] = [];
+      for (let date = first; date <= last; date = addDays(date, 1)) {
+        const planned = open.filter((task) => task.plannedDate === date).sort(byCreation);
+        const due = open.filter((task) => task.deadline === date && task.plannedDate !== date).sort(byCreation);
+        if (planned.length === 0 && due.length === 0) continue;
+        lines.push(`${format.longDay(date)}:`);
+        for (const task of planned) {
+          lines.push(format.taskLine(task, names) + (reminded.has(task.id) ? " · reminder" : ""));
+        }
+        for (const task of due) lines.push(`${format.taskLine(task, names)} · due`);
+      }
+      return lines.length === 0 ? `Nothing planned or due from ${span}.` : [`From ${span}:`, ...lines].join("\n");
+    },
+  },
+  {
     name: "save_review_summary",
     title: "Save a review summary",
     description:
@@ -938,6 +1469,10 @@ export const tools: Tool[] = [
       summary: z.string().describe("The summary, plain text or light Markdown."),
       mood: z.number().int().optional().describe("How the period felt, 1 (low) to 5 (great), if the owner said."),
       energy: z.number().int().optional().describe("The owner's energy, 1 (low) to 5 (high), if they said."),
+      reflections: z.array(z.object({
+        prompt: z.string().describe("The prompt's id, as the review asked it."),
+        answer: z.string().describe("What the owner wrote back."),
+      })).optional().describe("The prompts the review asked and the answers written, in the order asked."),
     },
     readOnly: false,
     destructive: false,
@@ -947,6 +1482,7 @@ export const tools: Tool[] = [
         summary: args.summary,
         mood: args.mood,
         energy: args.energy,
+        reflections: args.reflections,
       });
       return `Saved the ${review.kind} review summary for the period starting ${format.longDay(review.periodStart)}.`;
     },
@@ -970,6 +1506,7 @@ export const tools: Tool[] = [
           (review.mood !== null ? `, mood ${review.mood}/5` : "") +
           (review.energy !== null ? `, energy ${review.energy}/5` : "") + ":",
           review.summary,
+          ...review.reflections.map((one) => `- ${one.prompt}: ${one.answer}`),
         ].join("\n")
       ).join("\n\n");
     },

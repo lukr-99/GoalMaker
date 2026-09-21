@@ -16,7 +16,14 @@ import {
   periodEnd,
   periodStart as goalPeriodStart,
 } from "../rules/goals.ts";
-import { checkinId, type HabitCheckin, type HabitItem } from "../rules/habits.ts";
+import {
+  checkinId,
+  type HabitCadence,
+  type HabitCheckin,
+  type HabitDirection,
+  type HabitItem,
+  type HabitMeasure,
+} from "../rules/habits.ts";
 import {
   type BoardColumn,
   columnFor,
@@ -33,7 +40,7 @@ import {
   type ProjectStatus,
   repositoryKey,
 } from "../rules/projects.ts";
-import { colorForNewArea } from "./palette.ts";
+import { AREA_COLORS, colorForNewArea } from "./palette.ts";
 
 export interface Area {
   id: string;
@@ -84,6 +91,8 @@ export interface TaskFields {
 /** What a new goal or an edit says. Undefined leaves a field alone; null clears it. */
 export interface GoalFields {
   title?: string;
+  /** The goal this one sits under, by id; empty for none. */
+  parent?: string | null;
   emoji?: string | null;
   horizon?: GoalHorizon;
   /** Any day in the period the goal belongs to; its first day is worked out from the horizon. */
@@ -94,6 +103,49 @@ export interface GoalFields {
 }
 
 /** A habit as the connector shows it: the rules' habit with what it is called. */
+/** An area's own fields; what is left out stays as it was. */
+export interface AreaFields {
+  name?: string;
+  color?: string;
+  emoji?: string | null;
+  archived?: boolean;
+}
+
+/** A habit's own fields; what is left out stays as it was. */
+export interface HabitFields {
+  name?: string;
+  emoji?: string | null;
+  cadence?: HabitCadence;
+  weekdays?: number | null;
+  times?: number | null;
+  measure?: HabitMeasure;
+  target?: number | null;
+  direction?: HabitDirection;
+  unit?: string | null;
+  goal?: string | null;
+  startsOn?: Day;
+  archived?: boolean;
+}
+
+/** The settings every planning day is worked out from. */
+export interface Settings {
+  displayName: string | null;
+  timeZone: string;
+  dayStartHour: number;
+}
+
+/** One entry of the activity log, as the apps' Activity screen reads it. */
+export interface Change {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  actor: string;
+  at: string;
+  undone: boolean;
+  label: string | null;
+}
+
 /** What a new project is made of; what is left out takes the column's default. */
 export interface ProjectFields {
   name?: string;
@@ -128,6 +180,13 @@ export interface Review {
   mood: number | null;
   energy: number | null;
   summary: string;
+  reflections: Reflection[];
+}
+
+/** One prompt a review asked and what was written back (supabase/migrations/0011). */
+export interface Reflection {
+  prompt: string;
+  answer: string;
 }
 
 export class PlannerError extends Error {}
@@ -144,6 +203,9 @@ const MAX_UNIT = 20;
 const MAX_PROJECT_NAME = 120;
 const MAX_DESCRIPTION = 2_000;
 const MAX_LOCATION = 500;
+const MAX_HABIT_NAME = 100;
+const MAX_DISPLAY_NAME = 80;
+const MAX_TIME_ZONE = 64;
 const TIMESTAMP = `'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`;
 
 /**
@@ -434,7 +496,7 @@ export class Planner {
   async saveReview(
     kind: ReviewKind,
     day: Day,
-    review: { summary: string; mood?: number; energy?: number },
+    review: { summary: string; mood?: number; energy?: number; reflections?: Reflection[] },
   ): Promise<Review> {
     const summary = review.summary.trim();
     if (summary.length === 0 || summary.length > MAX_NOTES) {
@@ -445,16 +507,32 @@ export class Planner {
         throw new PlannerError(`${name} is a whole number from 1 to 5.`);
       }
     }
+    if (review.reflections !== undefined && review.reflections.length > 20) {
+      throw new PlannerError("A review holds at most 20 reflections.");
+    }
+    const written = review.reflections?.map((one) => {
+      const prompt = one.prompt.trim();
+      const answer = one.answer.trim();
+      if (prompt.length === 0 || prompt.length > 60) {
+        throw new PlannerError("A reflection needs the prompt it answers.");
+      }
+      if (answer.length > 4_000) throw new PlannerError("A reflection's answer runs to 4000 characters.");
+      return { prompt, answer };
+    });
+    // A plain string parameter would reach Postgres as a JSON string rather than the array it holds.
+    const reflections = written === undefined ? null : this.db.json(written);
     const start = periodStart(kind, day);
     const owner = (await this.db`select auth.uid()::text as id`)[0].id as string;
     const id = await reviewId(owner, kind, start);
     await this.db`
-      insert into public.reviews (id, kind, period_start, summary, mood, energy)
-      values (${id}, ${kind}, ${start}, ${summary}, ${review.mood ?? null}, ${review.energy ?? null})
+      insert into public.reviews (id, kind, period_start, summary, mood, energy, reflections)
+      values (${id}, ${kind}, ${start}, ${summary}, ${review.mood ?? null}, ${review.energy ?? null},
+              coalesce(${reflections}::jsonb, '[]'::jsonb))
       on conflict (id) do update set
         summary = excluded.summary,
         mood = coalesce(excluded.mood, public.reviews.mood),
         energy = coalesce(excluded.energy, public.reviews.energy),
+        reflections = coalesce(${reflections}::jsonb, public.reviews.reflections),
         deleted_at = null`;
     return (await this.reviews(kind, 1, start))[0];
   }
@@ -462,7 +540,7 @@ export class Planner {
   /** The latest reviews, newest period first; of one kind, and from one period start, when given. */
   async reviews(kind: ReviewKind | null, limit: number, start: Day | null = null): Promise<Review[]> {
     const rows = await this.db`
-      select kind, period_start::text, mood, energy, summary from public.reviews
+      select kind, period_start::text, mood, energy, summary, reflections from public.reviews
       where deleted_at is null
         and (${kind}::text is null or kind = ${kind})
         and (${start}::date is null or period_start = ${start}::date)
@@ -473,6 +551,7 @@ export class Planner {
       mood: row.mood,
       energy: row.energy,
       summary: row.summary,
+      reflections: row.reflections ?? [],
     }));
   }
 
@@ -549,8 +628,10 @@ export class Planner {
       .filter((goal) => goal.horizon === horizon && goal.periodStart === start).length;
     const id = crypto.randomUUID();
     await this.db`
-      insert into public.goals (id, title, emoji, horizon, period_start, progress_mode, target, unit, position)
-      values (${id}, ${title}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${horizon}, ${start}, ${mode}, ${target},
+      insert into public.goals (id, title, emoji, horizon, period_start, parent_id, progress_mode, target, unit,
+                                position)
+      values (${id}, ${title}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${horizon}, ${start},
+              ${await this.parentGoal(fields.parent, null)}, ${mode}, ${target},
               ${mode === "number" ? clip(fields.unit ?? null, MAX_UNIT) : null}, ${position})`;
     return await this.goal(id);
   }
@@ -569,6 +650,7 @@ export class Planner {
       update public.goals set
         title = ${title},
         emoji = ${fields.emoji === undefined ? goal.emoji : clip(fields.emoji, MAX_EMOJI)},
+        parent_id = ${fields.parent === undefined ? goal.parentId : await this.parentGoal(fields.parent, id)},
         target = ${numeric ? target : null},
         unit = ${numeric ? (fields.unit === undefined ? goal.unit : clip(fields.unit, MAX_UNIT)) : null}
       where id = ${id}`;
@@ -804,6 +886,371 @@ export class Planner {
     return habit;
   }
 
+  /** The owner's settings: the name they go by, their time zone and the hour a planning day starts. */
+  async settings(): Promise<Settings> {
+    const [row] = await this.db`select display_name, time_zone, day_rollover_hour from public.profiles`;
+    return { displayName: row.display_name, timeZone: row.time_zone, dayStartHour: row.day_rollover_hour };
+  }
+
+  /**
+   * Changes the settings every planning day is worked out from. A new time zone or day start moves
+   * what "today" means, so the profile this planner had cached goes with it.
+   */
+  async updateSettings(
+    fields: { displayName?: string | null; timeZone?: string; dayStartHour?: number },
+  ): Promise<Settings> {
+    const current = await this.settings();
+    const timeZone = fields.timeZone === undefined ? current.timeZone : fields.timeZone.trim();
+    if (timeZone.length === 0 || timeZone.length > MAX_TIME_ZONE) {
+      throw new PlannerError("A time zone is named like Europe/Prague.");
+    }
+    try {
+      new Intl.DateTimeFormat("en-GB", { timeZone });
+    } catch {
+      throw new PlannerError(`"${timeZone}" is not a time zone. Name one like Europe/Prague.`);
+    }
+    const hour = fields.dayStartHour ?? current.dayStartHour;
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+      throw new PlannerError("A planning day starts at a whole hour from 0 to 23.");
+    }
+    const displayName = fields.displayName === undefined
+      ? current.displayName
+      : clip(fields.displayName, MAX_DISPLAY_NAME);
+    await this.db`
+      update public.profiles
+      set display_name = ${displayName}, time_zone = ${timeZone}, day_rollover_hour = ${hour}`;
+    this.profile = null;
+    return await this.settings();
+  }
+
+  /** Adds an area, or takes the one that already has this name and sets what was asked on it. */
+  async addArea(fields: AreaFields): Promise<Area> {
+    const area = await this.findOrCreateArea(fields.name ?? "");
+    const more = fields.color !== undefined || fields.emoji !== undefined || fields.archived !== undefined;
+    return more ? await this.updateArea(area.id, { ...fields, name: undefined }) : area;
+  }
+
+  /** Renames an area, recolors it, gives it an emoji, or archives it and brings it back. */
+  async updateArea(id: string, fields: AreaFields): Promise<Area> {
+    const areas = await this.areas();
+    const area = areas.find((one) => one.id === id);
+    if (area === undefined) throw new PlannerError(`No area with id ${id}.`);
+    const name = fields.name === undefined ? area.name : fields.name.trim().replace(/^@/, "").slice(0, MAX_AREA);
+    if (name.length === 0) throw new PlannerError("An area needs a name.");
+    const taken = areas.find((one) => one.id !== id && one.name.trim().toLowerCase() === name.toLowerCase());
+    if (taken !== undefined) throw new PlannerError(`There is already an area called ${taken.name}.`);
+    let color = area.color;
+    if (fields.color !== undefined) {
+      color = fields.color.trim().toLowerCase();
+      if (!AREA_COLORS.includes(color)) {
+        throw new PlannerError(`"${color}" is not an area color. They are: ${AREA_COLORS.join(", ")}.`);
+      }
+    }
+    const archived = fields.archived ?? area.archived;
+    await this.db`
+      update public.areas set name = ${name}, color = ${color},
+        emoji = ${fields.emoji === undefined ? area.emoji : clip(fields.emoji, MAX_EMOJI)},
+        archived_at = case when ${archived}::boolean then coalesce(archived_at, now()) else null end
+      where id = ${id}`;
+    return (await this.areas()).find((one) => one.id === id)!;
+  }
+
+  /** Deletes an area. Its tasks and projects keep everything else and simply have no area. */
+  async deleteArea(id: string): Promise<Area> {
+    const area = (await this.areas()).find((one) => one.id === id);
+    if (area === undefined) throw new PlannerError(`No area with id ${id}.`);
+    await this.db`update public.tasks set area_id = null where area_id = ${id} and deleted_at is null`;
+    await this.db`update public.projects set area_id = null where area_id = ${id} and deleted_at is null`;
+    await this.db`update public.areas set deleted_at = now() where id = ${id}`;
+    return area;
+  }
+
+  /** Renames a tag everywhere it is used. */
+  async updateTag(id: string, name: string): Promise<Tag> {
+    const tags = await this.tags();
+    const tag = tags.find((one) => one.id === id);
+    if (tag === undefined) throw new PlannerError(`No tag with id ${id}.`);
+    const text = name.trim().replace(/^#/, "").slice(0, MAX_TAG);
+    if (text.length === 0) throw new PlannerError("A tag needs a name.");
+    const taken = tags.find((one) => one.id !== id && one.name.trim().toLowerCase() === text.toLowerCase());
+    if (taken !== undefined) throw new PlannerError(`There is already a tag called ${taken.name}.`);
+    await this.db`update public.tags set name = ${text} where id = ${id}`;
+    return { id, name: text };
+  }
+
+  /** Deletes a tag and takes it off every task that carried it. */
+  async deleteTag(id: string): Promise<Tag> {
+    const tag = (await this.tags()).find((one) => one.id === id);
+    if (tag === undefined) throw new PlannerError(`No tag with id ${id}.`);
+    await this.db`update public.task_tags set deleted_at = now() where tag_id = ${id} and deleted_at is null`;
+    await this.db`update public.tags set deleted_at = now() where id = ${id}`;
+    return tag;
+  }
+
+  /** Renames a step. */
+  async renameStep(id: string, title: string): Promise<Step> {
+    const text = title.trim();
+    if (text.length === 0 || text.length > MAX_STEP) {
+      throw new PlannerError(`A step needs 1 to ${MAX_STEP} characters.`);
+    }
+    const rows = await this.db`
+      update public.task_steps set title = ${text}
+      where id = ${isUuid(id) ? id : null} and deleted_at is null
+      returning id::text, title, done`;
+    if (rows.length === 0) throw new PlannerError(`No step with id ${id}.`);
+    return { id: rows[0].id, title: rows[0].title, done: rows[0].done };
+  }
+
+  /** Takes a step off its task. */
+  async removeStep(id: string): Promise<Step> {
+    const rows = await this.db`
+      update public.task_steps set deleted_at = now()
+      where id = ${isUuid(id) ? id : null} and deleted_at is null
+      returning id::text, title, done`;
+    if (rows.length === 0) throw new PlannerError(`No step with id ${id}.`);
+    return { id: rows[0].id, title: rows[0].title, done: rows[0].done };
+  }
+
+  /** The tasks that carry at least one reminder, for the calendar's mark. */
+  async remindedTasks(): Promise<Set<string>> {
+    const rows = await this.db`select distinct task_id::text from public.reminders where deleted_at is null`;
+    return new Set<string>(rows.map((row) => row.task_id as string));
+  }
+
+  /** The latest changes to the owner's rows, newest first, the way the Activity screen reads them. */
+  async changes(limit: number): Promise<Change[]> {
+    const rows = await this.db`${this.changeColumns()} order by id desc limit ${limit}`;
+    return rows.map(toChange);
+  }
+
+  /**
+   * Puts a row back the way a change found it, the way the apps' undo does: an edit gets its old
+   * values, a deletion comes back, and something added is deleted softly (docs/activity.md).
+   */
+  async undo(entryId: string): Promise<Change> {
+    const entry = entryId.trim();
+    if (!/^[0-9]{1,18}$/.test(entry)) throw new PlannerError(`${entryId} is not a change id.`);
+    try {
+      await this.db`select public.undo_activity(${entry}::bigint)`;
+    } catch (error) {
+      const said = (error as { message?: string }).message ?? "";
+      if (said.includes("no such change")) throw new PlannerError(`No change with id ${entry}.`);
+      if (said.includes("already undone")) throw new PlannerError("That change was already undone.");
+      if (said.includes("changed since")) {
+        throw new PlannerError(
+          "The row has moved on since that change, so undoing it would throw the later work away.",
+        );
+      }
+      if (said.includes("undone")) throw new PlannerError("That change cannot be undone.");
+      throw error;
+    }
+    const [row] = await this.db`${this.changeColumns()} where id = ${entry}::bigint`;
+    return toChange(row);
+  }
+
+  /** Deletes a goal. What served it, tasks, habits and the goals under it, stops serving one. */
+  async deleteGoal(id: string): Promise<GoalItem> {
+    const goal = await this.goal(id);
+    await this.db`update public.goals set parent_id = null where parent_id = ${id} and deleted_at is null`;
+    await this.db`update public.tasks set goal_id = null where goal_id = ${id} and deleted_at is null`;
+    await this.db`update public.habits set goal_id = null where goal_id = ${id} and deleted_at is null`;
+    await this.db`update public.goals set deleted_at = now() where id = ${id}`;
+    return goal;
+  }
+
+  /** Changes a project's own fields, under the same free-name rule addProject holds to. */
+  async updateProject(id: string, fields: ProjectFields): Promise<ProjectItem> {
+    const projects = await this.projects();
+    const project = projects.find((one) => one.id === id);
+    if (project === undefined) throw new PlannerError(`No project with id ${id}.`);
+    const name = fields.name === undefined ? project.name : fields.name.trim().slice(0, MAX_PROJECT_NAME);
+    if (name.length === 0) throw new PlannerError("A project needs a name.");
+    const repository = fields.repository === undefined ? project.repositoryUrl : clip(fields.repository, MAX_LOCATION);
+    const folder = fields.folder === undefined ? project.localFolder : clip(fields.folder, MAX_LOCATION);
+    const repositoryMatch = repositoryKey(repository);
+    const folderMatch = folderKey(folder);
+    for (const other of projects) {
+      if (other.id === id) continue;
+      if (other.name.trim().toLowerCase() === name.toLowerCase()) {
+        throw new PlannerError(`There is already a project called ${other.name} (project id ${other.id}).`);
+      }
+      if (repositoryMatch !== null && repositoryKey(other.repositoryUrl) === repositoryMatch) {
+        throw new PlannerError(`${other.name} is already that repository (project id ${other.id}).`);
+      }
+      if (folderMatch !== null && folderKey(other.localFolder) === folderMatch) {
+        throw new PlannerError(`${other.name} is already that folder (project id ${other.id}).`);
+      }
+    }
+    let areaId = project.areaId;
+    if (fields.area !== undefined) {
+      const wanted = clip(fields.area, MAX_AREA);
+      areaId = wanted === null ? null : (await this.findOrCreateArea(wanted)).id;
+    }
+    const description = fields.description === undefined
+      ? project.description
+      : clip(fields.description, MAX_DESCRIPTION) ?? "";
+    const notes = fields.notes === undefined ? project.notes : clip(fields.notes, MAX_NOTES) ?? "";
+    await this.db`
+      update public.projects set name = ${name}, description = ${description}, area_id = ${areaId},
+        status = ${fields.status ?? project.status}, repository_url = ${repository}, local_folder = ${folder},
+        notes = ${notes}
+      where id = ${id}`;
+    return await this.findProject(id);
+  }
+
+  /** Deletes a project. Its items stay behind as plain tasks rather than going with it. */
+  async deleteProject(id: string): Promise<ProjectItem> {
+    const project = (await this.projects()).find((one) => one.id === id);
+    if (project === undefined) throw new PlannerError(`No project with id ${id}.`);
+    await this.db`
+      update public.tasks set project_id = null, board_column = null, milestone_id = null where project_id = ${id}`;
+    await this.db`
+      update public.project_milestones set deleted_at = now() where project_id = ${id} and deleted_at is null`;
+    await this.db`update public.projects set deleted_at = now() where id = ${id}`;
+    return project;
+  }
+
+  /** Renames a milestone; its name has to be free within its own project. */
+  async renameMilestone(id: string, name: string): Promise<ProjectMilestone> {
+    const milestones = await this.milestones();
+    const milestone = milestones.find((one) => one.id === id);
+    if (milestone === undefined) throw new PlannerError(`No milestone with id ${id}.`);
+    const text = name.trim().slice(0, MAX_PROJECT_NAME);
+    if (text.length === 0) throw new PlannerError("A milestone needs a name.");
+    const taken = milestones.some((one) =>
+      one.projectId === milestone.projectId && one.id !== id &&
+      one.name.trim().toLowerCase() === text.toLowerCase()
+    );
+    if (taken) throw new PlannerError(`That project already has a milestone called ${text}.`);
+    await this.db`update public.project_milestones set name = ${text} where id = ${id}`;
+    return { ...milestone, name: text };
+  }
+
+  /** Removes a milestone; the items that carried it stay on the board without one. */
+  async removeMilestone(id: string): Promise<ProjectMilestone> {
+    const milestone = (await this.milestones()).find((one) => one.id === id);
+    if (milestone === undefined) throw new PlannerError(`No milestone with id ${id}.`);
+    await this.db`update public.tasks set milestone_id = null where milestone_id = ${id}`;
+    await this.db`update public.project_milestones set deleted_at = now() where id = ${id}`;
+    return milestone;
+  }
+
+  /** Adds a habit, the way the Habits screen's new-habit form does. */
+  async addHabit(fields: HabitFields): Promise<Habit> {
+    const name = (fields.name ?? "").trim().slice(0, MAX_HABIT_NAME);
+    if (name.length === 0) throw new PlannerError("A habit needs a name.");
+    const shape = habitShape({
+      cadence: fields.cadence ?? "daily",
+      weekdays: fields.weekdays ?? null,
+      times: fields.times ?? null,
+      measure: fields.measure ?? "check",
+      target: fields.target ?? null,
+      direction: fields.direction ?? "at_least",
+      unit: clip(fields.unit ?? null, MAX_UNIT),
+    });
+    const goalId = await this.habitGoal(fields.goal);
+    const startsOn = fields.startsOn ?? (await this.now()).today;
+    const position = (await this.habits()).length;
+    const id = crypto.randomUUID();
+    await this.db`
+      insert into public.habits (id, name, emoji, cadence, weekdays, times, measure, target, direction, unit,
+                                 goal_id, starts_on, position)
+      values (${id}, ${name}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${shape.cadence}, ${shape.weekdays},
+              ${shape.times}, ${shape.measure}, ${shape.target}, ${shape.direction}, ${shape.unit},
+              ${goalId}, ${startsOn}, ${position})`;
+    return await this.habit(id);
+  }
+
+  /** Changes a habit's own fields; what is left out stays as it was. */
+  async updateHabit(id: string, fields: HabitFields): Promise<Habit> {
+    const habit = await this.habit(id);
+    const name = fields.name === undefined ? habit.name : fields.name.trim().slice(0, MAX_HABIT_NAME);
+    if (name.length === 0) throw new PlannerError("A habit needs a name.");
+    const shape = habitShape({
+      cadence: fields.cadence ?? habit.cadence,
+      weekdays: fields.weekdays === undefined ? habit.weekdays : fields.weekdays,
+      times: fields.times === undefined ? habit.times : fields.times,
+      measure: fields.measure ?? habit.measure,
+      target: fields.target === undefined ? habit.target : fields.target,
+      direction: fields.direction ?? habit.direction,
+      unit: fields.unit === undefined ? habit.unit : clip(fields.unit, MAX_UNIT),
+    });
+    const goalId = fields.goal === undefined ? habit.goalId : await this.habitGoal(fields.goal);
+    const archived = fields.archived ?? habit.archived;
+    await this.db`
+      update public.habits set name = ${name},
+        emoji = ${fields.emoji === undefined ? habit.emoji : clip(fields.emoji, MAX_EMOJI)},
+        cadence = ${shape.cadence}, weekdays = ${shape.weekdays}, times = ${shape.times},
+        measure = ${shape.measure}, target = ${shape.target}, direction = ${shape.direction}, unit = ${shape.unit},
+        goal_id = ${goalId}, starts_on = ${fields.startsOn ?? habit.startsOn},
+        archived_at = case when ${archived}::boolean then coalesce(archived_at, now()) else null end
+      where id = ${id}`;
+    return await this.habit(id);
+  }
+
+  /** Deletes a habit with its check-ins and its pauses. */
+  async deleteHabit(id: string): Promise<Habit> {
+    const habit = await this.habit(id);
+    await this.db`update public.habit_checkins set deleted_at = now() where habit_id = ${id} and deleted_at is null`;
+    await this.db`update public.habit_pauses set deleted_at = now() where habit_id = ${id} and deleted_at is null`;
+    await this.db`update public.habits set deleted_at = now() where id = ${id}`;
+    return habit;
+  }
+
+  /**
+   * Pauses a habit from a day, open ended or up to a last day. A pause neither breaks a streak nor
+   * counts, and it stays after the habit resumes so old streaks still read right.
+   */
+  async pauseHabit(habitId: string, from: Day, until: Day | null): Promise<Pause> {
+    await this.habit(habitId);
+    if (until !== null && until < from) throw new PlannerError("A pause cannot end before it starts.");
+    await this.db`
+      insert into public.habit_pauses (id, habit_id, starts_on, ends_on)
+      values (${crypto.randomUUID()}, ${habitId}, ${from}, ${until})`;
+    return { habitId, from, until, deleted: false };
+  }
+
+  /** Ends the pause a habit is on, with this day as its last paused day. */
+  async resumeHabit(habitId: string, day: Day): Promise<Habit> {
+    const habit = await this.habit(habitId);
+    const rows = await this.db`
+      update public.habit_pauses set ends_on = ${day}
+      where habit_id = ${habitId} and deleted_at is null and starts_on <= ${day}::date
+        and (ends_on is null or ends_on > ${day}::date)
+      returning id`;
+    if (rows.length === 0) throw new PlannerError(`${habit.name} is not paused on ${day}.`);
+    return habit;
+  }
+
+  /** The goal a habit serves, by id; null when the reference is empty. */
+  private async habitGoal(reference: string | null | undefined): Promise<string | null> {
+    if (reference === undefined || reference === null || reference.trim() === "") return null;
+    return (await this.goal(reference.trim())).id;
+  }
+
+  /** The goal a parent reference points at, never the goal itself and never one of its own. */
+  private async parentGoal(reference: string | null | undefined, selfId: string | null): Promise<string | null> {
+    if (reference === undefined || reference === null || reference.trim() === "") return null;
+    const parent = await this.goal(reference.trim());
+    if (selfId !== null) {
+      const goals = await this.goals();
+      let walk: string | null = parent.id;
+      while (walk !== null) {
+        if (walk === selfId) throw new PlannerError("A goal cannot sit under itself.");
+        walk = goals.find((one) => one.id === walk)?.parentId ?? null;
+      }
+    }
+    return parent.id;
+  }
+
+  private changeColumns() {
+    return this.db`
+      select id::text, entity, entity_id::text, action, actor, undone_at is not null as undone,
+             coalesce(after ->> 'title', after ->> 'name', before ->> 'title', before ->> 'name') as label,
+             to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as at
+      from public.activity_log`;
+  }
+
   private async writeCheckin(habitId: string, day: Day, value: number, skipped: boolean) {
     const id = await checkinId(habitId, day);
     await this.db`
@@ -906,6 +1353,62 @@ function toGoal(row: any): GoalItem {
     unit: row.unit,
     deleted: false,
   };
+}
+
+// deno-lint-ignore no-explicit-any
+function toChange(row: any): Change {
+  return {
+    id: row.id,
+    entity: row.entity,
+    entityId: row.entity_id,
+    action: row.action,
+    actor: row.actor,
+    at: row.at,
+    undone: row.undone,
+    label: row.label,
+  };
+}
+
+/**
+ * The habit fields the database will take, or a PlannerError naming what does not fit: a cadence
+ * carries either its weekdays or its times and never both, only a counted habit has a target, and
+ * only a habit measured day by day can be a limit (supabase/migrations/0010 and 0014).
+ */
+function habitShape(wanted: {
+  cadence: HabitCadence;
+  weekdays: number | null;
+  times: number | null;
+  measure: HabitMeasure;
+  target: number | null;
+  direction: HabitDirection;
+  unit: string | null;
+}) {
+  const { cadence, measure, direction } = wanted;
+  const weekdays = cadence === "weekdays" ? wanted.weekdays : null;
+  const times = cadence === "per_week" || cadence === "per_month" ? wanted.times : null;
+  if (cadence === "weekdays" && (weekdays === null || !Number.isInteger(weekdays) || weekdays < 1 || weekdays > 127)) {
+    throw new PlannerError(
+      "A weekdays habit needs its days added up: Monday 1, Tuesday 2, Wednesday 4, Thursday 8, Friday 16, " +
+        "Saturday 32, Sunday 64.",
+    );
+  }
+  if (
+    (cadence === "per_week" || cadence === "per_month") && (times === null || !Number.isInteger(times) || times < 1)
+  ) {
+    throw new PlannerError("A habit counted per week or per month needs how many days a period takes.");
+  }
+  if (cadence === "per_week" && times !== null && times > 7) throw new PlannerError("A week holds 7 days.");
+  if (cadence === "per_month" && times !== null && times > 31) {
+    throw new PlannerError("A month holds at most 31 days.");
+  }
+  const target = measure === "check" ? null : wanted.target;
+  if (measure !== "check" && (target === null || !(target > 0))) {
+    throw new PlannerError("A habit that counts needs a target above zero.");
+  }
+  if (direction === "at_most" && cadence !== "daily" && cadence !== "weekdays") {
+    throw new PlannerError("Only a daily or weekdays habit can be a limit, because a limit is kept day by day.");
+  }
+  return { cadence, weekdays, times, measure, target, direction, unit: measure === "check" ? null : wanted.unit };
 }
 
 // deno-lint-ignore no-explicit-any
