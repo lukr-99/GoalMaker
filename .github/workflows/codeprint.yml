@@ -38,6 +38,9 @@ jobs:
       - name: Every control has something a screen reader can read
         run: python tools/check_accessibility.py
 
+      - name: A fork runs its own project and signing key
+        run: python tools/check_own_copy.py
+
       - name: Check PowerShell syntax
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1

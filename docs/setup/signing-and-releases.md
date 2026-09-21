@@ -33,7 +33,7 @@ The script refuses to replace an existing key. From the next build on, both apps
 ## 3. The other secrets and branch protection
 
 - The three Supabase secrets: [cloud-supabase.md](cloud-supabase.md), step 4.
-- `gh secret list --repo lukr-99/GoalMaker` should show eight `GOALMAKER_*` secrets.
+- `gh secret list` should show eight `GOALMAKER_*` secrets.
 - In the GitHub repository settings, protect `main` and require the CI checks: "Supabase migrations
   and row security", "Android build, unit tests and lint", "Windows format, build and tests" and
   "validate".

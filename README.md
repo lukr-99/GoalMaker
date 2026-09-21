@@ -38,8 +38,9 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   ([docs/mini-windows.md](docs/mini-windows.md)), and starting with Windows, with Add to Startup
   Profiles when that app is installed ([docs/startup.md](docs/startup.md)).
 
-No release has been published yet; the cloud project and the signing keys still need the one-time
-setup in [docs/setup/](docs/setup/).
+No release has been published yet. GoalMaker is built for one person, so there is no server of ours
+to join: running it means standing up your own project, sender and signing keys, which
+[docs/setup/your-own-copy.md](docs/setup/your-own-copy.md) walks through from a clean clone.
 
 ## Parts
 

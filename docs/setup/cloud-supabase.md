@@ -61,9 +61,9 @@ In **Project Settings → API Keys**:
 | Secret key (`sb_secret_...`) | the release workflow only (uploads) | secret `GOALMAKER_SUPABASE_SECRET_KEY` |
 
 ```powershell
-gh secret set GOALMAKER_SUPABASE_URL --repo lukr-99/GoalMaker
-gh secret set GOALMAKER_SUPABASE_KEY --repo lukr-99/GoalMaker
-gh secret set GOALMAKER_SUPABASE_SECRET_KEY --repo lukr-99/GoalMaker
+gh secret set GOALMAKER_SUPABASE_URL
+gh secret set GOALMAKER_SUPABASE_KEY
+gh secret set GOALMAKER_SUPABASE_SECRET_KEY
 ```
 
 (`gh secret set` asks for the value, so it never lands in your shell history.)

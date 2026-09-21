@@ -1,6 +1,6 @@
 # M6-10: Someone else's copy
 
-**Status:** todo · **Milestone:** M6 (before the repository is public)
+**Status:** done · **Milestone:** M6 (before the repository is public)
 
 ## Scope
 
@@ -35,3 +35,15 @@ use it without standing up their own of each. Right now the repository half-assu
 - The repository names our project ref in exactly the places the guide says to change, and the
   validator refuses a half-changed one.
 - `contracts/vectors/dev-sign-in.json` and the other examples use a placeholder project, not ours.
+
+## Done
+
+2026-09-21. docs/setup/your-own-copy.md runs from a clean clone: what is ours and must become theirs,
+the project and its sender, the two signing keys with the warning that keeping ours means their apps
+trust our releases and refuse their own, how to run it locally or for real, and closing signups after.
+tools/check_own_copy.py fails a clone whose origin is not ours while it still carries our project ref
+or our public signing key, and CI runs it. The `gh secret set` lines no longer name our repository,
+because they work from the clone. The README says there is no server of ours to join.
+
+Left for when it is actually public: read it once on a machine with no GoalMaker state, which is the
+acceptance criterion and wants a spare machine rather than this one.
