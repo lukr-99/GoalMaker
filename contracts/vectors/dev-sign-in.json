@@ -27,7 +27,7 @@
     },
     {
       "name": "the cloud project has no mailbox to read",
-      "backend": "https://wkjnauxqwlqhsqrqnkhg.supabase.co",
+      "backend": "https://a-project-ref.supabase.co",
       "expect": null
     },
     {
