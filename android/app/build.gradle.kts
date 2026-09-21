@@ -222,14 +222,13 @@ kotlin {
     }
 }
 
-// A release build without the cloud project would ship pointing at nothing.
-val releaseSupabaseConfigured = cloudSupabaseUrl.isNotEmpty() && cloudSupabaseKey.isNotEmpty()
-tasks.matching { it.name == "preReleaseBuild" }.configureEach {
-    doFirst {
-        check(releaseSupabaseConfigured) {
-            "Release builds need goalmaker.supabaseUrl and goalmaker.supabaseKey in android/local.properties " +
-                "(or GOALMAKER_SUPABASE_URL / GOALMAKER_SUPABASE_KEY). See docs/setup/cloud-supabase.md."
-        }
+// A release build without the cloud project would ship pointing at nothing. The check happens while
+// the build is configured, not in a task action, because an action holding on to this script cannot
+// go into the configuration cache.
+if (gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }) {
+    check(cloudSupabaseUrl.isNotEmpty() && cloudSupabaseKey.isNotEmpty()) {
+        "Release builds need goalmaker.supabaseUrl and goalmaker.supabaseKey in android/local.properties " +
+            "(or GOALMAKER_SUPABASE_URL / GOALMAKER_SUPABASE_KEY). See docs/setup/cloud-supabase.md."
     }
 }
 
