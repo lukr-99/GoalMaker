@@ -31,13 +31,16 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
@@ -96,6 +99,7 @@ import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.nav.MainDestination
 import com.goalmaker.app.ui.nav.MainNavigationBar
+import com.goalmaker.app.ui.nav.NavTransitions
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
@@ -150,8 +154,12 @@ fun ListsScreen(
         scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
     }
 
-    // Confetti when a habit's streak reaches a milestone while Today is open (design spec).
+    // A list tab arrives the way Projects and the Calendar do, since the bar treats all five alike.
+    val motion = AppTheme.motion
     val reduceMotion = AppTheme.reduceMotion
+    val transitions = remember(motion, reduceMotion) { NavTransitions(motion, reduceMotion) }
+
+    // Confetti when a habit's streak reaches a milestone while Today is open (design spec).
     var seenMilestones by remember { mutableStateOf<Set<String>?>(null) }
     var bursts by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.lists != null, state.habitMilestones) {
@@ -208,9 +216,13 @@ fun ListsScreen(
                     navigationIcon = { DayMark(tab, state.lists) },
                     actions = {
                         SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
+                        IconButton(onClick = onOpenHabits) {
+                            Icon(Icons.Outlined.DonutLarge, contentDescription = stringResource(R.string.habits_title))
+                        }
+                        IconButton(onClick = onOpenGoals) {
+                            Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
+                        }
                         MoreMenu(
-                            onOpenHabits = onOpenHabits,
-                            onOpenGoals = onOpenGoals,
                             onOpenArchive = onOpenArchive,
                             onOpenReviews = onOpenReviews,
                             onOpenStats = onOpenStats,
@@ -276,7 +288,13 @@ fun ListsScreen(
                             onTag = viewModel::filterByTag,
                             modifier = Modifier.padding(top = 4.dp),
                         )
-                        ListContent(tab, lists, state, viewModel, tick, onOpenTask, onOpenGoals, onOpenHabits, ::tapHabit) { remindFor = it }
+                        AnimatedContent(
+                            targetState = tab,
+                            transitionSpec = { transitions.switch() },
+                            label = "list tab",
+                        ) { shown ->
+                            ListContent(shown, lists, state, viewModel, tick, onOpenTask, onOpenGoals, onOpenHabits, ::tapHabit) { remindFor = it }
+                        }
                     }
                 }
             }
@@ -393,11 +411,9 @@ private fun ListContent(
     }
 }
 
-/** What doesn't fit the top bar: the projects, the reviews, the stats and the archive. */
+/** What doesn't fit the top bar: the reviews, the stats and the archive. */
 @Composable
 private fun MoreMenu(
-    onOpenHabits: () -> Unit,
-    onOpenGoals: () -> Unit,
     onOpenArchive: () -> Unit,
     onOpenReviews: () -> Unit,
     onOpenStats: () -> Unit,
@@ -409,23 +425,8 @@ private fun MoreMenu(
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.habits_title)) },
-                leadingIcon = { Icon(Icons.Outlined.DonutLarge, contentDescription = null) },
-                onClick = {
-                    open = false
-                    onOpenHabits()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.goals_title)) },
-                leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
-                onClick = {
-                    open = false
-                    onOpenGoals()
-                },
-            )
-            DropdownMenuItem(
                 text = { Text(stringResource(R.string.reviews_title)) },
+                leadingIcon = { Icon(Icons.Outlined.MenuBook, contentDescription = null) },
                 onClick = {
                     open = false
                     onOpenReviews()
@@ -433,6 +434,7 @@ private fun MoreMenu(
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.stats_title)) },
+                leadingIcon = { Icon(Icons.Outlined.TrendingUp, contentDescription = null) },
                 onClick = {
                     open = false
                     onOpenStats()
@@ -440,6 +442,7 @@ private fun MoreMenu(
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.archive_title)) },
+                leadingIcon = { Icon(Icons.Outlined.Archive, contentDescription = null) },
                 onClick = {
                     open = false
                     onOpenArchive()
