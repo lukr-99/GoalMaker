@@ -261,6 +261,11 @@ dependencies {
     implementation(libs.androidx.sqlite.bundled)
     implementation(libs.androidx.work.runtime)
 
+    // The unlock prompt in front of the signed-in app (docs/sign-in.md). Its FragmentActivity
+    // is what MainActivity extends, so the fragment version is pinned rather than inherited.
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment)
+
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.storage)

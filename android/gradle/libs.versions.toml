@@ -13,6 +13,11 @@ serialization = "1.11.0"
 supabase = "3.8.0"
 sqlite = "2.7.1"
 work = "2.11.2"
+# The unlock prompt behind the optional app lock (docs/sign-in.md). 1.1.0 is the newest that is
+# not an alpha. It brings androidx.fragment with it, pinned here so MainActivity's
+# FragmentActivity is the one that goes with the activity version above and not a 2020 copy.
+biometric = "1.1.0"
+fragment = "1.9.0"
 ktor = "3.6.0"
 junit = "4.13.2"
 robolectric = "4.17"
@@ -42,6 +47,8 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version.ref = "sqlite" }
 androidx-work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+androidx-biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+androidx-fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }

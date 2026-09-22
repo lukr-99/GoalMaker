@@ -5,16 +5,19 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.goalmaker.app.data.planning.ReminderAlarm
 import com.goalmaker.app.ui.GoalMakerApp
 import com.goalmaker.app.ui.StartupFailureScreen
 
-class MainActivity : ComponentActivity() {
+// A FragmentActivity rather than a plain ComponentActivity because androidx.biometric puts its
+// prompt up as a fragment (docs/sign-in.md). Everything else here is the same: enableEdgeToEdge
+// and setContent are ComponentActivity extensions, and a FragmentActivity is one.
+class MainActivity : FragmentActivity() {
     // Reminders are useless without notifications; from API 33 the owner has to allow them.
     private val askForNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
