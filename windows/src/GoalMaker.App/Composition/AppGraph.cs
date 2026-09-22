@@ -77,6 +77,8 @@ public sealed class AppGraph : IDisposable
         AppInfo = new AppInfo(build.Version, build.IsDevBuild, backend, build.DefaultBackend);
         supabase = SupabaseClientFactory.Create(backend, Paths.Session);
         Auth = new SupabaseAuthGateway(supabase);
+        // This PC keeps its session for a week and then asks for the code again (docs/sign-in.md).
+        SignInWatch = new SignInWatch(Auth, Settings, () => DateTimeOffset.Now);
 
         var configured = !string.IsNullOrWhiteSpace(build.ManifestPublicKey);
         ISignatureVerifier signatures = configured
@@ -170,7 +172,7 @@ public sealed class AppGraph : IDisposable
         var mailbox = build.IsDevBuild ? DevSignIn.MailboxOf(backend.Url) : null;
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
-        SignIn = new SignInViewModel(Auth, strings, build.IsDevBuild ? backend.Url : null, devCode);
+        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode);
         Shell = new ShellViewModel(Auth, SignIn, Problems, runOnUi);
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
@@ -344,6 +346,9 @@ public sealed class AppGraph : IDisposable
     public AppDataPaths Paths { get; }
 
     public ISettingsStore Settings { get; }
+
+    /// <summary>Holds this PC to its sign-in week (docs/sign-in.md).</summary>
+    public SignInWatch SignInWatch { get; }
 
     public AppInfo AppInfo { get; }
 

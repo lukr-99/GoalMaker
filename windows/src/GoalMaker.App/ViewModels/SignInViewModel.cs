@@ -14,6 +14,7 @@ namespace GoalMaker.App.ViewModels;
 public sealed partial class SignInViewModel : ObservableObject
 {
     private readonly IAuthGateway auth;
+    private readonly SignInWatch watch;
     private readonly IStrings strings;
     private readonly Func<string, CancellationToken, Task<string?>>? devCode;
 
@@ -42,11 +43,13 @@ public sealed partial class SignInViewModel : ObservableObject
 
     public SignInViewModel(
         IAuthGateway auth,
+        SignInWatch watch,
         IStrings strings,
         string? devBackend,
         Func<string, CancellationToken, Task<string?>>? devCode = null)
     {
         this.auth = auth;
+        this.watch = watch;
         this.strings = strings;
         this.devCode = devCode;
         DevBackendText = devBackend is null ? null : strings.Get("SignIn.DevBackend", devBackend);
@@ -155,7 +158,11 @@ public sealed partial class SignInViewModel : ObservableObject
             return;
         }
 
-        await RunAsync(() => auth.VerifyCodeAsync(address, parsed, CancellationToken.None));
+        if (await RunAsync(() => auth.VerifyCodeAsync(address, parsed, CancellationToken.None)))
+        {
+            // The week this PC is trusted for starts here, not when a stored session is restored.
+            watch.RecordSignIn();
+        }
     }
 
     [RelayCommand]

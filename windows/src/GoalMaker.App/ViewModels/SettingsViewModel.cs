@@ -53,6 +53,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private Appearance appearance;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SignsInAgain), nameof(HasSignsInAgain))]
     private string email = string.Empty;
 
     [ObservableProperty]
@@ -765,6 +766,15 @@ public sealed partial class SettingsViewModel : ObservableObject
             Appearance = Appearance with { ReduceMotion = choice };
         }
     }
+
+    /// <summary>The day this PC asks for the code again, so the weekly sign-out is no surprise.</summary>
+    public string SignsInAgain => auth.Session is AuthSession.SignedIn && settings.SignedInAt is { } moment
+        ? strings.Get(
+            "Settings.SignsInAgain",
+            SignInPolicy.DueAt(moment).ToLocalTime().ToString("d MMMM", CultureInfo.CurrentCulture))
+        : string.Empty;
+
+    public bool HasSignsInAgain => SignsInAgain.Length > 0;
 
     private void ShowSession(AuthSession session) =>
         Email = session is AuthSession.SignedIn signedIn ? signedIn.Email : string.Empty;

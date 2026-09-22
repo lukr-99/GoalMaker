@@ -75,7 +75,14 @@ public partial class App : Application
         instance.Listen(arguments => RunOnUi(() => Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
 
         Handle(StartupOptions.Parse(e.Args), secondLaunch: false);
-        _ = graph.Auth.InitializeAsync(CancellationToken.None);
+        _ = RestoreSessionAsync(graph);
+    }
+
+    // The stored session comes back first; a PC whose week has run out is signed out again at once.
+    private static async Task RestoreSessionAsync(AppGraph graph)
+    {
+        await graph.Auth.InitializeAsync(CancellationToken.None);
+        await graph.SignInWatch.EnforceAsync();
     }
 
     private void Handle(StartupOptions options, bool secondLaunch)

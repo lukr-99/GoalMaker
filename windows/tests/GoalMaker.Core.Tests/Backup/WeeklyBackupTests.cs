@@ -169,6 +169,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public DateTimeOffset? RemindedUntil { get; set; }
 
+        public DateTimeOffset? SignedInAt { get; set; }
+
         public string? QuickAddHotkey { get; set; }
 
         public bool NavigationCollapsed { get; set; }

@@ -14,6 +14,22 @@ device is offline changes nothing: the app stays signed in and tries again later
 server refuses (the token is gone, the project was reset) signs the device out, and the code comes
 again.
 
+## The PC's week
+
+Windows keeps its session for a week and then asks for the code once more (`SignInPolicy`,
+`SignInWatch`). The week starts when a code is accepted, not when a stored session is restored, so
+it is a week of the owner's time and not of the app's. The session itself is kept and refreshed the
+whole week, so the PC works offline throughout; the week only decides when the code is asked for
+again. The check runs once at start-up, right after the stored session comes back, and Settings says
+which day it falls on so the sign-out is no surprise. It leaves the replica where it is, the way a
+refresh the server refuses does, so anything still in the outbox is waiting when the owner signs in
+again; only a sign-out asked for in Settings clears the PC. A PC that signed in before this rule
+existed starts its week on the next start rather than being thrown out by the update, and a clock
+that ran ahead and came back never ends the week early.
+
+The phone has no week of its own yet; the optional biometric unlock it is meant to get instead is
+still to be built.
+
 ## The emails
 
 Both templates Supabase can send for this, **Magic link** and **Confirm signup**, are replaced by

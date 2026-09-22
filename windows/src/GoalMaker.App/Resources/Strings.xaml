@@ -328,6 +328,7 @@
     <sys:String x:Key="Settings.QuickAddTaken">Another app already uses {0}. Click the box and press other keys.</sys:String>
     <sys:String x:Key="Settings.QuietHoursOn">Ordinary reminders between {0} and {1} wait for the end. Important ones still ring.</sys:String>
     <sys:String x:Key="Settings.Account">Account</sys:String>
+    <sys:String x:Key="Settings.SignsInAgain">This PC signs in again on {0}.</sys:String>
     <sys:String x:Key="Settings.SignOut">Sign out</sys:String>
     <sys:String x:Key="Settings.SignOutUnsynced">{0} change(s) haven't reached the server yet. Signing out now deletes them from this PC.</sys:String>
     <sys:String x:Key="Settings.SignOutAnyway">Sign out anyway</sys:String>
