@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -70,11 +71,20 @@ fun QuickAddSheet(
         ) {
             val draft = viewModel.preview(line.text.toString())
             if (state.loaded && !state.signedIn) {
-                Text(
-                    stringResource(R.string.share_signed_out),
-                    style = MaterialTheme.typography.bodyMedium,
+                // The sheet floats over the home screen with nothing but a dim behind it, so this
+                // line carries its own surface rather than taking its chances on the wallpaper.
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.padding(horizontal = 24.dp),
-                )
+                ) {
+                    Text(
+                        stringResource(R.string.share_signed_out),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
             }
             // One tap for the day the widget is most often used for; the line keeps saying what happens.
             FilterChip(
