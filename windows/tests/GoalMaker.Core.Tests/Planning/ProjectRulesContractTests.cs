@@ -79,6 +79,22 @@ public sealed class ProjectRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryMakerFilter()
+    {
+        var makers = vectors.GetProperty("makers");
+        Assert.Equal(makers.GetProperty("values").EnumerateArray().Select(value => value.GetString()), ProjectRules.Makers);
+        Assert.Equal(makers.GetProperty("filters").EnumerateArray().Select(value => value.GetString()), ProjectRules.MakerFilters);
+        foreach (var testCase in makers.GetProperty("cases").EnumerateArray())
+        {
+            var filter = testCase.GetProperty("filter").GetString()!;
+            var shown = testCase.GetProperty("items").EnumerateArray()
+                .Where(item => ProjectRules.Shows(filter, item.TryGetProperty("madeBy", out var madeBy) ? madeBy.GetString() : null))
+                .Select(item => item.GetProperty("id").GetString());
+            Assert.Equal(testCase.GetProperty("expect").EnumerateArray().Select(id => id.GetString()), shown);
+        }
+    }
+
     private static IReadOnlyList<TaskItem> Items(JsonElement testCase) =>
     [
         .. testCase.GetProperty("items").EnumerateArray().Select(item => new TaskItem(

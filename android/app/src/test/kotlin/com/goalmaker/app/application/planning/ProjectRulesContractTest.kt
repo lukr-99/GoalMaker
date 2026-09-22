@@ -97,4 +97,21 @@ class ProjectRulesContractTest {
             }
         }
     }
+
+    @Test
+    fun `every who-made-it filter`() {
+        val makers = vectors.getValue("makers").jsonObject
+        assertEquals(makers.getValue("values").jsonArray.map { it.jsonPrimitive.content }, ProjectRules.MAKERS)
+        assertEquals(makers.getValue("filters").jsonArray.map { it.jsonPrimitive.content }, ProjectRules.MAKER_FILTERS)
+        makers.cases("cases").forEach { case ->
+            val filter = case.text("filter")!!
+            assertEquals(
+                case.text("name"),
+                case.getValue("expect").jsonArray.map { it.jsonPrimitive.content },
+                case.getValue("items").jsonArray.map { it.jsonObject }
+                    .filter { ProjectRules.shows(filter, it.text("madeBy")) }
+                    .map { it.text("id")!! },
+            )
+        }
+    }
 }
