@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.auth.AuthSession
+import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.ReminderService
@@ -42,6 +43,8 @@ class SettingsViewModel(
     private val backup: BackupService,
     private val requestSync: () -> Unit,
     private val restartApp: () -> Unit,
+    private val unlockAvailability: () -> UnlockAvailability = { UnlockAvailability.UNAVAILABLE },
+    private val appLockTurned: (Boolean) -> Unit = {},
 ) : ViewModel() {
 
     private val state = MutableStateFlow(
@@ -56,6 +59,8 @@ class SettingsViewModel(
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
+            appLock = settings.appLock.value,
+            unlock = unlockAvailability(),
             signingOut = false,
             unsyncedAtSignOut = null,
             update = UpdateUiState.Idle,
@@ -72,6 +77,9 @@ class SettingsViewModel(
         }
         viewModelScope.launch {
             settings.quietHours.collect { window -> state.update { it.copy(quietHours = window) } }
+        }
+        viewModelScope.launch {
+            settings.appLock.collect { on -> state.update { it.copy(appLock = on) } }
         }
         viewModelScope.launch {
             settings.planTomorrowReminder.collect { time -> state.update { it.copy(planTomorrowReminder = time) } }
@@ -98,6 +106,19 @@ class SettingsViewModel(
                 }
         }
     }
+
+    /**
+     * Turns the lock on or off (docs/sign-in.md). Turning it on takes hold the next time the app
+     * leaves the screen, so Settings does not lock itself behind the owner as they tap it.
+     */
+    fun setAppLock(on: Boolean) {
+        if (on && unlockAvailability() != UnlockAvailability.READY) return
+        settings.setAppLock(on)
+        appLockTurned(on)
+    }
+
+    /** Asks the phone again what it can do, in case the owner has just set a fingerprint up. */
+    fun checkUnlock() = state.update { it.copy(unlock = unlockAvailability()) }
 
     fun setTheme(id: String) = settings.updateAppearance { it.copy(themeId = id) }
 

@@ -8,6 +8,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.goalmaker.app.BuildConfig
 import com.goalmaker.app.application.about.AppInfo
+import com.goalmaker.app.application.auth.AppLock
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.activity.ActivityLog
@@ -39,6 +40,7 @@ import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.activity.PostgrestActivityLog
+import com.goalmaker.app.data.auth.DeviceUnlock
 import com.goalmaker.app.data.auth.LocalMailbox
 import com.goalmaker.app.domain.problems.ProblemRules
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
@@ -130,6 +132,12 @@ class AppGraph(context: Context) {
     )
 
     val auth: AuthGateway = SupabaseAuthGateway(supabase, scope)
+
+    /** The optional lock in front of the signed-in app on this phone (docs/sign-in.md). */
+    val appLock = AppLock(enabled = { settings.appLock.value }, now = Instant::now)
+
+    /** The phone's own prompt, which is what takes the lock down. */
+    val deviceUnlock = DeviceUnlock(appContext)
 
     private val manifestKey = BuildConfig.RELEASE_MANIFEST_PUBLIC_KEY
     private val signatureVerifier: SignatureVerifier =
@@ -313,6 +321,7 @@ class AppGraph(context: Context) {
             object : DefaultLifecycleObserver {
                 override fun onStart(owner: LifecycleOwner) {
                     visible = true
+                    appLock.cameBack()
                     if (signedIn) {
                         changeFeed.start()
                         sync.request()
@@ -321,6 +330,9 @@ class AppGraph(context: Context) {
 
                 override fun onStop(owner: LifecycleOwner) {
                     visible = false
+                    // The lock goes up as the app leaves rather than when it comes back, so the
+                    // day is not left on show behind it (docs/sign-in.md).
+                    appLock.leftTheScreen()
                     changeFeed.stop()
                 }
             },

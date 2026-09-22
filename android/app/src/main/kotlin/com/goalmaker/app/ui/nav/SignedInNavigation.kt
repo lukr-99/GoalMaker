@@ -249,6 +249,8 @@ fun SignedInNavigation(graph: AppGraph) {
                                 backup = graph.backup,
                                 requestSync = graph.sync::request,
                                 restartApp = graph.restartApp,
+                                unlockAvailability = graph.deviceUnlock::availability,
+                                appLockTurned = graph.appLock::turned,
                             )
                         }
                         SettingsScreen(

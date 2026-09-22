@@ -30,6 +30,17 @@ class SharedPreferencesSettingsStoreTest {
     }
 
     @Test
+    fun `the app lock is off until the owner turns it on, and stays on across a restart`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(false, store.appLock.value)
+
+        store.setAppLock(true)
+
+        assertEquals(true, store.appLock.value)
+        assertEquals(true, SharedPreferencesSettingsStore(preferences).appLock.value)
+    }
+
+    @Test
     fun `changes apply at once and survive a restart`() {
         val store = SharedPreferencesSettingsStore(preferences)
 

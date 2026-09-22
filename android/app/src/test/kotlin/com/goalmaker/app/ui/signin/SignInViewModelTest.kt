@@ -92,8 +92,24 @@ class SignInViewModelTest {
     }
 
     @Test
+    fun `a code that is accepted says so, and a wrong one does not`() {
+        // The app lock listens for this: the owner has just proved who they are (docs/sign-in.md).
+        var signedIn = 0
+        val viewModel = SignInViewModel(auth, onSignedIn = { signedIn++ })
+        viewModel.onEmailChange("me@example.com")
+
+        auth.verifyResult = AuthResult.WrongOrExpiredCode
+        viewModel.onCodeChange("111111")
+        assertEquals(0, signedIn)
+
+        auth.verifyResult = AuthResult.Success
+        viewModel.onCodeChange("123456")
+        assertEquals(1, signedIn)
+    }
+
+    @Test
     fun `one press signs in as the dev account`() {
-        val viewModel = SignInViewModel(auth) { email -> "112233".takeIf { email == DevSignIn.EMAIL } }
+        val viewModel = SignInViewModel(auth, devCode = { email -> "112233".takeIf { email == DevSignIn.EMAIL } })
         assertTrue(viewModel.uiState.value.hasDevSignIn)
 
         viewModel.signInAsDev()
@@ -105,7 +121,7 @@ class SignInViewModelTest {
 
     @Test
     fun `a dev build fills the code it reads in the stack's mailbox`() {
-        val viewModel = SignInViewModel(auth) { email -> "654321".takeIf { email == "me@example.com" } }
+        val viewModel = SignInViewModel(auth, devCode = { email -> "654321".takeIf { email == "me@example.com" } })
         viewModel.onEmailChange("me@example.com")
         viewModel.sendCode()
         assertEquals(listOf("me@example.com" to "654321"), auth.verified)

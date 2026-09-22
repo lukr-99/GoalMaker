@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.settings
 
 import com.goalmaker.app.application.about.AppInfo
+import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.domain.design.ThemeDefinition
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
@@ -23,6 +24,10 @@ data class SettingsUiState(
     val themeId: String,
     val themes: List<ThemeDefinition>,
     val email: String,
+    /** Whether the app asks to be unlocked when it comes back to the screen. */
+    val appLock: Boolean,
+    /** What this phone can ask for, which decides whether the lock can be turned on at all. */
+    val unlock: UnlockAvailability,
     val signingOut: Boolean,
     val unsyncedAtSignOut: Int?,
     val update: UpdateUiState,
