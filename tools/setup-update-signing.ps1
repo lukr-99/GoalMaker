@@ -3,7 +3,7 @@
     Creates the update channel's manifest signing key (ADR 0004), once.
 
 .DESCRIPTION
-      1. Generate an ECDSA P-256 private key with OpenSSL in -KeyFolder (default: the Kingston drive).
+      1. Generate an ECDSA P-256 private key with OpenSSL in -KeyFolder (default: E:, an offline drive).
          It refuses to replace an existing key.
       2. Write the public key to contracts/keys/release-manifest-public.b64. Commit that file: both
          apps build it in and trust only manifests signed by this key.

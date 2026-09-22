@@ -5,7 +5,7 @@
 1. Read `ARCHITECTURE.md` before changing module seams or dependency direction.
 2. Read `CONTEXT.md` before introducing domain terms; use its words in code and copy.
 3. Planning source of truth: `docs/spec.md`, `docs/roadmap.md`, ADRs in `docs/adr/`, and the
-   milestone issues in `.scratch/<milestone>/`. The grilling record is `docs/grilling/`.
+   milestone issues in `.scratch/<milestone>/`.
 4. For setup and delivery work, read the matching guide in `docs/setup/`.
 5. `docs/pitfalls.md` lists the mistakes this project has already made; add one when a bug took
    longer to find than to fix.
