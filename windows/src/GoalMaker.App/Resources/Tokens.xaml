@@ -5,7 +5,8 @@
     <!--
       GoalMaker's resources that don't depend on the theme. Everything themed (GM.*Brush and
       GM.*Color for each color role, GM.BodyFont, GM.BodyStrongFont, GM.HeadingFont, GM.NumberFont,
-      GM.CardCorner, GM.RowCorner, GM.ButtonCorner, GM.PagePadding, GM.RowGap, GM.RowMinHeight) is set
+      GM.CardCorner, GM.RowCorner, GM.ButtonCorner, GM.PagePadding, GM.PagePaddingToEdge, GM.PageGutter,
+      GM.RowGap, GM.RowMinHeight) is set
       at run time by Theming/ThemeApplier from contracts/design/themes.json (ADR 0008). Views use
       DynamicResource for those keys so a theme switch applies at once.
     -->
