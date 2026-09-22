@@ -108,6 +108,9 @@
                         <TextBlock Text="{Binding Day}" FontSize="11" Margin="8,0,0,0"
                                    Foreground="{DynamicResource GM.TextMutedBrush}"
                                    Visibility="{Binding HasDay, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{DynamicResource Projects.ByClaude}" FontSize="11" Margin="8,0,0,0"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding MadeByClaude, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -206,6 +209,15 @@
                         <ui:Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Top" Appearance="Primary"
                                    Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
                     </Grid>
+
+                    <!-- Who made the items on show: everyone, the owner, or Claude (docs/projects.md). -->
+                    <StackPanel Margin="0,0,0,8" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.MadeBy}" />
+                        <ComboBox MinWidth="120" ItemsSource="{Binding MakerFilters}"
+                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding MadeByFilter}"
+                                  AutomationProperties.Name="{DynamicResource Projects.MadeBy}" />
+                    </StackPanel>
 
                     <!--
                       The four columns share the width when there is room. In a narrow window they

@@ -10,7 +10,8 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// The Projects page (docs/projects.md, spec stories 43 to 50): the owner's projects and the board of
 /// the one on show, Backlog to Done. An item is a task, so moving a card writes through
-/// <see cref="TaskList"/> and the item turns up in Today when it has a day.
+/// <see cref="TaskList"/> and the item turns up in Today when it has a day. The who-made-it switch
+/// shows every item, only the owner's, or only Claude's.
 /// </summary>
 public sealed partial class ProjectsViewModel : ObservableObject
 {
@@ -49,6 +50,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
     [ObservableProperty]
     private string newItemType = ProjectRules.Task;
 
+    [ObservableProperty]
+    private string madeByFilter = ProjectRules.Everyone;
+
     public ProjectsViewModel(ProjectList projects, TaskList tasks, IStrings strings, Action<string> openTask, Action<Action> runOnUi)
     {
         this.projects = projects;
@@ -68,6 +72,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
             .. new[] { ProjectRules.Active, ProjectRules.Paused, ProjectRules.Finished }
                 .Select(status => new ChoiceViewModel(status, strings.Get(StatusKey(status)))),
         ];
+        MakerFilters = [.. ProjectRules.MakerFilters.Select(filter => new ChoiceViewModel(filter, strings.Get(MakerKey(filter))))];
         Refresh();
     }
 
@@ -82,6 +87,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     /// <summary>The statuses a project can have, for the editor.</summary>
     public IReadOnlyList<ChoiceViewModel> Statuses { get; }
+
+    /// <summary>What the who-made-it switch can show: everyone's items, the owner's, or Claude's.</summary>
+    public IReadOnlyList<ChoiceViewModel> MakerFilters { get; }
 
     /// <summary>Whether a project is on show, so the board and its boxes are worth drawing.</summary>
     public bool HasProject => chosen is not null;
@@ -112,7 +120,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
                 () => Select(id)));
         }
 
-        var items = chosen is null ? [] : everyItem.Where(task => task.ProjectId == chosen).ToList();
+        var items = chosen is null
+            ? []
+            : everyItem.Where(task => task.ProjectId == chosen && ProjectRules.Shows(MadeByFilter, task.MadeBy)).ToList();
         foreach (var column in Columns)
         {
             column.Items.Clear();
@@ -127,6 +137,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     strings.Get(PriorityKey(item.Priority)),
                     item.State == TaskState.Dropped,
                     item.PlannedDate?.ToString("d MMM", CultureInfo.CurrentCulture),
+                    item.MadeBy == ProjectRules.Claude,
                     column => tasks.SetBoardColumn(id, column),
                     () => openTask(id),
                     () => tasks.SetProject(id, null)));
@@ -233,6 +244,8 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     private bool CanAddItem() => !string.IsNullOrWhiteSpace(NewItemTitle) && chosen is not null;
 
+    partial void OnMadeByFilterChanged(string value) => Refresh();
+
     private static string ColumnKey(string column) => column switch
     {
         ProjectRules.Backlog => "Projects.Backlog",
@@ -254,6 +267,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ProjectRules.High => "Projects.High",
         ProjectRules.Low => "Projects.Low",
         _ => "Projects.Normal",
+    };
+
+    private static string MakerKey(string filter) => filter switch
+    {
+        ProjectRules.Owner => "Projects.MadeByOwner",
+        ProjectRules.Claude => "Projects.MadeByClaude",
+        _ => "Projects.MadeByAll",
     };
 
     private static string StatusKey(string status) => status switch

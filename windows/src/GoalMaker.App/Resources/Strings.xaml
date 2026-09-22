@@ -588,6 +588,11 @@
     <sys:String x:Key="Projects.High">High</sys:String>
     <sys:String x:Key="Projects.Normal">Normal</sys:String>
     <sys:String x:Key="Projects.Low">Low</sys:String>
+    <sys:String x:Key="Projects.MadeBy">Made by</sys:String>
+    <sys:String x:Key="Projects.MadeByAll">Everyone</sys:String>
+    <sys:String x:Key="Projects.MadeByOwner">Me</sys:String>
+    <sys:String x:Key="Projects.MadeByClaude">Claude</sys:String>
+    <sys:String x:Key="Projects.ByClaude">by Claude</sys:String>
 
     <!-- Stats (docs/stats.md) -->
     <sys:String x:Key="Nav.Stats">Stats</sys:String>

@@ -13,6 +13,7 @@ public sealed class BoardItemViewModel
         string priority,
         bool dropped,
         string? day,
+        bool madeByClaude,
         Action<string> move,
         Action open,
         Action remove)
@@ -24,6 +25,7 @@ public sealed class BoardItemViewModel
         Priority = priority;
         Dropped = dropped;
         Day = day ?? string.Empty;
+        MadeByClaude = madeByClaude;
         OpenCommand = new RelayCommand(open);
         RemoveCommand = new RelayCommand(remove);
         MoveCommand = new RelayCommand<string>(column =>
@@ -55,6 +57,9 @@ public sealed class BoardItemViewModel
     public string Day { get; }
 
     public bool HasDay => Day.Length > 0;
+
+    /// <summary>Claude made it through the connector, which the card says in small print.</summary>
+    public bool MadeByClaude { get; }
 
     public IRelayCommand OpenCommand { get; }
 
