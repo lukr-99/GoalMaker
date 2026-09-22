@@ -87,6 +87,7 @@ public sealed class ListRulesContractTests
             Text("time") is { } time ? TimeOnly.ParseExact(time, "HH:mm", CultureInfo.InvariantCulture) : null,
             Text("area"),
             null,
-            Field("deleted").GetBoolean());
+            Field("deleted").GetBoolean(),
+            ProjectId: Text("project"));
     }
 }

@@ -37,7 +37,8 @@ export function lists(tasks: TaskItem[], today: Day): PlanningLists {
     tomorrow: open
       .filter((task) => task.plannedDate === tomorrow)
       .sort((a, b) => Number(b.topPriority) - Number(a.topPriority) || byTime(a, b)),
-    inbox: open.filter((task) => task.plannedDate === null && task.areaId === null).sort(byCreation),
+    inbox: open.filter((task) => task.plannedDate === null && task.areaId === null && (task.projectId ?? null) === null)
+      .sort(byCreation),
     summary: {
       done: counted.filter((task) => task.state === "done").length,
       total: counted.length,

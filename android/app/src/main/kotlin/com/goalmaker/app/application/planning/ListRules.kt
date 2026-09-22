@@ -26,7 +26,7 @@ object ListRules {
             ),
             tomorrow = open.filter { it.plannedDate == tomorrow }
                 .sortedWith(compareByDescending<TaskItem> { it.topPriority }.then(byTime)),
-            inbox = open.filter { it.plannedDate == null && it.areaId == null }.sortedWith(byCreation),
+            inbox = open.filter { it.plannedDate == null && it.areaId == null && it.projectId == null }.sortedWith(byCreation),
             summary = DaySummary(done = counted.count { it.state == TaskState.DONE }, total = counted.size),
         )
     }

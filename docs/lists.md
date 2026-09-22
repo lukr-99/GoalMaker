@@ -15,10 +15,12 @@ Only open tasks appear; done, dropped and deleted ones leave every list.
 | Today: more | planned today without a time, not top priority | creation |
 | Today: overdue | planned before today | day, time (untimed last), creation |
 | Tomorrow | planned for tomorrow | top priority first, then time (untimed last), creation |
-| Inbox | no planned day and no area | creation |
+| Inbox | no planned day, no area and no project | creation |
 
 Tasks planned after tomorrow, and undated tasks with an area, wait in their area (M2-11) and the
-calendar (M5). Ties always break by id, so both apps agree.
+calendar (M5). An undated item of a project waits on that project's board (M5), because the board is
+where it was filed; it reaches the Inbox only once it is taken out of the project. Ties always break
+by id, so both apps agree.
 
 **The day's summary** ("2 of 5 done") counts tasks planned for today that are open or done; dropped
 and deleted ones don't count.
