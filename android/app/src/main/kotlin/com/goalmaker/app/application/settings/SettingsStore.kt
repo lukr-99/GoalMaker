@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
- * hours, the evening reminder and, in dev builds, a backend override.
+ * hours, the evening reminder, the app lock and, in dev builds, a backend override.
  */
 interface SettingsStore {
     val appearance: StateFlow<Appearance>
@@ -44,6 +44,11 @@ interface SettingsStore {
     val monthlyReviewReminder: StateFlow<LocalTime?>
 
     fun setMonthlyReviewReminder(time: LocalTime?)
+
+    /** Whether this phone asks to be unlocked before it shows the app (docs/sign-in.md); off unless set. */
+    val appLock: StateFlow<Boolean>
+
+    fun setAppLock(on: Boolean)
 
     /** When this device last looked at its reminders, so each one is shown once (docs/reminders.md). */
     fun remindedUntil(): Instant?

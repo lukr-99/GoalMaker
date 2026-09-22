@@ -91,6 +91,14 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         planTomorrow.value = time
     }
 
+    private val lock = MutableStateFlow(preferences.getBoolean(APP_LOCK, false))
+    override val appLock: StateFlow<Boolean> = lock.asStateFlow()
+
+    override fun setAppLock(on: Boolean) {
+        preferences.edit { putBoolean(APP_LOCK, on) }
+        lock.value = on
+    }
+
     override fun remindedUntil(): Instant? =
         preferences.getLong(REMINDED_UNTIL, -1L).takeIf { it >= 0 }?.let(Instant::ofEpochMilli)
 
@@ -152,6 +160,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val QUIET_START = "quiet_hours_start"
         const val QUIET_END = "quiet_hours_end"
         const val REMINDED_UNTIL = "reminded_until"
+        const val APP_LOCK = "app_lock"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
         const val WEEKLY_REVIEW_AT = "weekly_review_reminder"
         const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"
