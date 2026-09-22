@@ -168,9 +168,12 @@ function areaText(area: Area): string {
 /** One entry of the activity log as one line, the way the Activity screen reads it. */
 function changeText(change: Change): string {
   const who = change.actor === "claude" ? "Claude" : change.actor === "system" ? "GoalMaker" : "the owner";
-  const what = change.label === null ? change.entity : `${change.label} (${change.entity})`;
+  const what = change.label === null ? change.entity : `${change.entity} "${change.label}"`;
   const undone = change.undone ? " · undone" : "";
-  return `- ${change.action} ${what}, by ${who} at ${change.at}${undone} (change id ${change.id})`;
+  // The row is named as well as the change: without it there is no telling which task a line is about,
+  // and undoing the latest change of the wrong row is a quiet way to lose work.
+  return `- ${change.action} ${what}, by ${who} at ${change.at}${undone} ` +
+    `(change id ${change.id}, row ${change.entityId})`;
 }
 
 /** A habit's fields from a tool's arguments, with the weekdays turned into the mask they are kept as. */
@@ -1383,9 +1386,10 @@ export const tools: Tool[] = [
     name: "get_activity",
     title: "Recent changes",
     description:
-      "The latest changes to the owner's rows, newest first, with who made each one (the owner, Claude through " +
-      "this connector, or GoalMaker itself) and whether it was already undone. This is what the apps' Activity " +
-      "screen shows, and undo_change is what takes one back.",
+      "The latest changes to the owner's rows, newest first: what changed, which row it was, who made it (the " +
+      "owner, Claude through this connector, or GoalMaker itself), and whether it was already undone. This is " +
+      "what the apps' Activity screen shows. undo_change takes one back, by the change id on the line for the " +
+      "row you mean rather than whatever is newest.",
     input: {
       limit: z.number().int().min(1).max(60).optional().describe("How many; 20 by default, 60 at most."),
     },

@@ -602,10 +602,13 @@ Deno.test({
         const taskId = /\(id ([0-9a-f-]{36})\)/.exec(task.text)![1];
         await client.tool("update_task", { id: taskId, title: "Renamed" });
 
-        const log = await client.tool("get_activity", { limit: 5 });
+        const log = await client.tool("get_activity", { limit: 20 });
         assert(!log.isError, log.text);
         assertStringIncludes(log.text, "by Claude");
-        const changeId = /\(change id ([0-9]+)\)/.exec(log.text)![1];
+        // The line for this task, rather than whatever happens to be newest.
+        const mine = log.text.split("\n").find((line) => line.startsWith("- update") && line.includes(taskId));
+        assert(mine !== undefined, `no line for the task that was renamed: ${log.text}`);
+        const changeId = /\(change id ([0-9]+)/.exec(mine)![1];
 
         const undone = await client.tool("undo_change", { id: changeId });
         assert(!undone.isError, undone.text);
@@ -635,9 +638,13 @@ Deno.test({
           order.every((at) => at >= 0) && order[0] < order[1] && order[1] < order[2],
           `a day runs earliest time first with untimed tasks after: ${week.text}`,
         );
-        assert(!week.text.includes("repeats"), "a repeat is never drawn on the day it is already planned for");
-
         await client.tool("add_task", { title: "Weekly tidy", day: "today", repeat: "FREQ=WEEKLY" });
+        const onlyToday = await client.tool("get_calendar", { to: "today" });
+        assertStringIncludes(onlyToday.text, "Weekly tidy");
+        assert(
+          !onlyToday.text.includes("Weekly tidy · repeats"),
+          `a repeat is never drawn on the day it is already planned for: ${onlyToday.text}`,
+        );
         const ahead = await client.tool("get_calendar", { to: "2026-12-31" });
         assert(
           (ahead.text.match(/Weekly tidy · repeats/g) ?? []).length >= 2,
