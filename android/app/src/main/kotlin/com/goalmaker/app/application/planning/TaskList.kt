@@ -85,6 +85,8 @@ class TaskList(
                     "board_column" to (
                         projectId?.let { JsonPrimitive(ProjectRules.columnFor(itemType)) } ?: JsonNull
                         ),
+                    // Anything typed into an app is the owner's (docs/projects.md).
+                    "made_by" to JsonPrimitive(ProjectRules.OWNER),
                 ),
             ) ?: return@inTransaction null
             val placed = if (draft.repeat != null) JsonObject(task + (SERIES_ID to task.getValue(SyncedTable.ID))) else task
@@ -266,6 +268,8 @@ class TaskList(
                 "recurrence" to (current.recurrence?.let(::JsonPrimitive) ?: JsonNull),
                 SERIES_ID to JsonPrimitive(Occurrences.seriesOf(current)),
                 GOAL_ID to (goalFor(current.goalId, day)?.let(::JsonPrimitive) ?: JsonNull),
+                // Whoever made the series made its next occurrence too.
+                "made_by" to JsonPrimitive(current.madeBy),
             ),
         ) ?: return
         replica.queue(TABLE, next)
@@ -381,6 +385,7 @@ class TaskList(
         priority = row.text("priority") ?: ProjectRules.NORMAL,
         milestoneId = row.text("milestone_id"),
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
+        madeBy = row.text("made_by") ?: ProjectRules.OWNER,
     )
 
     private companion object {

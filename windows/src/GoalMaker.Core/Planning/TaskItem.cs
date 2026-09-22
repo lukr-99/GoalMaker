@@ -43,7 +43,10 @@ public sealed record TaskItem(
     string? MilestoneId = null,
 
     /// <summary>Where the owner dragged it inside its column or list.</summary>
-    double Position = 0)
+    double Position = 0,
+
+    /// <summary>Who made it, the owner or Claude; set once when it is made (docs/projects.md).</summary>
+    string MadeBy = ProjectRules.Owner)
 {
     /// <summary>The day it was finished, by the server's timestamp, or null while it is not done.</summary>
     public DateOnly? CompletedDay =>

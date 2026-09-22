@@ -87,6 +87,11 @@ export interface TaskFields {
   itemType?: string;
   priority?: string;
   milestoneId?: string | null;
+  /**
+   * Who made a new task (supabase/migrations/0015_task_made_by.sql). Left out, the server takes the
+   * actor, which through the connector is Claude; an edit never changes it.
+   */
+  madeBy?: "owner" | "claude";
 }
 
 /** What a new goal or an edit says. Undefined leaves a field alone; null clears it. */
@@ -332,12 +337,13 @@ export class Planner {
     await this.db`
       insert into public.tasks
         (id, title, notes, top_priority, status, position, planned_date, planned_time, deadline, area_id, recurrence,
-         series_id, project_id, item_type, board_column, priority, milestone_id)
+         series_id, project_id, item_type, board_column, priority, milestone_id, made_by)
       values
         (${id}, ${title}, ${cleanNotes(fields.notes ?? "")}, ${fields.topPriority ?? false}, 'open', 0, ${day}, ${time},
          ${fields.deadline ?? null}, ${areaId}, ${repeat}, ${repeat === null ? null : id},
          ${projectId}, ${itemType}, ${projectId === null ? null : columnFor(itemType)},
-         ${cleanPriority(fields.priority)}, ${projectId === null ? null : fields.milestoneId ?? null})`;
+         ${cleanPriority(fields.priority)}, ${projectId === null ? null : fields.milestoneId ?? null},
+         ${fields.madeBy ?? null})`;
     for (const tag of fields.tags ?? []) await this.link(id, (await this.findOrCreateTag(tag)).id);
     return (await this.task(id))!;
   }
@@ -1308,7 +1314,7 @@ export class Planner {
       select id::text, title, notes, status, top_priority, planned_date::text,
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
              series_id::text, goal_id::text, moved_count, position,
-             project_id::text, item_type, board_column, priority, milestone_id::text,
+             project_id::text, item_type, board_column, priority, milestone_id::text, made_by,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
@@ -1347,8 +1353,9 @@ export class Planner {
     return day >= start && day <= periodEnd(goal.horizon as GoalHorizon, start) ? goalId : null;
   }
 
-  // The next occurrence copies this one's plan onto the rule's next day, with its tags; nothing when
-  // the task doesn't repeat, the rule can't be followed, or the next occurrence is already there.
+  // The next occurrence copies this one's plan onto the rule's next day, with its tags and who made
+  // it; nothing when the task doesn't repeat, the rule can't be followed, or the next occurrence is
+  // already there.
   private async moveOn(current: TaskItem): Promise<TaskItem | null> {
     const rule = parseRecurrence(current.recurrence);
     if (rule === null) return null;
@@ -1360,10 +1367,11 @@ export class Planner {
     const goalId = await this.goalFor(current.goalId ?? null, day);
     await this.db`
       insert into public.tasks
-        (id, title, notes, top_priority, status, position, planned_date, planned_time, area_id, recurrence, series_id, goal_id)
+        (id, title, notes, top_priority, status, position, planned_date, planned_time, area_id, recurrence, series_id, goal_id,
+         made_by)
       values
         (${nextId}, ${current.title}, ${current.notes}, ${current.topPriority}, 'open', 0, ${day}, ${current.plannedTime},
-         ${current.areaId}, ${current.recurrence}, ${seriesOf(current)}, ${goalId})
+         ${current.areaId}, ${current.recurrence}, ${seriesOf(current)}, ${goalId}, ${current.madeBy ?? "owner"})
       on conflict (id) do update set
         title = excluded.title, notes = excluded.notes, top_priority = excluded.top_priority, status = 'open',
         completed_at = null, planned_date = excluded.planned_date, planned_time = excluded.planned_time,
@@ -1496,6 +1504,7 @@ function toTask(row: any): TaskItem {
     priority: row.priority ?? "normal",
     milestoneId: row.milestone_id,
     position: row.position ?? 0,
+    madeBy: row.made_by ?? "owner",
   };
 }
 
