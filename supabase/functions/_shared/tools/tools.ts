@@ -1468,7 +1468,7 @@ export const tools: Tool[] = [
       "The plan across a stretch of days: what is planned on each one, what is due then, where a repeating task " +
       "would come round to, and which of them carry a reminder. A week or a month at a time reads best. Each day " +
       "runs earliest time first with untimed tasks after, the same order Today uses. A repeat has no row of its " +
-      "own yet, so it is worked out from the task's rule.",
+      "own yet, so it is worked out from the task's rule and marked would come round.",
     input: {
       from: day.optional().describe("The first day; today by default."),
       to: day.optional().describe("The last day; six days after the first by default."),
@@ -1498,7 +1498,7 @@ export const tools: Tool[] = [
           lines.push(format.taskLine(task, names) + (reminded.has(task.id) ? " · reminder" : ""));
         }
         for (const task of dueOn) lines.push(`${format.taskLine(task, names)} · due`);
-        for (const task of around) lines.push(`${format.taskLine(task, names)} · repeats`);
+        for (const task of around) lines.push(`${format.taskLine(task, names)} · would come round`);
       }
       return lines.length === 0 ? `Nothing on the calendar from ${span}.` : [`From ${span}:`, ...lines].join("\n");
     },

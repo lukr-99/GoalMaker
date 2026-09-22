@@ -642,12 +642,12 @@ Deno.test({
         const onlyToday = await client.tool("get_calendar", { to: "today" });
         assertStringIncludes(onlyToday.text, "Weekly tidy");
         assert(
-          !onlyToday.text.includes("Weekly tidy · repeats"),
+          !onlyToday.text.includes("would come round"),
           `a repeat is never drawn on the day it is already planned for: ${onlyToday.text}`,
         );
         const ahead = await client.tool("get_calendar", { to: "2026-12-31" });
         assert(
-          (ahead.text.match(/Weekly tidy · repeats/g) ?? []).length >= 2,
+          (ahead.text.match(/Weekly tidy .* · would come round/g) ?? []).length >= 2,
           `a repeating task is projected onto the days it comes round to: ${ahead.text}`,
         );
         const backwards = await client.tool("get_calendar", { from: "tomorrow", to: "today" });
