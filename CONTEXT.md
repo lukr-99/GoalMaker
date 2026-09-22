@@ -80,6 +80,10 @@ Backlog, To do, Doing or Done.
 **Milestone**:
 A named group of project items inside one project.
 
+**Made by**:
+Who made a task, the owner or Claude, set once when it is made. A board's Made by switch shows
+everyone's items, only the owner's, or only Claude's.
+
 **Reminder**:
 A notification for a task or a ritual at a time, fired on every device and settled everywhere once
 handled.
