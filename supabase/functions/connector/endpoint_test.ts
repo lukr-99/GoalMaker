@@ -417,6 +417,252 @@ Deno.test({
         assertStringIncludes(nameless.text, "A project needs a name.");
       });
 
+      await t.step("areas, tags and steps are managed through the connector", async () => {
+        const area = await client.tool("add_area", { name: "Deep work", color: "teal" });
+        assert(!area.isError, area.text);
+        assertStringIncludes(area.text, "@Deep work · teal");
+        const areaId = /\(area id ([0-9a-f-]{36})\)/.exec(area.text)![1];
+        const again = await client.tool("add_area", { name: "deep work" });
+        assertStringIncludes(again.text, areaId, "the same name gives back the same area");
+
+        const recolored = await client.tool("update_area", {
+          id: areaId,
+          name: "Focus",
+          color: "amber",
+          archived: true,
+        });
+        assertStringIncludes(recolored.text, "@Focus · amber");
+        assertStringIncludes(recolored.text, "archived");
+        const offPalette = await client.tool("update_area", { id: areaId, color: "burgundy" });
+        assert(offPalette.isError, offPalette.text);
+        await client.tool("update_area", { id: areaId, archived: false });
+
+        const tag = await client.tool("add_tag", { name: "spec" });
+        const tagId = /\(tag id ([0-9a-f-]{36})\)/.exec(tag.text)![1];
+        assertStringIncludes((await client.tool("update_tag", { id: tagId, name: "specs" })).text, "#specs");
+
+        const task = await client.tool("add_task", { title: "Write the spec", area: "Focus", tags: ["specs"] });
+        const taskId = /\(id ([0-9a-f-]{36})\)/.exec(task.text)![1];
+        const step = await client.tool("add_step", { task_id: taskId, title: "Draft it" });
+        const stepId = /\(step id ([0-9a-f-]{36})\)/.exec(step.text)![1];
+        assertStringIncludes(
+          (await client.tool("update_step", { step_id: stepId, title: "Draft the outline" })).text,
+          "Draft the outline",
+        );
+        assert(!(await client.tool("remove_step", { step_id: stepId })).isError);
+
+        await client.tool("delete_area", { id: areaId });
+        await client.tool("delete_tag", { id: tagId });
+        const [bare] = await sql`select title, area_id from public.tasks where id = ${taskId}`;
+        const [links] = await sql`
+          select count(*)::int as n from public.task_tags where task_id = ${taskId} and deleted_at is null`;
+        assertEquals(
+          { title: bare.title, area_id: bare.area_id, tags: links.n },
+          { title: "Write the spec", area_id: null, tags: 0 },
+          "a deleted area and tag leave the task itself alone",
+        );
+      });
+
+      await t.step("habits are made, edited, paused and deleted through the connector", async () => {
+        const gym = await client.tool("add_habit", {
+          name: "Gym",
+          cadence: "weekdays",
+          weekdays: ["mon", "wed", "fri"],
+        });
+        assert(!gym.isError, gym.text);
+        const gymId = /\(habit id ([0-9a-f-]{36})\)/.exec(gym.text)![1];
+        const [mask] = await sql`select cadence, weekdays from public.habits where id = ${gymId}`;
+        assertEquals(mask, { cadence: "weekdays", weekdays: 21 }, "weekday names become the mask they are kept as");
+
+        for (
+          const wrong of [
+            { name: "Stretch", cadence: "weekdays" },
+            { name: "Water", measure: "count" },
+            { name: "Snacks", cadence: "per_week", times: 2, measure: "count", target: 2, direction: "at_most" },
+          ]
+        ) {
+          const refused = await client.tool("add_habit", wrong);
+          assert(refused.isError, `${JSON.stringify(wrong)} should not fit: ${refused.text}`);
+        }
+
+        const edited = await client.tool("update_habit", {
+          id: gymId,
+          name: "Gym session",
+          measure: "count",
+          target: 3,
+        });
+        assert(!edited.isError, edited.text);
+        assertStringIncludes(edited.text, "Gym session");
+
+        assertStringIncludes(
+          (await client.tool("pause_habit", { id: gymId, from: "2026-10-01", until: "2026-10-10" })).text,
+          "paused from",
+        );
+        for (
+          const overlapping of [
+            { id: gymId, from: "2026-10-05", until: "2026-10-20" },
+            { id: gymId, from: "2026-09-01" },
+          ]
+        ) {
+          const again = await client.tool("pause_habit", overlapping);
+          assert(again.isError, `a pause over paused days should be refused: ${again.text}`);
+        }
+        const [onlyOne] = await sql`select count(*)::int as n from public.habit_pauses where habit_id = ${gymId}`;
+        assertEquals(onlyOne.n, 1, "a refused pause writes nothing");
+
+        assertStringIncludes(
+          (await client.tool("resume_habit", { id: gymId, day: "2026-10-05" })).text,
+          "counts again from",
+        );
+        const [pause] = await sql`select ends_on::text from public.habit_pauses where habit_id = ${gymId}`;
+        assertEquals(pause.ends_on, "2026-10-04", "the pause ends the day before the habit counts again");
+
+        await client.tool("check_in_habit", { id: gymId, amount: 1 });
+        assert(!(await client.tool("delete_habit", { id: gymId })).isError);
+        const [left] = await sql`
+          select count(*)::int as n from public.habit_checkins where habit_id = ${gymId} and deleted_at is null`;
+        assertEquals(left.n, 0, "a deleted habit takes its check-ins with it");
+      });
+
+      await t.step("a project is edited and deleted, and its items stay", async () => {
+        const board = await client.tool("find_project", { folder: "F:\\Relay" });
+        const projectId = /\(project id ([0-9a-f-]{36})\)/.exec(board.text)![1];
+        const milestoneId = /\(milestone id ([0-9a-f-]{36})\)/.exec(board.text)![1];
+        const item = await client.tool("add_project_item", { project: projectId, title: "Pair over mDNS" });
+        const itemId = /\(id ([0-9a-f-]{36})\)/.exec(item.text)![1];
+
+        const paused = await client.tool("update_project", {
+          project: projectId,
+          name: "Relay deck",
+          status: "paused",
+        });
+        assert(!paused.isError, paused.text);
+        assertStringIncludes(paused.text, "Relay deck · paused");
+        const clash = await client.tool("update_project", { project: "GoalMaker", name: "relay deck" });
+        assert(clash.isError, clash.text);
+
+        assertStringIncludes(
+          (await client.tool("update_milestone", { id: milestoneId, name: "M0 spine" })).text,
+          "M0 spine",
+        );
+        assert(!(await client.tool("delete_milestone", { id: milestoneId })).isError);
+
+        const dropped = await client.tool("delete_project", { project: projectId });
+        assertStringIncludes(dropped.text, "stayed as plain tasks");
+        const [plain] = await sql`
+          select title, project_id, board_column, milestone_id, deleted_at
+          from public.tasks where id = ${itemId}`;
+        assertEquals(
+          plain,
+          { title: "Pair over mDNS", project_id: null, board_column: null, milestone_id: null, deleted_at: null },
+          "a deleted project leaves its items behind as plain tasks",
+        );
+      });
+
+      await t.step("goals nest, reviews keep their reflections, and rituals are recorded", async () => {
+        const month = await client.tool("add_goal", { title: "Ship the connector", horizon: "month" });
+        const monthId = /\(goal id ([0-9a-f-]{36})\)/.exec(month.text)![1];
+        const week = await client.tool("add_goal", { title: "Land the tools", horizon: "week", parent: monthId });
+        const weekId = /\(goal id ([0-9a-f-]{36})\)/.exec(week.text)![1];
+        const [child] = await sql`select parent_id::text from public.goals where id = ${weekId}`;
+        assertEquals(child.parent_id, monthId, "a goal sits under a wider one");
+        const loop = await client.tool("update_goal", { id: monthId, parent: weekId });
+        assert(loop.isError, "a wider goal cannot sit under a narrower one: " + loop.text);
+        const far = await client.tool("add_goal", { title: "A week in 2027", horizon: "week", day: "2027-03-01" });
+        const farId = /\(goal id ([0-9a-f-]{36})\)/.exec(far.text)![1];
+        const apart = await client.tool("update_goal", { id: farId, parent: monthId });
+        assert(apart.isError, "periods that do not overlap cannot be linked: " + apart.text);
+        await client.tool("delete_goal", { id: farId });
+        assert(!(await client.tool("delete_goal", { id: weekId })).isError);
+
+        const saved = await client.tool("save_review_summary", {
+          kind: "weekly",
+          summary: "The connector grew up.",
+          mood: 4,
+          reflections: [{ prompt: "reviews/what_went_well", answer: "Every tool landed." }],
+        });
+        assert(!saved.isError, saved.text);
+        const read = await client.tool("get_review_summaries", {});
+        assertStringIncludes(read.text, "reviews/what_went_well: Every tool landed.");
+        await client.tool("save_review_summary", { kind: "weekly", summary: "The connector grew up, mostly." });
+        assertStringIncludes(
+          (await client.tool("get_review_summaries", {})).text,
+          "Every tool landed.",
+          "saving the summary again keeps the reflections",
+        );
+
+        assert(!(await client.tool("finish_review", { kind: "weekly" })).isError);
+        const [ritual] = await sql`
+          select outcome from public.ritual_runs where owner_id = ${OWNER} and ritual = 'weekly_review'`;
+        assertEquals(ritual.outcome, "done");
+      });
+
+      await t.step("the activity log reads back and a change is undone", async () => {
+        const task = await client.tool("add_task", { title: "Rename me" });
+        const taskId = /\(id ([0-9a-f-]{36})\)/.exec(task.text)![1];
+        await client.tool("update_task", { id: taskId, title: "Renamed" });
+
+        const log = await client.tool("get_activity", { limit: 20 });
+        assert(!log.isError, log.text);
+        assertStringIncludes(log.text, "by Claude");
+        // The line for this task, rather than whatever happens to be newest.
+        const mine = log.text.split("\n").find((line) => line.startsWith("- update") && line.includes(taskId));
+        assert(mine !== undefined, `no line for the task that was renamed: ${log.text}`);
+        const changeId = /\(change id ([0-9]+)/.exec(mine)![1];
+
+        const undone = await client.tool("undo_change", { id: changeId });
+        assert(!undone.isError, undone.text);
+        const [back] = await sql`select title from public.tasks where id = ${taskId}`;
+        assertEquals(back.title, "Rename me", "undo puts the row back the way the change found it");
+        const twice = await client.tool("undo_change", { id: changeId });
+        assert(twice.isError, twice.text);
+
+        await sql`
+          insert into public.activity_log (owner_id, entity, entity_id, action, actor, after)
+          values (${OWNER}, 'tasks', ${taskId}, 'update', 'system', '{"title": "Swept up"}'::jsonb)`;
+        assertStringIncludes(
+          (await client.tool("get_activity", { limit: 3 })).text,
+          "by GoalMaker",
+          "a change GoalMaker made is not reported as the owner's",
+        );
+      });
+
+      await t.step("the calendar and the settings read and change", async () => {
+        await client.tool("add_task", { title: "Evening walk", day: "today", time: "19:00" });
+        await client.tool("add_task", { title: "Untimed errand", day: "today" });
+        await client.tool("add_task", { title: "Morning pages", day: "today", time: "07:00" });
+        const week = await client.tool("get_calendar", { to: "today" });
+        assert(!week.isError, week.text);
+        const order = ["Morning pages", "Evening walk", "Untimed errand"].map((one) => week.text.indexOf(one));
+        assert(
+          order.every((at) => at >= 0) && order[0] < order[1] && order[1] < order[2],
+          `a day runs earliest time first with untimed tasks after: ${week.text}`,
+        );
+        await client.tool("add_task", { title: "Weekly tidy", day: "today", repeat: "FREQ=WEEKLY" });
+        const onlyToday = await client.tool("get_calendar", { to: "today" });
+        assertStringIncludes(onlyToday.text, "Weekly tidy");
+        assert(
+          !onlyToday.text.includes("would come round"),
+          `a repeat is never drawn on the day it is already planned for: ${onlyToday.text}`,
+        );
+        const ahead = await client.tool("get_calendar", { to: "2026-12-31" });
+        assert(
+          (ahead.text.match(/Weekly tidy .* · would come round/g) ?? []).length >= 2,
+          `a repeating task is projected onto the days it comes round to: ${ahead.text}`,
+        );
+        const backwards = await client.tool("get_calendar", { from: "tomorrow", to: "today" });
+        assert(backwards.isError, backwards.text);
+
+        assertStringIncludes((await client.tool("get_settings")).text, "Europe/Prague");
+        const moved = await client.tool("update_settings", { time_zone: "Asia/Tokyo", day_start_hour: 5 });
+        assert(!moved.isError, moved.text);
+        const [profile] = await sql`select time_zone, day_rollover_hour from public.profiles where id = ${OWNER}`;
+        assertEquals(profile, { time_zone: "Asia/Tokyo", day_rollover_hour: 5 });
+        const nowhere = await client.tool("update_settings", { time_zone: "Middle/Earth" });
+        assert(nowhere.isError, nowhere.text);
+        await client.tool("update_settings", { time_zone: "Europe/Prague", day_start_hour: 4 });
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120

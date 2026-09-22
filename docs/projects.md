@@ -55,8 +55,9 @@ milestone and column, and moves an item between columns, over these same rules
 or the project's name, so Claude Code drops an idea into the right backlog without being told which
 one it is.
 
-Claude also makes a project, with its milestones in one go, and adds a milestone to one that already
-exists. A new project's name, repository and folder each have to be free, because those are what the
+Claude also makes a project, with its milestones in one go, adds a milestone to one that already
+exists, renames and removes milestones, changes a project's own fields including its status, and
+deletes a project, which leaves its items behind as plain tasks. A new project's name, repository and folder each have to be free, because those are what the
 match above reads and two projects sharing one would make it a toss-up. A folder sitting inside
 another project's folder is fine, since the deepest folder wins.
 

@@ -26,6 +26,9 @@ and 0008): an edit gets its old values, a deletion is restored, and something ad
 softly. The restored row reaches both replicas through normal sync, and the undo is itself a change
 in the log, so undoing it again takes a mistaken undo back.
 
+Claude reads the same log and undoes the same way, through `get_activity` and `undo_change`
+([connector](connector.md)), under the rules below rather than around them.
+
 Undo is offered on each row's latest change only. The server refuses to undo a change the row has
 moved on from, because that would throw the later work away; the screen then says so. It also says
 when the change was already undone, perhaps on the other device.
