@@ -31,6 +31,8 @@ data class TaskItem(
     val priority: String = ProjectRules.NORMAL,
     val milestoneId: String? = null,
     val position: Double = 0.0,
+    /** Who made it, the owner or Claude; set once when it is made (docs/projects.md). */
+    val madeBy: String = ProjectRules.OWNER,
 ) {
     /** The day it was finished, by the server's timestamp, or null while it is not done. */
     val completedDay: LocalDate? get() {

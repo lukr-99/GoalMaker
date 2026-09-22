@@ -17,7 +17,8 @@ import kotlinx.coroutines.launch
 
 /**
  * The Projects screen (docs/projects.md, spec stories 43 to 50): the owner's projects and the board
- * of the one being looked at. An item is a task, so moving it around the board writes to [tasks].
+ * of the one being looked at. An item is a task, so moving it around the board writes to [tasks]. The
+ * who-made-it switch shows every item, only the owner's, or only Claude's.
  */
 class ProjectsViewModel(
     private val projects: ProjectList,
@@ -25,12 +26,14 @@ class ProjectsViewModel(
     private val io: CoroutineDispatcher,
 ) : ViewModel() {
     private val chosen = MutableStateFlow<String?>(null)
+    private val madeBy = MutableStateFlow(ProjectRules.EVERYONE)
 
     val uiState: StateFlow<ProjectsUiState> = combine(
         projects.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
         chosen,
-    ) { data, taskList, selectedId ->
+        madeBy,
+    ) { data, taskList, selectedId, filter ->
         val selected = data.find(selectedId) ?: data.projects.firstOrNull()
         ProjectsUiState(
             loaded = true,
@@ -39,8 +42,9 @@ class ProjectsViewModel(
             board = if (selected == null) {
                 emptyList()
             } else {
-                ProjectRules.board(taskList.filter { it.projectId == selected.id })
+                ProjectRules.board(taskList.filter { it.projectId == selected.id && ProjectRules.shows(filter, it.madeBy) })
             },
+            madeBy = filter,
             milestones = selected?.let { data.milestonesOf(it.id) }.orEmpty(),
             openCounts = taskList.filterNot { it.deleted }
                 .filter { it.projectId != null && it.boardColumn != ProjectRules.DONE }
@@ -52,6 +56,11 @@ class ProjectsViewModel(
     /** Which project the board shows. */
     fun select(id: String?) {
         chosen.value = id
+    }
+
+    /** Whose items the board shows: everyone's, the owner's, or Claude's ([ProjectRules.MAKER_FILTERS]). */
+    fun showMadeBy(filter: String) {
+        madeBy.value = filter
     }
 
     fun addProject(draft: ProjectDraft) = write { projects.add(draft)?.let { chosen.value = it.id } }

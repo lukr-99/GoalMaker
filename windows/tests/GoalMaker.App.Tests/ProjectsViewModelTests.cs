@@ -99,6 +99,36 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.Equal("Ship the board", planner.Task("Ship the board").Title);
     }
 
+    [Fact]
+    public void TheSwitchShowsEveryoneOrOnlyTheOwnersOrOnlyClaudesItems()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+        page.NewItemTitle = "Cache the release feed";
+        page.AddItemCommand.Execute(null);
+
+        // Claude made this one through the connector, and that is how it arrives from the server.
+        var row = planner.Replica.Get("tasks", planner.Task("Cache the release feed").Id)!;
+        row["made_by"] = ProjectRules.Claude;
+        planner.Replica.Put("tasks", row);
+        page.Refresh();
+
+        Assert.Equal(
+            ["Projects.MadeByAll", "Projects.MadeByOwner", "Projects.MadeByClaude"],
+            page.MakerFilters.Select(choice => choice.Label));
+        Assert.Equal(ProjectRules.Everyone, page.MadeByFilter);
+        Assert.Equal(2, Column(page, "todo").Items.Count);
+        Assert.True(Column(page, "todo").Items.Single(item => item.Title == "Cache the release feed").MadeByClaude);
+        Assert.False(Column(page, "todo").Items.Single(item => item.Title == "Ship the board").MadeByClaude);
+
+        page.MadeByFilter = ProjectRules.Owner;
+        Assert.Equal(["Ship the board"], Column(page, "todo").Items.Select(item => item.Title));
+
+        page.MadeByFilter = ProjectRules.Claude;
+        Assert.Equal(["Cache the release feed"], Column(page, "todo").Items.Select(item => item.Title));
+    }
+
     private static BoardColumnViewModel Column(ProjectsViewModel page, string column) =>
         page.Columns.Single(candidate => candidate.Column == column);
 

@@ -24,7 +24,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules |
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
-| `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat |
+| `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat; a new task also says who made it |
 | `add_area`, `update_area`, `delete_area` | An area with its palette color and emoji; archive it or bring it back |
 | `add_tag`, `update_tag`, `delete_tag` | A tag; renaming one reaches every task that carries it |
 | `complete_task`, `drop_task`, `reopen_task`, `move_task` | A repeating task moves on and back like in the apps |
@@ -38,10 +38,10 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
 | `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction and the goal it feeds |
 | `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
-| `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order |
+| `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order, all of them or only the owner's or Claude's items |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
 | `create_project`, `create_milestone` | A project with its area, repository, folder and milestones; a milestone on one that already exists |
-| `add_project_item`, `update_project_item` | An item with its type, priority, milestone and column; its project can change |
+| `add_project_item`, `update_project_item` | An item with its type, priority, milestone, column and who made it; its project can change |
 | `move_project_item` | Moves an item between columns, which finishes or reopens the task with it |
 | `update_project`, `delete_project` | A project's own fields, its status, or the project itself; its items stay |
 | `update_milestone`, `delete_milestone` | Renames or removes a milestone; the items that carried it stay |

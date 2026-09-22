@@ -33,6 +33,8 @@ export interface TaskItem {
   milestoneId?: string | null;
   /** Where the owner dragged it inside its column or list. */
   position?: number;
+  /** Who made it, owner or claude; set once when it is made (docs/projects.md). */
+  madeBy?: string;
 }
 
 /** Text order, the way Kotlin and C# compare strings (UTF-16 code units). */

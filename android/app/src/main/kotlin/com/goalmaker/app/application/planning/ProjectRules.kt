@@ -2,7 +2,8 @@ package com.goalmaker.app.application.planning
 
 /**
  * The board of a project (docs/projects.md, contracts/vectors/projects.json): where a new item lands,
- * how a column and the task's own state move together, and the order items sit in.
+ * how a column and the task's own state move together, the order items sit in, and which items the
+ * who-made-it switch shows.
  */
 object ProjectRules {
     const val BACKLOG = "backlog"
@@ -23,11 +24,21 @@ object ProjectRules {
     const val PAUSED = "paused"
     const val PROJECT_DONE = "done"
 
+    const val OWNER = "owner"
+    const val CLAUDE = "claude"
+    const val EVERYONE = "all"
+
     /** The four columns, left to right. */
     val COLUMNS = listOf(BACKLOG, TODO, DOING, DONE)
 
     /** The priorities, most important first. */
     val PRIORITIES = listOf(URGENT, HIGH, NORMAL, LOW)
+
+    /** Who can make an item (supabase/migrations/0015_task_made_by.sql). */
+    val MAKERS = listOf(OWNER, CLAUDE)
+
+    /** What the board's who-made-it switch can show: everything, or one maker's items. */
+    val MAKER_FILTERS = listOf(EVERYONE, OWNER, CLAUDE)
 
     /** The column a new item of [itemType] lands in: an idea in the backlog, anything else in to do. */
     fun columnFor(itemType: String): String = if (itemType == IDEA) BACKLOG else TODO
@@ -62,6 +73,15 @@ object ProjectRules {
             .thenBy { it.createdAt }
             .thenBy { it.id },
     )
+
+    /**
+     * Whether the switch, set to [filter], shows an item made by [madeBy]. An item that doesn't say is
+     * the owner's, and a filter nobody knows shows everything.
+     */
+    fun shows(filter: String, madeBy: String?): Boolean = when (filter) {
+        OWNER, CLAUDE -> (madeBy ?: OWNER) == filter
+        else -> true
+    }
 
     /** The four columns of a project with their items in order; a column with nothing in it stays. */
     fun board(items: List<TaskItem>): List<ProjectColumn> = COLUMNS.map { column ->

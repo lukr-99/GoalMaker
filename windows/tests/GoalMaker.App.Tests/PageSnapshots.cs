@@ -368,6 +368,9 @@ public sealed class PageSnapshots
         planner.Tasks.SetPriority(planner.Task("The board drags nothing yet").Id, ProjectRules.Urgent);
         planner.Tasks.SetBoardColumn(planner.Task("The calendar view").Id, ProjectRules.Doing);
         planner.Tasks.SetBoardColumn(planner.Task("Mini windows").Id, ProjectRules.Done);
+        var shared = planner.Replica.Get("tasks", planner.Task("Share to GoalMaker").Id)!;
+        shared["made_by"] = ProjectRules.Claude;
+        planner.Replica.Put("tasks", shared);
         projects.Refresh();
 
         Save(new ProjectsPage(projects), folder, "projects", new Size(1100, 700));

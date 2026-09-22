@@ -15,6 +15,14 @@ export const COLUMNS: BoardColumn[] = ["backlog", "todo", "doing", "done"];
 /** The priorities, most important first. */
 export const PRIORITIES: Priority[] = ["urgent", "high", "normal", "low"];
 
+/** Who can make an item (supabase/migrations/0015_task_made_by.sql). */
+export type Maker = "owner" | "claude";
+export const MAKERS: Maker[] = ["owner", "claude"];
+
+/** What the board's who-made-it switch can show: everything, or one maker's items. */
+export type MakerFilter = "all" | Maker;
+export const MAKER_FILTERS: MakerFilter[] = ["all", "owner", "claude"];
+
 const RANK: Record<string, number> = { urgent: 3, high: 2, normal: 1, low: 0 };
 
 export interface ProjectItem {
@@ -42,6 +50,14 @@ export interface ProjectMilestone {
 export interface Column {
   column: BoardColumn;
   items: TaskItem[];
+}
+
+/**
+ * Whether the switch, set to `filter`, shows an item made by `madeBy`. An item that doesn't say is
+ * the owner's, and a filter nobody knows shows everything.
+ */
+export function shows(filter: string, madeBy: string | null | undefined): boolean {
+  return filter === "owner" || filter === "claude" ? (madeBy ?? "owner") === filter : true;
 }
 
 /** The column a new item of this type lands in: an idea in the backlog, anything else in to do. */

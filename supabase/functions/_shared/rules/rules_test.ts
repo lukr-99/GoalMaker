@@ -38,7 +38,18 @@ import {
   reactive,
   rotation,
 } from "./prompts.ts";
-import { board, columnFor, COLUMNS, finishedIn, moved, order, PRIORITIES } from "./projects.ts";
+import {
+  board,
+  columnFor,
+  COLUMNS,
+  finishedIn,
+  MAKER_FILTERS,
+  MAKERS,
+  moved,
+  order,
+  PRIORITIES,
+  shows,
+} from "./projects.ts";
 import { periodStart, reviewId } from "./reviews.ts";
 import type { TaskItem, TaskState } from "./task.ts";
 
@@ -205,6 +216,15 @@ Deno.test("projects.json: new items, moves, finishing, order and the board", asy
         `${vector.name} ${column.column}`,
       );
     }
+  }
+  assertEquals(MAKERS, file.makers.values);
+  assertEquals(MAKER_FILTERS, file.makers.filters);
+  for (const vector of file.makers.cases) {
+    assertEquals(
+      vector.items.filter((item: Json) => shows(vector.filter, item.madeBy)).map((item: Json) => item.id),
+      vector.expect,
+      vector.name,
+    );
   }
 });
 

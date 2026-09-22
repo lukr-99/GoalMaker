@@ -308,9 +308,12 @@ Deno.test({
           select actor from public.activity_log where entity = 'tasks' and entity_id = ${itemId} and action = 'create'`;
         assertEquals(log.actor, "claude");
 
+        const [maker] = await sql`select made_by from public.tasks where id = ${itemId}`;
+        assertEquals(maker.made_by, "claude", "an item Claude adds on its own is Claude's");
+
         const board = await client.tool("get_project_board", { project: "GoalMaker" });
         assertStringIncludes(board.text, "Backlog (1):");
-        assertStringIncludes(board.text, "[ ] Share to GoalMaker · idea · high · M5");
+        assertStringIncludes(board.text, "[ ] Share to GoalMaker · idea · high · M5 · by Claude");
         assertStringIncludes(board.text, "To do: nothing.");
 
         const moved = await client.tool("move_project_item", { id: itemId, column: "done" });
@@ -344,6 +347,36 @@ Deno.test({
         const projects = await client.tool("get_projects");
         assertStringIncludes(projects.text, "GoalMaker · active · 1 open of 1");
         assertStringIncludes(projects.text, "folder F:\\GoalMaker");
+
+        const asked = await client.tool("add_project_item", {
+          project: "GoalMaker",
+          title: "Dark mode for the widget",
+          type: "idea",
+          made_by: "owner",
+        });
+        assert(!asked.isError, asked.text);
+        const askedId = /\(id ([0-9a-f-]{36})\)/.exec(asked.text)![1];
+        const [askedRow] = await sql`select made_by from public.tasks where id = ${askedId}`;
+        assertEquals(askedRow.made_by, "owner", "an item the owner asked Claude for is the owner's");
+        const claudes = await client.tool("get_project_board", { project: "GoalMaker", made_by: "claude" });
+        assertStringIncludes(claudes.text, "Only the items Claude made.");
+        assertStringIncludes(claudes.text, "The ring flickers");
+        assert(!claudes.text.includes("Dark mode for the widget"), claudes.text);
+        const owners = await client.tool("get_project_board", { project: "GoalMaker", made_by: "owner" });
+        assertStringIncludes(owners.text, "Only the items the owner made.");
+        assertStringIncludes(owners.text, "[ ] Dark mode for the widget · idea (id");
+        assert(!owners.text.includes("The ring flickers"), owners.text);
+
+        const daily = await client.tool("add_task", {
+          title: "Water the plants",
+          day: "today",
+          repeat: "FREQ=DAILY",
+          made_by: "owner",
+        });
+        const dailyId = /\(id ([0-9a-f-]{36})\)/.exec(daily.text)![1];
+        await client.tool("complete_task", { id: dailyId });
+        const [next] = await sql`select made_by from public.tasks where series_id = ${dailyId} and id <> ${dailyId}`;
+        assertEquals(next.made_by, "owner", "a repeating task's next occurrence keeps who made it");
 
         const missing = await client.tool("add_project_item", { project: "F:\\Somewhere", title: "Nowhere" });
         assert(missing.isError, missing.text);

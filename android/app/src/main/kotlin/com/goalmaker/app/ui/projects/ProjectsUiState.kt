@@ -3,11 +3,13 @@ package com.goalmaker.app.ui.projects
 import com.goalmaker.app.application.planning.ProjectColumn
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.ProjectMilestone
+import com.goalmaker.app.application.planning.ProjectRules
 
 /**
  * The Projects screen: the owner's projects, and the board of the one being looked at.
  * [openCounts] is how many items each project still has waiting, by project id, so the picker
- * says where the work is without opening every board.
+ * says where the work is without opening every board. [madeBy] is what the who-made-it switch is set
+ * to, and the board holds only the items it shows.
  */
 data class ProjectsUiState(
     val loaded: Boolean = false,
@@ -16,6 +18,7 @@ data class ProjectsUiState(
     val board: List<ProjectColumn> = emptyList(),
     val milestones: List<ProjectMilestone> = emptyList(),
     val openCounts: Map<String, Int> = emptyMap(),
+    val madeBy: String = ProjectRules.EVERYONE,
 ) {
     /** How many items are in the columns that are not done. */
     val open: Int get() = board.filterNot { it.column == "done" }.sumOf { it.items.size }

@@ -100,6 +100,8 @@ public sealed class TaskList
                 // Every column the server has must carry a value: a null defeats its default.
                 ["priority"] = ProjectRules.Normal,
                 ["board_column"] = projectId is null ? null : ProjectRules.ColumnFor(itemType),
+                // Anything typed into an app is the owner's (docs/projects.md).
+                ["made_by"] = ProjectRules.Owner,
             });
             if (task is null)
             {
@@ -442,6 +444,8 @@ public sealed class TaskList
             ["recurrence"] = current.Recurrence,
             [SeriesId] = Occurrences.SeriesOf(current),
             [GoalId] = GoalFor(current.GoalId, day),
+            // Whoever made the series made its next occurrence too.
+            ["made_by"] = current.MadeBy,
         });
         if (next is null)
         {
@@ -516,5 +520,6 @@ public sealed class TaskList
         BoardColumn: (string?)row["board_column"],
         Priority: (string?)row["priority"] ?? ProjectRules.Normal,
         MilestoneId: (string?)row["milestone_id"],
-        Position: row["position"] is System.Text.Json.Nodes.JsonValue place && place.TryGetValue<double>(out var at) ? at : 0);
+        Position: row["position"] is System.Text.Json.Nodes.JsonValue place && place.TryGetValue<double>(out var at) ? at : 0,
+        MadeBy: (string?)row["made_by"] ?? ProjectRules.Owner);
 }

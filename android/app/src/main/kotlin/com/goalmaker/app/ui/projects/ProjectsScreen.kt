@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.projects
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -129,6 +130,7 @@ fun ProjectsScreen(
                         Text(stringResource(R.string.projects_add_item), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
+                item("made-by") { MakerSwitch(state.madeBy, onPick = viewModel::showMadeBy) }
                 state.board.forEach { column ->
                     item("h-${column.column}") { SectionHeader(columnName(column.column) + " · " + column.items.size) }
                     if (column.items.isEmpty()) {
@@ -234,6 +236,26 @@ private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit) {
     }
 }
 
+/** Whose items the board shows: everyone's, the owner's, or Claude's (docs/projects.md). */
+@Composable
+private fun MakerSwitch(madeBy: String, onPick: (String) -> Unit) {
+    // A narrow phone scrolls the chips sideways rather than cutting the last one off.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+    ) {
+        Text(
+            stringResource(R.string.projects_made_by),
+            style = MaterialTheme.typography.labelMedium,
+            color = AppTheme.colors.textMuted,
+        )
+        ProjectRules.MAKER_FILTERS.forEach { filter ->
+            ChoiceChip(selected = madeBy == filter, onClick = { onPick(filter) }, label = makerName(filter))
+        }
+    }
+}
+
 /** How many items a board still has waiting, or nothing at all when it is clear. */
 @Composable
 private fun WaitingCount(waiting: Int) {
@@ -324,6 +346,13 @@ private fun ItemRow(
                 task.plannedDate?.let { day ->
                     Text(
                         " · " + day.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppTheme.colors.textMuted,
+                    )
+                }
+                if (task.madeBy == ProjectRules.CLAUDE) {
+                    Text(
+                        " · " + stringResource(R.string.projects_by_claude),
                         style = MaterialTheme.typography.labelSmall,
                         color = AppTheme.colors.textMuted,
                     )
@@ -479,6 +508,15 @@ private fun typeName(itemType: String): String = stringResource(
         ProjectRules.IDEA -> R.string.projects_idea
         ProjectRules.BUG -> R.string.projects_bug
         else -> R.string.projects_task
+    },
+)
+
+@Composable
+private fun makerName(filter: String): String = stringResource(
+    when (filter) {
+        ProjectRules.OWNER -> R.string.projects_made_by_owner
+        ProjectRules.CLAUDE -> R.string.projects_made_by_claude
+        else -> R.string.projects_made_by_all
     },
 )
 

@@ -57,6 +57,21 @@ class RepeatingTaskTest {
     }
 
     @Test
+    fun `a task typed in is the owner's and its next occurrence keeps who made it`() {
+        val typed = phone.add("Stretch daily")
+        assertEquals(ProjectRules.OWNER, typed.madeBy)
+
+        // A repeating task Claude made through the connector, as it arrives from the server.
+        val water = phone.add("Water the plants daily")
+        val row = phone.test.replica.get("tasks", water.id)!!
+        phone.test.replica.put("tasks", JsonObject(row + ("made_by" to JsonPrimitive(ProjectRules.CLAUDE))))
+
+        phone.tasks.setDone(water.id, true)
+
+        assertEquals(ProjectRules.CLAUDE, phone.task(Occurrences.successorId(water.id)).madeBy)
+    }
+
+    @Test
     fun `dropping moves on too`() {
         val review = phone.add("Review budget every friday")
 

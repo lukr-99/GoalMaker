@@ -47,6 +47,24 @@ public sealed class RepeatingTaskTests : IDisposable
     }
 
     [Fact]
+    public void ATaskTypedInIsTheOwnersAndItsNextOccurrenceKeepsWhoMadeIt()
+    {
+        var typed = phone.Add("Stretch daily");
+        Assert.Equal(ProjectRules.Owner, typed.MadeBy);
+        Assert.Equal(ProjectRules.Owner, (string?)phone.Replica.Replica.Get("tasks", typed.Id)!["made_by"]);
+
+        // A repeating task Claude made through the connector, as it arrives from the server.
+        var water = phone.Add("Water the plants daily");
+        var row = phone.Replica.Replica.Get("tasks", water.Id)!;
+        row["made_by"] = ProjectRules.Claude;
+        phone.Replica.Replica.Put("tasks", row);
+
+        phone.Tasks.SetDone(water.Id, true);
+
+        Assert.Equal(ProjectRules.Claude, phone.Task(Occurrences.SuccessorId(water.Id)).MadeBy);
+    }
+
+    [Fact]
     public void DroppingMovesOnToo()
     {
         var review = phone.Add("Review budget every friday");

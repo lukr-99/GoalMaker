@@ -57,7 +57,7 @@ export function longDay(day: Day): string {
 export function taskLine(
   task: TaskItem,
   names: Names,
-  options: { showDay?: boolean; showProject?: boolean; milestone?: string } = {},
+  options: { showDay?: boolean; showProject?: boolean; milestone?: string; showMaker?: boolean } = {},
 ): string {
   const box = task.state === "done" ? "[x]" : task.state === "dropped" ? "[-]" : "[ ]";
   const parts = [`${box} ${task.title}`];
@@ -75,6 +75,7 @@ export function taskLine(
   if (options.milestone) parts.push(options.milestone);
   if (task.recurrence) parts.push(`repeats ${task.recurrence}`);
   if (task.deadline) parts.push(`due ${task.deadline}`);
+  if (options.showMaker && task.madeBy === "claude") parts.push("by Claude");
   return `- ${parts.join(" · ")} (id ${task.id})`;
 }
 
@@ -183,6 +184,7 @@ export function board(
   columns: Column[],
   names: Names,
   milestones: ProjectMilestone[],
+  madeBy: string = "all",
 ): string {
   const head = [project.name, project.status];
   const area = project.areaId ? names.areas.get(project.areaId) : undefined;
@@ -191,6 +193,8 @@ export function board(
   if (project.localFolder) head.push(`folder ${project.localFolder}`);
   const lines = [`${head.join(" · ")} (project id ${project.id})`];
   if (project.description.trim().length > 0) lines.push(project.description.trim());
+  if (madeBy === "owner") lines.push("Only the items the owner made.");
+  if (madeBy === "claude") lines.push("Only the items Claude made.");
   if (milestones.length > 0) {
     lines.push(
       "Milestones:",
@@ -212,7 +216,7 @@ export function board(
 /** A board item: its task line with the milestone it belongs to, and no project name to repeat. */
 export function itemLine(item: TaskItem, names: Names, milestones: ProjectMilestone[]): string {
   const milestone = milestones.find((one) => one.id === item.milestoneId);
-  return taskLine(item, names, { showDay: true, showProject: false, milestone: milestone?.name });
+  return taskLine(item, names, { showDay: true, showProject: false, milestone: milestone?.name, showMaker: true });
 }
 
 /** One task in full: its line, notes, steps and reminders. */
@@ -223,7 +227,7 @@ export function taskDetail(
   reminders: Reminder[],
   milestones: ProjectMilestone[] = [],
 ): string {
-  const lines = [taskLine(task, names, { showDay: true })];
+  const lines = [taskLine(task, names, { showDay: true, showMaker: true })];
   if (task.boardColumn) {
     const milestone = milestones.find((one) => one.id === task.milestoneId);
     lines.push(

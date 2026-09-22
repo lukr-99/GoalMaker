@@ -262,5 +262,104 @@
         "done": []
       }
     }
-  ]
+  ],
+  "makers": {
+    "description": "Who made an item (supabase/migrations/0015_task_made_by.sql): the owner or Claude, set once when it is made. The board's switch shows everything, only the owner's items, or only Claude's. An item that doesn't say is the owner's, as the server says of such a row.",
+    "values": [
+      "owner",
+      "claude"
+    ],
+    "filters": [
+      "all",
+      "owner",
+      "claude"
+    ],
+    "cases": [
+      {
+        "name": "all shows every item",
+        "filter": "all",
+        "items": [
+          {
+            "id": "a",
+            "madeBy": "owner"
+          },
+          {
+            "id": "b",
+            "madeBy": "claude"
+          },
+          {
+            "id": "c"
+          }
+        ],
+        "expect": [
+          "a",
+          "b",
+          "c"
+        ]
+      },
+      {
+        "name": "owner shows what the owner made, and what doesn't say",
+        "filter": "owner",
+        "items": [
+          {
+            "id": "a",
+            "madeBy": "owner"
+          },
+          {
+            "id": "b",
+            "madeBy": "claude"
+          },
+          {
+            "id": "c"
+          }
+        ],
+        "expect": [
+          "a",
+          "c"
+        ]
+      },
+      {
+        "name": "claude shows what Claude made",
+        "filter": "claude",
+        "items": [
+          {
+            "id": "a",
+            "madeBy": "owner"
+          },
+          {
+            "id": "b",
+            "madeBy": "claude"
+          },
+          {
+            "id": "c"
+          }
+        ],
+        "expect": [
+          "b"
+        ]
+      },
+      {
+        "name": "a filter nobody knows shows everything",
+        "filter": "someone",
+        "items": [
+          {
+            "id": "a",
+            "madeBy": "owner"
+          },
+          {
+            "id": "b",
+            "madeBy": "claude"
+          },
+          {
+            "id": "c"
+          }
+        ],
+        "expect": [
+          "a",
+          "b",
+          "c"
+        ]
+      }
+    ]
+  }
 }
