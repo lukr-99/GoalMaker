@@ -28,7 +28,7 @@ public static class ListRules
                 .ThenBy(task => task.PlannedTime)
                 .ThenBy(task => task.CreatedAt, StringComparer.Ordinal)
                 .ThenBy(task => task.Id, StringComparer.Ordinal)],
-            ByCreation(open.Where(task => task.PlannedDate is null && task.AreaId is null)),
+            ByCreation(open.Where(task => task.PlannedDate is null && task.AreaId is null && task.ProjectId is null)),
             new DaySummary(counted.Count(task => task.State == TaskState.Done), counted.Count));
     }
 

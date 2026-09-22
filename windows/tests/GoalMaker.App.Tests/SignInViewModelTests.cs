@@ -8,8 +8,12 @@ namespace GoalMaker.App.Tests;
 public sealed class SignInViewModelTests
 {
     private readonly FakeAuth auth = new();
+    private readonly TestPlanner.FakeSettings settings = new();
 
-    private SignInViewModel Create() => new(auth, new KeyStrings(), devBackend: null);
+    private SignInViewModel Create() =>
+        new(auth, new SignInWatch(auth, settings, () => Now), new KeyStrings(), devBackend: null);
+
+    private static readonly DateTimeOffset Now = new(2026, 9, 22, 9, 0, 0, TimeSpan.Zero);
 
     [Fact]
     public async Task AnInvalidEmailIsCaughtBeforeAnythingIsSent()
@@ -73,6 +77,7 @@ public sealed class SignInViewModelTests
     {
         var viewModel = new SignInViewModel(
             auth,
+            new SignInWatch(auth, settings, () => Now),
             new KeyStrings(),
             devBackend: "http://127.0.0.1:55321",
             devCode: (email, _) => Task.FromResult<string?>(email == DevSignIn.Email ? "112233" : null));
@@ -90,6 +95,7 @@ public sealed class SignInViewModelTests
     {
         var viewModel = new SignInViewModel(
             auth,
+            new SignInWatch(auth, settings, () => Now),
             new KeyStrings(),
             devBackend: "http://127.0.0.1:55321",
             devCode: (email, _) => Task.FromResult<string?>(email == "me@example.com" ? "654321" : null));

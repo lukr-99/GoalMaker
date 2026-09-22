@@ -7,7 +7,9 @@ import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.StepList
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.TagList
@@ -31,7 +33,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The detail view's tag toggling and goal picker, and the archive's search and reopen (M2-12, M4-02). */
+/**
+ * The detail view's tag toggling, goal picker and project picker, and the archive's search and reopen
+ * (M2-12, M4-02).
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class TaskAndArchiveViewModelTest {
@@ -41,6 +46,7 @@ class TaskAndArchiveViewModelTest {
     private lateinit var areas: AreaList
     private lateinit var steps: StepList
     private lateinit var goals: GoalList
+    private lateinit var projects: ProjectList
 
     @Before
     fun setUp() {
@@ -50,14 +56,15 @@ class TaskAndArchiveViewModelTest {
         tags = TagList(test.replica, rows, {})
         steps = StepList(test.replica, rows, {})
         goals = GoalList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
+        projects = ProjectList(test.replica, rows, {})
+        tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { LocalDate.parse("2026-09-18") }
     }
 
     @After
     fun tearDown() = test.close()
 
     private fun taskViewModel(id: String) =
-        TaskViewModel(id, tasks, areas, tags, steps, goals, Dispatchers.Unconfined) { LocalDate.parse("2026-09-18") }
+        TaskViewModel(id, tasks, areas, tags, steps, goals, projects, Dispatchers.Unconfined) { LocalDate.parse("2026-09-18") }
 
     @Test
     fun `toggling a tag links it and toggling again takes it off`() {
@@ -92,6 +99,26 @@ class TaskAndArchiveViewModelTest {
         viewModel.setGoal(year.id)
         viewModel.setGoal(null)
         assertEquals(null, tasks.find(task.id)!!.goalId)
+    }
+
+    @Test
+    fun `the project picker files an inbox task onto a board and takes it off again`() = runTest {
+        val task = tasks.add(ComposerParser.parse("Write the release notes", LocalDateTime.parse("2026-09-18T14:00")))!!
+        val app = projects.add(ProjectDraft(name = "GoalMaker"))!!
+        projects.add(ProjectDraft(name = "Old site", status = ProjectRules.PROJECT_DONE))!!
+        val viewModel = taskViewModel(task.id)
+
+        assertEquals(listOf("GoalMaker", "Old site"), viewModel.uiState.first { it.loaded }.projects.map { it.name })
+
+        viewModel.setProject(app.id)
+        val filed = tasks.find(task.id)!!
+        assertEquals(app.id, filed.projectId)
+        assertEquals(ProjectRules.TODO, filed.boardColumn)
+
+        viewModel.setProject(null)
+        val loose = tasks.find(task.id)!!
+        assertEquals(null, loose.projectId)
+        assertEquals(null, loose.boardColumn)
     }
 
     @Test

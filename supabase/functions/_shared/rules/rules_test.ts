@@ -65,6 +65,7 @@ function task(fields: Json, index: number): TaskItem {
     notes: fields.notes ?? "",
     deadline: null,
     completedAt: fields.completedAt ?? null,
+    projectId: fields.project ?? null,
   };
 }
 

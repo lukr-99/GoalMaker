@@ -31,6 +31,9 @@ public interface ISettingsStore
     /// <summary>When this device last looked at its reminders, so each one is shown once (docs/reminders.md).</summary>
     DateTimeOffset? RemindedUntil { get; set; }
 
+    /// <summary>When the owner last signed in on this PC, which starts its week (docs/sign-in.md).</summary>
+    DateTimeOffset? SignedInAt { get; set; }
+
     /// <summary>The global quick-add shortcut as text (<c>Win+Alt+Space</c>); null for the default, empty for none.</summary>
     string? QuickAddHotkey { get; set; }
 

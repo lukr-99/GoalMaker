@@ -62,6 +62,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.GoalHorizon
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.StepItem
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.TaskItem
@@ -125,6 +126,7 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
             HorizontalDivider()
             Schedule(task, onSchedule = viewModel::schedule, onDeadline = viewModel::setDeadline)
             AreaField(task, state, onArea = viewModel::setArea)
+            ProjectField(task, state, onProject = viewModel::setProject)
             GoalField(task, state, onGoal = viewModel::setGoal)
             RepeatField(task, onRepeat = viewModel::setRecurrence)
             HorizontalDivider()
@@ -281,6 +283,33 @@ private fun AreaField(task: TaskItem, state: TaskUiState, onArea: (String?) -> U
                 DropdownMenuItem(text = { Text(listOfNotNull(choice.emoji, choice.name).joinToString(" ")) }, onClick = {
                     open = false
                     onArea(choice.id)
+                })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectField(task: TaskItem, state: TaskUiState, onProject: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val project = state.projects.firstOrNull { it.id == task.projectId }
+    Box {
+        Field(
+            label = stringResource(R.string.task_project),
+            value = project?.name ?: stringResource(R.string.task_no_project),
+            onClick = { open = true },
+            onClear = project?.let { { onProject(null) } },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.task_no_project)) }, onClick = {
+                open = false
+                onProject(null)
+            })
+            // A paused or finished project leaves the picker, but the task's own project stays listed.
+            state.projects.filter { it.status == ProjectRules.ACTIVE || it.id == task.projectId }.forEach { choice ->
+                DropdownMenuItem(text = { Text(choice.name) }, onClick = {
+                    open = false
+                    onProject(choice.id)
                 })
             }
         }

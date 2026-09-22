@@ -35,6 +35,9 @@ public sealed record SettingsDocument
 
     public DateTimeOffset? RemindedUntil { get; init; }
 
+    /// <summary>When the owner last signed in on this PC; missing from older files starts the week anew.</summary>
+    public DateTimeOffset? SignedInAt { get; init; }
+
     public string? QuickAddHotkey { get; init; }
 
     public bool NavigationCollapsed { get; init; }

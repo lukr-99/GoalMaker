@@ -36,22 +36,17 @@ import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Today
-import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -99,6 +94,8 @@ import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.nav.MainDestination
+import com.goalmaker.app.ui.nav.MainNavigationBar
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
@@ -113,8 +110,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * The planner's home: Today, Tomorrow and the Inbox behind a bottom navigation (docs/lists.md), with
- * the composer above it. The list on screen supplies the day for what's typed (docs/composer.md).
+ * The planner's home: Today, Tomorrow and the Inbox behind the bottom navigation (docs/lists.md),
+ * with the composer above it. The list on screen supplies the day for what's typed
+ * (docs/composer.md). The bar itself is shared with Projects and the Calendar, so [tab] and the
+ * choosing live above this screen.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -128,13 +127,12 @@ fun ListsScreen(
     onOpenHabits: () -> Unit,
     onOpenReviews: () -> Unit,
     onOpenStats: () -> Unit,
-    onOpenProjects: () -> Unit,
-    onOpenCalendar: () -> Unit,
+    tab: ListTab,
+    onSelect: (MainDestination) -> Unit,
     hasProblems: Boolean = false,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val waiting = stringResource(R.string.problems_waiting)
-    var tab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val composer = rememberTextFieldState()
     val snackbars = remember { SnackbarHostState() }
@@ -200,7 +198,7 @@ fun ListsScreen(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             snackbarHost = { SnackbarHost(snackbars) },
             topBar = {
-                LargeFlexibleTopAppBar(
+                MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(tab.title())) },
                     subtitle = {
                         state.lists?.let {
@@ -210,18 +208,12 @@ fun ListsScreen(
                     navigationIcon = { DayMark(tab, state.lists) },
                     actions = {
                         SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
-                        IconButton(onClick = onOpenHabits) {
-                            Icon(Icons.Outlined.DonutLarge, contentDescription = stringResource(R.string.habits_title))
-                        }
-                        IconButton(onClick = onOpenGoals) {
-                            Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
-                        }
                         MoreMenu(
+                            onOpenHabits = onOpenHabits,
+                            onOpenGoals = onOpenGoals,
                             onOpenArchive = onOpenArchive,
                             onOpenReviews = onOpenReviews,
                             onOpenStats = onOpenStats,
-                            onOpenProjects = onOpenProjects,
-                            onOpenCalendar = onOpenCalendar,
                         )
                         IconButton(onClick = onOpenPlan) {
                             Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
@@ -257,16 +249,7 @@ fun ListsScreen(
                         onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
                     )
                     if (!WindowInsets.isImeVisible) {
-                        NavigationBar {
-                            ListTab.entries.forEach { entry ->
-                                NavigationBarItem(
-                                    selected = tab == entry,
-                                    onClick = { tab = entry },
-                                    icon = { Icon(entry.icon(), contentDescription = null) },
-                                    label = { Text(stringResource(entry.title())) },
-                                )
-                            }
-                        }
+                        MainNavigationBar(MainDestination.of(tab), onSelect)
                     }
                 }
             },
@@ -413,11 +396,11 @@ private fun ListContent(
 /** What doesn't fit the top bar: the projects, the reviews, the stats and the archive. */
 @Composable
 private fun MoreMenu(
+    onOpenHabits: () -> Unit,
+    onOpenGoals: () -> Unit,
     onOpenArchive: () -> Unit,
     onOpenReviews: () -> Unit,
     onOpenStats: () -> Unit,
-    onOpenProjects: () -> Unit,
-    onOpenCalendar: () -> Unit,
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
@@ -426,17 +409,19 @@ private fun MoreMenu(
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.calendar_title)) },
+                text = { Text(stringResource(R.string.habits_title)) },
+                leadingIcon = { Icon(Icons.Outlined.DonutLarge, contentDescription = null) },
                 onClick = {
                     open = false
-                    onOpenCalendar()
+                    onOpenHabits()
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.projects_title)) },
+                text = { Text(stringResource(R.string.goals_title)) },
+                leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
                 onClick = {
                     open = false
-                    onOpenProjects()
+                    onOpenGoals()
                 },
             )
             DropdownMenuItem(
@@ -578,10 +563,4 @@ private fun ListTab.title() = when (this) {
     ListTab.TODAY -> R.string.lists_today
     ListTab.TOMORROW -> R.string.lists_tomorrow
     ListTab.INBOX -> R.string.lists_inbox
-}
-
-private fun ListTab.icon() = when (this) {
-    ListTab.TODAY -> Icons.Outlined.Today
-    ListTab.TOMORROW -> Icons.Outlined.WbTwilight
-    ListTab.INBOX -> Icons.Outlined.Inbox
 }

@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.StepItem
 import com.goalmaker.app.application.planning.StepList
 import com.goalmaker.app.application.planning.TagItem
@@ -23,9 +24,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * One task's detail view (docs/archive.md): every field, its tags, its checklist and the goal it
- * serves. Each change is written at once and syncs like any other; disk work runs on [io], and
- * [today] is the planning day the goal picker counts from.
+ * One task's detail view (docs/archive.md): every field, its tags, its checklist, the goal it
+ * serves and the project it is an item of. Each change is written at once and syncs like any
+ * other; disk work runs on [io], and [today] is the planning day the goal picker counts from.
  */
 class TaskViewModel(
     private val taskId: String,
@@ -34,18 +35,21 @@ class TaskViewModel(
     private val tags: TagList,
     private val steps: StepList,
     goals: GoalList,
+    projects: ProjectList,
     private val io: CoroutineDispatcher,
     private val today: () -> LocalDate,
 ) : ViewModel() {
     private val tagging = combine(tags.watch().flowOn(io), tags.watchLinks().flowOn(io)) { tagList, links -> tagList to links[taskId].orEmpty() }
+    // Combine takes five flows, so the goals and the projects travel together.
+    private val filing = combine(goals.watch().flowOn(io), projects.watch().flowOn(io)) { (goalList, _), data -> goalList to data.projects }
 
     val uiState: StateFlow<TaskUiState> = combine(
         tasks.watch(taskId).flowOn(io),
         steps.watch(taskId).flowOn(io),
         areas.watch().flowOn(io),
         tagging,
-        goals.watch().flowOn(io),
-    ) { task, stepList, areaList, (tagList, tagIds), (goalList, _) ->
+        filing,
+    ) { task, stepList, areaList, (tagList, tagIds), (goalList, projectList) ->
         TaskUiState(
             loaded = true,
             task = task,
@@ -54,6 +58,7 @@ class TaskViewModel(
             tags = tagList,
             taskTagIds = tagIds,
             goals = goalChoices(goalList, task),
+            projects = projectList,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TaskUiState())
 
@@ -71,6 +76,12 @@ class TaskViewModel(
 
     /** Links the task to the goal it serves, or to none. */
     fun setGoal(goalId: String?) = write { tasks.setGoal(taskId, goalId) }
+
+    /**
+     * Files the task as an item of a project, which lands it in that board's To do, or takes it out
+     * of the one it was in, which leaves it a plain task (docs/projects.md).
+     */
+    fun setProject(projectId: String?) = write { tasks.setProject(taskId, projectId) }
 
     fun setDone(done: Boolean) = write { tasks.setDone(taskId, done) }
 

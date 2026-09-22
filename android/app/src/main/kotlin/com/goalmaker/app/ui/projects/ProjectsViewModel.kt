@@ -42,6 +42,10 @@ class ProjectsViewModel(
                 ProjectRules.board(taskList.filter { it.projectId == selected.id })
             },
             milestones = selected?.let { data.milestonesOf(it.id) }.orEmpty(),
+            openCounts = taskList.filterNot { it.deleted }
+                .filter { it.projectId != null && it.boardColumn != ProjectRules.DONE }
+                .groupingBy { it.projectId!! }
+                .eachCount(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProjectsUiState())
 

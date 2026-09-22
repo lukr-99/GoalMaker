@@ -60,6 +60,8 @@ import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.nav.MainDestination
+import com.goalmaker.app.ui.nav.MainNavigationBar
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
@@ -69,7 +71,12 @@ import java.time.format.TextStyle
 /** A week or a month of planned tasks, deadlines and reminders (docs/calendar.md). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit, onOpenTask: (String) -> Unit) {
+fun CalendarScreen(
+    viewModel: CalendarViewModel,
+    onBack: () -> Unit,
+    onOpenTask: (String) -> Unit,
+    onSelect: (MainDestination) -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val locale = LocalConfiguration.current.locales[0]
@@ -99,6 +106,7 @@ fun CalendarScreen(viewModel: CalendarViewModel, onBack: () -> Unit, onOpenTask:
                 scrollBehavior = scrollBehavior,
             )
         },
+        bottomBar = { MainNavigationBar(MainDestination.CALENDAR, onSelect) },
     ) { padding ->
         if (!state.loaded) return@Scaffold
         LazyColumn(

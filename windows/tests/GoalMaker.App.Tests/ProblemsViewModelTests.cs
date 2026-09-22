@@ -77,7 +77,8 @@ public sealed class ProblemsViewModelTests
     private static ShellViewModel Shell(ProblemLog log)
     {
         var auth = new SignedOutAuth();
-        return new ShellViewModel(auth, new SignInViewModel(auth, new KeyStrings(), devBackend: null), log, action => action());
+        var watch = new SignInWatch(auth, new TestPlanner.FakeSettings(), () => DateTimeOffset.Now);
+        return new ShellViewModel(auth, new SignInViewModel(auth, watch, new KeyStrings(), devBackend: null), log, action => action());
     }
 
     private sealed class KeyStrings : IStrings

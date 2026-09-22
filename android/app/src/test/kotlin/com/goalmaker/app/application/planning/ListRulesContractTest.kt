@@ -88,6 +88,7 @@ class ListRulesContractTest {
             plannedDate = text("planned")?.let(LocalDate::parse),
             plannedTime = text("time")?.let(LocalTime::parse),
             areaId = text("area"),
+            projectId = text("project"),
             deleted = fields.getValue("deleted").jsonPrimitive.boolean,
         )
     }

@@ -78,6 +78,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { RemindedUntil = value });
     }
 
+    public DateTimeOffset? SignedInAt
+    {
+        get => document.SignedInAt;
+        set => Save(document with { SignedInAt = value });
+    }
+
     public string? QuickAddHotkey
     {
         get => document.QuickAddHotkey;

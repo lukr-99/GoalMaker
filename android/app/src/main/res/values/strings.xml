@@ -702,6 +702,9 @@
     <string name="stats_habit_met">%1$d of %2$d met, best run %3$d</string>
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
+    <string name="projects_pick">Choose a project</string>
+    <string name="task_project">Project</string>
+    <string name="task_no_project">No project</string>
     <string name="activity_goal">goal “%1$s”</string>
     <string name="activity_goal_entry">an amount on a goal</string>
     <string name="activity_habit">the habit “%1$s”</string>

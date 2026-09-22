@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,8 +19,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -45,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -59,12 +62,19 @@ import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.nav.MainDestination
+import com.goalmaker.app.ui.nav.MainNavigationBar
 import com.goalmaker.app.ui.theme.AppTheme
 
 /** The projects and the board of the one on show (docs/projects.md). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProjectsScreen(viewModel: ProjectsViewModel, onBack: () -> Unit, onOpenTask: (String) -> Unit) {
+fun ProjectsScreen(
+    viewModel: ProjectsViewModel,
+    onBack: () -> Unit,
+    onOpenTask: (String) -> Unit,
+    onSelect: (MainDestination) -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     var editing by remember { mutableStateOf<ProjectItem?>(null) }
@@ -89,6 +99,7 @@ fun ProjectsScreen(viewModel: ProjectsViewModel, onBack: () -> Unit, onOpenTask:
                 scrollBehavior = scrollBehavior,
             )
         },
+        bottomBar = { MainNavigationBar(MainDestination.PROJECTS, onSelect) },
     ) { padding ->
         if (!state.loaded) return@Scaffold
         LazyColumn(
@@ -178,19 +189,60 @@ fun ProjectsScreen(viewModel: ProjectsViewModel, onBack: () -> Unit, onOpenTask:
     }
 }
 
-/** The projects as chips, so the board below follows the one chosen. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * One row naming the project on show, which drops a menu of the rest. A row of chips grew downwards
+ * with every project added and pushed the board off the phone, so the picker keeps to its one line
+ * however many projects there are. Each choice carries how many items are still waiting on it.
+ */
 @Composable
 private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        state.projects.forEach { project ->
-            ChoiceChip(
-                selected = project.id == state.selected?.id,
-                onClick = { onPick(project.id) },
-                label = project.name,
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppTheme.colors.surface, AppTheme.shapes.row)
+                .clickable { open = true }
+                .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+        ) {
+            Text(
+                state.selected?.name ?: stringResource(R.string.projects_pick),
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                modifier = Modifier.weight(1f),
+            )
+            WaitingCount(state.selected?.let { state.openCounts[it.id] } ?: 0)
+            Icon(
+                Icons.Outlined.ArrowDropDown,
+                contentDescription = stringResource(R.string.projects_pick),
+                modifier = Modifier.padding(start = 4.dp),
             )
         }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            state.projects.forEach { project ->
+                DropdownMenuItem(
+                    text = { Text(project.name) },
+                    trailingIcon = { WaitingCount(state.openCounts[project.id] ?: 0) },
+                    onClick = {
+                        open = false
+                        onPick(project.id)
+                    },
+                )
+            }
+        }
     }
+}
+
+/** How many items a board still has waiting, or nothing at all when it is clear. */
+@Composable
+private fun WaitingCount(waiting: Int) {
+    if (waiting == 0) return
+    Text(
+        waiting.toString(),
+        style = MaterialTheme.typography.labelLarge,
+        color = AppTheme.colors.accent,
+    )
 }
 
 @Composable
@@ -255,14 +307,28 @@ private fun ItemRow(
                 color = if (task.state == TaskState.DROPPED) AppTheme.colors.textMuted else AppTheme.colors.text,
                 maxLines = 2,
             )
-            Text(
-                listOfNotNull(
+            // An idea and a bug carry their own icon and colour, so a board reads at a glance.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    typeIcon(task.itemType),
+                    contentDescription = null,
+                    tint = typeColor(task.itemType),
+                    modifier = Modifier.size(14.dp),
+                )
+                Text(
                     typeName(task.itemType),
-                    task.plannedDate?.toString(),
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.labelSmall,
-                color = AppTheme.colors.textMuted,
-            )
+                    style = MaterialTheme.typography.labelSmall,
+                    color = typeColor(task.itemType),
+                    modifier = Modifier.padding(start = 4.dp),
+                )
+                task.plannedDate?.let { day ->
+                    Text(
+                        " · " + day.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = AppTheme.colors.textMuted,
+                    )
+                }
+            }
         }
         Box {
             IconButton(onClick = { menu = true }) {
@@ -415,6 +481,21 @@ private fun typeName(itemType: String): String = stringResource(
         else -> R.string.projects_task
     },
 )
+
+/** The icon an item's type wears on the board: a bug, a lightbulb, or a plain task. */
+private fun typeIcon(itemType: String): ImageVector = when (itemType) {
+    ProjectRules.IDEA -> Icons.Outlined.Lightbulb
+    ProjectRules.BUG -> Icons.Outlined.BugReport
+    else -> Icons.Outlined.TaskAlt
+}
+
+/** A bug reads as a problem, an idea as something to pick up, and a task keeps the quiet colour. */
+@Composable
+private fun typeColor(itemType: String): Color = when (itemType) {
+    ProjectRules.IDEA -> AppTheme.colors.accent
+    ProjectRules.BUG -> AppTheme.colors.danger
+    else -> AppTheme.colors.textMuted
+}
 
 @Composable
 private fun priorityName(priority: String): String = stringResource(
