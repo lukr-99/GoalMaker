@@ -96,6 +96,7 @@ import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.nav.MainDestination
 import com.goalmaker.app.ui.nav.MainNavigationBar
+import com.goalmaker.app.ui.nav.NavTransitions
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
@@ -150,8 +151,12 @@ fun ListsScreen(
         scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
     }
 
-    // Confetti when a habit's streak reaches a milestone while Today is open (design spec).
+    // A list tab arrives the way Projects and the Calendar do, since the bar treats all five alike.
+    val motion = AppTheme.motion
     val reduceMotion = AppTheme.reduceMotion
+    val transitions = remember(motion, reduceMotion) { NavTransitions(motion, reduceMotion) }
+
+    // Confetti when a habit's streak reaches a milestone while Today is open (design spec).
     var seenMilestones by remember { mutableStateOf<Set<String>?>(null) }
     var bursts by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.lists != null, state.habitMilestones) {
@@ -276,7 +281,13 @@ fun ListsScreen(
                             onTag = viewModel::filterByTag,
                             modifier = Modifier.padding(top = 4.dp),
                         )
-                        ListContent(tab, lists, state, viewModel, tick, onOpenTask, onOpenGoals, onOpenHabits, ::tapHabit) { remindFor = it }
+                        AnimatedContent(
+                            targetState = tab,
+                            transitionSpec = { transitions.switch() },
+                            label = "list tab",
+                        ) { shown ->
+                            ListContent(shown, lists, state, viewModel, tick, onOpenTask, onOpenGoals, onOpenHabits, ::tapHabit) { remindFor = it }
+                        }
                     }
                 }
             }

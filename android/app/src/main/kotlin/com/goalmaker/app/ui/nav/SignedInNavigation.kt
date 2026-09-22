@@ -117,11 +117,12 @@ fun SignedInNavigation(graph: AppGraph) {
                     rememberViewModelStoreNavEntryDecorator(),
                 ),
                 sharedTransitionScope = this,
-                transitionSpec = { transitions.forward() },
-                popTransitionSpec = { transitions.back() },
+                // Between the bar's own places nothing slides; going deeper still does.
+                transitionSpec = { if (initialState.isTopLevel() && targetState.isTopLevel()) transitions.switch() else transitions.forward() },
+                popTransitionSpec = { if (initialState.isTopLevel() && targetState.isTopLevel()) transitions.switch() else transitions.back() },
                 predictivePopTransitionSpec = { transitions.backSwipe() },
                 entryProvider = entryProvider {
-                    entry<TodayKey> {
+                    entry<TodayKey>(metadata = topLevel()) {
                         val listsViewModel = viewModel {
                             ListsViewModel(
                                 tasks = graph.tasks,
@@ -164,7 +165,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
                         )
                     }
-                    entry<CalendarKey> {
+                    entry<CalendarKey>(metadata = topLevel()) {
                         val calendarViewModel = viewModel {
                             CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
                         }
@@ -175,7 +176,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onSelect = ::select,
                         )
                     }
-                    entry<ProjectsKey> {
+                    entry<ProjectsKey>(metadata = topLevel()) {
                         val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
                         ProjectsScreen(
                             viewModel = projectsViewModel,
