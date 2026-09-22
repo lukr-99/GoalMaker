@@ -3,6 +3,16 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## A view model test waits on its state once
+
+2026-09-23, the Made by switch. A Robolectric test that read `uiState.first { ... }`, changed the
+view model's filter, and read `uiState.first { ... }` again hung until
+`UncompletedCoroutinesError: After waiting for 1m, the test body did not run to completion`. The
+first read passed; the second never saw the new state. The state comes from `stateIn(viewModelScope,
+WhileSubscribed(...))`, whose work runs on the main looper, and most likely nothing runs that looper
+while `runTest` waits a second time. Set everything up first, then wait once, and give each state its
+own test, the way `GoalsViewModelTest` already did (`ProjectsViewModelTest`).
+
 ## A queued row must fill every column the server needs
 
 2026-09-20, M5. Saving the composer's `+Project` and `?` set `item_type` and `board_column` on a new

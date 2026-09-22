@@ -695,6 +695,11 @@
     <string name="projects_high">High</string>
     <string name="projects_normal">Normal</string>
     <string name="projects_low">Low</string>
+    <string name="projects_made_by">Made by</string>
+    <string name="projects_made_by_all">Everyone</string>
+    <string name="projects_made_by_owner">Me</string>
+    <string name="projects_made_by_claude">Claude</string>
+    <string name="projects_by_claude">by Claude</string>
 
     <!-- Stats (docs/stats.md) -->
     <string name="stats_title">Stats</string>
