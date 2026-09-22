@@ -62,7 +62,7 @@ import com.goalmaker.app.data.sync.SupabaseChangeFeed
 import com.goalmaker.app.data.sync.WorkManagerSyncScheduler
 import com.goalmaker.app.data.update.ApkInstallerLauncher
 import com.goalmaker.app.data.update.EcdsaSignatureVerifier
-import com.goalmaker.app.data.update.SupabaseReleaseChannel
+import com.goalmaker.app.data.update.GitHubReleaseChannel
 import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.ui.widget.Widgets
 import com.goalmaker.app.domain.design.LogoMark
@@ -71,6 +71,7 @@ import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.sync.SyncedTable
 import com.goalmaker.app.domain.sync.SyncedTableCatalog
+import com.goalmaker.app.domain.update.ReleaseChannelAddress
 import com.goalmaker.app.domain.update.ReleasePlatform
 import io.github.jan.supabase.auth.auth
 import io.ktor.client.HttpClient
@@ -151,11 +152,27 @@ class AppGraph(context: Context) {
     private val signatureVerifier: SignatureVerifier =
         if (manifestKey.isBlank()) SignatureVerifier { _, _ -> false } else EcdsaSignatureVerifier(manifestKey)
 
+    /** Where updates come from (ADR 0010); null when this build has no channel. */
+    val releaseChannel: ReleaseChannelAddress? =
+        BuildConfig.UPDATE_URL.takeIf(String::isNotBlank)?.let(::ReleaseChannelAddress)
+
+    // Its own client: an APK can take longer than any one request should, so only stalls time out.
+    private val updateHttp = HttpClient(OkHttp) {
+        install(HttpTimeout) {
+            connectTimeoutMillis = 15_000
+            socketTimeoutMillis = 60_000
+        }
+    }
+
     val updates = UpdateService(
         installedVersion = BuildConfig.VERSION_NAME,
         platform = ReleasePlatform.ANDROID,
-        channelConfigured = manifestKey.isNotBlank(),
-        channel = SupabaseReleaseChannel(supabase, File(appContext.cacheDir, "updates")),
+        channelConfigured = manifestKey.isNotBlank() && releaseChannel != null,
+        channel = GitHubReleaseChannel(
+            http = updateHttp,
+            address = releaseChannel ?: ReleaseChannelAddress(""),
+            updatesDirectory = File(appContext.cacheDir, "updates"),
+        ),
         verifier = ReleaseVerifier(signatureVerifier),
         installer = ApkInstallerLauncher(appContext),
     )

@@ -218,7 +218,8 @@
     <string name="settings_update_failed">Couldn\'t check for updates: %1$s</string>
     <string name="settings_update_corrupted">The download didn\'t match its checksum and was discarded.</string>
     <string name="settings_update_opened">The installer is open. Confirm there to update.</string>
-    <string name="settings_update_manual">You can always install an update by hand from the GoalMaker GitHub release.</string>
+    <string name="settings_update_manual">If an update will not install here, you can download it yourself and open it.</string>
+    <string name="settings_update_download">Open the latest release</string>
     <string name="settings_about">About</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_backend">Backend: %1$s</string>

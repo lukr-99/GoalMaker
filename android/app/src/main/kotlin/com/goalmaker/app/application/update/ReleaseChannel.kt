@@ -1,6 +1,6 @@
 package com.goalmaker.app.application.update
 
-/** Reads the update channel (the private `releases` bucket). Throws on network or access errors. */
+/** Reads the update channel (the latest GitHub release, ADR 0010). Throws on network or access errors. */
 interface ReleaseChannel {
     /** The latest manifest's exact bytes and its detached base64 signature. */
     suspend fun fetchLatest(): ChannelSnapshot

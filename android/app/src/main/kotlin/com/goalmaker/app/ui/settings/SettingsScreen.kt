@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -435,11 +436,17 @@ private fun UpdatesContent(update: UpdateUiState, viewModel: SettingsViewModel) 
     OutlinedButton(onClick = viewModel::checkForUpdates, enabled = !busy) {
         Text(stringResource(R.string.settings_check_updates))
     }
-    Text(
-        stringResource(R.string.settings_update_manual),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    viewModel.releasesPage?.let { page ->
+        val links = LocalUriHandler.current
+        Text(
+            stringResource(R.string.settings_update_manual),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TextButton(onClick = { links.openUri(page) }) {
+            Text(stringResource(R.string.settings_update_download))
+        }
+    }
 }
 
 @Composable
