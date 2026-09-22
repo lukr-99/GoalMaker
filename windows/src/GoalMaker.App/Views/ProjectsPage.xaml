@@ -79,7 +79,8 @@
                     Background="{DynamicResource GM.SurfaceBrush}">
                 <StackPanel>
                     <DockPanel>
-                        <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent"
+                        <!-- The menu opens on a left click of the dots, as well as on a right click. -->
+                        <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent" Click="OnItemMenu"
                                    ToolTip="{DynamicResource Projects.ItemMenu}"
                                    AutomationProperties.Name="{DynamicResource Projects.ItemMenu}">
                             <ui:Button.ContextMenu>
@@ -114,7 +115,7 @@
 
         <!-- One column of the board. -->
         <DataTemplate x:Key="BoardColumn" DataType="{x:Type vm:BoardColumnViewModel}">
-            <StackPanel Margin="0,0,10,0" MinWidth="180">
+            <StackPanel Margin="0,0,10,0" MinWidth="200">
                 <TextBlock Style="{StaticResource ColumnTitle}" Text="{Binding Title}" />
                 <TextBlock Style="{StaticResource Hint}" FontSize="11" Text="{DynamicResource Projects.ColumnEmpty}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
@@ -140,7 +141,8 @@
         </StackPanel>
 
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
+            <!-- The scrollbar floats over the content, so the right edge keeps a lane clear of it. -->
+            <StackPanel Margin="0,0,14,0">
                 <!-- The project on show, or the editor when one is being written. -->
                 <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
                         Visibility="{Binding IsNotEditing, Converter={StaticResource BoolToVisibility}}">
@@ -205,13 +207,23 @@
                                    Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
                     </Grid>
 
-                    <ItemsControl ItemsSource="{Binding Columns}" ItemTemplate="{StaticResource BoardColumn}" Focusable="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Rows="1" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
+                    <!--
+                      The four columns share the width when there is room. In a narrow window they
+                      stop shrinking and the board scrolls sideways, so a card is never cut off and
+                      its menu stays on screen.
+                    -->
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <!-- The board takes the width it is shown in, and 840 at the least, so a title still wraps. -->
+                        <ItemsControl MinWidth="840"
+                                      Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}"
+                                      ItemsSource="{Binding Columns}" ItemTemplate="{StaticResource BoardColumn}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </ScrollViewer>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
