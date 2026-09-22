@@ -9,6 +9,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -39,6 +42,7 @@ import com.goalmaker.app.ui.goals.GoalsViewModel
 import com.goalmaker.app.ui.habits.HabitsKey
 import com.goalmaker.app.ui.habits.HabitsScreen
 import com.goalmaker.app.ui.habits.HabitsViewModel
+import com.goalmaker.app.ui.lists.ListTab
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
@@ -71,6 +75,16 @@ import com.goalmaker.app.ui.theme.AppTheme
 @Composable
 fun SignedInNavigation(graph: AppGraph) {
     val backStack = rememberNavBackStack(TodayKey)
+    // The bottom bar is one level: which list is on show, and whether a screen of its own sits on top.
+    var listTab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
+    fun select(destination: MainDestination) {
+        while (backStack.size > 1) backStack.removeLastOrNull()
+        when (destination) {
+            MainDestination.PROJECTS -> backStack.add(ProjectsKey)
+            MainDestination.CALENDAR -> backStack.add(CalendarKey)
+            else -> destination.tab()?.let { listTab = it }
+        }
+    }
     // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
     val problems by graph.problems.problems.collectAsStateWithLifecycle()
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
@@ -134,8 +148,8 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenHabits = { backStack.add(HabitsKey) },
                             onOpenReviews = { backStack.add(ReviewsKey) },
                             onOpenStats = { backStack.add(StatsKey) },
-                            onOpenProjects = { backStack.add(ProjectsKey) },
-                            onOpenCalendar = { backStack.add(CalendarKey) },
+                            tab = listTab,
+                            onSelect = ::select,
                         )
                     }
                     entry<GoalsKey> {
@@ -158,6 +172,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             viewModel = calendarViewModel,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                            onSelect = ::select,
                         )
                     }
                     entry<ProjectsKey> {
@@ -166,6 +181,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             viewModel = projectsViewModel,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                            onSelect = ::select,
                         )
                     }
                     entry<StatsKey> {
