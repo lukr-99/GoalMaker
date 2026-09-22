@@ -10,6 +10,7 @@ habits and projects.
 | --- | --- | --- | --- |
 | `vectors/semantic-version.json` | Semantic version parsing, precedence, update offer policy | `SemanticVersionContractTest` | `SemanticVersionContractTests` |
 | `vectors/release-manifest.json` | Release manifest signature check and validation | `ReleaseManifestContractTest` | `ReleaseManifestContractTests` |
+| `vectors/release-channel.json` | Where the update channel's manifest, signature and artifacts live on GitHub Releases (ADR 0010) | `ReleaseChannelContractTest` | `ReleaseChannelContractTests` |
 | `vectors/sync-merge.json` | Sync merge, full resync, pull start, timestamp form ([sync](../docs/sync.md)) | `SyncRulesContractTest` | `SyncRulesContractTests` |
 | `vectors/composer.json` | The composer's shortcut grammar ([composer](../docs/composer.md)) | `ComposerParserContractTest` | `ComposerParserContractTests` |
 | `vectors/lists.json` | What Today, Tomorrow and Inbox hold, and filtering by area and tag ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |

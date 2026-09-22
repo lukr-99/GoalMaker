@@ -1,5 +1,8 @@
 # ADR 0004: Updates through a private Supabase Storage bucket with a signed manifest
 
+**Superseded in part by [ADR 0010](0010-updates-through-public-github-releases.md):** the apps now read
+public GitHub Releases. The signed manifest described here still stands.
+
 The repository is private and the apps are sideloaded, so an installed app can't anonymously read
 GitHub release assets (Tarot2Go never solved this). Both apps already hold a Supabase session, so the
 release workflow uploads the APK, the installer and a release manifest to a private `releases`
