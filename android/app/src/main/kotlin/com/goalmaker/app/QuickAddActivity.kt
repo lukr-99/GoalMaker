@@ -3,14 +3,15 @@ package com.goalmaker.app
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.fragment.app.FragmentActivity
 import com.goalmaker.app.ui.capture.CaptureViewModel
 import com.goalmaker.app.ui.capture.QuickAddSheet
+import com.goalmaker.app.ui.lock.LockedWindow
 import com.goalmaker.app.ui.theme.GoalMakerTheme
 import java.time.LocalDateTime
 
@@ -18,8 +19,11 @@ import java.time.LocalDateTime
  * The quick-add box the home screen widget opens: the composer over whatever the owner was doing,
  * without the app coming up. A line with no day lands in the Inbox; `--EXTRA_TODAY` starts it on
  * today. It closes as soon as the task is saved.
+ *
+ * A FragmentActivity because the app lock can stand in front of this window too, and the unlock
+ * prompt is a fragment (docs/sign-in.md).
  */
-class QuickAddActivity : ComponentActivity() {
+class QuickAddActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -29,6 +33,7 @@ class QuickAddActivity : ComponentActivity() {
         setContent {
             val appearance by graph.settings.appearance.collectAsStateWithLifecycle()
             GoalMakerTheme(graph.design, appearance, graph.logo) {
+                LockedWindow(graph = graph, onGiveUp = ::finish) {
                 QuickAddSheet(
                     viewModel = viewModel {
                         CaptureViewModel(
@@ -49,6 +54,7 @@ class QuickAddActivity : ComponentActivity() {
                     },
                     onCancel = { finish() },
                 )
+                }
             }
         }
     }

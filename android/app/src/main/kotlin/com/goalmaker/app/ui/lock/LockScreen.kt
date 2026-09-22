@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,16 +30,25 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.goalmaker.app.R
 import com.goalmaker.app.application.auth.UnlockAvailability
+import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.data.auth.DeviceUnlock
 import com.goalmaker.app.ui.components.GoalMakerLogo
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 /**
  * The lock over the signed-in app (docs/sign-in.md). It asks the phone once as it appears, and
- * offers to ask again after that. A phone that cannot ask at all is not a dead end: the emailed
- * code is always the way through, so the owner is never shut out of their own planner.
+ * offers to ask again after that. A phone that cannot ask at all is not a dead end, which is what
+ * [giveUpLabel] and [onGiveUp] are for: the main window offers the emailed code, and the one-shot
+ * windows offer to close. The owner is never shut out of their own planner.
  */
 @Composable
-fun LockScreen(unlock: DeviceUnlock, onUnlocked: () -> Unit, onUseCode: () -> Unit) {
+fun LockScreen(
+    unlock: DeviceUnlock,
+    onUnlocked: () -> Unit,
+    onGiveUp: () -> Unit,
+    giveUpLabel: String,
+    onBack: () -> Unit,
+) {
     val activity = LocalActivity.current as? FragmentActivity
     val availability = remember { if (activity == null) UnlockAvailability.UNAVAILABLE else unlock.availability() }
     var problem by remember { mutableStateOf<String?>(null) }
@@ -70,8 +80,8 @@ fun LockScreen(unlock: DeviceUnlock, onUnlocked: () -> Unit, onUseCode: () -> Un
     // leaving takes the prompt down with it and the owner should not have to ask for it twice.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { ask() }
 
-    // Back does not go round the lock; it leaves the app the way Home does.
-    BackHandler(enabled = true) { activity?.moveTaskToBack(true) }
+    // Back does not go round the lock; it leaves, the way Home does.
+    BackHandler(enabled = true) { onBack() }
 
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
         Box(
@@ -101,7 +111,7 @@ fun LockScreen(unlock: DeviceUnlock, onUnlocked: () -> Unit, onUseCode: () -> Un
                 if (canAsk) {
                     Button(onClick = ask) { Text(stringResource(R.string.lock_unlock)) }
                 }
-                TextButton(onClick = onUseCode) { Text(stringResource(R.string.lock_use_code)) }
+                TextButton(onClick = onGiveUp) { Text(giveUpLabel) }
             }
         }
     }
@@ -111,4 +121,27 @@ private fun reasonFor(availability: UnlockAvailability) = when (availability) {
     UnlockAvailability.READY -> R.string.lock_subtitle
     UnlockAvailability.NOTHING_ENROLLED -> R.string.lock_nothing_enrolled
     UnlockAvailability.UNAVAILABLE -> R.string.lock_unavailable
+}
+
+/**
+ * [content] behind the lock, for the one-shot windows: the share target and the quick-add box.
+ * They use the same signed-in graph as the app itself, so a lock that did not cover them would not
+ * be a lock at all. They hold nothing worth keeping either, so the lock goes in place of the
+ * content rather than over it, and the owner's areas, tags and projects are not read until it
+ * comes down (docs/sign-in.md).
+ */
+@Composable
+fun LockedWindow(graph: AppGraph, onGiveUp: () -> Unit, content: @Composable () -> Unit) {
+    val locked by graph.appLock.locked.collectAsStateWithLifecycle()
+    if (locked) {
+        LockScreen(
+            unlock = graph.deviceUnlock,
+            onUnlocked = graph.appLock::unlocked,
+            onGiveUp = onGiveUp,
+            giveUpLabel = stringResource(R.string.lock_not_now),
+            onBack = onGiveUp,
+        )
+    } else {
+        content()
+    }
 }

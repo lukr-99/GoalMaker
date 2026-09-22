@@ -57,6 +57,18 @@ picture not to be taken at all while the lock is on, and the card in recents is 
 12 and below have no way to ask, so there the preview still shows the last screen, the way it always
 did.
 
+**Every window, not just the main one.** The share target and the quick-add box the widget opens
+are windows of their own, and they use the same signed-in graph as the app itself: their composer
+reads the owner's areas, tags and projects and writes tasks to the account. A lock that covered only
+the main window would not be a lock, because a share from any other app would walk straight past it.
+Both sit behind the same lock. They hold nothing worth keeping, so there the lock goes in place of
+the content rather than over it, and none of that is read until it comes down. Their way out is to
+close rather than the emailed code, which would be a strange thing to offer someone half way through
+sharing a link.
+
+The home screen widget is a different thing and is left as it was: it puts today's tasks on the home
+screen on purpose, which is what it is for, and it is not a way into the app.
+
 **What it asks for.** A weak biometric or the screen lock, together. That pairing is the one
 androidx.biometric supports on every Android the app runs on, and it means a phone with no
 fingerprint enrolled can still be unlocked with its PIN, which is the first fallback. Android 8 is

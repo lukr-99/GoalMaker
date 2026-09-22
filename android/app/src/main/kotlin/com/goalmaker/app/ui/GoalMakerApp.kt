@@ -7,14 +7,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.goalmaker.app.R
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.ui.lock.LockScreen
@@ -52,10 +55,13 @@ fun GoalMakerApp(graph: AppGraph) {
                         is AuthSession.SignedIn -> Box(Modifier.fillMaxSize()) {
                             SignedInNavigation(graph = graph)
                             if (locked) {
+                                val activity = LocalActivity.current
                                 LockScreen(
                                     unlock = graph.deviceUnlock,
                                     onUnlocked = graph.appLock::unlocked,
-                                    onUseCode = { scope.launch { graph.auth.signOut() } },
+                                    onGiveUp = { scope.launch { graph.auth.signOut() } },
+                                    giveUpLabel = stringResource(R.string.lock_use_code),
+                                    onBack = { activity?.moveTaskToBack(true) },
                                 )
                             }
                         }

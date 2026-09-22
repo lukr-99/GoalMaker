@@ -50,6 +50,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.ui.components.ScreenTitle
@@ -219,8 +221,9 @@ fun SettingsScreen(
             }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)
-                // The phone can gain or lose a fingerprint while the app is open.
-                LaunchedEffect(Unit) { viewModel.checkUnlock() }
+                // The owner can go and enrol a fingerprint and come straight back, which resumes
+                // this window rather than building it again, so asking once would read stale.
+                LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.checkUnlock() }
                 SwitchRow(
                     title = stringResource(R.string.settings_app_lock),
                     hint = stringResource(appLockHint(state.unlock)),
