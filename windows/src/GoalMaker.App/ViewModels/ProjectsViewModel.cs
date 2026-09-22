@@ -94,14 +94,25 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var all = projects.All();
         chosen = all.Any(project => project.Id == chosen) ? chosen : all.FirstOrDefault()?.Id;
 
+        var everyItem = tasks.All();
         Projects.Clear();
         foreach (var project in all)
         {
             var id = project.Id;
-            Projects.Add(new ProjectRowViewModel(id, project.Name, strings.Get(StatusKey(project.Status)), id == chosen, () => Select(id)));
+            var own = everyItem.Where(task => task.ProjectId == id).ToList();
+            int Waiting(string column) => own.Count(task => task.BoardColumn == column);
+            Projects.Add(new ProjectRowViewModel(
+                id,
+                project.Name,
+                strings.Get(StatusKey(project.Status)),
+                id == chosen,
+                Waiting(ProjectRules.Backlog),
+                Waiting(ProjectRules.Todo),
+                Waiting(ProjectRules.Doing),
+                () => Select(id)));
         }
 
-        var items = chosen is null ? [] : tasks.All().Where(task => task.ProjectId == chosen).ToList();
+        var items = chosen is null ? [] : everyItem.Where(task => task.ProjectId == chosen).ToList();
         foreach (var column in Columns)
         {
             column.Items.Clear();
@@ -112,6 +123,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     id,
                     item.Title,
                     strings.Get(TypeKey(item.ItemType)),
+                    item.ItemType,
                     strings.Get(PriorityKey(item.Priority)),
                     item.State == TaskState.Dropped,
                     item.PlannedDate?.ToString("d MMM", CultureInfo.CurrentCulture),

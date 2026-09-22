@@ -9,6 +9,7 @@ public sealed class BoardItemViewModel
         string id,
         string title,
         string type,
+        string itemType,
         string priority,
         bool dropped,
         string? day,
@@ -19,6 +20,7 @@ public sealed class BoardItemViewModel
         Id = id;
         Title = title;
         Type = type;
+        ItemType = itemType;
         Priority = priority;
         Dropped = dropped;
         Day = day ?? string.Empty;
@@ -39,6 +41,9 @@ public sealed class BoardItemViewModel
 
     /// <summary>Task, idea or bug, in the owner's words.</summary>
     public string Type { get; }
+
+    /// <summary>The same thing as GoalMaker writes it down, which the card styles itself by.</summary>
+    public string ItemType { get; }
 
     /// <summary>Low, normal, high or urgent, in the owner's words.</summary>
     public string Priority { get; }

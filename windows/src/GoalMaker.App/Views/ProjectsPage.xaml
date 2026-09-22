@@ -27,10 +27,50 @@
                        Appearance="Transparent" Command="{Binding OpenCommand}">
                 <StackPanel>
                     <TextBlock Text="{Binding Name}" FontSize="14" />
-                    <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <!-- The status, then what Backlog, To do and Doing hold, so the load reads at a glance. -->
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <TextBlock Margin="8,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Backlog}"
+                                   Foreground="{DynamicResource GM.AccentBrush}"
+                                   ToolTip="{DynamicResource Projects.Backlog}" />
+                        <TextBlock Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Todo}"
+                                   Foreground="{DynamicResource GM.AccentBrush}"
+                                   ToolTip="{DynamicResource Projects.Todo}" />
+                        <TextBlock Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Doing}"
+                                   Foreground="{DynamicResource GM.AccentBrush}"
+                                   ToolTip="{DynamicResource Projects.Doing}" />
+                    </StackPanel>
                 </StackPanel>
             </ui:Button>
         </DataTemplate>
+
+        <!-- A card's type: a plain task stays quiet, an idea takes the accent and a bug the danger colour. -->
+        <Style x:Key="ItemTypeIcon" TargetType="ui:SymbolIcon">
+            <Setter Property="Symbol" Value="TaskListSquareLtr24" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ItemType}" Value="idea">
+                    <Setter Property="Symbol" Value="LightbulbFilament24" />
+                    <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ItemType}" Value="bug">
+                    <Setter Property="Symbol" Value="Bug24" />
+                    <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="ItemTypeLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ItemType}" Value="idea">
+                    <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ItemType}" Value="bug">
+                    <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
 
         <!-- One card on the board. -->
         <DataTemplate x:Key="BoardCard" DataType="{x:Type vm:BoardItemViewModel}">
@@ -58,7 +98,10 @@
                         <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center" />
                     </DockPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="{Binding Type}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <!-- An idea and a bug wear their own icon and colour, so a board reads at a glance. -->
+                        <ui:SymbolIcon Margin="0,0,4,0" FontSize="12" VerticalAlignment="Center"
+                                       Style="{StaticResource ItemTypeIcon}" />
+                        <TextBlock Text="{Binding Type}" FontSize="11" Style="{StaticResource ItemTypeLabel}" />
                         <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
                         <TextBlock Text="{Binding Priority}" FontSize="11" Foreground="{DynamicResource GM.AccentBrush}" />
                         <TextBlock Text="{Binding Day}" FontSize="11" Margin="8,0,0,0"
@@ -139,15 +182,28 @@
                 </Border>
 
                 <StackPanel Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}">
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,12">
-                        <ui:TextBox MinWidth="280" PlaceholderText="{DynamicResource Projects.ItemTitle}"
-                                    Text="{Binding NewItemTitle, UpdateSourceTrigger=PropertyChanged}" />
-                        <ComboBox Margin="8,0,0,0" MinWidth="110" ItemsSource="{Binding ItemTypes}"
+                    <!-- A long title wraps down the box instead of running off to the right, and Return adds it. -->
+                    <Grid Margin="0,12,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0" MinWidth="280" MaxHeight="140" TextWrapping="Wrap"
+                                    VerticalAlignment="Top" VerticalScrollBarVisibility="Auto"
+                                    PlaceholderText="{DynamicResource Projects.ItemTitle}"
+                                    Text="{Binding NewItemTitle, UpdateSourceTrigger=PropertyChanged}">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding AddItemCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                        <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="110" VerticalAlignment="Top"
+                                  ItemsSource="{Binding ItemTypes}"
                                   DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemType}"
                                   AutomationProperties.Name="{DynamicResource Projects.ItemType}" />
-                        <ui:Button Margin="8,0,0,0" Appearance="Primary" Command="{Binding AddItemCommand}"
-                                   Content="{DynamicResource Projects.AddItem}" />
-                    </StackPanel>
+                        <ui:Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Top" Appearance="Primary"
+                                   Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
+                    </Grid>
 
                     <ItemsControl ItemsSource="{Binding Columns}" ItemTemplate="{StaticResource BoardColumn}" Focusable="False">
                         <ItemsControl.ItemsPanel>
