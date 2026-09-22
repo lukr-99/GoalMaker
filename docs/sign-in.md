@@ -43,12 +43,19 @@ rule stays where it is, in `SignInPolicy` on the Windows side, with no Kotlin co
 `contracts/` for a rule only one app has.
 
 **When it asks.** The lock goes up as the app leaves the screen rather than when it comes back, so
-the day is not left on show behind it. Coming back within half a minute takes it down again without
-asking, which is what makes a file picker, a share sheet or the screen going dark and back bearable.
-Longer than that and it asks. A cold start has no moment written down, so a lock that is on starts
-locked. A clock that went backwards while the app was away says nothing about how long it was gone,
-so it asks: one fingerprint is the cheap way to be wrong. The lock sits over the app rather than in
-place of it, so unlocking gives the owner back the screen they were on.
+the day is not on screen while the prompt is being answered. Coming back within half a minute takes
+it down again without asking, which is what makes a file picker, a share sheet or the screen going
+dark and back bearable. Longer than that and it asks. A cold start has no moment written down, so a
+lock that is on starts locked. A clock that went backwards while the app was away says nothing about
+how long it was gone, so it asks: one fingerprint is the cheap way to be wrong. The lock sits over
+the app rather than in place of it, so unlocking gives the owner back the screen they were on.
+
+**The recent apps preview.** Putting the lock up on the way out is not enough by itself: Android
+takes the preview picture of a task as the activity stops, before the lock has a frame to draw
+itself in, so the preview showed the screen the owner had just been on. `MainActivity` asks for that
+picture not to be taken at all while the lock is on, and the card in recents is then empty. Android
+12 and below have no way to ask, so there the preview still shows the last screen, the way it always
+did.
 
 **What it asks for.** A weak biometric or the screen lock, together. That pairing is the one
 androidx.biometric supports on every Android the app runs on, and it means a phone with no
