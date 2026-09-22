@@ -24,6 +24,14 @@
     <string name="sign_in_error_other">That did not work. Try again in a moment.</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 
+    <!-- The optional lock in front of the signed-in app (docs/sign-in.md). -->
+    <string name="lock_title">GoalMaker is locked</string>
+    <string name="lock_subtitle">Unlock to see your day.</string>
+    <string name="lock_unlock">Unlock</string>
+    <string name="lock_use_code">Sign in with a code instead</string>
+    <string name="lock_nothing_enrolled">This phone has no fingerprint, face or screen lock set up any more, so it can\'t ask for one.</string>
+    <string name="lock_unavailable">This phone can\'t ask who is holding it.</string>
+
     <!-- Plan tomorrow (docs/plan-tomorrow.md) -->
     <string name="plan_title">Plan tomorrow</string>
     <string name="plan_close">Close</string>
@@ -186,6 +194,10 @@
     <string name="settings_day_start">The day starts at %1$s</string>
     <string name="settings_day_start_hint">Until then it\'s still yesterday, so planning after midnight lands on the right tomorrow.</string>
     <string name="settings_account">Account</string>
+    <string name="settings_app_lock">Lock the app</string>
+    <string name="settings_app_lock_hint">Ask for your fingerprint, face or screen lock every time GoalMaker comes back to the screen. Your session is kept either way.</string>
+    <string name="settings_app_lock_nothing_enrolled">Set up a fingerprint, a face or a screen lock on this phone first, then come back.</string>
+    <string name="settings_app_lock_unavailable">This phone can\'t ask, so the app can\'t lock itself here.</string>
     <string name="settings_sign_out">Sign out</string>
     <plurals name="settings_sign_out_unsynced">
         <item quantity="one">%1$d change hasn\'t reached the server yet. Signing out now deletes it from this phone.</item>

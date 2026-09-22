@@ -18,10 +18,14 @@ import kotlinx.coroutines.launch
  * Drives the two-step email code sign-in. Success is observed through [AuthGateway.session]. A dev
  * build against the local stack reads the code out of the stack's own mailbox through [devCode] and
  * fills it in, and offers the dev account, which is that in one press (docs/sign-in.md).
+ *
+ * [onSignedIn] runs when a code is accepted, which is the owner proving who they are, so the app
+ * lock has nothing left to ask. It is not called when a stored session comes back.
  */
 class SignInViewModel(
     private val auth: AuthGateway,
     private val devCode: (suspend (String) -> String?)? = null,
+    private val onSignedIn: () -> Unit = {},
 ) : ViewModel() {
 
     private val state = MutableStateFlow(SignInUiState(hasDevSignIn = devCode != null))
@@ -69,7 +73,7 @@ class SignInViewModel(
             ?: return state.update { it.copy(step = SignInStep.EMAIL, error = SignInError.INVALID_EMAIL) }
         val code = SignInCode.parse(current.code)
             ?: return state.update { it.copy(error = SignInError.INVALID_CODE) }
-        run(onSuccess = { it }) { auth.verifyCode(email, code) }
+        run(onSuccess = { it }, then = onSignedIn) { auth.verifyCode(email, code) }
     }
 
     fun useAnotherEmail() = state.update { SignInUiState(email = it.email, hasDevSignIn = devCode != null) }

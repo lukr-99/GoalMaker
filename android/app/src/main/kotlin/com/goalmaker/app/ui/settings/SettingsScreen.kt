@@ -56,6 +56,7 @@ import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.ui.components.ChoiceChip
+import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.planning.PlanningDay
@@ -218,6 +219,15 @@ fun SettingsScreen(
             }
             Section(stringResource(R.string.settings_account)) {
                 Text(state.email, style = MaterialTheme.typography.bodyLarge)
+                // The phone can gain or lose a fingerprint while the app is open.
+                LaunchedEffect(Unit) { viewModel.checkUnlock() }
+                SwitchRow(
+                    title = stringResource(R.string.settings_app_lock),
+                    hint = stringResource(appLockHint(state.unlock)),
+                    checked = state.appLock,
+                    enabled = state.unlock == UnlockAvailability.READY || state.appLock,
+                    onCheckedChange = viewModel::setAppLock,
+                )
                 val unsynced = state.unsyncedAtSignOut
                 if (unsynced == null) {
                     OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
@@ -332,19 +342,32 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun SwitchRow(title: String, hint: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchRow(
+    title: String,
+    hint: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange),
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange),
     ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
             Text(hint, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = checked, onCheckedChange = null)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
+}
+
+// Why the lock cannot be turned on, or what it does when it can.
+private fun appLockHint(unlock: UnlockAvailability) = when (unlock) {
+    UnlockAvailability.READY -> R.string.settings_app_lock_hint
+    UnlockAvailability.NOTHING_ENROLLED -> R.string.settings_app_lock_nothing_enrolled
+    UnlockAvailability.UNAVAILABLE -> R.string.settings_app_lock_unavailable
 }
 
 /** A row of connected toggle buttons where exactly one option is on. */
