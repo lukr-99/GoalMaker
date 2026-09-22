@@ -20,14 +20,8 @@ class DeviceUnlock(context: Context) {
     private val appContext = context.applicationContext
 
     /** What the phone can do right now. Asked again each time, because the owner can change it. */
-    fun availability(): UnlockAvailability {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return UnlockAvailability.UNAVAILABLE
-        return when (BiometricManager.from(appContext).canAuthenticate(ALLOWED)) {
-            BiometricManager.BIOMETRIC_SUCCESS -> UnlockAvailability.READY
-            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> UnlockAvailability.NOTHING_ENROLLED
-            else -> UnlockAvailability.UNAVAILABLE
-        }
-    }
+    fun availability(): UnlockAvailability =
+        readAvailability(Build.VERSION.SDK_INT, BiometricManager.from(appContext).canAuthenticate(ALLOWED))
 
     /**
      * Puts the prompt up. [onUnlocked] runs when the owner proves who they are; [onGaveUp] when
@@ -64,9 +58,23 @@ class DeviceUnlock(context: Context) {
         )
     }
 
-    private companion object {
+    companion object {
         const val ALLOWED = BiometricManager.Authenticators.BIOMETRIC_WEAK or
             BiometricManager.Authenticators.DEVICE_CREDENTIAL
+
+        /**
+         * What [canAuthenticate] said, as one of three answers the app has copy for. Kept apart
+         * from the phone so every branch can be tested without one: only [UnlockAvailability.READY]
+         * lets the lock be turned on, and only [UnlockAvailability.NOTHING_ENROLLED] is worth
+         * telling the owner they can fix. Anything else, an Android too old for the prompt this app
+         * puts up included, is simply a phone that cannot ask.
+         */
+        fun readAvailability(sdkInt: Int, canAuthenticate: Int): UnlockAvailability = when {
+            sdkInt < Build.VERSION_CODES.P -> UnlockAvailability.UNAVAILABLE
+            canAuthenticate == BiometricManager.BIOMETRIC_SUCCESS -> UnlockAvailability.READY
+            canAuthenticate == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> UnlockAvailability.NOTHING_ENROLLED
+            else -> UnlockAvailability.UNAVAILABLE
+        }
 
         val CLOSED_IT = setOf(
             BiometricPrompt.ERROR_USER_CANCELED,
