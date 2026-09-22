@@ -22,7 +22,7 @@ import {
 } from "../rules/goals.ts";
 import { goalAmounts, habitPeriodStart, habitState, ring, streak } from "../rules/habits.ts";
 import { lists } from "../rules/listRules.ts";
-import { board, COLUMNS, PRIORITIES, type ProjectItem } from "../rules/projects.ts";
+import { board, COLUMNS, MAKER_FILTERS, MAKERS, PRIORITIES, type ProjectItem, shows } from "../rules/projects.ts";
 import { seriesOf } from "../rules/occurrences.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
@@ -74,6 +74,7 @@ async function taskFields(planner: Planner, args: Record<string, unknown>): Prom
     topPriority: args.top_priority as boolean | undefined,
     repeat: args.repeat as string | null | undefined,
     priority: args.priority as string | undefined,
+    madeBy: args.made_by as "owner" | "claude" | undefined,
   };
 }
 
@@ -86,6 +87,11 @@ const priority = z.enum(PRIORITIES as [string, ...string[]]).describe(
   "How important it is: urgent, high, normal or low. Items sit in a column in this order.",
 );
 const column = z.enum(COLUMNS as [string, ...string[]]).describe("A board column: backlog, todo, doing or done.");
+const madeBy = z.enum(MAKERS as [string, ...string[]]).describe(
+  "Who it comes from: owner when the owner asked for this item, claude when you are adding it on your own " +
+    "(something you found or suggest). claude by default. The boards can show the owner's items apart from " +
+    "Claude's, and this can't be changed later.",
+);
 const projectStatus = z.enum(["active", "paused", "done"]).describe(
   "Where the project stands: active, paused or done.",
 );
@@ -485,6 +491,7 @@ export const tools: Tool[] = [
       notes: z.string().optional().describe("Notes; light Markdown: **bold**, *italic*, - lists, links."),
       repeat: repeat.optional(),
       priority: priority.optional().describe("low, normal, high or urgent; normal by default."),
+      made_by: madeBy.optional(),
     },
     readOnly: false,
     destructive: false,
@@ -1108,14 +1115,28 @@ export const tools: Tool[] = [
     title: "A project's board",
     description:
       "One project's board as the apps show it: Backlog, To do, Doing and Done, each with its items in the order " +
-      "the board puts them (priority first, then where they were dragged), plus the project's milestones and notes.",
-    input: { project: projectRef },
+      "the board puts them (priority first, then where they were dragged), plus the project's milestones and notes. " +
+      "An item Claude made says so.",
+    input: {
+      project: projectRef,
+      made_by: z.enum(MAKER_FILTERS as [string, ...string[]]).optional().describe(
+        "Only the items the owner made (owner) or only those Claude made (claude); all by default, like the apps' switch.",
+      ),
+    },
     readOnly: true,
     destructive: false,
     run: async (planner, args) => {
       const project = await planner.findProject(args.project);
-      const items = (await planner.tasks()).filter((task) => task.projectId === project.id);
-      return format.board(project, board(items), await namesOf(planner), await milestonesOf(planner, project));
+      const filter = (args.made_by as string | undefined) ?? "all";
+      const items = (await planner.tasks())
+        .filter((task) => task.projectId === project.id && shows(filter, task.madeBy));
+      return format.board(
+        project,
+        board(items),
+        await namesOf(planner),
+        await milestonesOf(planner, project),
+        filter,
+      );
     },
   },
   {
@@ -1225,6 +1246,7 @@ export const tools: Tool[] = [
       area: z.string().optional().describe("An area's name, like Work."),
       tags: z.array(z.string()).optional().describe("Tag names, without #."),
       notes: z.string().optional().describe("Notes; light Markdown. A link the idea came from belongs here."),
+      made_by: madeBy.optional(),
     },
     readOnly: false,
     destructive: false,
