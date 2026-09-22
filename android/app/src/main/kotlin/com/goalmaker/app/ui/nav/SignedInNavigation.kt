@@ -255,7 +255,7 @@ fun SignedInNavigation(graph: AppGraph) {
                     }
                     entry<TaskKey>(metadata = transitions.task()) { key ->
                         val taskViewModel = viewModel(key = key.id) {
-                            TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.goals, graph.io, graph::today)
+                            TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.goals, graph.projects, graph.io, graph::today)
                         }
                         TaskScreen(viewModel = taskViewModel, onBack = { backStack.removeLastOrNull() })
                     }
