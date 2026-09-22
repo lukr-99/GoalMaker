@@ -16,7 +16,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.goalmaker.app.R
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.data.auth.DeviceUnlock
@@ -41,23 +42,33 @@ fun LockScreen(unlock: DeviceUnlock, onUnlocked: () -> Unit, onUseCode: () -> Un
     val activity = LocalActivity.current as? FragmentActivity
     val availability = remember { if (activity == null) UnlockAvailability.UNAVAILABLE else unlock.availability() }
     var problem by remember { mutableStateOf<String?>(null) }
+    var asking by remember { mutableStateOf(false) }
     val canAsk = activity != null && availability == UnlockAvailability.READY
 
     val title = stringResource(R.string.lock_title)
     val subtitle = stringResource(R.string.lock_subtitle)
     val ask = {
-        if (canAsk) {
+        if (canAsk && !asking) {
             problem = null
+            asking = true
             unlock.ask(
                 activity = requireNotNull(activity),
                 title = title,
                 subtitle = subtitle,
-                onUnlocked = onUnlocked,
-                onGaveUp = { message -> problem = message },
+                onUnlocked = {
+                    asking = false
+                    onUnlocked()
+                },
+                onGaveUp = { message ->
+                    asking = false
+                    problem = message
+                },
             )
         }
     }
-    LaunchedEffect(Unit) { ask() }
+    // Asks as the lock appears, and again each time the app comes back to the screen, because
+    // leaving takes the prompt down with it and the owner should not have to ask for it twice.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { ask() }
 
     // Back does not go round the lock; it leaves the app the way Home does.
     BackHandler(enabled = true) { activity?.moveTaskToBack(true) }
