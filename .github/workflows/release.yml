@@ -1,8 +1,9 @@
 name: Release
 
 # Push a tag vX.Y.Z that matches version.properties. The workflow builds the signed APK and the
-# Windows installer, publishes both with a signed manifest to the update channel (ADR 0004) and
-# drafts a GitHub Release as the record. Setup: docs/setup/signing-and-releases.md.
+# Windows installer and publishes both with a signed manifest as the GitHub Release, which is the
+# update channel (ADR 0010). The same files still go to the old releases bucket (ADR 0004) until
+# every installed copy reads GitHub. Setup: docs/setup/signing-and-releases.md.
 
 on:
   push:
@@ -78,6 +79,7 @@ jobs:
     env:
       GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
       GOALMAKER_SUPABASE_KEY: ${{ secrets.GOALMAKER_SUPABASE_KEY }}
+      GOALMAKER_UPDATE_URL: ${{ github.server_url }}/${{ github.repository }}
       GOALMAKER_KEYSTORE_PASSWORD: ${{ secrets.GOALMAKER_KEYSTORE_PASSWORD }}
       GOALMAKER_KEY_ALIAS: ${{ secrets.GOALMAKER_KEY_ALIAS }}
       GOALMAKER_KEY_PASSWORD: ${{ secrets.GOALMAKER_KEY_PASSWORD }}
@@ -134,6 +136,7 @@ jobs:
     env:
       GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
       GOALMAKER_SUPABASE_KEY: ${{ secrets.GOALMAKER_SUPABASE_KEY }}
+      GOALMAKER_UPDATE_URL: ${{ github.server_url }}/${{ github.repository }}
     steps:
       - uses: actions/checkout@v7
 
@@ -161,7 +164,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish to the update channel and draft the GitHub Release
+    name: Publish the GitHub Release, which is the update channel
     needs: [check, android, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -181,7 +184,7 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Sign the manifest and upload everything to the releases bucket
+      - name: Sign the manifest and upload everything to the old releases bucket
         env:
           GOALMAKER_MANIFEST_SIGNING_KEY: ${{ secrets.GOALMAKER_MANIFEST_SIGNING_KEY }}
           GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
@@ -201,11 +204,12 @@ jobs:
             --output release-out
           rm -f "$RUNNER_TEMP/manifest-key.pem"
 
-      - name: Draft the GitHub Release
+      # Published, not drafted: the apps read the latest release's manifest.json and manifest.sig.
+      - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp release-out/manifest.json release-out/manifest.sig artifacts/
           (cd artifacts && sha256sum GoalMaker-* manifest.json manifest.sig > SHA256SUMS)
-          gh release create "$GITHUB_REF_NAME" --draft --title "GoalMaker $VERSION" --generate-notes \
+          gh release create "$GITHUB_REF_NAME" --latest --title "GoalMaker $VERSION" --generate-notes \
             artifacts/GoalMaker-* artifacts/manifest.json artifacts/manifest.sig artifacts/SHA256SUMS
