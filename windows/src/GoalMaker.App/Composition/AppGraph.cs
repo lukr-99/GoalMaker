@@ -46,6 +46,9 @@ public sealed class AppGraph : IDisposable
     private readonly IDisposable? signatureKey;
     private readonly bool localOnly;
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
+
+    // An installer is a few megabytes over whatever line the PC has, so it gets far longer than an API call.
+    private readonly HttpClient updatesHttp = new() { Timeout = TimeSpan.FromMinutes(15) };
     private readonly SqliteReplica replica;
     private readonly SupabaseChangeFeed changeFeed;
     private readonly IProfileSettings profile;
@@ -85,16 +88,19 @@ public sealed class AppGraph : IDisposable
         // This PC keeps its session for a week and then asks for the code again (docs/sign-in.md).
         SignInWatch = new SignInWatch(Auth, Settings, () => DateTimeOffset.Now);
 
-        var configured = !string.IsNullOrWhiteSpace(build.ManifestPublicKey);
+        // Updates come from the repository's public GitHub Releases, with no sign-in (ADR 0010). The
+        // signed manifest is what makes them trusted, so a build without the key has no channel.
+        var configured = build.HasUpdateChannel;
         ISignatureVerifier signatures = configured
             ? new EcdsaSignatureVerifier(build.ManifestPublicKey)
             : new NotConfiguredSignatureVerifier();
         signatureKey = signatures as IDisposable;
+        var releases = configured ? new ReleaseChannelAddress(build.UpdateUrl) : null;
         Updates = new UpdateService(
             build.Version,
             ReleasePlatform.Windows,
             configured,
-            new SupabaseReleaseChannel(supabase, Paths.Updates),
+            releases is null ? new NotConfiguredReleaseChannel() : new GitHubReleaseChannel(updatesHttp, releases, Paths.Updates),
             new ReleaseVerifier(signatures),
             new InstallerLauncher(shutdownApp));
 
@@ -301,6 +307,8 @@ public sealed class AppGraph : IDisposable
                 SupportsMinimized = true,
             },
             restartApp,
+            releases?.ReleasesPage,
+            OpenInBrowser,
             runOnUi);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
@@ -335,6 +343,10 @@ public sealed class AppGraph : IDisposable
         var dialog = new Microsoft.Win32.OpenFolderDialog { Multiselect = false };
         return dialog.ShowDialog() == true ? dialog.FolderName : null;
     }
+
+    // A web page the owner asked for opens in their default browser.
+    private static void OpenInBrowser(string url) =>
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
 
     /// <summary>Reading the owner's data out to a file and back in (docs/backup.md).</summary>
     public BackupService Backup { get; private set; } = null!;
@@ -500,6 +512,7 @@ public sealed class AppGraph : IDisposable
         signatureKey?.Dispose();
         supabase.Auth.Shutdown();
         http.Dispose();
+        updatesHttp.Dispose();
     }
 
     // The weekly export runs unattended, so a folder that has gone or a file that would not write is

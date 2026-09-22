@@ -45,6 +45,8 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly IStartupProfiles startupProfiles;
     private readonly StartupProfilesRequest startupProfilesRequest;
     private readonly Action restartApp;
+    private readonly string? releasesPage;
+    private readonly Action<string> openInBrowser;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSystemTheme), nameof(IsLightTheme), nameof(IsDarkTheme), nameof(PureBlack))]
@@ -119,6 +121,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         IStartupProfiles startupProfiles,
         StartupProfilesRequest startupProfilesRequest,
         Action restartApp,
+        string? releasesPage,
+        Action<string> openInBrowser,
         Action<Action> runOnUi)
     {
         this.openMini = openMini;
@@ -148,6 +152,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         this.quietHoursChanged = quietHoursChanged;
         this.applyQuickAddHotkey = applyQuickAddHotkey;
         this.restartApp = restartApp;
+        this.releasesPage = releasesPage;
+        this.openInBrowser = openInBrowser;
         appearance = settings.Appearance;
         backendUrlDraft = appInfo.Backend.Url;
         backendKeyDraft = appInfo.Backend.PublishableKey;
@@ -628,6 +634,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool CanInstall => AvailableUpdate is not null;
 
+    /// <summary>
+    /// The latest release's page, where the owner can always download GoalMaker themselves; shown
+    /// whenever the build has an update channel, and most useful when a check fails.
+    /// </summary>
+    public bool HasReleasesPage => releasesPage is not null;
+
     public string InstallText =>
         AvailableUpdate is null ? string.Empty : strings.Get("Settings.InstallUpdate", AvailableUpdate.Manifest.Version);
 
@@ -728,6 +740,15 @@ public sealed partial class SettingsViewModel : ObservableObject
         finally
         {
             IsUpdating = false;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(HasReleasesPage))]
+    private void OpenReleasesPage()
+    {
+        if (releasesPage is not null)
+        {
+            openInBrowser(releasesPage);
         }
     }
 

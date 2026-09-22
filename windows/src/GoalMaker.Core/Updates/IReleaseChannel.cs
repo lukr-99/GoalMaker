@@ -1,6 +1,6 @@
 namespace GoalMaker.Core.Updates;
 
-/// <summary>Reads the update channel (the private releases bucket). Throws on network or access errors.</summary>
+/// <summary>Reads the update channel (the public GitHub Releases, ADR 0010). Throws on network or access errors.</summary>
 public interface IReleaseChannel
 {
     /// <summary>The latest manifest's exact bytes and its detached base64 signature.</summary>

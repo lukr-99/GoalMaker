@@ -346,7 +346,7 @@
     <sys:String x:Key="Settings.Update.Failed">Couldn't check for updates: {0}</sys:String>
     <sys:String x:Key="Settings.Update.Corrupted">The download didn't match its checksum and was discarded.</sys:String>
     <sys:String x:Key="Settings.Update.Started">The installer is running. GoalMaker restarts when it finishes.</sys:String>
-    <sys:String x:Key="Settings.Update.Manual">You can always install an update by hand from the GoalMaker GitHub release.</sys:String>
+    <sys:String x:Key="Settings.Update.DownloadYourself">Open the latest release</sys:String>
     <sys:String x:Key="Settings.About">About</sys:String>
     <sys:String x:Key="Settings.Version">Version {0}</sys:String>
     <sys:String x:Key="Settings.Backend">Backend: {0}</sys:String>
