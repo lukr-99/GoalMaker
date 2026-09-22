@@ -81,3 +81,13 @@ An Android debug APK is signed with `~/.android/debug.keystore`, which differs o
 is not the release key on the backup drive. A phone that holds a debug build from another machine
 cannot be updated in place: `adb uninstall com.goalmaker.app.debug` first, which clears that app's
 replica, so check its outbox is empty before doing it.
+
+## A lock drawn on the way out is still in the recent apps preview
+
+2026-09-22, the phone's app lock. The lock is put up as the app leaves the screen rather than when
+it comes back, which is right, but it is not enough on its own: Android takes the preview picture of
+a task as the activity stops, before the new state has a frame to draw itself in, so the card in
+recent apps kept showing the screen the owner had just been on. Unit tests all passed, because the
+lock state was correct the whole time; only opening recents on a real phone showed it. An activity
+that covers something asks for that picture not to be taken at all, with
+`setRecentsScreenshotEnabled(false)` from API 33.
