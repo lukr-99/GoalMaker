@@ -68,6 +68,8 @@ Both offer the project list with its status, area, repository
 and folder, how many items each project still has waiting, and the milestones of the project on show.
 An idea and a bug carry their own icon and colour on the board, so a mixed column reads at a glance.
 On Android, moving an item to Done or taking it out of the project offers Undo, as the lists do.
+Android marks each project's status in its picker and on its card: active plays on in the accent,
+paused and done step back in the muted colour, each with a mark of its own.
 
 ## Through the connector
 

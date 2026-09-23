@@ -21,9 +21,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -232,6 +235,7 @@ private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit, modi
                 .clickable { open = true }
                 .padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
         ) {
+            state.selected?.let { StatusMark(it.status, Modifier.padding(end = 8.dp)) }
             Text(
                 state.selected?.name ?: stringResource(R.string.projects_pick),
                 style = MaterialTheme.typography.titleSmall,
@@ -248,7 +252,8 @@ private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit, modi
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             state.projects.forEach { project ->
                 DropdownMenuItem(
-                    text = { Text(project.name) },
+                    text = { Text(project.name, color = if (project.status == ProjectRules.ACTIVE) Color.Unspecified else AppTheme.colors.textMuted) },
+                    leadingIcon = { StatusMark(project.status) },
                     trailingIcon = { WaitingCount(state.openCounts[project.id] ?: 0) },
                     onClick = {
                         open = false
@@ -302,10 +307,11 @@ private fun ProjectCard(project: ProjectItem, onEdit: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(project.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            StatusMark(project.status, Modifier.padding(end = 4.dp))
             Text(
                 statusName(project.status),
                 style = MaterialTheme.typography.labelMedium,
-                color = AppTheme.colors.accent,
+                color = statusColor(project.status),
             )
         }
         if (project.description.isNotBlank()) {
@@ -597,6 +603,28 @@ private fun priorityName(priority: String): String = stringResource(
         else -> R.string.projects_normal
     },
 )
+
+/**
+ * A project's status at a glance: active plays on in the accent, paused and done step back in the muted
+ * colour, each with a mark of its own so they read apart without colour too.
+ */
+@Composable
+private fun StatusMark(status: String, modifier: Modifier = Modifier) {
+    Icon(
+        when (status) {
+            ProjectRules.PAUSED -> Icons.Outlined.PauseCircle
+            ProjectRules.PROJECT_DONE -> Icons.Outlined.CheckCircle
+            else -> Icons.Outlined.PlayCircle
+        },
+        contentDescription = statusName(status),
+        tint = statusColor(status),
+        modifier = modifier.size(18.dp),
+    )
+}
+
+@Composable
+private fun statusColor(status: String): Color =
+    if (status == ProjectRules.ACTIVE) AppTheme.colors.accent else AppTheme.colors.textMuted
 
 @Composable
 private fun statusName(status: String): String = stringResource(
