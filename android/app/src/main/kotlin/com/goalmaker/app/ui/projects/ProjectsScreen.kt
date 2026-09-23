@@ -35,10 +35,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +53,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -59,9 +64,11 @@ import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
+import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.lists.UndoEvent
 import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.theme.AppTheme
 
@@ -78,9 +85,24 @@ fun ProjectsScreen(
     var editing by remember { mutableStateOf<ProjectItem?>(null) }
     var adding by remember { mutableStateOf(false) }
     var addingItem by remember { mutableStateOf(false) }
+    val snackbars = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+
+    // Finishing an item or taking it out of the project can be taken back, as on the lists.
+    LaunchedEffect(viewModel) {
+        viewModel.undo.collect { event ->
+            val message = resources.getString(
+                if (event.kind == UndoEvent.Kind.DONE) R.string.lists_done_message else R.string.projects_removed_message,
+                event.title,
+            )
+            val result = snackbars.showSnackbar(message, actionLabel = resources.getString(R.string.lists_undo), duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) event.undo()
+        }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { AppSnackbarHost(snackbars) },
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.projects_title)) },
@@ -150,9 +172,9 @@ fun ProjectsScreen(
                             task = task,
                             columns = column,
                             onOpen = { onOpenTask(task.id) },
-                            onMove = { to -> viewModel.move(task.id, to) },
+                            onMove = { to -> viewModel.move(task, to) },
                             onPriority = { priority -> viewModel.setPriority(task.id, priority) },
-                            onRemove = { viewModel.removeFromProject(task.id) },
+                            onRemove = { viewModel.removeFromProject(task) },
                         )
                     }
                 }

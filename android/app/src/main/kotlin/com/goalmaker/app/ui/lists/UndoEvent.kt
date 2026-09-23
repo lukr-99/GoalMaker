@@ -6,5 +6,6 @@ data class UndoEvent(
     val title: String,
     val undo: () -> Unit,
 ) {
-    enum class Kind { DONE, DELETED }
+    /** Done, deleted, or (on a project's board) taken out of the project. */
+    enum class Kind { DONE, DELETED, OUT_OF_PROJECT }
 }

@@ -8,10 +8,13 @@ import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.data.replica.TestReplica
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
@@ -103,5 +106,43 @@ class ProjectsViewModelTest {
         assertEquals(ProjectRules.DOING, item.boardColumn)
         assertEquals(ProjectRules.HIGH, item.priority)
         assertEquals("Like the lists have", item.notes)
+    }
+
+    @Test
+    fun `undoing a move to Done puts the item back in its column, open`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val added = tasks.add("Ship the board")!!
+        tasks.setProject(added.id, project.id, ProjectRules.TASK)
+        tasks.setBoardColumn(added.id, ProjectRules.DOING)
+        val event = async(start = CoroutineStart.UNDISPATCHED) { viewModel.undo.first() }
+
+        viewModel.move(tasks.find(added.id)!!, ProjectRules.DONE)
+        assertEquals(TaskState.DONE, tasks.find(added.id)!!.state)
+        event.await().undo()
+
+        val item = tasks.find(added.id)!!
+        assertEquals(ProjectRules.DOING, item.boardColumn)
+        assertEquals(TaskState.OPEN, item.state)
+    }
+
+    @Test
+    fun `undoing taking an item out puts it back in the project where it was`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val milestone = projects.addMilestone(project.id, "M1")!!
+        val added = tasks.add("Cache the release feed")!!
+        tasks.setProject(added.id, project.id, ProjectRules.BUG)
+        tasks.setBoardColumn(added.id, ProjectRules.DOING)
+        tasks.setMilestone(added.id, milestone.id)
+        val event = async(start = CoroutineStart.UNDISPATCHED) { viewModel.undo.first() }
+
+        viewModel.removeFromProject(tasks.find(added.id)!!)
+        assertEquals(null, tasks.find(added.id)!!.projectId)
+        event.await().undo()
+
+        val item = tasks.find(added.id)!!
+        assertEquals(project.id, item.projectId)
+        assertEquals(ProjectRules.BUG, item.itemType)
+        assertEquals(ProjectRules.DOING, item.boardColumn)
+        assertEquals(milestone.id, item.milestoneId)
     }
 }
