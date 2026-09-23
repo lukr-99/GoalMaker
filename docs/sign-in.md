@@ -99,11 +99,14 @@ Both templates Supabase can send for this, **Magic link** and **Confirm signup**
 
 ## Dev builds get past the post
 
-**Android dev builds do not sign in at all.** They open straight on Today as one fixed owner who lives
-only on the phone, in a replica of their own (`replica-local.db`), and nothing syncs: every change
+**Dev builds do not sign in.** On both apps they open straight on Today as one fixed owner who lives
+only on that device, in a replica of their own (`replica-local.db`), and nothing syncs: every change
 counts as pushed and nothing ever comes down. Settings says so in place of the account and its
-sign-out. A release build is the only one that signs in. What follows is how a Windows dev build
-signs in.
+sign-out. A release build always signs in.
+
+Signing in can still be tested on a dev build when it has to be: on Android, Settings → Developer →
+**Sign in and sync** (the app restarts); on Windows, start it with `--sign-in`. It then signs in and
+syncs like a release, against the dev backend, and what follows applies.
 
 Developing against the local stack means signing in again every time the stack is reset, so a dev
 build has two ways through, both only ever against that stack: the plain-http backend on port 55321,
