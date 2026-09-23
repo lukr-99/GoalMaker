@@ -200,7 +200,7 @@ class AppGraph(context: Context) {
     }
 
     val sync = SyncCoordinator(
-        engine = SyncEngine(catalog, replica, remote, Instant::now),
+        engine = SyncEngine(catalog, replica, remote, pulls = !localOnly, now = Instant::now),
         replica = replica,
         scope = scope,
         io = io,

@@ -3,6 +3,15 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## A remote that never answers is a full resync every run
+
+2026-09-23, dev builds without sign-in. The first local-only sync pushed to a remote that keeps
+nothing and pulled from it too. Every write vanished about two seconds later, with no error: a table
+that has never pulled has no watermark, `SyncRules.needsFullResync` says a table with no watermark
+starts over, and starting over clears every row without a pending change before pulling, which then
+brought nothing back. The outbox counter was the tell: seven pushes, empty tables. A local-only
+`SyncEngine` now only pushes (`pulls = false`), and `SyncEngineTest` runs it twice over a row.
+
 ## A view model test waits on its state once
 
 2026-09-23, the Made by switch. A Robolectric test that read `uiState.first { ... }`, changed the
