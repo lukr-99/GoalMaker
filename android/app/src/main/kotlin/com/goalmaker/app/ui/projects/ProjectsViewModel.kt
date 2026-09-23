@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.domain.composer.ComposerDraft
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -78,11 +79,15 @@ class ProjectsViewModel(
 
     fun deleteMilestone(id: String) = write { projects.deleteMilestone(id) }
 
-    /** Adds an item to the project on show; it lands in the column its type calls for. */
-    fun addItem(title: String, itemType: String) {
+    /** Adds an item to the project on show, in the column and at the priority chosen for it, with its notes. */
+    fun addItem(title: String, itemType: String, column: String, priority: String, notes: String) {
         val projectId = uiState.value.selected?.id ?: return
         write {
-            tasks.add(title)?.let { task -> tasks.setProject(task.id, projectId, itemType) }
+            tasks.add(ComposerDraft(title = title), notes)?.let { task ->
+                tasks.setProject(task.id, projectId, itemType)
+                tasks.setBoardColumn(task.id, column)
+                tasks.setPriority(task.id, priority)
+            }
         }
     }
 

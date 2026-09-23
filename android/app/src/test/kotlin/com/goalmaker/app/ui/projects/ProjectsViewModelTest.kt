@@ -24,7 +24,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** The Projects screen's who-made-it switch over a real replica (docs/projects.md). */
+/** The Projects screen's who-made-it switch and new items over a real replica (docs/projects.md). */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class ProjectsViewModelTest {
@@ -88,5 +88,20 @@ class ProjectsViewModelTest {
             listOf("Cache the release feed"),
             todo(viewModel.uiState.first { it.madeBy == ProjectRules.CLAUDE && it.board.isNotEmpty() }),
         )
+    }
+
+    @Test
+    fun `a new item keeps the column, priority and notes it was given`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        viewModel.uiState.first { it.selected?.id == project.id }
+
+        viewModel.addItem("Undo on the board", ProjectRules.IDEA, ProjectRules.DOING, ProjectRules.HIGH, "Like the lists have")
+
+        val item = tasks.all().single()
+        assertEquals(project.id, item.projectId)
+        assertEquals(ProjectRules.IDEA, item.itemType)
+        assertEquals(ProjectRules.DOING, item.boardColumn)
+        assertEquals(ProjectRules.HIGH, item.priority)
+        assertEquals("Like the lists have", item.notes)
     }
 }

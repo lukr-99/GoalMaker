@@ -680,6 +680,9 @@
     <string name="projects_finished">Done</string>
     <string name="projects_add_item">Add an item</string>
     <string name="projects_item_title">What is it?</string>
+    <string name="projects_item_type">Type</string>
+    <string name="projects_item_column">Column</string>
+    <string name="projects_item_priority">Priority</string>
     <string name="projects_item_menu">More</string>
     <string name="projects_move_to">Move to %1$s</string>
     <string name="projects_remove_item">Out of the project</string>

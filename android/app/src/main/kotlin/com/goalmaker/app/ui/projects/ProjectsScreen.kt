@@ -184,8 +184,8 @@ fun ProjectsScreen(
 
     if (addingItem) {
         ItemDialog(
-            onSave = { title, type ->
-                viewModel.addItem(title, type)
+            onSave = { title, type, column, priority, notes ->
+                viewModel.addItem(title, type, column, priority, notes)
                 addingItem = false
             },
             onDismiss = { addingItem = false },
@@ -457,30 +457,59 @@ private fun ProjectDialog(
     )
 }
 
+/**
+ * A new item with its type, column, priority and notes. The column follows the type, as an idea
+ * starts in the backlog, until one is picked.
+ */
 @Composable
-private fun ItemDialog(onSave: (String, String) -> Unit, onDismiss: () -> Unit) {
+private fun ItemDialog(onSave: (title: String, type: String, column: String, priority: String, notes: String) -> Unit, onDismiss: () -> Unit) {
     var title by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(ProjectRules.TASK) }
+    var picked by remember { mutableStateOf<String?>(null) }
+    var priority by remember { mutableStateOf(ProjectRules.NORMAL) }
+    var notes by remember { mutableStateOf("") }
+    val column = picked ?: ProjectRules.columnFor(type)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.projects_add_item)) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Field(title, { title = it }, R.string.projects_item_title)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 10.dp)) {
-                    listOf(ProjectRules.TASK, ProjectRules.IDEA, ProjectRules.BUG).forEach { choice ->
-                        ChoiceChip(selected = type == choice, onClick = { type = choice }, label = typeName(choice))
-                    }
-                }
+                Choices(R.string.projects_item_type, listOf(ProjectRules.TASK, ProjectRules.IDEA, ProjectRules.BUG), type, { typeName(it) }) { type = it }
+                Choices(R.string.projects_item_column, ProjectRules.COLUMNS - ProjectRules.DONE, column, { columnName(it) }) { picked = it }
+                Choices(R.string.projects_item_priority, ProjectRules.PRIORITIES, priority, { priorityName(it) }) { priority = it }
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text(stringResource(R.string.task_notes)) },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                )
             }
         },
         confirmButton = {
-            TextButton(enabled = title.isNotBlank(), onClick = { onSave(title.trim(), type) }) {
+            TextButton(enabled = title.isNotBlank(), onClick = { onSave(title.trim(), type, column, priority, notes.trim()) }) {
                 Text(stringResource(R.string.goals_save))
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.goals_cancel)) } },
     )
+}
+
+/** One labelled row of chips; a narrow phone scrolls it sideways rather than cutting a chip off. */
+@Composable
+private fun Choices(label: Int, options: List<String>, selected: String, name: @Composable (String) -> String, onPick: (String) -> Unit) {
+    Text(
+        stringResource(label),
+        style = MaterialTheme.typography.labelMedium,
+        color = AppTheme.colors.textMuted,
+        modifier = Modifier.padding(top = 12.dp),
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
+        options.forEach { choice ->
+            ChoiceChip(selected = selected == choice, onClick = { onPick(choice) }, label = name(choice))
+        }
+    }
 }
 
 @Composable
