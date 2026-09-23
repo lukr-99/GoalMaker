@@ -187,16 +187,16 @@
             <StackPanel Margin="{DynamicResource GM.PageGutter}">
                 <!-- The project on show, or the editor when one is being written. -->
                 <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
-                        Visibility="{Binding IsNotEditing, Converter={StaticResource BoolToVisibility}}">
+                        Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
                     <DockPanel>
-                        <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding EditCommand}"
-                                   Content="{DynamicResource Projects.Edit}" />
-                        <!-- The status with its mark, beside the Edit button. -->
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top" Margin="0,6,8,0">
+                        <!-- The status with its mark and the Edit button share one row, centred on each other. -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
                             <ui:SymbolIcon Margin="0,0,4,0" FontSize="14" VerticalAlignment="Center"
                                            Tag="{Binding ProjectStatus}" Style="{StaticResource StatusIcon}" />
-                            <TextBlock Text="{Binding ProjectStatusText}" FontSize="12" VerticalAlignment="Center"
+                            <TextBlock Margin="0,0,8,0" Text="{Binding ProjectStatusText}" FontSize="12" VerticalAlignment="Center"
                                        Tag="{Binding ProjectStatus}" Style="{StaticResource StatusName}" />
+                            <ui:Button Appearance="Transparent" VerticalAlignment="Center" Command="{Binding EditCommand}"
+                                       Content="{DynamicResource Projects.Edit}" />
                         </StackPanel>
                         <StackPanel>
                             <TextBlock Text="{Binding ProjectName}" FontSize="18" FontFamily="{DynamicResource GM.BodyStrongFont}" />

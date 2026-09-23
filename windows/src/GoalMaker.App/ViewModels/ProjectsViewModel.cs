@@ -51,7 +51,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private string projectStatus = ProjectRules.Active;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNotEditing))]
+    [NotifyPropertyChangedFor(nameof(ShowsProject))]
     private bool isEditing;
 
     [ObservableProperty]
@@ -137,8 +137,8 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>Whether a project is on show, so the board and its boxes are worth drawing.</summary>
     public bool HasProject => chosen is not null;
 
-    /// <summary>The card of the project on show, which gives way to the editor.</summary>
-    public bool IsNotEditing => !IsEditing;
+    /// <summary>The card of the project on show: there is one, and the editor is not in its place.</summary>
+    public bool ShowsProject => HasProject && !IsEditing;
 
     public void Refresh()
     {
@@ -201,6 +201,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
         IsEmpty = all.Count == 0;
         OnPropertyChanged(nameof(HasProject));
+        OnPropertyChanged(nameof(ShowsProject));
     }
 
     /// <summary>Shows a project's board.</summary>
@@ -223,6 +224,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ProjectStatus = ProjectRules.Active;
         IsEditing = true;
         OnPropertyChanged(nameof(HasProject));
+        OnPropertyChanged(nameof(ShowsProject));
     }
 
     /// <summary>Opens the project on show for editing.</summary>

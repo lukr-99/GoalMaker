@@ -17,6 +17,7 @@ public sealed class ProjectsViewModelTests : IDisposable
 
         Assert.True(page.IsEmpty);
         Assert.False(page.HasProject);
+        Assert.False(page.ShowsProject);
         Assert.Equal(["backlog", "todo", "doing", "done"], page.Columns.Select(column => column.Column));
     }
 
@@ -32,6 +33,7 @@ public sealed class ProjectsViewModelTests : IDisposable
 
         Assert.False(page.IsEmpty);
         Assert.True(page.HasProject);
+        Assert.True(page.ShowsProject);
         var row = Assert.Single(page.Projects);
         Assert.Equal("GoalMaker", row.Name);
         Assert.Equal("Projects.Active", row.Status);
