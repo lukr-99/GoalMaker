@@ -36,7 +36,6 @@ import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -76,6 +75,7 @@ import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.ui.components.ProgressRing
@@ -179,7 +179,7 @@ fun ListsScreen(
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            snackbarHost = { SnackbarHost(snackbars) },
+            snackbarHost = { AppSnackbarHost(snackbars) },
             topBar = {
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(tab.title())) },
