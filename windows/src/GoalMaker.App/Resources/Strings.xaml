@@ -576,6 +576,10 @@
     <sys:String x:Key="Projects.ItemMenu">More</sys:String>
     <sys:String x:Key="Projects.OpenItem">Open</sys:String>
     <sys:String x:Key="Projects.RemoveItem">Out of the project</sys:String>
+    <sys:String x:Key="Projects.Removed">Out of the project: {0}</sys:String>
+    <sys:String x:Key="Projects.ItemColumn">Column</sys:String>
+    <sys:String x:Key="Projects.ItemPriority">Priority</sys:String>
+    <sys:String x:Key="Projects.ItemNotes">Notes (optional)</sys:String>
     <sys:String x:Key="Projects.ColumnEmpty">Nothing here yet.</sys:String>
     <sys:String x:Key="Projects.Backlog">Backlog</sys:String>
     <sys:String x:Key="Projects.Todo">To do</sys:String>

@@ -344,7 +344,7 @@ public sealed class PageSnapshots
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
         using var theme = Theme(planner);
-        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, strings, _ => { }, action => action());
+        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, strings, _ => { }, action => action(), planner.Time);
         projects.NewCommand.Execute(null);
         projects.ProjectName = "GoalMaker";
         projects.ProjectDescription = "The planner on the phone and the PC.";
@@ -371,7 +371,12 @@ public sealed class PageSnapshots
         var shared = planner.Replica.Get("tasks", planner.Task("Share to GoalMaker").Id)!;
         shared["made_by"] = ProjectRules.Claude;
         planner.Replica.Put("tasks", shared);
+        // A paused and a finished project, so the list shows every status's mark.
+        planner.Projects.Add(new ProjectDraft("Relay") { Status = ProjectRules.Paused });
+        planner.Projects.Add(new ProjectDraft("Treeline") { Status = ProjectRules.Finished });
         projects.Refresh();
+        // A card just finished, so the undo bar is on show.
+        projects.Columns.Single(column => column.Column == ProjectRules.Todo).Items[0].MoveCommand.Execute(ProjectRules.Done);
 
         Save(new ProjectsPage(projects), folder, "projects", new Size(1100, 700));
     });

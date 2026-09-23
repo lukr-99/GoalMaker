@@ -10,6 +10,7 @@ public sealed class ProjectRowViewModel(
     string id,
     string name,
     string status,
+    string statusId,
     bool selected,
     int backlog,
     int todo,
@@ -22,6 +23,9 @@ public sealed class ProjectRowViewModel(
 
     /// <summary>Active, paused or done, in the owner's words.</summary>
     public string Status { get; } = status;
+
+    /// <summary>The same status as GoalMaker writes it down, which the row styles its mark and name by.</summary>
+    public string StatusId { get; } = statusId;
 
     public bool IsSelected { get; } = selected;
 
