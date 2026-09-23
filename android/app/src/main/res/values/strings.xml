@@ -737,6 +737,8 @@
     <string name="activity_resumed">%1$s resumed %2$s</string>
     <string name="settings_backup">Your data</string>
     <string name="settings_local_only">Development build: no sign-in, and everything stays on this phone.</string>
+    <string name="settings_dev_sign_in">Sign in and sync</string>
+    <string name="settings_dev_sign_in_hint">Off, this dev build keeps everything on this phone. On, it signs in and syncs like a release, against the backend below. Changing it restarts the app.</string>
     <string name="settings_backup_hint">One file with everything: your tasks, goals, habits, projects and reviews. A restore adds what is missing and never deletes anything.</string>
     <string name="settings_backup_export">Export</string>
     <string name="settings_backup_restore">Restore</string>

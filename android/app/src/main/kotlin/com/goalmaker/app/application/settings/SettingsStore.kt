@@ -59,4 +59,9 @@ interface SettingsStore {
     fun backendOverride(): BackendEnvironment?
 
     fun setBackendOverride(environment: BackendEnvironment?)
+
+    /** Dev builds only: sign in and sync from the next app start, instead of keeping everything here. */
+    fun devSignIn(): Boolean
+
+    fun setDevSignIn(on: Boolean)
 }

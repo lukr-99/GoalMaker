@@ -123,6 +123,10 @@ class AppGraph(context: Context) {
     /** The review prompts the app ships (docs/reviews.md). */
     val prompts: PromptLibrary = PromptLibrary.load(appContext.assets.open("prompts.json"))
 
+    // A dev build skips sign-in and keeps its rows on the phone unless Settings → Developer turns
+    // signing in back on; a release build always signs in and syncs (docs/sign-in.md).
+    private val localOnly = BuildConfig.IS_DEV_BUILD && !settings.devSignIn()
+
     private val defaultBackend = BackendEnvironment(BuildConfig.DEFAULT_SUPABASE_URL, BuildConfig.DEFAULT_SUPABASE_KEY)
     private val backend = (if (BuildConfig.IS_DEV_BUILD) settings.backendOverride() else null) ?: defaultBackend
     private val supabase = SupabaseClientFactory.create(backend)
@@ -132,11 +136,8 @@ class AppGraph(context: Context) {
         isDevBuild = BuildConfig.IS_DEV_BUILD,
         backend = backend,
         defaultBackend = defaultBackend,
+        localOnly = localOnly,
     )
-
-    // A dev build skips sign-in and keeps its rows on the phone; only a release build signs in and
-    // syncs (docs/sign-in.md).
-    private val localOnly = BuildConfig.IS_DEV_BUILD
 
     val auth: AuthGateway = if (localOnly) LocalOnlyAuthGateway() else SupabaseAuthGateway(supabase, scope)
 
