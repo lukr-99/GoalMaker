@@ -45,10 +45,9 @@ android\gradlew.bat -p android assembleDebug
 powershell -File android\tools\build-and-install.ps1 -Serial emulator-5554 -Launch
 ```
 
-The debug app (`com.goalmaker.app.debug`, version `X.Y.Z-dev`) talks to `http://10.0.2.2:55321`,
-the PC as seen from the emulator. On a phone, open Settings → Developer and enter the PC's LAN
-address (for example `http://192.168.1.20:55321`), then Save and restart. Sign in with any address
-and read the code in the mail viewer.
+The debug app (`com.goalmaker.app.debug`, version `X.Y.Z-dev`) does not sign in or sync: it opens
+straight on Today and keeps everything on the device ([sign-in](../sign-in.md)), so it needs no
+local stack. Only a release build signs in.
 
 `android/tools/phone.ps1` has serial-safe screenshots, logcat, taps and key presses.
 

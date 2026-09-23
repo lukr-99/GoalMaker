@@ -732,6 +732,7 @@
     <string name="activity_paused">%1$s paused %2$s</string>
     <string name="activity_resumed">%1$s resumed %2$s</string>
     <string name="settings_backup">Your data</string>
+    <string name="settings_local_only">Development build: no sign-in, and everything stays on this phone.</string>
     <string name="settings_backup_hint">One file with everything: your tasks, goals, habits, projects and reviews. A restore adds what is missing and never deletes anything.</string>
     <string name="settings_backup_export">Export</string>
     <string name="settings_backup_restore">Restore</string>

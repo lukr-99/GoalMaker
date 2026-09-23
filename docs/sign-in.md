@@ -99,6 +99,12 @@ Both templates Supabase can send for this, **Magic link** and **Confirm signup**
 
 ## Dev builds get past the post
 
+**Android dev builds do not sign in at all.** They open straight on Today as one fixed owner who lives
+only on the phone, in a replica of their own (`replica-local.db`), and nothing syncs: every change
+counts as pushed and nothing ever comes down. Settings says so in place of the account and its
+sign-out. A release build is the only one that signs in. What follows is how a Windows dev build
+signs in.
+
 Developing against the local stack means signing in again every time the stack is reset, so a dev
 build has two ways through, both only ever against that stack: the plain-http backend on port 55321,
 whose mailbox is on 55324. Any other backend, the cloud project above all, has neither, and the code
