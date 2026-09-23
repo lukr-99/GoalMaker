@@ -17,11 +17,16 @@ import kotlinx.serialization.json.jsonObject
  * One sync run: push the outbox in order, then pull every table and merge (docs/sync.md). Decisions
  * come from [SyncRules], so both apps behave the same. Replica calls block, so this runs on an IO
  * dispatcher; not safe to run twice at once, which the [SyncCoordinator] prevents.
+ *
+ * [pulls] is false only for a dev build's local-only remote, which never has anything to send back:
+ * a table that has never pulled has no watermark, and no watermark means a full resync, which clears
+ * the table first, so pulling from it would wipe the replica on every run.
  */
 class SyncEngine(
     private val catalog: SyncedTableCatalog,
     private val replica: Replica,
     private val remote: RemoteTables,
+    private val pulls: Boolean = true,
     private val now: () -> Instant,
 ) {
     suspend fun run(): SyncReport {
@@ -43,8 +48,10 @@ class SyncEngine(
                 }
             }
 
-            for (table in catalog.tables) {
-                pulled += pull(table)
+            if (pulls) {
+                for (table in catalog.tables) {
+                    pulled += pull(table)
+                }
             }
 
             SyncReport(

@@ -21,14 +21,49 @@
             <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
         </Style>
 
+        <!--
+          A project's status at a glance, read from the Tag: active plays on in the accent, paused and
+          done step back in the muted colour, each with a mark of its own.
+        -->
+        <Style x:Key="StatusIcon" TargetType="ui:SymbolIcon">
+            <Setter Property="Symbol" Value="PlayCircle24" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="paused">
+                    <Setter Property="Symbol" Value="PauseCircle24" />
+                    <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="done">
+                    <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                    <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="StatusName" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="paused">
+                    <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="done">
+                    <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- One project in the list beside the board. -->
         <DataTemplate x:Key="ProjectRow" DataType="{x:Type vm:ProjectRowViewModel}">
             <ui:Button Margin="0,0,0,4" Padding="10,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                        Appearance="Transparent" Command="{Binding OpenCommand}">
                 <StackPanel>
-                    <TextBlock Text="{Binding Name}" FontSize="14" />
-                    <!-- The status, then what Backlog, To do and Doing hold, so the load reads at a glance. -->
                     <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center"
+                                       Tag="{Binding StatusId}" Style="{StaticResource StatusIcon}" />
+                        <TextBlock Text="{Binding Name}" FontSize="14" Tag="{Binding StatusId}" Style="{StaticResource StatusName}" />
+                    </StackPanel>
+                    <!-- The status, then what Backlog, To do and Doing hold, so the load reads at a glance. -->
+                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
                         <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
                         <TextBlock Margin="8,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Backlog}"
                                    Foreground="{DynamicResource GM.AccentBrush}"
@@ -133,8 +168,12 @@
             <ColumnDefinition Width="240" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+        <StackPanel Grid.Column="0" Grid.RowSpan="2" Margin="0,0,16,0">
             <controls:HeadlineText Title="{DynamicResource Projects.Title}" FontSize="32" />
             <ui:Button Margin="0,8,0,8" HorizontalAlignment="Left" Appearance="Primary"
                        Command="{Binding NewCommand}" Content="{DynamicResource Projects.Add}" />
@@ -148,10 +187,17 @@
             <StackPanel Margin="{DynamicResource GM.PageGutter}">
                 <!-- The project on show, or the editor when one is being written. -->
                 <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
-                        Visibility="{Binding IsNotEditing, Converter={StaticResource BoolToVisibility}}">
+                        Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
                     <DockPanel>
-                        <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding EditCommand}"
-                                   Content="{DynamicResource Projects.Edit}" />
+                        <!-- The status with its mark and the Edit button share one row, centred on each other. -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <ui:SymbolIcon Margin="0,0,4,0" FontSize="14" VerticalAlignment="Center"
+                                           Tag="{Binding ProjectStatus}" Style="{StaticResource StatusIcon}" />
+                            <TextBlock Margin="0,0,8,0" Text="{Binding ProjectStatusText}" FontSize="12" VerticalAlignment="Center"
+                                       Tag="{Binding ProjectStatus}" Style="{StaticResource StatusName}" />
+                            <ui:Button Appearance="Transparent" VerticalAlignment="Center" Command="{Binding EditCommand}"
+                                       Content="{DynamicResource Projects.Edit}" />
+                        </StackPanel>
                         <StackPanel>
                             <TextBlock Text="{Binding ProjectName}" FontSize="18" FontFamily="{DynamicResource GM.BodyStrongFont}" />
                             <TextBlock Text="{Binding ProjectDescription}" FontSize="12" TextWrapping="Wrap"
@@ -210,6 +256,29 @@
                                    Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
                     </Grid>
 
+                    <!-- The new item's column (it follows the kind until one is picked), priority and notes. -->
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" MinWidth="110" VerticalAlignment="Top"
+                                  ItemsSource="{Binding NewItemColumns}"
+                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemColumn}"
+                                  ToolTip="{DynamicResource Projects.ItemColumn}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ItemColumn}" />
+                        <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="110" VerticalAlignment="Top"
+                                  ItemsSource="{Binding Priorities}"
+                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemPriority}"
+                                  ToolTip="{DynamicResource Projects.ItemPriority}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ItemPriority}" />
+                        <ui:TextBox Grid.Column="2" Margin="8,0,0,0" MaxHeight="140" TextWrapping="Wrap" AcceptsReturn="True"
+                                    VerticalAlignment="Top" VerticalScrollBarVisibility="Auto"
+                                    PlaceholderText="{DynamicResource Projects.ItemNotes}"
+                                    Text="{Binding NewItemNotes, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+
                     <!-- Who made the items on show: everyone, the owner, or Claude (docs/projects.md). -->
                     <StackPanel Margin="0,0,0,8" Orientation="Horizontal" HorizontalAlignment="Right">
                         <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
@@ -239,5 +308,22 @@
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Undo for the last item finished or taken out, for five seconds, as on the lists. -->
+        <Border Grid.Row="1" Grid.Column="1"
+                Margin="0,12,0,0"
+                Padding="16,6,6,6"
+                CornerRadius="{DynamicResource GM.RowCorner}"
+                Background="{DynamicResource GM.HeroBrush}"
+                Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel>
+                <ui:Button DockPanel.Dock="Right"
+                           Appearance="Transparent"
+                           Foreground="{DynamicResource GM.HeroAccentBrush}"
+                           Content="{DynamicResource Lists.Undo}"
+                           Command="{Binding UndoCommand}" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding UndoText}" Foreground="{DynamicResource GM.OnHeroBrush}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
     </Grid>
 </Page>

@@ -4,16 +4,18 @@ namespace GoalMaker.App.Startup;
 /// Launch switches (spec: Windows specifics). <c>--tray</c> starts hidden in the tray; <c>--open
 /// today|tomorrow|inbox|plan|settings|areas|archive|activity</c> shows that page; <c>--mini
 /// today|habits</c> opens a mini window (docs/mini-windows.md); <c>--no-activate</c> shows the window
-/// without taking the keyboard focus (start-up scripts, dev tooling). A <c>goalmaker://open/today</c>
+/// without taking the keyboard focus (start-up scripts, dev tooling); <c>--sign-in</c> makes a dev build
+/// sign in and sync instead of keeping everything on this PC (docs/sign-in.md). A <c>goalmaker://open/today</c>
 /// or <c>goalmaker://mini/habits</c> link does the same. Unknown values are ignored so older or newer
 /// shortcuts never stop the app from starting.
 /// </summary>
-public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool NoActivate = false, MiniPage? Mini = null)
+public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool NoActivate = false, MiniPage? Mini = null, bool SignIn = false)
 {
     public static StartupOptions Parse(IReadOnlyList<string> arguments)
     {
         var tray = false;
         var noActivate = false;
+        var signIn = false;
         AppPage? page = null;
         MiniPage? mini = null;
         for (var index = 0; index < arguments.Count; index++)
@@ -26,6 +28,10 @@ public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool No
             else if (argument.Equals("--no-activate", StringComparison.OrdinalIgnoreCase))
             {
                 noActivate = true;
+            }
+            else if (argument.Equals("--sign-in", StringComparison.OrdinalIgnoreCase))
+            {
+                signIn = true;
             }
             else if (argument.Equals("--open", StringComparison.OrdinalIgnoreCase) && index + 1 < arguments.Count)
             {
@@ -47,7 +53,7 @@ public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool No
 
         // A launch that only asks for a mini window leaves the main window where it was, so a shortcut
         // can put Today on the desktop without the whole app coming up.
-        return new StartupOptions((tray || mini is not null) && page is null, page, noActivate, mini);
+        return new StartupOptions((tray || mini is not null) && page is null, page, noActivate, mini, signIn);
     }
 
     private static MiniPage? MiniFrom(string name) => name.Trim().ToLowerInvariant() switch

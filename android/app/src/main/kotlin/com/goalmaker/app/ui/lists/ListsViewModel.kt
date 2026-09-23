@@ -113,13 +113,11 @@ class ListsViewModel(
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
         rows,
-        sync.status,
         refreshing,
         goalsAndHabits,
-    ) { (planning, narrowed), context, status, pulled, (goalRows, habitRows) ->
+    ) { (planning, narrowed), context, pulled, (goalRows, habitRows) ->
         ListsUiState(
             lists = planning,
-            sync = status,
             refreshing = pulled,
             areas = context.areas,
             tagNames = context.tags.map { it.name },
@@ -134,7 +132,7 @@ class ListsViewModel(
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ListsUiState(lists = null, sync = sync.status.value, refreshing = false),
+        initialValue = ListsUiState(lists = null, refreshing = false),
     )
 
     /** Completions and deletions the screen offers to undo. */

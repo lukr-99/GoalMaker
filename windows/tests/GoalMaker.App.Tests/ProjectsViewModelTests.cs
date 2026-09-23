@@ -3,7 +3,7 @@ using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.Tests;
 
-/// <summary>The Windows projects page over a real replica: the board and what moving a card does (M5-02).</summary>
+/// <summary>The Windows projects page over a real replica: the board, what moving a card does, and taking it back (M5-02).</summary>
 public sealed class ProjectsViewModelTests : IDisposable
 {
     private readonly TestPlanner planner = new();
@@ -17,6 +17,7 @@ public sealed class ProjectsViewModelTests : IDisposable
 
         Assert.True(page.IsEmpty);
         Assert.False(page.HasProject);
+        Assert.False(page.ShowsProject);
         Assert.Equal(["backlog", "todo", "doing", "done"], page.Columns.Select(column => column.Column));
     }
 
@@ -32,9 +33,11 @@ public sealed class ProjectsViewModelTests : IDisposable
 
         Assert.False(page.IsEmpty);
         Assert.True(page.HasProject);
+        Assert.True(page.ShowsProject);
         var row = Assert.Single(page.Projects);
         Assert.Equal("GoalMaker", row.Name);
         Assert.Equal("Projects.Active", row.Status);
+        Assert.Equal(ProjectRules.Active, row.StatusId);
         Assert.Equal("https://github.com/owner/goalmaker", planner.Projects.All()[0].RepositoryUrl);
     }
 
@@ -54,6 +57,77 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.Equal(["Ship the board"], Column(page, "todo").Items.Select(item => item.Title));
         Assert.Equal("Projects.Idea", Column(page, "backlog").Items[0].Type);
         Assert.Equal(string.Empty, page.NewItemTitle);
+    }
+
+    [Fact]
+    public void ANewItemKeepsTheColumnPriorityAndNotesItWasGiven()
+    {
+        var page = WithProject();
+
+        page.NewItemType = ProjectRules.Idea;
+        Assert.Equal(ProjectRules.Backlog, page.NewItemColumn);
+        page.NewItemColumn = ProjectRules.Doing;
+        page.NewItemType = ProjectRules.Bug;
+        page.NewItemPriority = ProjectRules.High;
+        page.NewItemNotes = "Like the lists have";
+        page.NewItemTitle = "Undo on the board";
+        page.AddItemCommand.Execute(null);
+
+        var item = planner.Task("Undo on the board");
+        Assert.Equal(ProjectRules.Bug, item.ItemType);
+        Assert.Equal(ProjectRules.Doing, item.BoardColumn);
+        Assert.Equal(ProjectRules.High, item.Priority);
+        Assert.Equal("Like the lists have", item.Notes);
+        Assert.Equal(string.Empty, page.NewItemNotes);
+    }
+
+    [Fact]
+    public void UndoingAMoveToDonePutsTheCardBackOpen()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+
+        Column(page, "todo").Items[0].MoveCommand.Execute("done");
+        Assert.True(page.HasUndo);
+        Assert.Equal("Lists.Done(Ship the board)", page.UndoText);
+        page.UndoCommand.Execute(null);
+
+        Assert.False(page.HasUndo);
+        Assert.Equal(ProjectRules.Todo, planner.Task("Ship the board").BoardColumn);
+        Assert.Equal(TaskState.Open, planner.Task("Ship the board").State);
+    }
+
+    [Fact]
+    public void UndoingTakingAnItemOutPutsItBackWhereItWas()
+    {
+        var page = WithProject();
+        page.NewItemType = ProjectRules.Bug;
+        page.NewItemColumn = ProjectRules.Doing;
+        page.NewItemTitle = "Cache the release feed";
+        page.AddItemCommand.Execute(null);
+
+        Column(page, "doing").Items[0].RemoveCommand.Execute(null);
+        Assert.Null(planner.Task("Cache the release feed").ProjectId);
+        page.UndoCommand.Execute(null);
+
+        var item = planner.Task("Cache the release feed");
+        Assert.Equal(planner.Projects.All()[0].Id, item.ProjectId);
+        Assert.Equal(ProjectRules.Bug, item.ItemType);
+        Assert.Equal(ProjectRules.Doing, item.BoardColumn);
+    }
+
+    [Fact]
+    public void TheUndoBarGoesAfterFiveSeconds()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+
+        Column(page, "todo").Items[0].MoveCommand.Execute("done");
+        planner.Time.Advance(TimeSpan.FromSeconds(5));
+
+        Assert.False(page.HasUndo);
     }
 
     [Fact]
@@ -142,5 +216,5 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     private ProjectsViewModel Page() =>
-        new(planner.Projects, planner.Tasks, planner.Strings, _ => { }, action => action());
+        new(planner.Projects, planner.Tasks, planner.Strings, _ => { }, action => action(), planner.Time);
 }

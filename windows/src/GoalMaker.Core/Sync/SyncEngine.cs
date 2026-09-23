@@ -6,8 +6,13 @@ namespace GoalMaker.Core.Sync;
 /// One sync run: push the outbox in order, then pull every table and merge (docs/sync.md). Decisions
 /// come from <see cref="SyncRules"/>, so both apps behave the same. Not thread-safe: the
 /// <see cref="SyncCoordinator"/> runs one at a time.
+/// <para>
+/// <paramref name="pulls"/> is false only for a dev build's local-only remote, which never has anything
+/// to send back: a table that has never pulled has no watermark, and no watermark means a full resync,
+/// which clears the table first, so pulling from it would wipe the replica on every run.
+/// </para>
 /// </summary>
-public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRemoteTables remote, TimeProvider time)
+public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRemoteTables remote, TimeProvider time, bool pulls = true)
 {
     public const int PageSize = 500;
 
@@ -37,9 +42,12 @@ public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRe
                 }
             }
 
-            foreach (var table in catalog.Tables)
+            if (pulls)
             {
-                pulled += await PullAsync(table, cancellationToken).ConfigureAwait(false);
+                foreach (var table in catalog.Tables)
+                {
+                    pulled += await PullAsync(table, cancellationToken).ConfigureAwait(false);
+                }
             }
 
             return new SyncReport(pushed, rejected, pulled, Offline: false, Problem: rejected > 0 ? $"{rejected} change(s) refused by the server" : null);

@@ -220,7 +220,12 @@ fun SettingsScreen(
                 BackupCard(viewModel, state.backup)
             }
             Section(stringResource(R.string.settings_account)) {
-                Text(state.email, style = MaterialTheme.typography.bodyLarge)
+                // A dev build that stays on the phone has no account to show or leave (docs/sign-in.md).
+                if (state.appInfo.localOnly) {
+                    Text(stringResource(R.string.settings_local_only), style = MaterialTheme.typography.bodyLarge)
+                } else {
+                    Text(state.email, style = MaterialTheme.typography.bodyLarge)
+                }
                 // The owner can go and enrol a fingerprint and come straight back, which resumes
                 // this window rather than building it again, so asking once would read stale.
                 LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.checkUnlock() }
@@ -231,23 +236,25 @@ fun SettingsScreen(
                     enabled = state.unlock == UnlockAvailability.READY || state.appLock,
                     onCheckedChange = viewModel::setAppLock,
                 )
-                val unsynced = state.unsyncedAtSignOut
-                if (unsynced == null) {
-                    OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
-                        Text(stringResource(R.string.settings_sign_out))
-                    }
-                } else {
-                    Text(
-                        pluralStringResource(R.plurals.settings_sign_out_unsynced, unsynced, unsynced),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!state.appInfo.localOnly) {
+                    val unsynced = state.unsyncedAtSignOut
+                    if (unsynced == null) {
                         OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
                             Text(stringResource(R.string.settings_sign_out))
                         }
-                        TextButton(onClick = { viewModel.signOut(discardUnsynced = true) }, enabled = !state.signingOut) {
-                            Text(stringResource(R.string.settings_sign_out_anyway))
+                    } else {
+                        Text(
+                            pluralStringResource(R.plurals.settings_sign_out_unsynced, unsynced, unsynced),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
+                                Text(stringResource(R.string.settings_sign_out))
+                            }
+                            TextButton(onClick = { viewModel.signOut(discardUnsynced = true) }, enabled = !state.signingOut) {
+                                Text(stringResource(R.string.settings_sign_out_anyway))
+                            }
                         }
                     }
                 }
@@ -265,6 +272,12 @@ fun SettingsScreen(
             }
             if (state.appInfo.isDevBuild) {
                 Section(stringResource(R.string.settings_developer)) {
+                    SwitchRow(
+                        title = stringResource(R.string.settings_dev_sign_in),
+                        hint = stringResource(R.string.settings_dev_sign_in_hint),
+                        checked = !state.appInfo.localOnly,
+                        onCheckedChange = viewModel::setDevSignIn,
+                    )
                     Text(
                         stringResource(R.string.settings_backend_hint),
                         style = MaterialTheme.typography.bodyMedium,

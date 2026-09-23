@@ -124,6 +124,13 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         }
     }
 
+    override fun devSignIn(): Boolean = preferences.getBoolean(DEV_SIGN_IN, false)
+
+    // Committed at once, since the app restarts right after.
+    override fun setDevSignIn(on: Boolean) {
+        preferences.edit(commit = true) { putBoolean(DEV_SIGN_IN, on) }
+    }
+
     private fun readQuietHours(): QuietHours {
         val start = preferences.getInt(QUIET_START, 0)
         val end = preferences.getInt(QUIET_END, 0)
@@ -169,6 +176,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val SECONDS_PER_DAY = 86_400
         const val BACKEND_URL = "dev_backend_url"
         const val BACKEND_KEY = "dev_backend_key"
+        const val DEV_SIGN_IN = "dev_sign_in"
 
         inline fun <reified T : Enum<T>> enumOrDefault(stored: String?, default: T): T =
             enumValues<T>().firstOrNull { it.name == stored } ?: default

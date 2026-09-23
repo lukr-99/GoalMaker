@@ -11,15 +11,25 @@ namespace GoalMaker.App.ViewModels;
 /// The Projects page (docs/projects.md, spec stories 43 to 50): the owner's projects and the board of
 /// the one on show, Backlog to Done. An item is a task, so moving a card writes through
 /// <see cref="TaskList"/> and the item turns up in Today when it has a day. The who-made-it switch
-/// shows every item, only the owner's, or only Claude's.
+/// shows every item, only the owner's, or only Claude's. Moving an item to Done or taking it out of
+/// the project can be undone for five seconds, as on the lists.
 /// </summary>
 public sealed partial class ProjectsViewModel : ObservableObject
 {
+    private static readonly TimeSpan UndoFor = TimeSpan.FromSeconds(5);
     private readonly ProjectList projects;
     private readonly TaskList tasks;
     private readonly IStrings strings;
     private readonly Action<string> openTask;
+    private readonly Action<Action> runOnUi;
+    private readonly TimeProvider time;
     private string? chosen;
+    private Action? undo;
+    private ITimer? undoTimer;
+
+    // The new item's column follows its type, an idea starting in the backlog, until one is picked.
+    private bool columnPicked;
+    private bool columnFollowing;
 
     [ObservableProperty]
     private bool isEmpty;
@@ -37,10 +47,11 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private string projectFolder = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProjectStatusText))]
     private string projectStatus = ProjectRules.Active;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNotEditing))]
+    [NotifyPropertyChangedFor(nameof(ShowsProject))]
     private bool isEditing;
 
     [ObservableProperty]
@@ -51,14 +62,31 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private string newItemType = ProjectRules.Task;
 
     [ObservableProperty]
+    private string newItemColumn = ProjectRules.Todo;
+
+    [ObservableProperty]
+    private string newItemPriority = ProjectRules.Normal;
+
+    [ObservableProperty]
+    private string newItemNotes = string.Empty;
+
+    [ObservableProperty]
+    private string undoText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasUndo;
+
+    [ObservableProperty]
     private string madeByFilter = ProjectRules.Everyone;
 
-    public ProjectsViewModel(ProjectList projects, TaskList tasks, IStrings strings, Action<string> openTask, Action<Action> runOnUi)
+    public ProjectsViewModel(ProjectList projects, TaskList tasks, IStrings strings, Action<string> openTask, Action<Action> runOnUi, TimeProvider time)
     {
         this.projects = projects;
         this.tasks = tasks;
         this.strings = strings;
         this.openTask = openTask;
+        this.runOnUi = runOnUi;
+        this.time = time;
         projects.Changed += (_, _) => runOnUi(Refresh);
         tasks.Changed += (_, _) => runOnUi(Refresh);
         Columns = [.. ProjectRules.Columns.Select(column => new BoardColumnViewModel(column, strings.Get(ColumnKey(column))))];
@@ -67,6 +95,12 @@ public sealed partial class ProjectsViewModel : ObservableObject
             .. new[] { ProjectRules.Task, ProjectRules.Idea, ProjectRules.Bug }
                 .Select(kind => new ChoiceViewModel(kind, strings.Get(TypeKey(kind)))),
         ];
+        NewItemColumns =
+        [
+            .. new[] { ProjectRules.Backlog, ProjectRules.Todo, ProjectRules.Doing }
+                .Select(column => new ChoiceViewModel(column, strings.Get(ColumnKey(column)))),
+        ];
+        Priorities = [.. ProjectRules.Priorities.Select(priority => new ChoiceViewModel(priority, strings.Get(PriorityKey(priority))))];
         Statuses =
         [
             .. new[] { ProjectRules.Active, ProjectRules.Paused, ProjectRules.Finished }
@@ -85,8 +119,17 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The kinds an item can be, for the picker beside the new item box.</summary>
     public IReadOnlyList<ChoiceViewModel> ItemTypes { get; }
 
+    /// <summary>The columns a new item can start in; Done is not one of them.</summary>
+    public IReadOnlyList<ChoiceViewModel> NewItemColumns { get; }
+
+    /// <summary>How important a new item is, urgent to low.</summary>
+    public IReadOnlyList<ChoiceViewModel> Priorities { get; }
+
     /// <summary>The statuses a project can have, for the editor.</summary>
     public IReadOnlyList<ChoiceViewModel> Statuses { get; }
+
+    /// <summary>The status of the project on show, in the owner's words.</summary>
+    public string ProjectStatusText => strings.Get(StatusKey(ProjectStatus));
 
     /// <summary>What the who-made-it switch can show: everyone's items, the owner's, or Claude's.</summary>
     public IReadOnlyList<ChoiceViewModel> MakerFilters { get; }
@@ -94,8 +137,8 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>Whether a project is on show, so the board and its boxes are worth drawing.</summary>
     public bool HasProject => chosen is not null;
 
-    /// <summary>The card of the project on show, which gives way to the editor.</summary>
-    public bool IsNotEditing => !IsEditing;
+    /// <summary>The card of the project on show: there is one, and the editor is not in its place.</summary>
+    public bool ShowsProject => HasProject && !IsEditing;
 
     public void Refresh()
     {
@@ -113,6 +156,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
                 id,
                 project.Name,
                 strings.Get(StatusKey(project.Status)),
+                project.Status,
                 id == chosen,
                 Waiting(ProjectRules.Backlog),
                 Waiting(ProjectRules.Todo),
@@ -129,6 +173,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
             foreach (var item in ProjectRules.Order(items.Where(task => task.BoardColumn == column.Column)))
             {
                 var id = item.Id;
+                var card = item;
                 column.Items.Add(new BoardItemViewModel(
                     id,
                     item.Title,
@@ -138,9 +183,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     item.State == TaskState.Dropped,
                     item.PlannedDate?.ToString("d MMM", CultureInfo.CurrentCulture),
                     item.MadeBy == ProjectRules.Claude,
-                    column => tasks.SetBoardColumn(id, column),
+                    column => Move(card, column),
                     () => openTask(id),
-                    () => tasks.SetProject(id, null)));
+                    () => RemoveFromProject(card)));
             }
         }
 
@@ -156,6 +201,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
         IsEmpty = all.Count == 0;
         OnPropertyChanged(nameof(HasProject));
+        OnPropertyChanged(nameof(ShowsProject));
     }
 
     /// <summary>Shows a project's board.</summary>
@@ -178,6 +224,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ProjectStatus = ProjectRules.Active;
         IsEditing = true;
         OnPropertyChanged(nameof(HasProject));
+        OnPropertyChanged(nameof(ShowsProject));
     }
 
     /// <summary>Opens the project on show for editing.</summary>
@@ -228,7 +275,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Adds an item to the project on show; it lands in the column its type calls for.</summary>
+    /// <summary>Adds an item to the project on show, in the column and at the priority chosen, with its notes.</summary>
     [RelayCommand(CanExecute = nameof(CanAddItem))]
     public void AddItem()
     {
@@ -238,11 +285,89 @@ public sealed partial class ProjectsViewModel : ObservableObject
         }
 
         tasks.SetProject(task.Id, projectId, NewItemType);
+        tasks.SetBoardColumn(task.Id, NewItemColumn);
+        tasks.SetPriority(task.Id, NewItemPriority);
+        if (!string.IsNullOrWhiteSpace(NewItemNotes))
+        {
+            tasks.SetNotes(task.Id, NewItemNotes.Trim());
+        }
+
         NewItemTitle = string.Empty;
+        NewItemNotes = string.Empty;
         Refresh();
     }
 
     private bool CanAddItem() => !string.IsNullOrWhiteSpace(NewItemTitle) && chosen is not null;
+
+    partial void OnNewItemTypeChanged(string value)
+    {
+        if (columnPicked)
+        {
+            return;
+        }
+
+        columnFollowing = true;
+        NewItemColumn = ProjectRules.ColumnFor(value);
+        columnFollowing = false;
+    }
+
+    partial void OnNewItemColumnChanged(string value) => columnPicked |= !columnFollowing;
+
+    // Moving to Done can be taken back, to the column the item came from.
+    private void Move(TaskItem item, string column)
+    {
+        tasks.SetBoardColumn(item.Id, column);
+        if (column == ProjectRules.Done && item.BoardColumn is { } from && from != ProjectRules.Done)
+        {
+            ShowUndo(strings.Get("Lists.Done", item.Title), () => tasks.SetBoardColumn(item.Id, from));
+        }
+    }
+
+    // Taking an item out can be taken back: it returns with its type, column and milestone.
+    private void RemoveFromProject(TaskItem item)
+    {
+        if (item.ProjectId is not { } projectId)
+        {
+            return;
+        }
+
+        tasks.SetProject(item.Id, null);
+        ShowUndo(strings.Get("Projects.Removed", item.Title), () =>
+        {
+            tasks.SetProject(item.Id, projectId, item.ItemType);
+            if (item.BoardColumn is { } column)
+            {
+                tasks.SetBoardColumn(item.Id, column);
+            }
+
+            tasks.SetMilestone(item.Id, item.MilestoneId);
+        });
+    }
+
+    [RelayCommand]
+    private void Undo()
+    {
+        var action = undo;
+        HideUndo();
+        action?.Invoke();
+    }
+
+    private void ShowUndo(string text, Action action)
+    {
+        undoTimer?.Dispose();
+        undo = action;
+        UndoText = text;
+        HasUndo = true;
+        undoTimer = time.CreateTimer(_ => runOnUi(HideUndo), null, UndoFor, Timeout.InfiniteTimeSpan);
+    }
+
+    private void HideUndo()
+    {
+        undoTimer?.Dispose();
+        undoTimer = null;
+        undo = null;
+        HasUndo = false;
+    }
 
     partial void OnMadeByFilterChanged(string value) => Refresh();
 

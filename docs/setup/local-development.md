@@ -45,10 +45,11 @@ android\gradlew.bat -p android assembleDebug
 powershell -File android\tools\build-and-install.ps1 -Serial emulator-5554 -Launch
 ```
 
-The debug app (`com.goalmaker.app.debug`, version `X.Y.Z-dev`) talks to `http://10.0.2.2:55321`,
-the PC as seen from the emulator. On a phone, open Settings → Developer and enter the PC's LAN
-address (for example `http://192.168.1.20:55321`), then Save and restart. Sign in with any address
-and read the code in the mail viewer.
+The debug app (`com.goalmaker.app.debug`, version `X.Y.Z-dev`) does not sign in or sync: it opens
+straight on Today and keeps everything on the device ([sign-in](../sign-in.md)), so it needs no
+local stack. To test signing in and sync, turn on Settings → Developer → Sign in and sync; it talks to
+`http://10.0.2.2:55321`, the PC as seen from the emulator, and on a phone to the address entered under
+Developer (the PC's LAN address, for example `http://192.168.1.20:55321`).
 
 `android/tools/phone.ps1` has serial-safe screenshots, logcat, taps and key presses.
 
@@ -63,9 +64,10 @@ dotnet build windows\GoalMaker.slnx
 windows\src\GoalMaker.App\bin\Debug\net10.0-windows10.0.19041.0\GoalMaker.exe --no-activate
 ```
 
-Dev builds use `http://127.0.0.1:55321` and keep their files in `%LOCALAPPDATA%\GoalMaker-dev`
-(session, settings, `logs\crash.log`). Launch switches: `--tray` (start hidden), `--no-activate`
-(show without taking focus) and `--open <page>`, where a page is `today`, `tomorrow`, `inbox`,
+Dev builds do not sign in or sync: they keep everything in `%LOCALAPPDATA%\GoalMaker-dev` (the
+replica, settings, `logs\crash.log`). Started with `--sign-in` they sign in and sync against
+`http://127.0.0.1:55321` instead. Launch switches: `--tray` (start hidden), `--no-activate`
+(show without taking focus), `--sign-in` and `--open <page>`, where a page is `today`, `tomorrow`, `inbox`,
 `plan`, `goals`, `habits`, `reviews`, `stats`, `projects`, `calendar`, `areas`, `archive`,
 `activity` or `settings`. A second launch hands its switches to the running app.
 
@@ -77,7 +79,8 @@ powershell -File windows\installer\build-installer.ps1 -Dev
 
 ## Checking both apps together
 
-Run this after changing sync or reminders. Sign both apps in with the same address, then:
+Run this after changing sync or reminders. Dev builds keep to themselves, so turn signing in on in
+both (Windows `--sign-in`, Android Settings → Developer) and sign them in with the same address, then:
 
 1. Add a task for today on one app and check it appears on the other within a few seconds
    (Realtime nudges a sync). Complete it on the other and check the first shows it done.

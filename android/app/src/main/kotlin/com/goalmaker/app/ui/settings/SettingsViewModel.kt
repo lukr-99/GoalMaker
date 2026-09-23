@@ -261,6 +261,13 @@ class SettingsViewModel(
         restartApp()
     }
 
+    /** Dev builds only: sign in and sync, or keep everything on the phone; takes effect on a restart. */
+    fun setDevSignIn(on: Boolean) {
+        if (!appInfo.isDevBuild) return
+        settings.setDevSignIn(on)
+        restartApp()
+    }
+
     // Every reminder setting ends the same way: the one alarm is armed for whatever comes first.
     private fun rearm() {
         viewModelScope.launch(io) { reminders.rearm() }

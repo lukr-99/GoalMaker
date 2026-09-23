@@ -680,9 +680,13 @@
     <string name="projects_finished">Done</string>
     <string name="projects_add_item">Add an item</string>
     <string name="projects_item_title">What is it?</string>
+    <string name="projects_item_type">Type</string>
+    <string name="projects_item_column">Column</string>
+    <string name="projects_item_priority">Priority</string>
     <string name="projects_item_menu">More</string>
     <string name="projects_move_to">Move to %1$s</string>
     <string name="projects_remove_item">Out of the project</string>
+    <string name="projects_removed_message">Out of the project: %1$s</string>
     <string name="projects_column_empty">Nothing here yet.</string>
     <string name="projects_backlog">Backlog</string>
     <string name="projects_todo">To do</string>
@@ -732,6 +736,9 @@
     <string name="activity_paused">%1$s paused %2$s</string>
     <string name="activity_resumed">%1$s resumed %2$s</string>
     <string name="settings_backup">Your data</string>
+    <string name="settings_local_only">Development build: no sign-in, and everything stays on this phone.</string>
+    <string name="settings_dev_sign_in">Sign in and sync</string>
+    <string name="settings_dev_sign_in_hint">Off, this dev build keeps everything on this phone. On, it signs in and syncs like a release, against the backend below. Changing it restarts the app.</string>
     <string name="settings_backup_hint">One file with everything: your tasks, goals, habits, projects and reviews. A restore adds what is missing and never deletes anything.</string>
     <string name="settings_backup_export">Export</string>
     <string name="settings_backup_restore">Restore</string>

@@ -36,9 +36,10 @@ public partial class App : Application
         }
 
         var strings = new ResourceStrings(this);
+        var options = StartupOptions.Parse(e.Args);
         try
         {
-            graph = new AppGraph(build, strings, Resources, RunOnUi, () => RunOnUi(Quit), () => RunOnUi(Restart));
+            graph = new AppGraph(build, strings, Resources, RunOnUi, () => RunOnUi(Quit), () => RunOnUi(Restart), options.SignIn);
         }
         catch (Exception error)
         {
@@ -74,7 +75,7 @@ public partial class App : Application
         graph.SettingsPage.ApplyStoredQuickAddHotkey();
         instance.Listen(arguments => RunOnUi(() => Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
 
-        Handle(StartupOptions.Parse(e.Args), secondLaunch: false);
+        Handle(options, secondLaunch: false);
         _ = RestoreSessionAsync(graph);
     }
 

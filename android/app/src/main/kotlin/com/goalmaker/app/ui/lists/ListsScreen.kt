@@ -13,14 +13,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,28 +28,14 @@ import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Archive
-import androidx.compose.material.icons.outlined.DonutLarge
-import androidx.compose.material.icons.outlined.EditCalendar
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.TrendingUp
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -92,13 +75,12 @@ import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
-import com.goalmaker.app.ui.nav.MainDestination
-import com.goalmaker.app.ui.nav.MainNavigationBar
 import com.goalmaker.app.ui.nav.NavTransitions
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
@@ -117,26 +99,19 @@ import kotlinx.coroutines.launch
  * The planner's home: Today, Tomorrow and the Inbox behind the bottom navigation (docs/lists.md),
  * with the composer above it. The list on screen supplies the day for what's typed
  * (docs/composer.md). The bar itself is shared with Projects and the Calendar, so [tab] and the
- * choosing live above this screen.
+ * choosing live above this screen, in [com.goalmaker.app.ui.nav.MainScreen].
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ListsScreen(
     viewModel: ListsViewModel,
     onOpenPlan: () -> Unit,
-    onOpenSettings: () -> Unit,
     onOpenTask: (String) -> Unit,
-    onOpenArchive: () -> Unit,
     onOpenGoals: () -> Unit,
     onOpenHabits: () -> Unit,
-    onOpenReviews: () -> Unit,
-    onOpenStats: () -> Unit,
     tab: ListTab,
-    onSelect: (MainDestination) -> Unit,
-    hasProblems: Boolean = false,
+    actions: @Composable () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val waiting = stringResource(R.string.problems_waiting)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val composer = rememberTextFieldState()
     val snackbars = remember { SnackbarHostState() }
@@ -204,7 +179,7 @@ fun ListsScreen(
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            snackbarHost = { SnackbarHost(snackbars) },
+            snackbarHost = { AppSnackbarHost(snackbars) },
             topBar = {
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(tab.title())) },
@@ -214,31 +189,7 @@ fun ListsScreen(
                         }
                     },
                     navigationIcon = { DayMark(tab, state.lists) },
-                    actions = {
-                        SyncIndicator(state.sync, onSyncNow = viewModel::refresh)
-                        IconButton(onClick = onOpenHabits) {
-                            Icon(Icons.Outlined.DonutLarge, contentDescription = stringResource(R.string.habits_title))
-                        }
-                        IconButton(onClick = onOpenGoals) {
-                            Icon(Icons.Outlined.Flag, contentDescription = stringResource(R.string.goals_title))
-                        }
-                        MoreMenu(
-                            onOpenArchive = onOpenArchive,
-                            onOpenReviews = onOpenReviews,
-                            onOpenStats = onOpenStats,
-                        )
-                        IconButton(onClick = onOpenPlan) {
-                            Icon(Icons.Outlined.EditCalendar, contentDescription = stringResource(R.string.plan_title))
-                        }
-                        IconButton(onClick = onOpenSettings) {
-                            // Something went wrong while nobody was watching (docs/problems.md).
-                            BadgedBox(
-                                badge = { if (hasProblems) Badge(modifier = Modifier.semantics { contentDescription = waiting }) },
-                            ) {
-                                Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.today_settings))
-                            }
-                        }
-                    },
+                    actions = { actions() },
                     scrollBehavior = scrollBehavior,
                 )
             },
@@ -260,9 +211,6 @@ fun ListsScreen(
                         },
                         onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
                     )
-                    if (!WindowInsets.isImeVisible) {
-                        MainNavigationBar(MainDestination.of(tab), onSelect)
-                    }
                 }
             },
         ) { padding ->
@@ -407,47 +355,6 @@ private fun ListContent(
                 if (lists.inbox.isEmpty()) item(key = "empty") { Empty(stringResource(R.string.lists_inbox_empty)) }
                 rows(lists.inbox)
             }
-        }
-    }
-}
-
-/** What doesn't fit the top bar: the reviews, the stats and the archive. */
-@Composable
-private fun MoreMenu(
-    onOpenArchive: () -> Unit,
-    onOpenReviews: () -> Unit,
-    onOpenStats: () -> Unit,
-) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.lists_more_menu))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.reviews_title)) },
-                leadingIcon = { Icon(Icons.Outlined.MenuBook, contentDescription = null) },
-                onClick = {
-                    open = false
-                    onOpenReviews()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.stats_title)) },
-                leadingIcon = { Icon(Icons.Outlined.TrendingUp, contentDescription = null) },
-                onClick = {
-                    open = false
-                    onOpenStats()
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.archive_title)) },
-                leadingIcon = { Icon(Icons.Outlined.Archive, contentDescription = null) },
-                onClick = {
-                    open = false
-                    onOpenArchive()
-                },
-            )
         }
     }
 }

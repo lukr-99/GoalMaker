@@ -5,11 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
+import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.domain.composer.ComposerDraft
+import com.goalmaker.app.ui.lists.UndoEvent
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -18,7 +24,8 @@ import kotlinx.coroutines.launch
 /**
  * The Projects screen (docs/projects.md, spec stories 43 to 50): the owner's projects and the board
  * of the one being looked at. An item is a task, so moving it around the board writes to [tasks]. The
- * who-made-it switch shows every item, only the owner's, or only Claude's.
+ * who-made-it switch shows every item, only the owner's, or only Claude's. Finishing an item and taking
+ * one out of the project can be undone, as on the lists.
  */
 class ProjectsViewModel(
     private val projects: ProjectList,
@@ -27,6 +34,10 @@ class ProjectsViewModel(
 ) : ViewModel() {
     private val chosen = MutableStateFlow<String?>(null)
     private val madeBy = MutableStateFlow(ProjectRules.EVERYONE)
+    private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
+
+    /** What the board offers to take back: an item moved to Done, or one taken out of the project. */
+    val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
 
     val uiState: StateFlow<ProjectsUiState> = combine(
         projects.watch().flowOn(io),
@@ -78,15 +89,26 @@ class ProjectsViewModel(
 
     fun deleteMilestone(id: String) = write { projects.deleteMilestone(id) }
 
-    /** Adds an item to the project on show; it lands in the column its type calls for. */
-    fun addItem(title: String, itemType: String) {
+    /** Adds an item to the project on show, in the column and at the priority chosen for it, with its notes. */
+    fun addItem(title: String, itemType: String, column: String, priority: String, notes: String) {
         val projectId = uiState.value.selected?.id ?: return
         write {
-            tasks.add(title)?.let { task -> tasks.setProject(task.id, projectId, itemType) }
+            tasks.add(ComposerDraft(title = title), notes)?.let { task ->
+                tasks.setProject(task.id, projectId, itemType)
+                tasks.setBoardColumn(task.id, column)
+                tasks.setPriority(task.id, priority)
+            }
         }
     }
 
-    fun move(id: String, column: String) = write { tasks.setBoardColumn(id, column) }
+    /** Moves an item to [column]; moving it to Done can be undone, back to the column it came from. */
+    fun move(item: TaskItem, column: String) {
+        write { tasks.setBoardColumn(item.id, column) }
+        val from = item.boardColumn ?: return
+        if (column == ProjectRules.DONE) {
+            undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DONE, item.title) { write { tasks.setBoardColumn(item.id, from) } })
+        }
+    }
 
     fun setPriority(id: String, priority: String) = write { tasks.setPriority(id, priority) }
 
@@ -94,8 +116,20 @@ class ProjectsViewModel(
 
     fun setMilestone(id: String, milestoneId: String?) = write { tasks.setMilestone(id, milestoneId) }
 
-    /** Takes an item out of its project; it stays as a plain task. */
-    fun removeFromProject(id: String) = write { tasks.setProject(id, null) }
+    /** Takes an item out of its project; it stays as a plain task. Undo puts it back where it was. */
+    fun removeFromProject(item: TaskItem) {
+        val projectId = item.projectId ?: return
+        write { tasks.setProject(item.id, null) }
+        undoEvents.tryEmit(
+            UndoEvent(UndoEvent.Kind.OUT_OF_PROJECT, item.title) {
+                write {
+                    tasks.setProject(item.id, projectId, item.itemType)
+                    item.boardColumn?.let { tasks.setBoardColumn(item.id, it) }
+                    tasks.setMilestone(item.id, item.milestoneId)
+                }
+            },
+        )
+    }
 
     private fun write(work: () -> Unit) {
         viewModelScope.launch(io) { work() }

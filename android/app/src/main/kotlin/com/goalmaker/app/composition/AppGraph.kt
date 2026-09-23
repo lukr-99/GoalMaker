@@ -33,6 +33,7 @@ import com.goalmaker.app.application.settings.ProfileSettings
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.sync.RemoteRejectedException
+import com.goalmaker.app.application.sync.RemoteTables
 import com.goalmaker.app.application.sync.RemoteUnavailableException
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.application.sync.SyncState
@@ -42,6 +43,7 @@ import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.activity.PostgrestActivityLog
 import com.goalmaker.app.data.auth.DeviceUnlock
 import com.goalmaker.app.data.auth.LocalMailbox
+import com.goalmaker.app.data.auth.LocalOnlyAuthGateway
 import com.goalmaker.app.domain.problems.ProblemRules
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
 import com.goalmaker.app.data.connector.PostgrestConnectorLinks
@@ -54,6 +56,7 @@ import com.goalmaker.app.data.settings.PostgrestProfileSettings
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.data.supabase.PostgrestHttp
 import com.goalmaker.app.data.supabase.SupabaseClientFactory
+import com.goalmaker.app.data.sync.LocalOnlyRemoteTables
 import com.goalmaker.app.data.sync.PostgrestRemoteTables
 import com.goalmaker.app.data.sync.SupabaseChangeFeed
 import com.goalmaker.app.data.sync.WorkManagerSyncScheduler
@@ -120,6 +123,10 @@ class AppGraph(context: Context) {
     /** The review prompts the app ships (docs/reviews.md). */
     val prompts: PromptLibrary = PromptLibrary.load(appContext.assets.open("prompts.json"))
 
+    // A dev build skips sign-in and keeps its rows on the phone unless Settings → Developer turns
+    // signing in back on; a release build always signs in and syncs (docs/sign-in.md).
+    private val localOnly = BuildConfig.IS_DEV_BUILD && !settings.devSignIn()
+
     private val defaultBackend = BackendEnvironment(BuildConfig.DEFAULT_SUPABASE_URL, BuildConfig.DEFAULT_SUPABASE_KEY)
     private val backend = (if (BuildConfig.IS_DEV_BUILD) settings.backendOverride() else null) ?: defaultBackend
     private val supabase = SupabaseClientFactory.create(backend)
@@ -129,9 +136,10 @@ class AppGraph(context: Context) {
         isDevBuild = BuildConfig.IS_DEV_BUILD,
         backend = backend,
         defaultBackend = defaultBackend,
+        localOnly = localOnly,
     )
 
-    val auth: AuthGateway = SupabaseAuthGateway(supabase, scope)
+    val auth: AuthGateway = if (localOnly) LocalOnlyAuthGateway() else SupabaseAuthGateway(supabase, scope)
 
     /** The optional lock in front of the signed-in app on this phone (docs/sign-in.md). */
     val appLock = AppLock(enabled = { settings.appLock.value }, now = Instant::now)
@@ -158,7 +166,7 @@ class AppGraph(context: Context) {
     )
     private val replica = SqliteReplica(
         driver = BundledSQLiteDriver(),
-        path = appContext.getDatabasePath(ReplicaFileName.forBackend(backend.url)).path,
+        path = appContext.getDatabasePath(if (localOnly) LOCAL_REPLICA else ReplicaFileName.forBackend(backend.url)).path,
         catalog = catalog,
         migrations = { ReplicaMigrator.builtIn(appContext.assets) },
     )
@@ -179,7 +187,7 @@ class AppGraph(context: Context) {
     private val postgrest = PostgrestHttp(http, backend.url, backend.publishableKey) {
         supabase.auth.currentAccessTokenOrNull()
     }
-    private val remote = PostgrestRemoteTables(postgrest)
+    private val remote: RemoteTables = if (localOnly) LocalOnlyRemoteTables(Instant::now) else PostgrestRemoteTables(postgrest)
 
     /** The Claude connector's links (docs/connector.md), read and changed online. */
     val connectorLinks: ConnectorLinks = PostgrestConnectorLinks(postgrest)
@@ -193,7 +201,7 @@ class AppGraph(context: Context) {
     }
 
     val sync = SyncCoordinator(
-        engine = SyncEngine(catalog, replica, remote, Instant::now),
+        engine = SyncEngine(catalog, replica, remote, pulls = !localOnly, now = Instant::now),
         replica = replica,
         scope = scope,
         io = io,
@@ -323,7 +331,7 @@ class AppGraph(context: Context) {
                     visible = true
                     appLock.cameBack()
                     if (signedIn) {
-                        changeFeed.start()
+                        if (!localOnly) changeFeed.start()
                         sync.request()
                     }
                 }
@@ -410,7 +418,7 @@ class AppGraph(context: Context) {
         signedIn = true
         withContext(io) { forgetOtherAccounts(session.userId) }
         sync.request()
-        backgroundSync.keepSyncing()
+        if (!localOnly) backgroundSync.keepSyncing()
         // Anything that was due while the app was away, and the alarm for what comes next.
         withContext(io) {
             val look = reminders.catchUp()
@@ -423,12 +431,13 @@ class AppGraph(context: Context) {
                 reminderNotifications.showReview(RitualRunList.MONTHLY_REVIEW, day, "monthly", ReviewReminder.periodStart("monthly", day))
             }
         }
-        if (visible) changeFeed.start()
+        if (visible && !localOnly) changeFeed.start()
         updateProfile()
     }
 
     // Best effort: offline, the next sign-in or day-start change writes it.
     private suspend fun updateProfile() {
+        if (localOnly) return
         try {
             withContext(io) { profile.update(ZoneId.systemDefault().id, settings.dayStartHour.value) }
         } catch (_: RemoteUnavailableException) {
@@ -453,5 +462,10 @@ class AppGraph(context: Context) {
             }
         }
         if (foreign) replica.clearAll()
+    }
+
+    private companion object {
+        // A dev build's own replica, never mixed with one a release build synced.
+        const val LOCAL_REPLICA = "replica-local.db"
     }
 }

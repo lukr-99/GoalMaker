@@ -4,6 +4,7 @@ import android.app.Application
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.replica.text
 import com.goalmaker.app.data.replica.with
+import com.goalmaker.app.data.sync.LocalOnlyRemoteTables
 import java.time.Instant
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonPrimitive
@@ -47,6 +48,20 @@ class SyncEngineTest {
         assertTrue(replica.outbox().isEmpty())
         assertTrue(Regex("2026-09-18T10:00:00\\.[0-9]{6}Z").matches(replica.get("tasks", "a")!!.text("updated_at")!!))
         assertEquals("Run", server.rows("tasks").single().text("title"))
+    }
+
+    @Test
+    fun `a dev build's local-only sync keeps its rows run after run`() = runTest {
+        // Pulling from a remote that never sends anything back would be a full resync every run,
+        // clearing the replica; a local-only engine only pushes (docs/sign-in.md).
+        val local = SyncEngine(test.catalog, replica, LocalOnlyRemoteTables { now }, pulls = false) { now }
+        replica.queue("tasks", test.newTask("a", "Run"))
+
+        local.run()
+        local.run()
+
+        assertTrue(replica.outbox().isEmpty())
+        assertEquals("Run", replica.get("tasks", "a")!!.text("title"))
     }
 
     @Test
