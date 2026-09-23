@@ -44,6 +44,7 @@ public sealed class AppGraph : IDisposable
 
     private readonly Supabase.Client supabase;
     private readonly IDisposable? signatureKey;
+    private readonly bool localOnly;
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
     private readonly SqliteReplica replica;
     private readonly SupabaseChangeFeed changeFeed;
@@ -64,7 +65,8 @@ public sealed class AppGraph : IDisposable
         System.Windows.ResourceDictionary appResources,
         Action<Action> runOnUi,
         Action shutdownApp,
-        Action restartApp)
+        Action restartApp,
+        bool signIn = false)
     {
         this.runOnUi = runOnUi;
         this.strings = strings;
@@ -73,10 +75,13 @@ public sealed class AppGraph : IDisposable
         Paths.ClearUpdates();
         Settings = new JsonSettingsStore(Paths.Settings);
 
+        // A dev build skips sign-in and keeps its rows on this PC unless it is started with --sign-in; a
+        // release build always signs in and syncs (docs/sign-in.md).
+        localOnly = build.IsDevBuild && !signIn;
         var backend = (build.IsDevBuild ? Settings.BackendOverride : null) ?? build.DefaultBackend;
-        AppInfo = new AppInfo(build.Version, build.IsDevBuild, backend, build.DefaultBackend);
+        AppInfo = new AppInfo(build.Version, build.IsDevBuild, backend, build.DefaultBackend, localOnly);
         supabase = SupabaseClientFactory.Create(backend, Paths.Session);
-        Auth = new SupabaseAuthGateway(supabase);
+        Auth = localOnly ? new LocalOnlyAuthGateway() : new SupabaseAuthGateway(supabase);
         // This PC keeps its session for a week and then asks for the code again (docs/sign-in.md).
         SignInWatch = new SignInWatch(Auth, Settings, () => DateTimeOffset.Now);
 
@@ -95,11 +100,11 @@ public sealed class AppGraph : IDisposable
 
         catalog = ContractResources.SyncedTables();
         var design = ContractResources.Themes();
-        replica = new SqliteReplica(Paths.ReplicaFor(backend.Url), catalog, ReplicaMigrator.BuiltIn());
+        replica = new SqliteReplica(localOnly ? Paths.LocalReplica : Paths.ReplicaFor(backend.Url), catalog, ReplicaMigrator.BuiltIn());
         var postgrest = new PostgrestHttp(http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken);
-        var remote = new PostgrestRemoteTables(postgrest);
+        IRemoteTables remote = localOnly ? new LocalOnlyRemoteTables(TimeProvider.System) : new PostgrestRemoteTables(postgrest);
         profile = new PostgrestProfileSettings(postgrest, () => (Auth.Session as AuthSession.SignedIn)?.UserId);
-        Sync = new SyncCoordinator(new SyncEngine(catalog, replica, remote, TimeProvider.System), replica, TimeProvider.System, SyncDebounce);
+        Sync = new SyncCoordinator(new SyncEngine(catalog, replica, remote, TimeProvider.System, pulls: !localOnly), replica, TimeProvider.System, SyncDebounce);
         var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
         Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
         Tags = new TagList(replica, newRows, Sync.Request);
@@ -532,6 +537,12 @@ public sealed class AppGraph : IDisposable
         ForgetOtherAccounts(signedIn.UserId);
         Sync.Request();
         runOnUi(LookAtReminders);
+        if (localOnly)
+        {
+            // Nothing leaves this PC: no Realtime and no sync on a timer.
+            return;
+        }
+
         _ = UpdateProfileAsync();
         if (supabase.Auth.CurrentSession?.AccessToken is { } token)
         {
@@ -690,6 +701,12 @@ public sealed class AppGraph : IDisposable
     // zone id (Europe/Prague), which Windows' own ids (Central Europe Standard Time) convert to.
     private async Task UpdateProfileAsync()
     {
+        // A dev build that stays on this PC has no profile on a server to keep.
+        if (localOnly)
+        {
+            return;
+        }
+
         // The region picks the zone's city (Central Europe Standard Time is Europe/Prague in Czechia).
         var zone = TimeZoneInfo.Local;
         var region = System.Globalization.RegionInfo.CurrentRegion.TwoLetterISORegionName;

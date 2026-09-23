@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using GoalMaker.Core.Sync;
+using GoalMaker.Infrastructure.Sync;
 using Microsoft.Extensions.Time.Testing;
 
 namespace GoalMaker.Core.Tests.Sync;
@@ -28,6 +29,22 @@ public sealed class SyncEngineTests : IDisposable
         var local = test.Replica.Get("tasks", "a")!;
         Assert.Matches(@"^2026-09-18T10:00:00\.[0-9]{6}Z$", (string)local["updated_at"]!);
         Assert.Equal("Run", (string?)server.Rows("tasks").Single()["title"]);
+    }
+
+    [Fact]
+    public async Task ADevBuildsLocalOnlySyncKeepsItsRowsRunAfterRun()
+    {
+        // Pulling from a remote that never sends anything back would be a full resync every run,
+        // clearing the replica; a local-only engine only pushes (docs/sign-in.md).
+        var local = new SyncEngine(test.Catalog, test.Replica, new LocalOnlyRemoteTables(time), time, pulls: false);
+        test.Replica.Queue("tasks", test.NewTask("a", "Run"));
+
+        await local.RunAsync(Token);
+        var report = await local.RunAsync(Token);
+
+        Assert.Empty(test.Replica.Outbox());
+        Assert.Equal(0, report.Pulled);
+        Assert.Equal("Run", (string?)test.Replica.Get("tasks", "a")!["title"]);
     }
 
     [Fact]

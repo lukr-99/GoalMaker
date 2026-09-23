@@ -21,6 +21,9 @@ public sealed class AppDataPaths
 
     public string Settings => Path.Combine(Root, "settings.json");
 
+    /// <summary>A dev build's own replica when it keeps everything on this PC, never mixed with a synced one.</summary>
+    public string LocalReplica => Path.Combine(Root, "replica-local.db");
+
     public string Updates => Path.Combine(Root, "updates");
 
     /// <summary>

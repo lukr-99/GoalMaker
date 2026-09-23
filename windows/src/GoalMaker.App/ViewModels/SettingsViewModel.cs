@@ -637,6 +637,11 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool IsDevBuild => appInfo.IsDevBuild;
 
+    /// <summary>A dev build that keeps everything on this PC has no account to show or leave.</summary>
+    public bool IsLocalOnly => appInfo.LocalOnly;
+
+    public bool HasAccount => !appInfo.LocalOnly;
+
     partial void OnAppearanceChanged(Appearance value)
     {
         settings.Appearance = value;

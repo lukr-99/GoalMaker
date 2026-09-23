@@ -323,14 +323,19 @@
             <ui:Card Margin="0,0,0,12" Padding="20">
                 <StackPanel>
                     <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />
-                    <TextBlock Text="{Binding Email}" FontSize="15" />
-                    <TextBlock Margin="0,2,0,12" Text="{Binding SignsInAgain}" TextWrapping="Wrap"
-                               Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding HasSignsInAgain, Converter={StaticResource BoolToVisibility}}" />
-                    <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />
-                    <StackPanel Margin="0,12,0,0" Visibility="{Binding HasSignOutWarning, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Margin="0,0,0,8" Text="{Binding SignOutWarning}" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}" />
-                        <ui:Button Appearance="Danger" Content="{DynamicResource Settings.SignOutAnyway}" Command="{Binding SignOutAnywayCommand}" />
+                    <!-- A dev build that stays on this PC has no account (docs/sign-in.md). -->
+                    <TextBlock Text="{DynamicResource Settings.LocalOnly}" FontSize="15" TextWrapping="Wrap"
+                               Visibility="{Binding IsLocalOnly, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding Email}" FontSize="15" />
+                        <TextBlock Margin="0,2,0,12" Text="{Binding SignsInAgain}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding HasSignsInAgain, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding HasSignOutWarning, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Margin="0,0,0,8" Text="{Binding SignOutWarning}" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}" />
+                            <ui:Button Appearance="Danger" Content="{DynamicResource Settings.SignOutAnyway}" Command="{Binding SignOutAnywayCommand}" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </ui:Card>
