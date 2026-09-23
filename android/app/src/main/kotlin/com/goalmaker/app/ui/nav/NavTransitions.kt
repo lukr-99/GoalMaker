@@ -12,7 +12,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.NavDisplay
 import com.goalmaker.app.domain.design.MotionTokens
 
@@ -21,7 +20,7 @@ import com.goalmaker.app.domain.design.MotionTokens
  * screen in a little and fades it up, Back slides it away, and a back swipe shrinks it with the
  * finger. The places the bottom bar reaches are side by side rather than one inside the other, so
  * moving between them fades through ([switch]) instead of sliding, whether that is a list tab or
- * Projects and the Calendar. A task's details grow out of its row and drain back into it
+ * Projects and the Calendar ([MainScreen]). A task's details grow out of its row and drain back into it
  * ([sharedTaskBounds]) while the list behind recedes and comes back. With reduce motion, every
  * change is a short fade.
  */
@@ -90,13 +89,3 @@ class NavTransitions(private val motion: MotionTokens, private val reduced: Bool
     }
 }
 
-/**
- * Marks a screen the bottom bar reaches, so [NavTransitions] can tell a switch between two of them
- * from going deeper into one.
- */
-fun topLevel(): Map<String, Any> = mapOf(TOP_LEVEL to true)
-
-/** Whether this scene is a screen the bottom bar reaches. */
-fun Scene<*>.isTopLevel(): Boolean = entries.lastOrNull()?.metadata?.containsKey(TOP_LEVEL) == true
-
-private const val TOP_LEVEL = "goalmaker.topLevel"

@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BugReport
@@ -63,8 +62,7 @@ import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
-import com.goalmaker.app.ui.nav.MainDestination
-import com.goalmaker.app.ui.nav.MainNavigationBar
+import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.theme.AppTheme
 
 /** The projects and the board of the one on show (docs/projects.md). */
@@ -72,9 +70,8 @@ import com.goalmaker.app.ui.theme.AppTheme
 @Composable
 fun ProjectsScreen(
     viewModel: ProjectsViewModel,
-    onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
-    onSelect: (MainDestination) -> Unit,
+    actions: @Composable () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -87,20 +84,11 @@ fun ProjectsScreen(
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.projects_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { adding = true }) {
-                        Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.projects_add))
-                    }
-                },
+                navigationIcon = { AppMark() },
+                actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )
         },
-        bottomBar = { MainNavigationBar(MainDestination.PROJECTS, onSelect) },
     ) { padding ->
         if (!state.loaded) return@Scaffold
         LazyColumn(
@@ -117,10 +105,24 @@ fun ProjectsScreen(
                         modifier = Modifier.padding(8.dp),
                     )
                 }
+                item("add-project") {
+                    TextButton(onClick = { adding = true }) {
+                        Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.projects_add), modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
                 return@LazyColumn
             }
 
-            item("picker") { ProjectPicker(state, onPick = viewModel::select) }
+            item("picker") {
+                // A new project starts beside the picker, where the projects are chosen.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ProjectPicker(state, onPick = viewModel::select, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { adding = true }) {
+                        Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.projects_add))
+                    }
+                }
+            }
 
             state.selected?.let { project ->
                 item("about") { ProjectCard(project, onEdit = { editing = project }) }
@@ -197,9 +199,9 @@ fun ProjectsScreen(
  * however many projects there are. Each choice carries how many items are still waiting on it.
  */
 @Composable
-private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit) {
+private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
-    Box {
+    Box(modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier

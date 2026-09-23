@@ -5,7 +5,6 @@ import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ProjectItem
-import com.goalmaker.app.application.sync.SyncStatus
 import com.goalmaker.app.ui.goals.GoalRow
 import com.goalmaker.app.ui.habits.HabitRow
 
@@ -18,7 +17,6 @@ import com.goalmaker.app.ui.habits.HabitRow
  */
 data class ListsUiState(
     val lists: PlanningLists?,
-    val sync: SyncStatus,
     val refreshing: Boolean,
     val areas: List<AreaItem> = emptyList(),
     val tagNames: List<String> = emptyList(),

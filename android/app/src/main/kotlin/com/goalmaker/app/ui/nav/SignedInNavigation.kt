@@ -2,12 +2,12 @@ package com.goalmaker.app.ui.nav
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -50,10 +50,8 @@ import com.goalmaker.app.ui.review.ReviewKey
 import com.goalmaker.app.ui.review.ReviewScreen
 import com.goalmaker.app.ui.review.ReviewViewModel
 import com.goalmaker.app.ui.review.ReviewsKey
-import com.goalmaker.app.ui.calendar.CalendarKey
 import com.goalmaker.app.ui.calendar.CalendarScreen
 import com.goalmaker.app.ui.calendar.CalendarViewModel
-import com.goalmaker.app.ui.projects.ProjectsKey
 import com.goalmaker.app.ui.projects.ProjectsScreen
 import com.goalmaker.app.ui.projects.ProjectsViewModel
 import com.goalmaker.app.ui.stats.StatsKey
@@ -75,16 +73,18 @@ import com.goalmaker.app.ui.theme.AppTheme
 @Composable
 fun SignedInNavigation(graph: AppGraph) {
     val backStack = rememberNavBackStack(TodayKey)
-    // The bottom bar is one level: which list is on show, and whether a screen of its own sits on top.
+    // The bottom bar's five places are tabs of the start screen: which one is on show, and the list
+    // the lists come back to.
+    var place by rememberSaveable { mutableStateOf(MainDestination.TODAY) }
     var listTab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
     fun select(destination: MainDestination) {
         while (backStack.size > 1) backStack.removeLastOrNull()
-        when (destination) {
-            MainDestination.PROJECTS -> backStack.add(ProjectsKey)
-            MainDestination.CALENDAR -> backStack.add(CalendarKey)
-            else -> destination.tab()?.let { listTab = it }
-        }
+        place = destination
+        destination.tab()?.let { listTab = it }
     }
+    // Back from any other place returns to Today, and only Today's Back leaves the app. Registered
+    // before the NavDisplay, so a screen on top of the tabs always gets Back first.
+    BackHandler(enabled = place != MainDestination.TODAY && backStack.size == 1) { select(MainDestination.TODAY) }
     // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
     val problems by graph.problems.problems.collectAsStateWithLifecycle()
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
@@ -117,12 +117,11 @@ fun SignedInNavigation(graph: AppGraph) {
                     rememberViewModelStoreNavEntryDecorator(),
                 ),
                 sharedTransitionScope = this,
-                // Between the bar's own places nothing slides; going deeper still does.
-                transitionSpec = { if (initialState.isTopLevel() && targetState.isTopLevel()) transitions.switch() else transitions.forward() },
-                popTransitionSpec = { if (initialState.isTopLevel() && targetState.isTopLevel()) transitions.switch() else transitions.back() },
+                transitionSpec = { transitions.forward() },
+                popTransitionSpec = { transitions.back() },
                 predictivePopTransitionSpec = { transitions.backSwipe() },
                 entryProvider = entryProvider {
-                    entry<TodayKey>(metadata = topLevel()) {
+                    entry<TodayKey> {
                         val listsViewModel = viewModel {
                             ListsViewModel(
                                 tasks = graph.tasks,
@@ -138,19 +137,47 @@ fun SignedInNavigation(graph: AppGraph) {
                                 clock = LocalDateTime::now,
                             )
                         }
-                        ListsScreen(
-                            viewModel = listsViewModel,
-                            hasProblems = problems.any { it.unread },
-                            onOpenPlan = { backStack.add(PlanKey) },
-                            onOpenSettings = { backStack.add(SettingsKey) },
-                            onOpenTask = { id -> backStack.add(TaskKey(id)) },
-                            onOpenArchive = { backStack.add(ArchiveKey) },
-                            onOpenGoals = { backStack.add(GoalsKey) },
-                            onOpenHabits = { backStack.add(HabitsKey) },
-                            onOpenReviews = { backStack.add(ReviewsKey) },
-                            onOpenStats = { backStack.add(StatsKey) },
-                            tab = listTab,
+                        val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
+                        val calendarViewModel = viewModel {
+                            CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
+                        }
+                        val syncStatus by graph.sync.status.collectAsStateWithLifecycle()
+                        // Every place the bottom bar reaches wears the same top bar actions.
+                        val actions: @Composable () -> Unit = {
+                            MainActions(
+                                sync = syncStatus,
+                                onSyncNow = listsViewModel::refresh,
+                                hasProblems = problems.any { it.unread },
+                                onOpenHabits = { backStack.add(HabitsKey) },
+                                onOpenGoals = { backStack.add(GoalsKey) },
+                                onOpenArchive = { backStack.add(ArchiveKey) },
+                                onOpenReviews = { backStack.add(ReviewsKey) },
+                                onOpenStats = { backStack.add(StatsKey) },
+                                onOpenPlan = { backStack.add(PlanKey) },
+                                onOpenSettings = { backStack.add(SettingsKey) },
+                            )
+                        }
+                        MainScreen(
+                            current = place,
+                            listTab = listTab,
                             onSelect = ::select,
+                            lists = { tab ->
+                                ListsScreen(
+                                    viewModel = listsViewModel,
+                                    onOpenPlan = { backStack.add(PlanKey) },
+                                    onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                                    onOpenGoals = { backStack.add(GoalsKey) },
+                                    onOpenHabits = { backStack.add(HabitsKey) },
+                                    tab = tab,
+                                    actions = actions,
+                                )
+                            },
+                            projects = {
+                                ProjectsScreen(viewModel = projectsViewModel, onOpenTask = { id -> backStack.add(TaskKey(id)) }, actions = actions)
+                            },
+                            calendar = {
+                                CalendarScreen(viewModel = calendarViewModel, onOpenTask = { id -> backStack.add(TaskKey(id)) }, actions = actions)
+                            },
                         )
                     }
                     entry<GoalsKey> {
@@ -163,26 +190,6 @@ fun SignedInNavigation(graph: AppGraph) {
                             viewModel = reviewsViewModel,
                             onBack = { backStack.removeLastOrNull() },
                             onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
-                        )
-                    }
-                    entry<CalendarKey>(metadata = topLevel()) {
-                        val calendarViewModel = viewModel {
-                            CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
-                        }
-                        CalendarScreen(
-                            viewModel = calendarViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            onOpenTask = { id -> backStack.add(TaskKey(id)) },
-                            onSelect = ::select,
-                        )
-                    }
-                    entry<ProjectsKey>(metadata = topLevel()) {
-                        val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
-                        ProjectsScreen(
-                            viewModel = projectsViewModel,
-                            onBack = { backStack.removeLastOrNull() },
-                            onOpenTask = { id -> backStack.add(TaskKey(id)) },
-                            onSelect = ::select,
                         )
                     }
                     entry<StatsKey> {

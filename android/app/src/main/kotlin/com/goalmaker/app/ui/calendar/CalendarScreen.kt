@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.NotificationsNone
@@ -60,9 +60,8 @@ import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
-import com.goalmaker.app.ui.nav.MainDestination
-import com.goalmaker.app.ui.nav.MainNavigationBar
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
@@ -73,9 +72,8 @@ import java.time.format.TextStyle
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
-    onBack: () -> Unit,
     onOpenTask: (String) -> Unit,
-    onSelect: (MainDestination) -> Unit,
+    actions: @Composable () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -87,26 +85,11 @@ fun CalendarScreen(
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.calendar_title)) },
                 subtitle = { Text(period(state, locale), maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                    }
-                },
-                actions = {
-                    IconButton(onClick = viewModel::back) {
-                        Icon(Icons.Outlined.ChevronLeft, contentDescription = stringResource(R.string.calendar_back))
-                    }
-                    IconButton(onClick = { viewModel.today(true) }) {
-                        Icon(Icons.Outlined.Today, contentDescription = stringResource(R.string.calendar_today))
-                    }
-                    IconButton(onClick = viewModel::forward) {
-                        Icon(Icons.Outlined.ChevronRight, contentDescription = stringResource(R.string.calendar_forward))
-                    }
-                },
+                navigationIcon = { AppMark() },
+                actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )
         },
-        bottomBar = { MainNavigationBar(MainDestination.CALENDAR, onSelect) },
     ) { padding ->
         if (!state.loaded) return@Scaffold
         LazyColumn(
@@ -114,8 +97,9 @@ fun CalendarScreen(
             verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
+            // The period's own controls sit over it, since the top bar carries what every place does.
             item("kind") {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     ChoiceChip(
                         selected = state.kind == CalendarRules.WEEK,
                         onClick = { viewModel.show(CalendarRules.WEEK) },
@@ -126,6 +110,16 @@ fun CalendarScreen(
                         onClick = { viewModel.show(CalendarRules.MONTH) },
                         label = stringResource(R.string.calendar_month),
                     )
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = viewModel::back) {
+                        Icon(Icons.Outlined.ChevronLeft, contentDescription = stringResource(R.string.calendar_back))
+                    }
+                    IconButton(onClick = { viewModel.today(true) }) {
+                        Icon(Icons.Outlined.Today, contentDescription = stringResource(R.string.calendar_today))
+                    }
+                    IconButton(onClick = viewModel::forward) {
+                        Icon(Icons.Outlined.ChevronRight, contentDescription = stringResource(R.string.calendar_forward))
+                    }
                 }
             }
 

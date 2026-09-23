@@ -61,7 +61,8 @@ made says "by Claude" in small print.
 
 Windows shows the four columns side by side as a board, Android the same items as a grouped list,
 one group per column with a move action. Android reaches Projects from the bottom bar, beside Today,
-Tomorrow, the Inbox and the Calendar. Both offer the project list with its status, area, repository
+Tomorrow, the Inbox and the Calendar, and starts a new project from the + beside its project picker.
+Both offer the project list with its status, area, repository
 and folder, how many items each project still has waiting, and the milestones of the project on show.
 An idea and a bug carry their own icon and colour on the board, so a mixed column reads at a glance.
 
