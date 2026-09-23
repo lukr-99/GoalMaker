@@ -5,7 +5,7 @@ and each has markdown issues under `.scratch/<milestone>/`.
 
 ## Process
 
-1. Spec grilling (done: `docs/grilling/`)
+1. Spec grilling (done; the record stays with the owner, not in the repository)
 2. Spec, roadmap, glossary and ADRs (done)
 3. **M0: delivery spine** (built 2026-09-18; the first push and the owner's one-time setup remain)
 4. **Design questionnaire** (answered 2026-09-18: four switchable themes, Track by default;

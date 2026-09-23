@@ -112,6 +112,10 @@ val manifestPublicKeyFile = repositoryRoot.resolve("contracts/keys/release-manif
 val manifestPublicKey: String = setting("goalmaker.manifestPublicKey", "GOALMAKER_MANIFEST_PUBLIC_KEY")
     .ifEmpty { if (manifestPublicKeyFile.isFile) manifestPublicKeyFile.readText().trim() else "" }
 
+// Where updates are published: the repository's web address (ADR 0010). The release workflow sets it
+// to the repository it runs in, so a copy updates from its own releases. Empty means "not configured".
+val updateUrl: String = setting("goalmaker.updateUrl", "GOALMAKER_UPDATE_URL")
+
 val sharedAssets = tasks.register<SharedAssets>("sharedAssets") {
     migrations.set(repositoryRoot.resolve("replica/migrations"))
     syncedTables.set(repositoryRoot.resolve("contracts/schemas/synced-tables.json"))
@@ -137,6 +141,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "RELEASE_MANIFEST_PUBLIC_KEY", quoted(manifestPublicKey))
+        buildConfigField("String", "UPDATE_URL", quoted(updateUrl))
     }
 
     signingConfigs {
@@ -268,7 +273,6 @@ dependencies {
 
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
-    implementation(libs.supabase.storage)
     implementation(libs.supabase.realtime)
     implementation(libs.ktor.client.okhttp)
 
@@ -277,6 +281,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(libs.robolectric)
     // Unit tests drive the replica through the framework driver under Robolectric; the app ships the bundled one.
     testImplementation(libs.androidx.sqlite.framework)

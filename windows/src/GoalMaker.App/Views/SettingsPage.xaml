@@ -359,10 +359,10 @@
                                    Command="{Binding InstallUpdateCommand}"
                                    Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
-                    <TextBlock Margin="0,12,0,0"
-                               Text="{DynamicResource Settings.Update.Manual}"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <ui:Button Margin="0,12,0,0"
+                               Content="{DynamicResource Settings.Update.DownloadYourself}"
+                               Command="{Binding OpenReleasesPageCommand}"
+                               Visibility="{Binding HasReleasesPage, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </ui:Card>
 

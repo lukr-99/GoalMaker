@@ -25,7 +25,7 @@
           "platform": { "enum": ["android", "windows"] },
           "path": {
             "type": "string",
-            "description": "Object path inside the releases bucket. Relative, forward slashes, no '..' segments.",
+            "description": "X.Y.Z/<file>: the asset <file> of the GitHub Release vX.Y.Z (vectors/release-channel.json), and the object path in the old releases bucket. Relative, forward slashes, no '..' segments.",
             "pattern": "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
           },
           "size": { "type": "integer", "minimum": 1, "maximum": 524288000 },

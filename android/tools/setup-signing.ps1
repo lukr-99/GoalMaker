@@ -13,7 +13,7 @@
          GOALMAKER_KEY_ALIAS and GOALMAKER_KEY_PASSWORD as GitHub Actions secrets.
 
     Losing this key means installed copies can never be updated in place. Keep the backup offline
-    (the Kingston drive) and the password in the password manager, never beside the key.
+    (an offline drive) and the password in the password manager, never beside the key.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File android\tools\setup-signing.ps1 -BackupTo 'E:\android-keystores\goalmaker'

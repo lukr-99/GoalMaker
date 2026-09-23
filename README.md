@@ -9,7 +9,7 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 **M0 to M5 are built.** What works today, on both apps unless it says otherwise:
 
 - **Delivery (M0):** sign-in with an emailed 6-digit code ([docs/sign-in.md](docs/sign-in.md)),
-  sessions kept across restarts, a signed update channel in Supabase Storage that both apps verify
+  sessions kept across restarts, a signed update channel on GitHub Releases that both apps verify
   before installing, the migration chain with full-chain, isolated and row-security tests, CI for
   every part and a tag-driven release.
 - **Sync (M1):** a SQLite replica with an outbox on each device, offline work, Realtime refresh
@@ -106,8 +106,8 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
 - **Windows:** a per-user Inno Setup installer (framework-dependent, about 9 MB) that can start
   GoalMaker in the tray at sign-in.
 - **Updates:** tag `vX.Y.Z` and the release workflow publishes the APK, the installer and a signed
-  manifest to the private `releases` bucket, and drafts a GitHub Release. Apps check the bucket with
-  the user's session (ADR 0004). A manual download from the GitHub Release always works.
+  manifest as a GitHub Release. Apps read the latest release and trust it only through the manifest's
+  signature (ADR 0010). Settings opens the same release for a manual download.
 
 Setup: [docs/setup/signing-and-releases.md](docs/setup/signing-and-releases.md).
 

@@ -436,13 +436,15 @@ project_id = "wkjnauxqwlqhsqrqnkhg"
 [remotes.production.auth]
 site_url = "https://wkjnauxqwlqhsqrqnkhg.supabase.co"
 additional_redirect_urls = []
+# The owner's account exists, so nobody else may make one (docs/setup/cloud-supabase.md, step 6).
+enable_signup = false
 
 [remotes.production.auth.mfa.totp]
 enroll_enabled = true
 verify_enabled = true
 
 [remotes.production.auth.email]
-enable_signup = true
+enable_signup = false
 enable_confirmations = true
 double_confirm_changes = true
 secure_password_change = false

@@ -101,8 +101,10 @@ returns 0 for no toasts, while the bare `.Count` is empty, not 0.
 1. Make a throwaway key: `openssl ecparam -name prime256v1 -genkey -noout -out test.pem`, and its
    public key: `openssl ec -in test.pem -pubout -outform DER | base64 -w0`.
 2. Build two release installers against the local stack by setting `GOALMAKER_SUPABASE_URL`,
-   `GOALMAKER_SUPABASE_KEY` (the local publishable key) and `GOALMAKER_MANIFEST_PUBLIC_KEY`, changing
-   `version.properties` between the builds (restore it afterwards).
-3. Publish the newer one:
-   `python tools/publish_release.py --version X.Y.Z --windows-installer <setup.exe> --signing-key test.pem --supabase-url http://127.0.0.1:55321 --secret-key <local secret key>`.
-4. Install the older one, sign in, Settings → Check for updates → Install.
+   `GOALMAKER_SUPABASE_KEY` (the local publishable key), `GOALMAKER_MANIFEST_PUBLIC_KEY` and
+   `GOALMAKER_UPDATE_URL=http://127.0.0.1:55380`, changing `version.properties` between the builds
+   (restore it afterwards).
+3. Lay the newer one out the way GitHub Releases does and serve it:
+   `python tools/publish_release.py --version X.Y.Z --windows-installer <setup.exe> --signing-key test.pem --dry-run --channel-folder release-channel`,
+   then `python -m http.server 55380 -d release-channel`.
+4. Install the older one, Settings → Check for updates → Install.

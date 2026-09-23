@@ -39,6 +39,8 @@ class SettingsViewModel(
     private val io: CoroutineDispatcher,
     private val design: DesignTokens,
     private val updates: UpdateService,
+    /** Where a release can be downloaded by hand (spec, story 94); null when there is no channel. */
+    val releasesPage: String? = null,
     private val appInfo: AppInfo,
     private val backup: BackupService,
     private val requestSync: () -> Unit,

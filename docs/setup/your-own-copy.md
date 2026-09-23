@@ -61,7 +61,9 @@ not yours**, which is the one mistake here with teeth.
   the local stack, and reads its own sign-in code out of the stack's mailbox
   ([docs/sign-in.md](../sign-in.md)).
 - **For real:** tag a version, let the release workflow build and publish the signed APK and
-  installer, install them, and sign in with the address your sender can reach.
+  installer, install them, and sign in with the address your sender can reach. The apps update
+  from your fork's own releases: the workflow builds in the address of the repository it runs in
+  (ADR 0010). They can read those releases only while your fork is public.
 - **Then close the door:** in Supabase, **Authentication → Allow new users to sign up → off**. Your
   account keeps working, and nobody else can make one on your project.
 

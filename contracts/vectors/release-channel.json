@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "description": "Where the update channel lives (ADR 0010). The channel is a repository's web address on GitHub (or a local server with the same layout, for testing); a trailing slash is ignored. The manifest and its signature are assets of the latest published release. A manifest artifact path 'X.Y.Z/<file>' is the asset <file> on the release tagged vX.Y.Z; any other path has no address (url null) and is never downloaded.",
+  "channels": [
+    {
+      "updateUrl": "https://github.com/lukr-99/GoalMaker",
+      "manifest": "https://github.com/lukr-99/GoalMaker/releases/latest/download/manifest.json",
+      "signature": "https://github.com/lukr-99/GoalMaker/releases/latest/download/manifest.sig",
+      "releasesPage": "https://github.com/lukr-99/GoalMaker/releases/latest"
+    },
+    {
+      "updateUrl": "https://github.com/someone/their-copy/",
+      "manifest": "https://github.com/someone/their-copy/releases/latest/download/manifest.json",
+      "signature": "https://github.com/someone/their-copy/releases/latest/download/manifest.sig",
+      "releasesPage": "https://github.com/someone/their-copy/releases/latest"
+    },
+    {
+      "updateUrl": "http://127.0.0.1:55380",
+      "manifest": "http://127.0.0.1:55380/releases/latest/download/manifest.json",
+      "signature": "http://127.0.0.1:55380/releases/latest/download/manifest.sig",
+      "releasesPage": "http://127.0.0.1:55380/releases/latest"
+    }
+  ],
+  "artifactUpdateUrl": "https://github.com/lukr-99/GoalMaker",
+  "artifacts": [
+    {
+      "path": "1.2.0/GoalMaker-1.2.0.apk",
+      "url": "https://github.com/lukr-99/GoalMaker/releases/download/v1.2.0/GoalMaker-1.2.0.apk"
+    },
+    {
+      "path": "1.2.0/GoalMaker-1.2.0-setup.exe",
+      "url": "https://github.com/lukr-99/GoalMaker/releases/download/v1.2.0/GoalMaker-1.2.0-setup.exe"
+    },
+    {
+      "path": "10.0.3/GoalMaker-10.0.3.apk",
+      "url": "https://github.com/lukr-99/GoalMaker/releases/download/v10.0.3/GoalMaker-10.0.3.apk"
+    },
+    { "path": "GoalMaker-1.2.0.apk", "url": null },
+    { "path": "1.2.0/android/GoalMaker-1.2.0.apk", "url": null },
+    { "path": "../1.2.0/GoalMaker-1.2.0.apk", "url": null },
+    { "path": "1.2/GoalMaker-1.2.apk", "url": null },
+    { "path": "1.2.0-dev/GoalMaker.apk", "url": null },
+    { "path": "01.2.0/GoalMaker.apk", "url": null },
+    { "path": "1.2.0/", "url": null },
+    { "path": "1.2.0/..", "url": null },
+    { "path": "1.2.0/.", "url": null },
+    { "path": "1.2.0/Goal Maker.apk", "url": null },
+    { "path": "", "url": null }
+  ]
+}

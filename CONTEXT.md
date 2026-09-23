@@ -137,7 +137,8 @@ The queue of local changes waiting to be pushed to Supabase.
 A deleted row kept with `deleted_at` so the deletion reaches other devices.
 
 **Update channel**:
-The private Storage bucket holding release artifacts and the signed release manifest.
+The latest published GitHub Release, holding the release artifacts and the signed release manifest
+(ADR 0010).
 
 **Release manifest**:
 The signed JSON file describing the latest release and its artifacts' sizes and hashes.

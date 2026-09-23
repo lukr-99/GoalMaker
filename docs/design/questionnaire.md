@@ -7,7 +7,7 @@ Windows. This questionnaire pins down the look before M2, the first UI-heavy mil
 Answered 2026-09-18 through a design board (four directions drawn as the same Today screen) and a
 short form. `ok` means the recommendation stands.
 
-Same format as the grilling rounds: write under **Answer:**, and `ok` accepts the recommendation.
+Write under **Answer:**, and `ok` accepts the recommendation.
 "You decide" is fine for anything you don't care about. Screenshots or app names as references help
 most.
 

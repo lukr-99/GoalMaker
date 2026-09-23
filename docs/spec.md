@@ -7,8 +7,8 @@
 Supabase Storage bucket
 **License (code):** PolyForm Noncommercial 1.0.0 (CodePrint default)
 
-The decisions behind this spec, with the owner's answers, are in `docs/grilling/` (rounds 1 to 4
-and the summary). Domain terms are defined in [CONTEXT.md](../CONTEXT.md).
+The decisions behind this spec came from four rounds of questions with the owner; the lasting ones
+are recorded as ADRs in `docs/adr/`. Domain terms are defined in [CONTEXT.md](../CONTEXT.md).
 
 ## Problem Statement
 
@@ -385,7 +385,7 @@ it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build
 through the Windows SDK projection (unpackaged, without the Windows App SDK; ADR 0009),
 NHotkey (global hotkey), Markdig, the Supabase C# client, the shared SQLite replica through
 Microsoft.Data.Sqlite (ADR 0007).
-Published framework-dependent to stay under the update channel's 50 MB file limit (ADR 0004).
+Published framework-dependent, which kept it under the first update channel's 50 MB file limit (ADR 0004).
 `dotnetlib` was checked; see ADR 0006. Single instance, launch
 switches, `goalmaker://` links, Startup Profiles registration through its public contract.
 
@@ -401,7 +401,8 @@ project; deploys run through the CLI. See ADR 0001.
 - Android: signed APK, sideloaded. Windows: per-user Inno Setup installer.
 - A tag-driven workflow builds both, writes a release manifest (version, per-platform artifact path,
   size, SHA-256) signed with an Ed25519 key, uploads artifacts and manifest to a private Supabase
-  Storage bucket, and drafts a GitHub Release. See ADR 0004.
+  Storage bucket, and drafts a GitHub Release. See ADR 0004. Since the repository went public, the
+  apps read the published GitHub Release instead; see ADR 0010.
 - Apps: release source (manifest from Storage with the user's session) → signature check with the
   embedded public key → version policy → download → SHA-256 check → installer launch. A manual
   download path always exists.

@@ -11,9 +11,10 @@
   </PropertyGroup>
 
   <!--
-    Backend and update-channel settings baked into the build (ADR 0001, ADR 0004). Dev builds default
-    to the local Supabase stack; release builds need the cloud project from GOALMAKER_SUPABASE_URL and
-    GOALMAKER_SUPABASE_KEY or windows/GoalMaker.local.props (untracked).
+    Backend and update-channel settings baked into the build (ADR 0001, ADR 0004, ADR 0010). Dev builds
+    default to the local Supabase stack; release builds need the cloud project from GOALMAKER_SUPABASE_URL
+    and GOALMAKER_SUPABASE_KEY or windows/GoalMaker.local.props (untracked). The update channel is the
+    repository page in GOALMAKER_UPDATE_URL (its GitHub Releases); left blank, the build has no channel.
   -->
   <PropertyGroup>
     <GoalMakerSupabaseUrl Condition="'$(GoalMakerSupabaseUrl)' == ''">$(GOALMAKER_SUPABASE_URL)</GoalMakerSupabaseUrl>
@@ -23,6 +24,7 @@
     <_ManifestKeyFile>$(RepositoryRoot)\contracts\keys\release-manifest-public.b64</_ManifestKeyFile>
     <GoalMakerManifestPublicKey Condition="'$(GoalMakerManifestPublicKey)' == ''">$(GOALMAKER_MANIFEST_PUBLIC_KEY)</GoalMakerManifestPublicKey>
     <GoalMakerManifestPublicKey Condition="'$(GoalMakerManifestPublicKey)' == '' and Exists('$(_ManifestKeyFile)')">$([System.IO.File]::ReadAllText('$(_ManifestKeyFile)').Trim())</GoalMakerManifestPublicKey>
+    <GoalMakerUpdateUrl Condition="'$(GoalMakerUpdateUrl)' == ''">$(GOALMAKER_UPDATE_URL)</GoalMakerUpdateUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +32,7 @@
     <AssemblyMetadata Include="GoalMaker.SupabaseUrl" Value="$(GoalMakerSupabaseUrl)" />
     <AssemblyMetadata Include="GoalMaker.SupabaseKey" Value="$(GoalMakerSupabaseKey)" />
     <AssemblyMetadata Include="GoalMaker.ManifestPublicKey" Value="$(GoalMakerManifestPublicKey)" />
+    <AssemblyMetadata Include="GoalMaker.UpdateUrl" Value="$(GoalMakerUpdateUrl)" />
   </ItemGroup>
 
   <Target Name="RequireCloudBackendForRelease"

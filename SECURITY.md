@@ -21,7 +21,8 @@ issue.
 - **Sessions:** Windows keeps the session in a DPAPI-encrypted file readable only by the same Windows
   user. Android keeps it in private app storage, excluded from Android backups; encrypting it with the
   Android Keystore is planned before v1.0.
-- **Update channel:** artifacts are trusted only through the release manifest's ECDSA P-256 signature
+- **Update channel:** the latest public GitHub Release (ADR 0010). Artifacts are trusted only through
+  the release manifest's ECDSA P-256 signature
   (key built into the apps) and each artifact's size and SHA-256. Development builds never update
   themselves. The manifest signing key lives offline and in one GitHub secret.
 - **Android release key:** offline backup on the owner's drive, password only in the password
@@ -41,5 +42,5 @@ issue.
   commit the new public key, and install the next release of each app by hand once.
 - **Lost Android release key:** the app can no longer update in place; uninstall and install a build
   signed with a new key (data lives in Supabase, so nothing is lost).
-- **Bad release:** delete `releases/latest/` in the Storage bucket to stop the offer, publish a fixed
-  version, and install it by hand if needed.
+- **Bad release:** delete that GitHub Release (and `releases/latest/` in the old Storage bucket while
+  it is still fed) to stop the offer, publish a fixed version, and install it by hand if needed.

@@ -7,16 +7,19 @@ Realtime, Edge Functions) is the source of truth; each app keeps a SQLite replic
 it works offline and syncs when it can (ADR 0002, ADR 0007, [docs/sync.md](docs/sync.md)). Claude
 reaches the data through the connector, an MCP Edge Function that acts as the owner under row
 security (ADR 0003, [docs/connector.md](docs/connector.md)). Releases reach both apps through a
-signed update channel in Supabase Storage (ADR 0004).
+signed update channel on GitHub Releases (ADR 0010).
 
 ```text
   Android app  ──┐                           ┌── Claude apps (MCP, the connector's secret link)
   (Kotlin)       │  HTTPS, user session      │
                  ├──────────► Supabase ◄─────┘
-  Windows app  ──┘   Auth · Postgres (RLS) · Realtime · Storage (releases) · Edge Functions (connector)
-  (.NET/WPF)                    ▲
-                                │ migrations, deploys (CLI)      release workflow (CI)
-                         supabase/ folder  ◄─────────────────────  uploads + signed manifest
+  Windows app  ──┤   Auth · Postgres (RLS) · Realtime · Edge Functions (connector)
+  (.NET/WPF)     │              ▲
+                 │              │ migrations, deploys (CLI)
+                 │       supabase/ folder
+                 │
+                 └──────────► GitHub Releases ◄── release workflow (CI): artifacts + signed manifest
+                   (updates, no sign-in)
 ```
 
 ## Modules and dependencies
@@ -46,7 +49,7 @@ composition root creates everything
   `HabitList`, `ReviewList`, `ProjectList`, `ReminderList`, `RitualRunList`) and the rules beside
   them (`ListRules`, `PlanRules`, `ArchiveRules`, `GoalRules`, `HabitRules`, `ReviewRules`,
   `ReviewLookBack`, `StatsRules`, `ProjectRules`, `CalendarRules`, `ReminderRules`).
-- `data/`: `SupabaseAuthGateway`, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`,
+- `data/`: `SupabaseAuthGateway`, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`,
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
   (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
@@ -66,7 +69,7 @@ composition root creates everything
   (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`,
   `Notes`, `Startup` (starting with Windows and the Startup Profiles contract)).
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
-  store, `SupabaseReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
+  store, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
   `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
   `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Planning/TimerReminderScheduler` and
   `Startup/` (GoalMaker's own value under Run, and finding Startup Profiles).
@@ -179,8 +182,8 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   side; the release key is described in [docs/setup/signing-and-releases.md](docs/setup/signing-and-releases.md).
 - Windows: framework-dependent publish and a per-user Inno Setup installer with a stable AppId, an
   optional sign-in start (`--tray`), and a separate side-by-side "GoalMaker Dev" flavor.
-- Release workflow: tag → tests → signed APK + installer → signed manifest → `releases` bucket →
-  draft GitHub Release.
+- Release workflow: tag → tests → signed APK + installer → signed manifest → published GitHub
+  Release (and the old `releases` bucket until every copy reads GitHub).
 
 ## Known constraints
 
