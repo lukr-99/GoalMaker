@@ -133,7 +133,6 @@
     <string name="lists_done_message">Done: %1$s</string>
     <string name="lists_deleted_message">Deleted: %1$s</string>
     <string name="lists_undo">Undo</string>
-    <string name="lists_more_menu">More</string>
 
     <!-- Composer preview (docs/composer.md) -->
     <string name="composer_date_today">Today</string>
@@ -769,4 +768,31 @@
     <string name="share_saved">Added to GoalMaker</string>
     <string name="share_signed_out">Sign in to GoalMaker before saving this.</string>
     <string name="share_open_app">Open GoalMaker</string>
+
+    <!-- Places: the bottom bar's fifth tab and pinned places (ADR 0014) -->
+    <string name="places_title">Places</string>
+    <string name="places_in_bar">In the bar: %1$s</string>
+    <string name="places_edit">Edit</string>
+    <string name="places_edit_label">Edit pinned places</string>
+    <string name="places_done">Done</string>
+    <string name="places_pinned_count">%1$d of %2$d pinned.</string>
+    <string name="places_tap_to_pin">Tap a place to pin it.</string>
+    <string name="places_unpin_first">Unpin one to pin another.</string>
+    <string name="places_pinned">Pinned</string>
+    <string name="places_not_pinned">Not pinned</string>
+    <plurals name="places_waiting">
+        <item quantity="one">%1$d waiting in Places</item>
+        <item quantity="other">%1$d waiting in Places</item>
+    </plurals>
+    <string name="places_out_of">/ %1$d</string>
+    <string name="places_tomorrow">%1$d planned</string>
+    <string name="places_inbox">to sort</string>
+    <string name="places_calendar">%1$d in the next 7 days</string>
+    <string name="places_habits_none">Nothing due today</string>
+    <string name="places_goals_none">No goals this week</string>
+    <string name="places_projects">%1$d open · %2$d doing</string>
+    <string name="places_letter">Your letter is here</string>
+    <string name="places_reviews">Past weeks and months</string>
+    <string name="places_stats">%1$d done this week</string>
+    <string name="places_archive">%1$d done</string>
 </resources>

@@ -73,6 +73,7 @@ import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.lists.UndoEvent
 import com.goalmaker.app.ui.nav.AppMark
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 
 /** The projects and the board of the one on show (docs/projects.md). */
@@ -82,6 +83,7 @@ fun ProjectsScreen(
     viewModel: ProjectsViewModel,
     onOpenTask: (String) -> Unit,
     actions: @Composable () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -109,7 +111,7 @@ fun ProjectsScreen(
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.projects_title)) },
-                navigationIcon = { AppMark() },
+                navigationIcon = { PlaceNavigationIcon(onBack) { AppMark() } },
                 actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )

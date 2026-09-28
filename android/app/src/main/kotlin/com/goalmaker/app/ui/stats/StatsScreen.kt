@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -43,6 +42,7 @@ import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.StatsDigest
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
@@ -51,7 +51,7 @@ import kotlin.math.roundToInt
 /** The long view: tasks a week, goals a month, habits and past ratings (docs/stats.md). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsScreen(viewModel: StatsViewModel, onBack: () -> Unit) {
+fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val digest = state.digest
@@ -61,11 +61,8 @@ fun StatsScreen(viewModel: StatsViewModel, onBack: () -> Unit) {
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.stats_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                    }
-                },
+                navigationIcon = { PlaceNavigationIcon(onBack) },
+                actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )
         },

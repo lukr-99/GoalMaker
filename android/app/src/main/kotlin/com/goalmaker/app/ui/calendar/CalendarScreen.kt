@@ -62,6 +62,7 @@ import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.AppMark
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
@@ -74,6 +75,7 @@ fun CalendarScreen(
     viewModel: CalendarViewModel,
     onOpenTask: (String) -> Unit,
     actions: @Composable () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -85,7 +87,7 @@ fun CalendarScreen(
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.calendar_title)) },
                 subtitle = { Text(period(state, locale), maxLines = 1) },
-                navigationIcon = { AppMark() },
+                navigationIcon = { PlaceNavigationIcon(onBack) { AppMark() } },
                 actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )

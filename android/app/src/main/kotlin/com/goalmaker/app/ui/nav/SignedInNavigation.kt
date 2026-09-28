@@ -22,6 +22,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.composition.AppGraph
+import com.goalmaker.app.domain.navigation.PlaceRules
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
 import com.goalmaker.app.ui.activity.ActivityKey
@@ -45,6 +46,8 @@ import com.goalmaker.app.ui.habits.HabitsViewModel
 import com.goalmaker.app.ui.lists.ListTab
 import com.goalmaker.app.ui.lists.ListsScreen
 import com.goalmaker.app.ui.lists.ListsViewModel
+import com.goalmaker.app.ui.places.PlacesScreen
+import com.goalmaker.app.ui.places.PlacesViewModel
 import com.goalmaker.app.ui.plan.PlanScreen
 import com.goalmaker.app.ui.review.ReviewKey
 import com.goalmaker.app.ui.review.ReviewScreen
@@ -73,18 +76,23 @@ import com.goalmaker.app.ui.theme.AppTheme
 @Composable
 fun SignedInNavigation(graph: AppGraph) {
     val backStack = rememberNavBackStack(TodayKey)
-    // The bottom bar's five places are tabs of the start screen: which one is on show, and the list
-    // the lists come back to.
-    var place by rememberSaveable { mutableStateOf(MainDestination.TODAY) }
+    // Every place is a tab of the start screen (ADR 0014): the pinned ones in the bottom bar, and the
+    // rest reached from Places. Which one is on show, and the list the lists come back to.
+    val pins by graph.settings.pins.collectAsStateWithLifecycle()
+    val home = if (PlaceRules.TODAY in pins) PlaceRules.TODAY else pins.first()
+    var place by rememberSaveable { mutableStateOf(home) }
     var listTab by rememberSaveable { mutableStateOf(ListTab.TODAY) }
-    fun select(destination: MainDestination) {
+    fun select(destination: String) {
         while (backStack.size > 1) backStack.removeLastOrNull()
         place = destination
-        destination.tab()?.let { listTab = it }
+        PlaceLook.tab(destination)?.let { listTab = it }
     }
-    // Back from any other place returns to Today, and only Today's Back leaves the app. Registered
-    // before the NavDisplay, so a screen on top of the tabs always gets Back first.
-    BackHandler(enabled = place != MainDestination.TODAY && backStack.size == 1) { select(MainDestination.TODAY) }
+    // A place opened from Places goes back there; any other place goes back home (Today, unless it
+    // was unpinned), and only home's Back leaves the app. Registered before the NavDisplay, so a
+    // screen on top of the tabs always gets Back first.
+    val fromHub = place != PlaceLook.HUB && place !in pins
+    BackHandler(enabled = place != home && backStack.size == 1) { select(if (fromHub) PlaceLook.HUB else home) }
+    val backToHub: (() -> Unit)? = if (fromHub) ({ select(PlaceLook.HUB) }) else null
     // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
     val problems by graph.problems.problems.collectAsStateWithLifecycle()
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
@@ -138,47 +146,104 @@ fun SignedInNavigation(graph: AppGraph) {
                             )
                         }
                         val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
+                        val placesViewModel = viewModel {
+                            PlacesViewModel(graph.tasks, graph.habits, graph.goals, graph.reviews, graph.settings, graph.io, LocalDateTime::now)
+                        }
+                        val placesState by placesViewModel.uiState.collectAsStateWithLifecycle()
                         val calendarViewModel = viewModel {
                             CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
                         }
                         val syncStatus by graph.sync.status.collectAsStateWithLifecycle()
-                        // Every place the bottom bar reaches wears the same top bar actions.
+                        // Every place wears the same top bar actions.
                         val actions: @Composable () -> Unit = {
                             MainActions(
                                 sync = syncStatus,
                                 onSyncNow = listsViewModel::refresh,
                                 hasProblems = problems.any { it.unread },
-                                onOpenHabits = { backStack.add(HabitsKey) },
-                                onOpenGoals = { backStack.add(GoalsKey) },
-                                onOpenArchive = { backStack.add(ArchiveKey) },
-                                onOpenReviews = { backStack.add(ReviewsKey) },
-                                onOpenStats = { backStack.add(StatsKey) },
                                 onOpenPlan = { backStack.add(PlanKey) },
                                 onOpenSettings = { backStack.add(SettingsKey) },
                             )
                         }
+                        // Leaving Places ends pin editing, so it never waits half done.
+                        LaunchedEffect(place) { if (place != PlaceLook.HUB) placesViewModel.stopEditing() }
                         MainScreen(
                             current = place,
-                            listTab = listTab,
+                            pins = pins,
+                            placesCount = placesState.count,
                             onSelect = ::select,
-                            lists = { tab ->
-                                ListsScreen(
+                        ) { screen ->
+                            when (screen) {
+                                PlaceLook.LISTS -> ListsScreen(
                                     viewModel = listsViewModel,
                                     onOpenPlan = { backStack.add(PlanKey) },
                                     onOpenTask = { id -> backStack.add(TaskKey(id)) },
                                     onOpenGoals = { backStack.add(GoalsKey) },
                                     onOpenHabits = { backStack.add(HabitsKey) },
-                                    tab = tab,
+                                    tab = listTab,
                                     actions = actions,
+                                    onBack = backToHub,
                                 )
-                            },
-                            projects = {
-                                ProjectsScreen(viewModel = projectsViewModel, onOpenTask = { id -> backStack.add(TaskKey(id)) }, actions = actions)
-                            },
-                            calendar = {
-                                CalendarScreen(viewModel = calendarViewModel, onOpenTask = { id -> backStack.add(TaskKey(id)) }, actions = actions)
-                            },
-                        )
+                                PlaceRules.PROJECTS -> ProjectsScreen(
+                                    viewModel = projectsViewModel,
+                                    onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                                    actions = actions,
+                                    onBack = backToHub,
+                                )
+                                PlaceRules.CALENDAR -> CalendarScreen(
+                                    viewModel = calendarViewModel,
+                                    onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                                    actions = actions,
+                                    onBack = backToHub,
+                                )
+                                PlaceRules.HABITS -> {
+                                    val habitsViewModel = viewModel(key = "habits-tab") {
+                                        HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
+                                    }
+                                    HabitsScreen(viewModel = habitsViewModel, onBack = backToHub, actions = actions)
+                                }
+                                PlaceRules.GOALS -> {
+                                    val goalsViewModel = viewModel(key = "goals-tab") {
+                                        GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
+                                    }
+                                    GoalsScreen(viewModel = goalsViewModel, onBack = backToHub, actions = actions)
+                                }
+                                PlaceRules.REVIEWS -> {
+                                    val reviewsViewModel = viewModel(key = "reviews-tab") {
+                                        ReviewsViewModel(graph.reviews, graph.settings, graph.io, LocalDateTime::now)
+                                    }
+                                    ReviewsScreen(
+                                        viewModel = reviewsViewModel,
+                                        onBack = backToHub,
+                                        onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                                        actions = actions,
+                                    )
+                                }
+                                PlaceRules.STATS -> {
+                                    val statsViewModel = viewModel(key = "stats-tab") {
+                                        StatsViewModel(
+                                            tasks = graph.tasks,
+                                            goals = graph.goals,
+                                            habits = graph.habits,
+                                            reviews = graph.reviews,
+                                            settings = graph.settings,
+                                            io = graph.io,
+                                            clock = LocalDateTime::now,
+                                        )
+                                    }
+                                    StatsScreen(viewModel = statsViewModel, onBack = backToHub, actions = actions)
+                                }
+                                PlaceRules.ARCHIVE -> {
+                                    val archiveViewModel = viewModel(key = "archive-tab") { ArchiveViewModel(graph.tasks, graph.io) }
+                                    ArchiveScreen(
+                                        viewModel = archiveViewModel,
+                                        onBack = backToHub,
+                                        onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                                        actions = actions,
+                                    )
+                                }
+                                else -> PlacesScreen(viewModel = placesViewModel, onOpen = ::select, actions = actions)
+                            }
+                        }
                     }
                     entry<GoalsKey> {
                         val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
