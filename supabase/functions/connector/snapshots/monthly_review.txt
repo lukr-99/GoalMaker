@@ -1,0 +1,20 @@
+Let's do my GoalMaker monthly review for Saturday 1 August 2026 to Monday 31 August 2026.
+
+Done this month: 3 tasks (No area 2, Health 1).
+Done:
+- [x] Last week's errand · 2026-08-11 (id d1e57000-0000-4000-8000-000000000010)
+- [x] Book the dentist · 2026-08-18 · @Health (id d1e57000-0000-4000-8000-000000000011)
+- [x] Prune the roses · 2026-08-19 (id d1e57000-0000-4000-8000-000000000012)
+Still open and overdue:
+- [ ] Call the bank · 2026-08-20 (id d1e57000-0000-4000-8000-000000000013)
+- [ ] An old errand · 2026-08-12 (id d1e57000-0000-4000-8000-000000000014)
+- [ ] Plan the trip · 2026-08-25 · due 2026-08-28 (id d1e57000-0000-4000-8000-000000000015)
+
+Goals of this month:
+- Tidy the garden · month of 2026-08-01 to 2026-08-31 · 0% (goal id d1e57000-0000-4000-8000-000000000022)
+Habits:
+- Read · 2 of 31 met (habit id d1e57000-0000-4000-8000-000000000030)
+- Stretch · 1 of 15 met (habit id d1e57000-0000-4000-8000-000000000031)
+What this period's data asks about: a goal behind where the period says it should be (Tidy the garden); a habit that missed half its periods or more (Read); a task that keeps moving to another day (Call the bank).
+
+Help me see the month: which areas got attention and which didn't, what I'm proud of, what to stop or change, and up to three things that matter most next month. Ask about what the data above asks about, mark the goals that are reached with set_goal_status, and set next month's goals with add_goal. One question at a time. Then write a short summary and save it with save_review_summary (kind monthly, period 2026-08-01).

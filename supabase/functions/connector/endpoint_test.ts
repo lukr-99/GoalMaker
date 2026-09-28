@@ -3,6 +3,7 @@
 // doesn't serve functions). It makes its own user and link in the database and deletes them after.
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.13";
 import { postgres } from "../_shared/deps.ts";
+import { reviewId } from "../_shared/rules/reviews.ts";
 import { cooldownsId } from "../_shared/rules/wants.ts";
 
 const enabled = Deno.env.get("GOALMAKER_CONNECTOR_TEST") === "1";
@@ -11,6 +12,7 @@ const dbUrl = Deno.env.get("GOALMAKER_DB_URL") ?? "postgresql://postgres:postgre
 
 const OWNER = "c0ffee00-0000-4000-8000-000000000001";
 const STRANGER = "c0ffee00-0000-4000-8000-000000000002";
+const REVIEWER = "c0ffee00-0000-4000-8000-000000000003";
 
 // deno-lint-ignore no-explicit-any
 type Json = any;
@@ -840,6 +842,141 @@ Deno.test({
       });
     } finally {
       await sql`delete from auth.users where id in (${OWNER}, ${STRANGER})`;
+      await sql.end();
+    }
+  },
+});
+
+/** A fixed August 2026 for the review prompts and the digest: every day in it is long past. */
+async function seedAugust(sql: postgres.Sql, owner: string) {
+  const id = (n: number) => `d1e57000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+  await sql`update public.profiles set time_zone = 'Europe/Prague', day_rollover_hour = 4 where id = ${owner}`;
+  await sql`insert into public.areas (id, owner_id, name, color) values (${id(1)}, ${owner}, 'Health', 'violet')`;
+  await sql`insert into public.projects (id, owner_id, name) values (${id(2)}, ${owner}, 'Garden')`;
+  const task = async (
+    n: number,
+    title: string,
+    fields: {
+      status?: string;
+      day?: string;
+      done?: string;
+      area?: boolean;
+      project?: boolean;
+      moves?: number;
+      deadline?: string;
+      created: string;
+    },
+  ) => {
+    await sql`
+      insert into public.tasks (id, owner_id, title, status, planned_date, completed_at, area_id, project_id,
+                                board_column, moved_count, deadline, created_at)
+      values (${id(n)}, ${owner}, ${title}, ${fields.status ?? "open"}, ${fields.day ?? null}, ${fields.done ?? null},
+              ${fields.area ? id(1) : null}, ${fields.project ? id(2) : null},
+              ${fields.project ? (fields.status === "done" ? "done" : "todo") : null}, ${fields.moves ?? 0},
+              ${fields.deadline ?? null}, ${fields.created})`;
+  };
+  await task(10, "Last week's errand", {
+    status: "done",
+    day: "2026-08-11",
+    done: "2026-08-11T12:00:00Z",
+    created: "2026-08-01T08:00:00Z",
+  });
+  await task(11, "Book the dentist", {
+    status: "done",
+    day: "2026-08-18",
+    done: "2026-08-18T09:00:00Z",
+    area: true,
+    created: "2026-08-02T08:00:00Z",
+  });
+  await task(12, "Prune the roses", {
+    status: "done",
+    day: "2026-08-19",
+    done: "2026-08-19T16:00:00Z",
+    project: true,
+    created: "2026-08-03T08:00:00Z",
+  });
+  await task(13, "Call the bank", { day: "2026-08-20", moves: 4, created: "2026-08-04T08:00:00Z" });
+  await task(14, "An old errand", { day: "2026-08-12", created: "2026-08-05T08:00:00Z" });
+  await task(15, "Plan the trip", { day: "2026-08-25", deadline: "2026-08-28", created: "2026-08-06T08:00:00Z" });
+  await task(16, "Let it go", { status: "dropped", day: "2026-08-19", created: "2026-08-07T08:00:00Z" });
+  await task(17, "Renew the passport", { deadline: "2026-08-27", created: "2026-08-08T08:00:00Z" });
+
+  await sql`
+    insert into public.goals (id, owner_id, title, horizon, period_start, progress_mode, target, unit)
+    values (${id(20)}, ${owner}, 'Run 20 km', 'week', '2026-08-17', 'number', 20, 'km'),
+           (${id(21)}, ${owner}, 'Read a book', 'week', '2026-08-24', 'done', null, null),
+           (${id(22)}, ${owner}, 'Tidy the garden', 'month', '2026-08-01', 'done', null, null)`;
+  await sql`
+    insert into public.goal_entries (id, owner_id, goal_id, day, amount)
+    values (${id(23)}, ${owner}, ${id(20)}, '2026-08-18', 5)`;
+
+  await sql`
+    insert into public.habits (id, owner_id, name, cadence, measure, starts_on)
+    values (${id(30)}, ${owner}, 'Read', 'daily', 'check', '2026-08-01'),
+           (${id(31)}, ${owner}, 'Stretch', 'daily', 'check', '2026-08-17')`;
+  await sql`
+    insert into public.habit_checkins (id, owner_id, habit_id, day, value, skipped)
+    values (${id(32)}, ${owner}, ${id(30)}, '2026-08-17', 1, false),
+           (${id(33)}, ${owner}, ${id(30)}, '2026-08-18', 1, false),
+           (${id(34)}, ${owner}, ${id(31)}, '2026-08-17', 1, false),
+           (${id(35)}, ${owner}, ${id(31)}, '2026-08-18', 0, true)`;
+
+  await sql`
+    insert into public.wants (id, owner_id, title, reason, price, cooldown_days, added_on, cools_until, decision,
+                              decided_at, made_by)
+    values (${id(40)}, ${owner}, 'Headphones', 'The old ones broke', 2500, 30, '2026-07-19', '2026-08-18', null, null,
+            'owner'),
+           (${id(41)}, ${owner}, 'Kettle', 'Ours leaks', 800, 7, '2026-08-05', '2026-08-12', 'bought',
+            '2026-08-20T10:00:00Z', 'owner'),
+           (${id(42)}, ${owner}, 'Tent', 'Summer trips', null, 30, '2026-07-26', '2026-08-25', null, null, 'claude')`;
+
+  await sql`
+    insert into public.reviews (id, owner_id, kind, period_start, summary, mood, energy, reflections)
+    values (${await reviewId(owner, "weekly", "2026-08-10")}, ${owner}, 'weekly', '2026-08-10',
+            'Last week was calm.', null, null, '[]'::jsonb),
+           (${await reviewId(owner, "weekly", "2026-08-17")}, ${owner}, 'weekly', '2026-08-17', '', 4, 3,
+            '[{"prompt": "wins/proud", "answer": "The dentist, finally."}]'::jsonb)`;
+}
+
+Deno.test({
+  name: "the review prompts and the digest read a fixed August",
+  ignore: !enabled,
+  sanitizeResources: false,
+  sanitizeOps: false,
+  fn: async (t) => {
+    const sql = postgres(dbUrl, { max: 1 });
+    try {
+      await sql`delete from auth.users where id = ${REVIEWER}`;
+      await sql`
+        insert into auth.users (id, instance_id, aud, role, email)
+        values (${REVIEWER}, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+                'connector-reviewer@example.test')`;
+      await seedAugust(sql, REVIEWER);
+      const secret = await sql.begin(async (db) => {
+        await db`select set_config('request.jwt.claims', ${
+          JSON.stringify({ sub: REVIEWER, role: "authenticated" })
+        }, true)`;
+        await db`set local role authenticated`;
+        return (await db`select public.create_connector_link() as secret`)[0].secret as string;
+      });
+      const client = new Client(`${api}/functions/v1/connector/${secret}`);
+      const promptText = async (name: string, args: Record<string, string>) =>
+        (await client.call("prompts/get", { name, arguments: args })).messages[0].content.text as string;
+
+      await t.step("the review prompts read the same as their snapshots", async () => {
+        const cases: [string, Record<string, string>][] = [
+          ["weekly_review", { week_start: "2026-08-17" }],
+          ["monthly_review", { month: "2026-08" }],
+        ];
+        for (const [name, args] of cases) {
+          const text = await promptText(name, args);
+          const file = new URL(`./snapshots/${name}.txt`, import.meta.url);
+          if (Deno.env.get("GOALMAKER_UPDATE_SNAPSHOTS") === "1") await Deno.writeTextFile(file, text);
+          assertEquals(text, await Deno.readTextFile(file), `${name} changed; the snapshot is the text before M8-07`);
+        }
+      });
+    } finally {
+      await sql`delete from auth.users where id = ${REVIEWER}`;
       await sql.end();
     }
   },

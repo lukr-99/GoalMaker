@@ -1,0 +1,19 @@
+Let's do my GoalMaker weekly review for the week of Monday 17 August 2026 to Sunday 23 August 2026.
+
+Done this week:
+- [x] Book the dentist · 2026-08-18 · @Health (id d1e57000-0000-4000-8000-000000000011)
+- [x] Prune the roses · 2026-08-19 (id d1e57000-0000-4000-8000-000000000012)
+Still open from this week or earlier:
+- [ ] An old errand · 2026-08-12 (id d1e57000-0000-4000-8000-000000000014)
+- [ ] Call the bank · 2026-08-20 (id d1e57000-0000-4000-8000-000000000013)
+Planned for next week:
+- [ ] Plan the trip · 2026-08-25 · due 2026-08-28 (id d1e57000-0000-4000-8000-000000000015)
+
+Goals of this week:
+- Run 20 km · week of 2026-08-17 to 2026-08-23 · 5 of 20 km · 25% (goal id d1e57000-0000-4000-8000-000000000020)
+Habits:
+- Read · 2 of 7 met (habit id d1e57000-0000-4000-8000-000000000030)
+- Stretch · 1 of 7 met (habit id d1e57000-0000-4000-8000-000000000031)
+What this period's data asks about: a goal behind where the period says it should be (Run 20 km); a habit that missed half its periods or more (Stretch); a task that keeps moving to another day (Call the bank); a busier period than usual.
+
+Walk me through it one step at a time: what went well, what slipped and why, what to carry into next week (move_task for the open ones), and one or two focuses for next week. Ask about what the data above asks about, mark the goals that are reached with set_goal_status, and set next week's goals with add_goal. Then write a short summary of the week (a few sentences: wins, lessons, focus) and save it with save_review_summary (kind weekly, period 2026-08-17), with my mood and energy from 1 to 5 if I gave them. get_review_summaries shows earlier weeks.
