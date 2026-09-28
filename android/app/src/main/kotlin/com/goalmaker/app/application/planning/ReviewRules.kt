@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.domain.planning.NameBasedUuid
+import com.goalmaker.app.domain.planning.ReviewReminder
 import java.time.LocalDate
 import java.util.Locale
 
@@ -21,6 +22,16 @@ object ReviewRules {
         MONTHLY -> day.withDayOfMonth(1)
         YEARLY -> day.withDayOfYear(1)
         else -> throw IllegalArgumentException("Unknown review kind: $kind")
+    }
+
+    /**
+     * Whether the [kind] review reminder ringing on [day] can say the letter is here: the review of the
+     * period it looks back on has a summary a Claude routine wrote (docs/letter.md, 'letterWaiting' in
+     * contracts/vectors/reminders.json). The reminder reads [reviews] as they are when it rings.
+     */
+    fun letterWaiting(kind: String, day: LocalDate, reviews: List<ReviewItem>): Boolean {
+        val start = ReviewReminder.periodStart(kind, day)
+        return reviews.any { !it.deleted && it.kind == kind && it.periodStart == start && it.summary.isNotBlank() }
     }
 
     /** The id of [owner]'s [kind] review for the period starting on [periodStart]. */

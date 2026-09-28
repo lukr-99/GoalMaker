@@ -23,6 +23,19 @@ public static class ReviewRules
         _ => throw new ArgumentException($"Unknown review kind: {kind}", nameof(kind)),
     };
 
+    /// <summary>
+    /// Whether the <paramref name="kind"/> review reminder ringing on <paramref name="day"/> can say the
+    /// letter is here: the review of the period it looks back on has a summary a Claude routine wrote
+    /// (docs/letter.md, 'letterWaiting' in contracts/vectors/reminders.json). The reminder reads
+    /// <paramref name="reviews"/> as they are when it rings.
+    /// </summary>
+    public static bool LetterWaiting(string kind, DateOnly day, IEnumerable<ReviewItem> reviews)
+    {
+        var start = ReviewReminder.PeriodStart(kind, day);
+        return reviews.Any(review =>
+            !review.Deleted && review.Kind == kind && review.PeriodStart == start && !string.IsNullOrWhiteSpace(review.Summary));
+    }
+
     /// <summary>The id of <paramref name="owner"/>'s <paramref name="kind"/> review for the period starting on <paramref name="periodStart"/>.</summary>
     public static string IdOf(string owner, string kind, DateOnly periodStart) =>
         NameBasedUuid.Of(Namespace, $"review/{owner.ToLowerInvariant()}/{kind}/{periodStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
