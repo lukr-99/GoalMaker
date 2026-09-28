@@ -27,6 +27,7 @@ import { seriesOf } from "../rules/occurrences.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
 import * as format from "./format.ts";
+import { wantTools } from "./wantTools.ts";
 
 /**
  * One tool: what Claude sees (name, description, input) and what it does with the owner's planner.
@@ -1580,4 +1581,5 @@ export const tools: Tool[] = [
       ).join("\n\n");
     },
   },
+  ...wantTools,
 ];

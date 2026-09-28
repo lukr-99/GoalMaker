@@ -1,10 +1,12 @@
 import type { Area, Habit, Reminder, Step, Tag } from "../planner/planner.ts";
-import { type Day, weekday } from "../rules/day.ts";
+import type { Want } from "../planner/wantList.ts";
+import { type Day, daysBetween, weekday } from "../rules/day.ts";
 import type { GoalItem, GoalProgress } from "../rules/goals.ts";
 import type { HabitPeriodState } from "../rules/habits.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
 import type { Column, ProjectItem, ProjectMilestone } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
+import type { WantState } from "../rules/wants.ts";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MONTHS = [
@@ -117,6 +119,42 @@ export function habitLine(
   parts.push(state === "met" ? "done" : state === "none" ? "not due" : state);
   if (streak > 0) parts.push(`streak ${streak}`);
   return `- ${parts.join(" · ")} (habit id ${habit.id})`;
+}
+
+/** `4500 CZK`. */
+export function money(amount: number, currency: string): string {
+  return `${round(amount)} ${currency}`;
+}
+
+/**
+ * A want the way the Wants place shows it, with its reason, link, last price check and decision note
+ * on the lines under it, so Claude can talk the decision through without another call.
+ */
+export function wantLine(want: Want, state: WantState, today: Day, names: Names): string {
+  const parts = [want.title];
+  if (want.price !== null) parts.push(money(want.price, want.currency));
+  if (state === "cooling") {
+    const left = daysBetween(today, want.coolsUntil);
+    parts.push(`cooling, ready on ${want.coolsUntil} (${left} ${left === 1 ? "day" : "days"} to go)`);
+  } else if (state === "ready") {
+    parts.push(`ready to decide since ${want.coolsUntil}`);
+  } else {
+    parts.push(want.decision ?? "decided");
+  }
+  const area = want.areaId ? names.areas.get(want.areaId) : undefined;
+  if (area) parts.push(`@${area.name}`);
+  if (want.madeBy === "claude") parts.push("by Claude");
+  const lines = [`- ${parts.join(" · ")} (want id ${want.id})`, `  Why: ${want.reason}`];
+  if (want.link) lines.push(`  Link: ${want.link}`);
+  if (want.checkedPrice !== null) {
+    const note = want.checkedNote.trim().replace(/\s*\n\s*/g, " · ");
+    lines.push(
+      `  Last checked: ${money(want.checkedPrice, want.currency)} on ${want.checkedAt?.slice(0, 10)}` +
+        (note.length > 0 ? ` · ${note}` : ""),
+    );
+  }
+  if (want.decision !== null && want.decisionNote.trim().length > 0) lines.push(`  Note: ${want.decisionNote.trim()}`);
+  return lines.join("\n");
 }
 
 /** A number without a trailing .0, so "5 of 20 km" reads like a person wrote it. */

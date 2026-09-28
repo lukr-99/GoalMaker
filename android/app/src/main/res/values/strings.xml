@@ -811,6 +811,7 @@
     <string name="wants_none_cooling">Nothing is cooling.</string>
     <string name="wants_none_decided">Nothing decided yet.</string>
     <string name="wants_status_ready">ready to decide</string>
+    <string name="wants_by_claude">by Claude</string>
     <plurals name="wants_status_days">
         <item quantity="one">%1$d day to go</item>
         <item quantity="other">%1$d days to go</item>

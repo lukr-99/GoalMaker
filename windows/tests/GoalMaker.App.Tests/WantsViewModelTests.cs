@@ -50,6 +50,22 @@ public sealed class WantsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AWantClaudeAddedSaysSoAndTheOwnersDoNot()
+    {
+        planner.Wants.Add(new WantDraft("Kindle", "Reading at night", PickedDays: 0));
+        planner.Wants.Add(new WantDraft("Lamp", "Dark desk", PickedDays: 0));
+        // Claude added this one through the connector, and that is how it arrives from the server.
+        var row = planner.Replica.Get("wants", planner.Wants.All().Single(want => want.Title == "Kindle").Id)!;
+        row["made_by"] = ProjectRules.Claude;
+        planner.Replica.Put("wants", row);
+
+        var page = Page();
+
+        Assert.EndsWith("Wants.ByClaude", page.Rows.Single(one => one.Title == "Kindle").Subtitle);
+        Assert.DoesNotContain("Wants.ByClaude", page.Rows.Single(one => one.Title == "Lamp").Subtitle);
+    }
+
+    [Fact]
     public void TheAddPanelShowsTheCooldownAPriceGivesAndCanPickAnother()
     {
         var page = Page();

@@ -161,12 +161,13 @@ public sealed partial class WantsViewModel : ObservableObject
                 _ => strings.Get(want.Decision == WantRules.Bought ? "Wants.StatusBought" : "Wants.StatusDropped"),
             };
             var price = want.Price is { } amount ? Money(amount, want.Currency) : null;
+            var maker = want.MadeBy == ProjectRules.Claude ? strings.Get("Wants.ByClaude") : null;
             var checkedText = want.CheckedPrice is { } found
                 ? string.Join(" · ", new[] { Money(found, want.Currency), want.CheckedNote }.Where(part => part.Length > 0))
                 : null;
             Rows.Add(new WantRowViewModel(
                 this, want, state!.Value, WantRules.Progress(want, today), daysLeft,
-                string.Join(" · ", new[] { price, status }.Where(part => part is not null)), checkedText));
+                string.Join(" · ", new[] { price, status, maker }.Where(part => part is not null)), checkedText));
         }
 
         IsEmpty = Rows.Count == 0;
