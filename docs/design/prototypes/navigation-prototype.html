@@ -1,0 +1,515 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throwaway (M8-01). Lives on the branch prototype/m8-navigation only; never merge to main.
+  Question: which navigation gives GoalMaker room for more places (Wants, Tally, ...) on the phone and
+  on Windows? Three structurally different variants, switchable with ?variant=A|B|C (or the arrows at
+  the bottom, or the keyboard's left and right arrows). Theme tokens are copied from
+  contracts/design/themes.json; fonts come from fonts/ when served from the repository root:
+    python -m http.server 8765   then open http://localhost:8765/docs/design/prototypes/navigation-prototype.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigation prototype (M8-01)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0">
+<style>
+@font-face { font-family: "Archivo"; src: url("../../../fonts/archivo/Archivo%5Bwdth,wght%5D.ttf"); font-weight: 100 900; font-stretch: 62.5% 125%; font-style: normal; }
+@font-face { font-family: "Archivo"; src: url("../../../fonts/archivo/Archivo-Italic%5Bwdth,wght%5D.ttf"); font-weight: 100 900; font-stretch: 62.5% 125%; font-style: italic; }
+@font-face { font-family: "Plus Jakarta Sans"; src: url("../../../fonts/plusjakartasans/PlusJakartaSans%5Bwght%5D.ttf"); font-weight: 200 800; }
+@font-face { font-family: "Space Grotesk"; src: url("../../../fonts/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf"); font-weight: 300 700; }
+@font-face { font-family: "Outfit"; src: url("../../../fonts/outfit/Outfit%5Bwght%5D.ttf"); font-weight: 100 900; }
+
+:root {
+  --quick: 120ms; --standard: 250ms; --emph: 400ms;
+  --ease: cubic-bezier(.2, .8, .2, 1); --spring: cubic-bezier(.2, 1.1, .3, 1);
+}
+.reduce { --standard: 120ms; --emph: 120ms; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2b2e; color: #eee; font: 14px/1.4 system-ui, sans-serif; min-height: 100vh; padding-bottom: 90px; }
+.ms { font-family: "Material Symbols Outlined"; font-weight: 400; font-style: normal; font-size: 22px; line-height: 1;
+  display: inline-block; font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; user-select: none; }
+.ms.fill { font-variation-settings: "FILL" 1; }
+
+/* ---------- prototype chrome (not part of the design) ---------- */
+.proto-bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px 16px; background: #1b1c1f;
+  border-bottom: 1px solid #3a3b40; position: sticky; top: 0; z-index: 50; font-size: 13px; }
+.proto-bar b { color: #fff; letter-spacing: .02em; }
+.proto-bar label { display: flex; gap: 6px; align-items: center; color: #bbb; }
+.proto-bar select, .proto-bar button { background: #2c2d31; color: #eee; border: 1px solid #45464c; border-radius: 6px; padding: 4px 8px; font: inherit; }
+.proto-bar .seg button[aria-pressed="true"] { background: #e8e8e8; color: #111; }
+.proto-bar .seg { display: flex; gap: 2px; }
+.proto-state { font: 12px/1.4 ui-monospace, Consolas, monospace; color: #9fa; padding: 6px 16px; background: #17181a; border-bottom: 1px solid #333; }
+.proto-note { color: #aaa; font-size: 12px; max-width: 1400px; margin: 10px auto 0; padding: 0 16px; }
+.switcher { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 4px;
+  background: #fff; color: #111; border-radius: 999px; padding: 6px; box-shadow: 0 8px 30px rgba(0,0,0,.45); font: 600 13px system-ui, sans-serif; }
+.switcher button { border: 0; background: #111; color: #fff; width: 34px; height: 34px; border-radius: 999px; cursor: pointer; font-size: 18px; }
+.switcher span { padding: 0 12px; min-width: 250px; text-align: center; }
+
+.stage { display: flex; flex-wrap: wrap; gap: 36px; justify-content: center; align-items: flex-start; padding: 24px 16px; }
+
+/* ---------- design surface ---------- */
+.gm { background: var(--bg); color: var(--text); font-family: var(--body-font); font-size: 15px; position: relative; overflow: hidden; }
+.gm .headline { font-family: var(--head-font); font-weight: var(--head-weight); font-style: var(--head-style); font-stretch: var(--head-width);
+  text-transform: var(--head-transform); letter-spacing: var(--head-tracking); color: var(--accent); margin: 0; line-height: 1.05; }
+.gm .label { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.gm .muted { color: var(--muted); }
+.gm .num { font-family: var(--head-font); font-weight: 900; font-style: var(--head-style); font-stretch: var(--head-width); font-variant-numeric: tabular-nums; }
+.gm button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+.gm .iconbtn { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; color: var(--text); position: relative;
+  transition: background var(--quick) var(--ease); }
+.gm .iconbtn:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.gm .dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 99px; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.gm .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--accent); color: var(--onAccent);
+  font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; font-variant-numeric: tabular-nums; }
+.gm .new { font-size: 10px; font-weight: 800; letter-spacing: .08em; padding: 2px 6px; border-radius: 99px; background: var(--hero); color: var(--heroAccent); }
+
+.page { animation: pageIn var(--standard) var(--ease) both; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.reduce .page { animation-name: fadeIn; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.stagger > * { animation: tileIn var(--emph) var(--spring) both; }
+@keyframes tileIn { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: none; } }
+.reduce .stagger > * { animation: fadeIn var(--quick) linear both; }
+
+/* rows and content */
+.row { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: var(--r-row); padding: 0 14px; min-height: 52px; }
+.check { width: 22px; height: 22px; border-radius: var(--r-check); border: 2px solid var(--outline); flex: none; display: grid; place-items: center; }
+.check.on { background: var(--accent); border-color: var(--accent); color: var(--onAccent); }
+.rows { display: flex; flex-direction: column; gap: 8px; }
+.ring { --p: .6; width: var(--s, 44px); height: var(--s, 44px); border-radius: 50%; flex: none;
+  background: conic-gradient(var(--accent) calc(var(--p) * 360deg), color-mix(in srgb, var(--outline) 35%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--w, 6px)), #000 calc(100% - var(--w, 6px) + 1px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--w, 6px)), #000 calc(100% - var(--w, 6px) + 1px)); }
+.tallybar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; gap: 2px; }
+.tallybar i { display: block; height: 100%; }
+.hero { background: var(--hero); color: var(--onHero); border-radius: var(--r-card); padding: 16px; }
+.hero .num { color: var(--heroAccent); }
+.composer { position: absolute; left: 12px; right: 12px; bottom: 12px; height: 50px; border-radius: 999px; background: var(--surfaceVariant);
+  display: flex; align-items: center; padding: 0 6px 0 18px; color: var(--muted); box-shadow: 0 4px 18px rgba(0,0,0,.18); }
+.composer .send { margin-left: auto; width: 38px; height: 38px; border-radius: 99px; background: var(--primary); color: var(--onPrimary); display: grid; place-items: center; }
+
+/* ---------- phone frame ---------- */
+.phone { width: 390px; height: 800px; border-radius: 46px; border: 10px solid #0b0b0c; box-shadow: 0 30px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+.phone .status { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 12px; font-weight: 600; }
+.phone .topbar { flex: none; display: flex; align-items: center; gap: 2px; padding: 4px 8px 4px 16px; min-height: 56px; }
+.phone .topbar .headline { font-size: 30px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.phone .content { flex: 1; overflow: auto; padding: 4px 16px 90px; position: relative; scrollbar-width: none; }
+.phone .navbar { flex: none; height: 76px; display: flex; background: var(--surface); padding: 0 6px 8px; border-top: 1px solid color-mix(in srgb, var(--outline) 25%, transparent); }
+.phone .navbar button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.phone .navbar .pill { width: 56px; height: 32px; border-radius: 99px; display: grid; place-items: center; position: relative; transition: background var(--standard) var(--ease), color var(--standard) var(--ease); }
+.phone .navbar button[aria-current="true"] { color: var(--text); }
+.phone .navbar button[aria-current="true"] .pill { background: var(--accent); color: var(--onAccent); }
+.phone .navbar .pill .badge { position: absolute; top: -4px; right: 2px; transform: scale(.85); }
+
+/* sheet */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); animation: fadeIn var(--standard) linear both; z-index: 20; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; padding: 10px 16px 22px; z-index: 21;
+  animation: sheetUp var(--emph) var(--spring) both; max-height: 86%; overflow: auto; }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.reduce .sheet { animation: fadeIn var(--quick) linear both; }
+.grabber { width: 36px; height: 4px; border-radius: 9px; background: var(--outline); opacity: .5; margin: 0 auto 14px; }
+
+/* ---------- windows frame ---------- */
+.win { width: 1060px; height: 660px; border-radius: 10px; box-shadow: 0 30px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; border: 1px solid #444; }
+.win .titlebar { height: 34px; flex: none; display: flex; align-items: center; padding-left: 14px; font-size: 12px; gap: 8px; color: var(--muted); }
+.win .titlebar .caps { margin-left: auto; display: flex; }
+.win .titlebar .caps span { width: 46px; text-align: center; font-size: 16px; }
+.win .body { flex: 1; display: flex; min-height: 0; }
+.win .side { width: 232px; flex: none; padding: 6px 8px; display: flex; flex-direction: column; gap: 1px; overflow: auto; transition: width var(--standard) var(--ease); scrollbar-width: thin; }
+.win .side.narrow { width: 60px; }
+.win .navitem { display: flex; align-items: center; gap: 12px; height: 36px; padding: 0 10px; border-radius: var(--r-button); color: var(--text); font-size: 14px;
+  width: 100%; text-align: left; position: relative; white-space: nowrap; transition: background var(--quick) var(--ease); }
+.win .navitem:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.win .navitem[aria-current="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); font-weight: 650; }
+.win .navitem[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--accent);
+  animation: barIn var(--standard) var(--spring) both; }
+@keyframes barIn { from { transform: scaleY(0); } to { transform: none; } }
+.win .navitem .trail { margin-left: auto; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.win .side.narrow .navitem .txt, .win .side.narrow .navitem .trail, .win .side.narrow .sechead .txt, .win .side.narrow .sechead .chev { display: none; }
+.win .sechead { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; margin-top: 10px; width: 100%; }
+.win .sechead .chev { margin-left: auto; font-size: 18px; color: var(--muted); transition: transform var(--standard) var(--ease); }
+.win .sechead[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.win .group { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--standard) var(--ease); }
+.win .group.shut { grid-template-rows: 0fr; }
+.win .group > div { overflow: hidden; display: flex; flex-direction: column; gap: 1px; }
+.win .main { flex: 1; background: var(--surfaceMain); border-top-left-radius: 10px; overflow: auto; padding: 20px 28px 90px; position: relative; min-width: 0; }
+.win .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.win .toolbar .headline { font-size: 28px; }
+.win .composer { position: sticky; left: auto; right: auto; bottom: 0; margin-top: 16px; max-width: 760px; }
+.palette { position: absolute; inset: 0; background: rgba(0,0,0,.35); z-index: 30; display: flex; justify-content: center; padding-top: 70px; animation: fadeIn var(--quick) linear both; }
+.palette .box { width: 520px; background: var(--surface); border-radius: var(--r-card); box-shadow: 0 20px 50px rgba(0,0,0,.4); overflow: hidden; height: max-content;
+  animation: tileIn var(--standard) var(--spring) both; border: 1px solid color-mix(in srgb, var(--outline) 40%, transparent); }
+.palette input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 16px; padding: 16px 18px; border-bottom: 1px solid color-mix(in srgb, var(--outline) 30%, transparent); }
+.palette .opt { display: flex; gap: 12px; align-items: center; padding: 10px 18px; width: 100%; text-align: left; }
+.palette .opt.sel { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+
+/* tiles (variant A) */
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { background: var(--surface); border-radius: var(--r-card); padding: 14px; min-height: 118px; display: flex; flex-direction: column; gap: 8px; text-align: left;
+  transition: transform var(--quick) var(--ease), box-shadow var(--quick) var(--ease); position: relative;
+  border: 1px solid color-mix(in srgb, var(--outline) 28%, transparent); }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.14); }
+.tile:active { transform: scale(.97); }
+.tile .top { display: flex; align-items: center; gap: 8px; }
+.tile .top .ms { color: var(--accent); }
+.tile .name { font-weight: 700; font-size: 15px; }
+.tile .live { margin-top: auto; }
+.tile.wide { grid-column: span 2; min-height: 96px; }
+.tile.hero { background: var(--hero); color: var(--onHero); }
+.tile.hero .top .ms, .tile.hero .num { color: var(--heroAccent); }
+.win .tiles { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+/* sections (variant B) */
+.segs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 16px 10px; scrollbar-width: none; flex: none; }
+.chip { height: 34px; padding: 0 14px; border-radius: 99px; border: 1px solid var(--outline); color: var(--text); font-size: 14px; font-weight: 600; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; transition: background var(--standard) var(--ease), color var(--standard) var(--ease), border-color var(--standard) var(--ease); flex: none; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--onAccent); border-color: var(--accent); }
+
+/* all places sheet (variant C) */
+.allgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px 4px; }
+.cell { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px; border-radius: 16px; position: relative; font-size: 12px; font-weight: 600; }
+.cell .ico { width: 52px; height: 52px; border-radius: 18px; display: grid; place-items: center; background: var(--surfaceVariant); color: var(--accent); transition: transform var(--quick) var(--ease); }
+.cell:active .ico { transform: scale(.92); }
+.cell .sub { font-size: 11px; font-weight: 500; color: var(--muted); text-align: center; line-height: 1.2; }
+.cell .pin { position: absolute; top: 4px; right: 10px; width: 22px; height: 22px; border-radius: 99px; display: grid; place-items: center; font-size: 15px;
+  background: var(--surfaceVariant); color: var(--muted); border: 1px solid var(--outline); animation: tileIn var(--standard) var(--spring) both; }
+.cell .pin.on { background: var(--accent); color: var(--onAccent); border-color: var(--accent); }
+.editing .cell { animation: wiggle .5s ease-in-out infinite alternate; }
+.reduce .editing .cell { animation: none; }
+@keyframes wiggle { from { transform: rotate(-1.2deg); } to { transform: rotate(1.2deg); } }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <b>PROTOTYPE · M8-01 navigation</b>
+  <label>Device <span class="seg" id="deviceSeg"></span></label>
+  <label>Theme <select id="themeSel"><option value="track">Track</option><option value="electric">Electric</option><option value="night">Night</option><option value="sunrise">Sunrise</option></select></label>
+  <label>Mode <span class="seg" id="modeSeg"></span></label>
+  <label><input type="checkbox" id="reduceChk"> Reduce motion</label>
+  <button id="resetBtn">Reset state</button>
+</div>
+<div class="proto-state" id="state"></div>
+<p class="proto-note" id="note"></p>
+<div class="stage" id="stage"></div>
+<div class="switcher" role="group" aria-label="Prototype variant">
+  <button id="prevV" aria-label="Previous variant">‹</button><span id="vLabel"></span><button id="nextV" aria-label="Next variant">›</button>
+</div>
+
+<script>
+// ---------------------------------------------------------------- data
+const THEMES = {"track":{"light":{"background":"#FFFFFF","surface":"#F2F2EF","surfaceVariant":"#E8E8E3","text":"#0A0A0A","textMuted":"#5A5A56","outline":"#6E6E69","primary":"#0A0A0A","onPrimary":"#D6FF3A","accent":"#0A0A0A","onAccent":"#D6FF3A","hero":"#0A0A0A","onHero":"#FFFFFF","heroAccent":"#D6FF3A","danger":"#C8231B"},"dark":{"background":"#111310","surface":"#1B1D19","surfaceVariant":"#252821","text":"#F5F5F2","textMuted":"#A4A79D","outline":"#80837A","primary":"#D6FF3A","onPrimary":"#0A0A0A","accent":"#D6FF3A","onAccent":"#0A0A0A","hero":"#D6FF3A","onHero":"#0A0A0A","heroAccent":"#0A0A0A","danger":"#FF7A6E"},"shape":{"card":12,"row":8,"checkbox":3,"button":8},"heading":{"family":"Archivo","weight":900,"width":112.5,"italic":true,"uppercase":true,"tracking":-0.01}},"electric":{"light":{"background":"#F6F3FF","surface":"#FFFFFF","surfaceVariant":"#ECE6FF","text":"#1B1433","textMuted":"#5E5680","outline":"#7D74A2","primary":"#5B2EE6","onPrimary":"#FFFFFF","accent":"#CA3924","onAccent":"#FFFFFF","hero":"#5B2EE6","onHero":"#FFFFFF","heroAccent":"#FFD0C4","danger":"#C62828"},"dark":{"background":"#15111F","surface":"#211B31","surfaceVariant":"#2A2340","text":"#F2EEFF","textMuted":"#A69EC6","outline":"#8A81B0","primary":"#9579FF","onPrimary":"#120A2E","accent":"#FF7A5E","onAccent":"#1F0904","hero":"#5B2EE6","onHero":"#FFFFFF","heroAccent":"#FFB8A6","danger":"#FF8A80"},"shape":{"card":24,"row":16,"checkbox":999,"button":999},"heading":{"family":"Plus Jakarta Sans","weight":800,"width":100,"italic":false,"uppercase":false,"tracking":-0.03}},"night":{"light":{"background":"#FBFAFF","surface":"#F0EEFA","surfaceVariant":"#E6E3F6","text":"#12101F","textMuted":"#5A5679","outline":"#76729A","primary":"#4F46E5","onPrimary":"#FFFFFF","accent":"#0E7490","onAccent":"#FFFFFF","hero":"#4F46E5","onHero":"#FFFFFF","heroAccent":"#A5F3FC","danger":"#C62828"},"dark":{"background":"#0B0A14","surface":"#15132A","surfaceVariant":"#1C1935","text":"#E9E7FF","textMuted":"#938FB8","outline":"#76729A","primary":"#8B80FF","onPrimary":"#0B0A14","accent":"#22D3EE","onAccent":"#04141A","hero":"#3730A3","onHero":"#FFFFFF","heroAccent":"#67E8F9","danger":"#FF7A7A"},"shape":{"card":10,"row":7,"checkbox":5,"button":8},"heading":{"family":"Space Grotesk","weight":700,"width":100,"italic":false,"uppercase":false,"tracking":-0.02}},"sunrise":{"light":{"background":"#FFF6EC","surface":"#FFFFFF","surfaceVariant":"#FFE7D1","text":"#2B1408","textMuted":"#765646","outline":"#957464","primary":"#C2410C","onPrimary":"#FFFFFF","accent":"#C2185B","onAccent":"#FFFFFF","hero":"#C2185B","onHero":"#FFFFFF","heroAccent":"#FFD23F","danger":"#B91C1C"},"dark":{"background":"#1C120C","surface":"#2A1C14","surfaceVariant":"#33231A","text":"#FFF1E6","textMuted":"#C4A696","outline":"#9E8070","primary":"#FF8A3D","onPrimary":"#2B1408","accent":"#FF5C93","onAccent":"#2B0612","hero":"#B0205A","onHero":"#FFFFFF","heroAccent":"#FFD23F","danger":"#FF8A80"},"shape":{"card":28,"row":20,"checkbox":7,"button":999},"heading":{"family":"Outfit","weight":800,"width":100,"italic":false,"uppercase":false,"tracking":-0.02}}};
+
+// Every place, with a live line like the real app would show. New in M8: Wants and Tally.
+const P = {
+  today:    { label: "Today",    icon: "today",            live: "3 of 7 done",          count: 4 },
+  tomorrow: { label: "Tomorrow", icon: "wb_twilight",      live: "4 planned" },
+  inbox:    { label: "Inbox",    icon: "inbox",            live: "6 to sort",            count: 6 },
+  calendar: { label: "Calendar", icon: "calendar_month",   live: "Dentist Thu 14:00" },
+  habits:   { label: "Habits",   icon: "donut_large",      live: "3 of 5 today",         ring: .6 },
+  goals:    { label: "Goals",    icon: "flag",             live: "2 of 4 this week",     ring: .5 },
+  projects: { label: "Projects", icon: "dashboard",        live: "12 open · 3 doing" },
+  wants:    { label: "Wants",    icon: "shopping_bag",     live: "2 ready",              count: 2, isNew: true },
+  tally:    { label: "Tally",    icon: "hourglass_bottom", live: "5 h 12 m today",       isNew: true },
+  reviews:  { label: "Reviews",  icon: "menu_book",        live: "Your letter is here",  dot: true },
+  stats:    { label: "Stats",    icon: "trending_up",      live: "31 done this week" },
+  archive:  { label: "Archive",  icon: "archive",          live: "412 done" },
+  settings: { label: "Settings", icon: "settings",         live: "" },
+};
+const TALLY = [["Coding", "#6D5DF6", 128], ["Study", "#12A594", 64], ["Video", "#E5484D", 52], ["Chat", "#F76B15", 38], ["Other", "#8B8D98", 30]];
+
+const VARIANTS = {
+  A: { name: "Places hub",
+       note: "A · Places hub. The bottom bar keeps the three lists and a fourth tab, Places: a grid of live tiles (rings, counts, the Tally bar) for everything else. The top bar slims to sync, Plan tomorrow and Settings. Windows keeps the lists in the sidebar and puts the same tiles on a Places page." },
+  B: { name: "Sections",
+       note: "B · Sections. Four sections in the bottom bar (Plan, Track, Projects, Reflect); each section's places are chips under the title and it remembers the last one. Windows groups the sidebar under the same four headings, each collapsible, and the sidebar folds to icons." },
+  C: { name: "Pinned + All places",
+       note: "C · Pinned + All places. Four places you pin sit in the bottom bar; the fifth button opens every place as a sheet, with Edit pins to swap. Windows shows the pins on top, All places below, and Ctrl+K (or the search button) jumps anywhere." },
+};
+const SECTIONS = [
+  { id: "plan",     label: "Plan",     icon: "event_available", places: ["today", "tomorrow", "inbox", "calendar"] },
+  { id: "track",    label: "Track",    icon: "donut_large",     places: ["habits", "goals", "tally", "wants"] },
+  { id: "projects", label: "Projects", icon: "dashboard",       places: ["projects"] },
+  { id: "reflect",  label: "Reflect",  icon: "menu_book",       places: ["reviews", "stats", "archive"] },
+];
+const ALL = Object.keys(P).filter(k => k !== "settings");
+
+// ---------------------------------------------------------------- state
+const q = new URLSearchParams(location.search);
+const S = {
+  variant: VARIANTS[q.get("variant")] ? q.get("variant") : "A",
+  device: q.get("device") || "both",
+  theme: THEMES[q.get("theme")] ? q.get("theme") : "track",
+  mode: q.get("mode") || "dark",
+  reduce: q.get("reduce") === "1",
+};
+function freshUi() {
+  return {
+    phone: { place: "today", sheet: false, editing: false, pins: ["today", "inbox", "habits", "projects"], lastInSection: { plan: "today", track: "habits", projects: "projects", reflect: "reviews" } },
+    win:   { place: "today", narrow: false, shut: {}, palette: false, paletteQ: "", paletteSel: 0, pins: ["today", "inbox", "habits", "projects"], allOpen: true, lastInSection: {} },
+  };
+}
+let U = freshUi();
+
+function syncUrl() {
+  const p = new URLSearchParams({ variant: S.variant, device: S.device, theme: S.theme, mode: S.mode });
+  if (S.reduce) p.set("reduce", "1");
+  history.replaceState(null, "", "?" + p);
+}
+
+// ---------------------------------------------------------------- helpers
+const ic = (name, fill) => `<span class="ms${fill ? " fill" : ""}" aria-hidden="true">${name}</span>`;
+const sectionOf = k => SECTIONS.find(s => s.places.includes(k));
+function trailFor(k) {
+  const p = P[k];
+  if (p.count) return `<span class="badge">${p.count}</span>`;
+  if (p.dot) return `<span class="badge" title="Letter waiting">${ic("mail", true).replace('class="ms', 'style="font-size:13px" class="ms')}</span>`;
+  if (p.isNew) return `<span class="new">NEW</span>`;
+  return "";
+}
+function ringHtml(p, size = 44, w = 6) { return `<div class="ring" style="--p:${p};--s:${size}px;--w:${w}px"></div>`; }
+function tallyBar() { const tot = TALLY.reduce((a, t) => a + t[2], 0); return `<div class="tallybar">${TALLY.map(t => `<i style="background:${t[1]};width:${t[2] / tot * 100}%"></i>`).join("")}</div>`; }
+
+// Content of a place: enough to feel real, not a spec.
+function placeBody(k, dev) {
+  const tasks = [["Finish M6 hardening: expired session", true], ["Call the dentist back", false], ["Read two chapters", false], ["Run 5 km", true], ["Review the Wants prices", false]];
+  switch (k) {
+    case "today": case "tomorrow": case "inbox":
+      return `<div class="muted" style="margin:-4px 0 14px">${P[k].live}</div>
+        ${k === "today" ? `<div class="label" style="margin-bottom:8px">Top priorities</div>` : ""}
+        <div class="rows stagger">${tasks.map(([t, on], i) => `<div class="row" style="animation-delay:${i * 30}ms"><span class="check ${on && k === "today" ? "on" : ""}">${on && k === "today" ? ic("check") : ""}</span><span style="${on && k === "today" ? "text-decoration:line-through;opacity:.55" : ""}">${t}</span></div>`).join("")}</div>`;
+    case "habits":
+      return `<div class="rows stagger">${[["Water", .75, "6 / 8"], ["Read", 1, "30 min"], ["Run", .4, "2 / 5 wk"], ["No sugar", 1, "streak 12"], ["Stretch", 0, "not yet"]].map(([n, p, s], i) => `<div class="row" style="animation-delay:${i * 30}ms">${ringHtml(p, 34, 5)}<b style="font-weight:650">${n}</b><span class="muted" style="margin-left:auto">${s}</span></div>`).join("")}</div>`;
+    case "tally":
+      return `<div class="hero stagger" style="margin-bottom:12px"><div class="label" style="color:inherit;opacity:.8">Today · phone + PC</div><div class="num" style="font-size:44px">5 h 12 m</div><div style="margin-top:10px">${tallyBar()}</div></div>
+        <div class="rows stagger">${TALLY.map(([n, c, m], i) => `<div class="row" style="animation-delay:${i * 30}ms"><i style="width:12px;height:12px;border-radius:4px;background:${c}"></i>${n}<span class="muted num" style="margin-left:auto;font-weight:700">${Math.floor(m / 60)} h ${m % 60} m</span></div>`).join("")}</div>`;
+    case "wants":
+      return `<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap"><span class="chip" aria-pressed="true">Ready 2</span><span class="chip" aria-pressed="false">Cooling 5</span><span class="chip" aria-pressed="false">Decided</span></div>
+        <div class="rows stagger">${[["Mechanical keyboard", "2 890 Kč", 1], ["Trail shoes", "3 400 Kč", 1], ["Standing desk", "12 900 Kč", .35], ["Kindle", "3 290 Kč", .7]].map(([n, pr, p], i) => `<div class="row" style="animation-delay:${i * 30}ms">${ringHtml(p, 30, 4)}<span>${n}</span><span class="muted" style="margin-left:auto">${pr}</span></div>`).join("")}</div>`;
+    case "reviews":
+      return `<div class="hero stagger" style="margin-bottom:12px"><div class="label" style="color:inherit;opacity:.8">${ic("mail")} Letter · 21 to 27 Sep</div><div style="margin-top:6px;font-size:15px">A good week for GoalMaker: M6 nearly closed, 31 tasks done…</div></div>
+        <div class="rows stagger">${["Week of 14 Sep", "Week of 7 Sep", "August"].map((w, i) => `<div class="row" style="animation-delay:${i * 30}ms">${ic("menu_book")}${w}<span class="muted" style="margin-left:auto">mood 4</span></div>`).join("")}</div>`;
+    case "stats":
+      return `<div class="hero stagger"><div class="label" style="color:inherit;opacity:.8">Tasks a week</div><div class="num" style="font-size:44px">31</div>
+        <div style="display:flex;gap:5px;align-items:flex-end;height:70px;margin-top:8px">${[12, 18, 9, 22, 25, 17, 28, 31].map(h => `<i style="flex:1;height:${h * 2.2}px;background:var(--heroAccent);border-radius:3px;opacity:.9"></i>`).join("")}</div></div>`;
+    default:
+      return `<div class="muted" style="margin:-4px 0 14px">${P[k].live}</div><div class="rows stagger">${[1, 2, 3, 4].map(i => `<div class="row" style="animation-delay:${i * 30}ms;opacity:${1 - i * .12}"><span style="height:10px;width:${40 + i * 12}%;border-radius:9px;background:var(--surfaceVariant)"></span></div>`).join("")}</div>`;
+  }
+}
+const hasComposer = k => ["today", "tomorrow", "inbox"].includes(k);
+const composer = () => `<div class="composer">Add a task: tomorrow 17:00 #tag @Area<span class="send">${ic("arrow_upward")}</span></div>`;
+
+// ---------------------------------------------------------------- phone
+function phoneTop(title, actions) {
+  return `<div class="topbar"><h1 class="headline">${title}</h1>${actions}</div>`;
+}
+const syncBtn = `<button class="iconbtn" aria-label="Synced">${ic("cloud_done")}</button>`;
+const planBtn = `<button class="iconbtn" aria-label="Plan tomorrow">${ic("edit_calendar")}</button>`;
+const setBtn  = `<button class="iconbtn" data-go="settings" aria-label="Settings">${ic("settings")}</button>`;
+
+function renderPhone() {
+  const ph = U.phone, v = S.variant;
+  let top = "", segs = "", body = "", nav = "", overlay = "";
+  if (v === "A") {
+    const tabs = ["today", "tomorrow", "inbox", "places"];
+    const cur = ["today", "tomorrow", "inbox"].includes(ph.place) ? ph.place : "places";
+    const title = ph.place === "places" ? "Places" : P[ph.place].label;
+    const back = !["today", "tomorrow", "inbox", "places"].includes(ph.place) ? `<button class="iconbtn" data-go="places" aria-label="Back">${ic("arrow_back")}</button>` : "";
+    top = `<div class="topbar">${back}<h1 class="headline">${title}</h1>${syncBtn}${planBtn}${setBtn}</div>`;
+    body = ph.place === "places" ? placesTiles("phone") : placeBody(ph.place);
+    nav = tabs.map(t => {
+      const lbl = t === "places" ? "Places" : P[t].label, icn = t === "places" ? "apps" : P[t].icon;
+      const badge = t === "places" ? `<span class="badge">3</span>` : (P[t]?.count && t === "inbox" ? `<span class="badge">${P[t].count}</span>` : "");
+      return `<button data-go="${t}" aria-current="${cur === t}"><span class="pill">${ic(icn, cur === t)}${badge}</span>${lbl}</button>`;
+    }).join("");
+  } else if (v === "B") {
+    const sec = sectionOf(ph.place) || SECTIONS[0];
+    top = phoneTop(P[ph.place].label, `${syncBtn}${planBtn}${setBtn}`);
+    if (sec.places.length > 1) segs = `<div class="segs">${sec.places.map(k => `<button class="chip" data-go="${k}" aria-pressed="${k === ph.place}">${P[k].label}${P[k].count ? ` <span class="badge" style="transform:scale(.85)">${P[k].count}</span>` : ""}${P[k].isNew ? ` <span class="new">NEW</span>` : ""}</button>`).join("")}</div>`;
+    body = placeBody(ph.place);
+    nav = SECTIONS.map(s => {
+      const on = s === sec, note = s.places.some(k => P[k].count || P[k].dot);
+      return `<button data-sec="${s.id}" aria-current="${on}"><span class="pill">${ic(s.icon, on)}${note && !on ? `<span class="dot" style="top:2px;right:10px"></span>` : ""}</span>${s.label}</button>`;
+    }).join("");
+  } else {
+    top = phoneTop(P[ph.place].label, `${syncBtn}${planBtn}${setBtn}`);
+    body = placeBody(ph.place);
+    nav = ph.pins.map(k => `<button data-go="${k}" aria-current="${ph.place === k}"><span class="pill">${ic(P[k].icon, ph.place === k)}${P[k].count ? `<span class="badge">${P[k].count}</span>` : ""}</span>${P[k].label}</button>`).join("")
+      + `<button data-sheet="1" aria-current="${!ph.pins.includes(ph.place)}"><span class="pill">${ic("apps", !ph.pins.includes(ph.place))}<span class="dot" style="top:2px;right:10px"></span></span>All</button>`;
+    if (ph.sheet) {
+      overlay = `<div class="scrim" data-close="1"></div><div class="sheet ${ph.editing ? "editing" : ""}"><div class="grabber"></div>
+        <div style="display:flex;align-items:center;margin-bottom:12px"><h2 class="headline" style="font-size:24px;flex:1">${ph.editing ? "Pick 4 pins" : "All places"}</h2>
+          <button class="chip" data-edit="1" aria-pressed="${ph.editing}">${ic(ph.editing ? "check" : "push_pin")} ${ph.editing ? "Done" : "Edit pins"}</button></div>
+        <div class="allgrid stagger">${ALL.concat("settings").map((k, i) => `<button class="cell" style="animation-delay:${i * 18}ms" ${ph.editing ? `data-pin="${k}"` : `data-go="${k}"`}>
+          <span class="ico">${ic(P[k].icon, true)}</span>${P[k].label}<span class="sub">${P[k].live || "&nbsp;"}</span>
+          ${ph.editing && k !== "settings" ? `<span class="pin ${ph.pins.includes(k) ? "on" : ""}">${ic("push_pin", true)}</span>` : ""}
+          ${!ph.editing && (P[k].count || P[k].dot) ? `<span class="dot" style="top:10px;right:18px"></span>` : ""}</button>`).join("")}</div></div>`;
+    }
+  }
+  const pageKey = ph.place + v;
+  return `<div class="gm phone" data-dev="phone">
+    <div class="status"><span>9:41</span><span>${ic("signal_cellular_alt")} ${ic("wifi")} ${ic("battery_full")}</span></div>
+    ${top}${segs}
+    <div class="content"><div class="page" data-k="${pageKey}">${body}</div></div>
+    ${hasComposer(ph.place) ? `<div style="position:relative;height:0">${composer().replace('class="composer"', 'class="composer" style="bottom:88px"')}</div>` : ""}
+    <nav class="navbar" aria-label="Places">${nav}</nav>${overlay}</div>`;
+}
+
+function placesTiles(dev) {
+  const order = ["habits", "goals", "tally", "wants", "projects", "calendar", "reviews", "stats", "archive"];
+  return `<div class="tiles stagger">${order.map((k, i) => {
+    const p = P[k];
+    let live = `<div class="muted">${p.live}</div>`;
+    if (p.ring !== undefined) live = `<div style="display:flex;align-items:center;gap:10px">${ringHtml(p.ring, 40, 6)}<span class="num" style="font-size:22px">${p.live.split(" ")[0]}<span class="muted" style="font-size:13px;font-weight:500;font-style:normal"> / ${p.live.split(" ")[2]}</span></span></div>`;
+    if (k === "tally") live = `<div><div class="num" style="font-size:22px">5 h 12 m</div><div style="margin-top:6px">${tallyBar()}</div></div>`;
+    if (k === "wants") live = `<div><span class="num" style="font-size:26px">2</span> <span class="muted">ready</span></div>`;
+    const wide = dev === "phone" && (k === "tally" || k === "reviews") ? " wide" : "";
+    const hero = k === "reviews" ? " hero" : "";
+    return `<button class="tile${wide}${hero}" data-go="${k}" style="animation-delay:${i * 35}ms">
+      <div class="top">${ic(p.icon, true)}<span class="name">${p.label}</span>${p.isNew ? `<span class="new" style="margin-left:auto">NEW</span>` : ""}</div>
+      <div class="live">${k === "reviews" ? `<div>${ic("mail", true)} ${p.live}</div>` : live}</div></button>`;
+  }).join("")}</div>`;
+}
+
+// ---------------------------------------------------------------- windows
+function navItem(k, cur, extra = "") {
+  const lbl = k === "places" ? "Places" : P[k].label, icn = k === "places" ? "apps" : P[k].icon;
+  const trail = k === "places" ? `<span class="trail"><span class="badge">3</span></span>` : `<span class="trail">${trailFor(k)}</span>`;
+  return `<button class="navitem" data-go="${k}" aria-current="${cur}" title="${lbl}" ${extra}>${ic(icn, cur)}<span class="txt">${lbl}</span>${trail}</button>`;
+}
+function renderWin() {
+  const w = U.win, v = S.variant;
+  let side = "";
+  const toggle = `<button class="navitem" data-narrow="1" title="Collapse">${ic("menu")}<span class="txt muted" style="font-size:12px">GoalMaker</span></button>`;
+  if (v === "A") {
+    const cur = ["today", "tomorrow", "inbox"].includes(w.place) ? w.place : (w.place === "settings" ? "settings" : "places");
+    side = toggle + ["today", "tomorrow", "inbox", "places"].map(k => navItem(k, cur === k)).join("") + `<div style="flex:1"></div>` + navItem("settings", cur === "settings");
+  } else if (v === "B") {
+    side = toggle + SECTIONS.map(s => {
+      const shut = !!w.shut[s.id];
+      const pending = s.places.some(k => P[k].count || P[k].dot);
+      return `<button class="sechead" data-shut="${s.id}" aria-expanded="${!shut}"><span class="label txt">${s.label}</span>${shut && pending ? `<span class="dot" style="position:static;box-shadow:none"></span>` : ""}<span class="ms chev">expand_more</span></button>
+        <div class="group ${shut ? "shut" : ""}"><div>${s.places.map(k => navItem(k, w.place === k)).join("")}</div></div>`;
+    }).join("") + `<div style="flex:1"></div>` + navItem("settings", w.place === "settings");
+  } else {
+    side = toggle + `<button class="navitem" data-palette="1" title="Go to (Ctrl+K)">${ic("search")}<span class="txt muted">Go to…</span><span class="trail">Ctrl K</span></button>`
+      + `<div class="sechead"><span class="label txt">Pinned</span></div>` + w.pins.map(k => navItem(k, w.place === k)).join("")
+      + `<button class="sechead" data-allopen="1" aria-expanded="${w.allOpen}"><span class="label txt">All places</span><span class="ms chev">expand_more</span></button>`
+      + `<div class="group ${w.allOpen ? "" : "shut"}"><div>${ALL.filter(k => !w.pins.includes(k)).map(k => navItem(k, w.place === k)).join("")}</div></div>`
+      + `<div style="flex:1"></div>` + navItem("settings", w.place === "settings");
+  }
+  const title = w.place === "places" ? "Places" : P[w.place].label;
+  let chips = "";
+  if (v === "B") { const sec = sectionOf(w.place); if (sec && sec.places.length > 1) chips = `<div style="display:flex;gap:6px;margin:-6px 0 16px">${sec.places.map(k => `<button class="chip" data-go="${k}" aria-pressed="${k === w.place}">${P[k].label}</button>`).join("")}</div>`; }
+  const pinBtn = v === "C" && w.place !== "settings" ? `<button class="chip" data-winpin="${w.place}" aria-pressed="${w.pins.includes(w.place)}">${ic("push_pin", w.pins.includes(w.place))} ${w.pins.includes(w.place) ? "Pinned" : "Pin"}</button>` : "";
+  const body = w.place === "places" ? placesTiles("win") : placeBody(w.place, "win");
+  let palette = "";
+  if (w.palette) {
+    const list = ALL.concat("settings").filter(k => P[k].label.toLowerCase().includes(w.paletteQ.toLowerCase()));
+    const sel = Math.min(w.paletteSel, Math.max(0, list.length - 1));
+    palette = `<div class="palette" data-close="1"><div class="box"><input id="palIn" placeholder="Go to a place…" value="${w.paletteQ}">
+      ${list.map((k, i) => `<button class="opt ${i === sel ? "sel" : ""}" data-go="${k}">${ic(P[k].icon)}<span>${P[k].label}</span><span class="muted" style="margin-left:auto;font-size:12px">${P[k].live}</span></button>`).join("") || `<div class="opt muted">Nothing called that</div>`}</div></div>`;
+  }
+  return `<div class="gm win" data-dev="win">
+    <div class="titlebar">${ic("target")}<span>GoalMaker</span><span class="caps"><span>–</span><span>▢</span><span>✕</span></span></div>
+    <div class="body"><nav class="side ${w.narrow ? "narrow" : ""}" aria-label="Places">${side}</nav>
+      <main class="main"><div class="page" data-k="${w.place + v}">
+        <div class="toolbar"><h1 class="headline">${title}</h1>${w.place === "places" ? "" : `<span class="muted">${P[w.place].live}</span>`}
+          <span style="margin-left:auto;display:flex;gap:8px;align-items:center">${pinBtn}${syncBtn}${hasComposer(w.place) ? `<button class="chip" style="background:var(--primary);color:var(--onPrimary);border-color:var(--primary)">${ic("edit_calendar")} Plan tomorrow</button>` : ""}</span></div>
+        ${chips}${body}${hasComposer(w.place) ? composer() : ""}</div></main></div>${palette}</div>`;
+}
+
+// ---------------------------------------------------------------- render + events
+function applyTheme() {
+  const t = THEMES[S.theme], c = t[S.mode], h = t.heading, r = document.documentElement.style;
+  const fam = `"${h.family}", system-ui, sans-serif`;
+  const map = { "--bg": c.background, "--surface": c.surface, "--surfaceVariant": c.surfaceVariant, "--surfaceMain": c.background, "--text": c.text, "--muted": c.textMuted,
+    "--outline": c.outline, "--primary": c.primary, "--onPrimary": c.onPrimary, "--accent": c.accent, "--onAccent": c.onAccent, "--hero": c.hero,
+    "--onHero": c.onHero, "--heroAccent": c.heroAccent, "--r-card": t.shape.card + "px", "--r-row": t.shape.row + "px", "--r-check": t.shape.checkbox + "px",
+    "--r-button": Math.min(t.shape.button, 12) + "px", "--head-font": fam, "--body-font": fam, "--head-weight": h.weight, "--head-style": h.italic ? "italic" : "normal",
+    "--head-width": h.width + "%", "--head-transform": h.uppercase ? "uppercase" : "none", "--head-tracking": h.tracking + "em" };
+  for (const [k, v] of Object.entries(map)) r.setProperty(k, v);
+  document.body.classList.toggle("reduce", S.reduce);
+}
+function render() {
+  applyTheme(); syncUrl();
+  const stage = document.getElementById("stage");
+  stage.innerHTML = (S.device !== "win" ? renderPhone() : "") + (S.device !== "phone" ? renderWin() : "");
+  document.getElementById("vLabel").textContent = `${S.variant} (${VARIANTS[S.variant].name})`;
+  document.getElementById("note").textContent = VARIANTS[S.variant].note;
+  seg("deviceSeg", [["phone", "Phone"], ["win", "Windows"], ["both", "Both"]], "device");
+  seg("modeSeg", [["light", "Light"], ["dark", "Dark"]], "mode");
+  document.getElementById("themeSel").value = S.theme;
+  document.getElementById("reduceChk").checked = S.reduce;
+  document.getElementById("state").textContent =
+    `variant=${S.variant} · phone: place=${U.phone.place}${S.variant === "C" ? ` pins=[${U.phone.pins}] sheet=${U.phone.sheet} editing=${U.phone.editing}` : ""}${S.variant === "B" ? ` section=${(sectionOf(U.phone.place) || {}).id}` : ""}`
+    + ` · windows: place=${U.win.place} narrow=${U.win.narrow}${S.variant === "B" ? ` collapsed=[${Object.keys(U.win.shut).filter(k => U.win.shut[k])}]` : ""}${S.variant === "C" ? ` pins=[${U.win.pins}] palette=${U.win.palette}` : ""}`
+    + ` · theme=${S.theme}/${S.mode}${S.reduce ? " · reduce motion" : ""}`;
+  const pi = document.getElementById("palIn");
+  if (pi) { pi.focus(); pi.setSelectionRange(pi.value.length, pi.value.length); }
+}
+function seg(id, opts, key) {
+  document.getElementById(id).innerHTML = opts.map(([v, l]) => `<button data-${key}="${v}" aria-pressed="${S[key] === v}">${l}</button>`).join("");
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-go],[data-sec],[data-sheet],[data-close],[data-edit],[data-pin],[data-narrow],[data-shut],[data-palette],[data-allopen],[data-winpin],[data-device],[data-mode]");
+  if (!t) return;
+  const d = t.dataset, dev = t.closest("[data-dev]")?.dataset.dev, st = dev === "win" ? U.win : U.phone;
+  if (d.device) S.device = d.device;
+  else if (d.mode) S.mode = d.mode;
+  else if (d.close !== undefined && e.target === t) { st.sheet = false; st.editing = false; st.palette = false; }
+  else if (d.go) {
+    st.place = d.go; st.sheet = false; st.editing = false; st.palette = false; st.paletteQ = "";
+    const sec = sectionOf(d.go); if (sec) st.lastInSection[sec.id] = d.go;
+  }
+  else if (d.sec) { const sec = SECTIONS.find(s => s.id === d.sec); st.place = st.lastInSection[sec.id] || sec.places[0]; }
+  else if (d.sheet) st.sheet = true;
+  else if (d.edit) st.editing = !st.editing;
+  else if (d.pin) {
+    const i = st.pins.indexOf(d.pin);
+    if (i >= 0) { if (st.pins.length > 1) st.pins.splice(i, 1); }
+    else { if (st.pins.length >= 4) st.pins.shift(); st.pins.push(d.pin); }
+  }
+  else if (d.narrow) st.narrow = !st.narrow;
+  else if (d.shut) st.shut[d.shut] = !st.shut[d.shut];
+  else if (d.palette) { st.palette = true; st.paletteSel = 0; }
+  else if (d.allopen) st.allOpen = !st.allOpen;
+  else if (d.winpin) {
+    const i = st.pins.indexOf(d.winpin);
+    if (i >= 0) st.pins.splice(i, 1); else st.pins.push(d.winpin);
+  }
+  else return;
+  render();
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "palIn") { U.win.paletteQ = e.target.value; U.win.paletteSel = 0; render(); }
+});
+document.getElementById("themeSel").onchange = e => { S.theme = e.target.value; render(); };
+document.getElementById("reduceChk").onchange = e => { S.reduce = e.target.checked; render(); };
+document.getElementById("resetBtn").onclick = () => { U = freshUi(); render(); };
+const keys = Object.keys(VARIANTS);
+function cycle(n) { S.variant = keys[(keys.indexOf(S.variant) + n + keys.length) % keys.length]; render(); }
+document.getElementById("prevV").onclick = () => cycle(-1);
+document.getElementById("nextV").onclick = () => cycle(1);
+document.addEventListener("keydown", e => {
+  const inField = e.target.closest?.("input,textarea,[contenteditable]");
+  if (S.variant === "C" && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); U.win.palette = true; U.win.paletteSel = 0; render(); return; }
+  if (U.win.palette && e.target.id === "palIn") {
+    const list = ALL.concat("settings").filter(k => P[k].label.toLowerCase().includes(U.win.paletteQ.toLowerCase()));
+    if (e.key === "Escape") { U.win.palette = false; render(); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); U.win.paletteSel = Math.min(U.win.paletteSel + 1, list.length - 1); render(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); U.win.paletteSel = Math.max(U.win.paletteSel - 1, 0); render(); }
+    else if (e.key === "Enter" && list.length) { U.win.place = list[Math.min(U.win.paletteSel, list.length - 1)]; U.win.palette = false; U.win.paletteQ = ""; render(); }
+    return;
+  }
+  if (inField) return;
+  if (e.key === "ArrowLeft") cycle(-1);
+  if (e.key === "ArrowRight") cycle(1);
+  if (e.key === "Escape") { U.phone.sheet = false; U.phone.editing = false; render(); }
+});
+render();
+</script>
+</body>
+</html>
