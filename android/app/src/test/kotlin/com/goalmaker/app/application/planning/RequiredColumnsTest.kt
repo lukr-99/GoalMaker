@@ -52,6 +52,7 @@ class RequiredColumnsTest {
         val projects = ProjectList(test.replica, rows, {})
         val reminders = ReminderList(test.replica, rows, {})
         val tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { day }
+        val wants = WantList(test.replica, rows, {}) { day }
 
         // One row in every synced table, each through the list that owns it.
         assertNotNull(areas.create("Health"))
@@ -72,6 +73,8 @@ class RequiredColumnsTest {
         assertNotNull(projects.addMilestone(project!!.id, "M6"))
         rituals.record(RitualRunList.PLAN_TOMORROW, day)
         assertNotNull(reviews.open(ReviewRules.WEEKLY, day))
+        assertNotNull(wants.add(WantDraft("Trail shoes", "The old ones have holes", price = 3400.0)))
+        assertTrue(wants.setCooldowns(WantCooldowns.DEFAULT.copy(smallDays = 5)))
 
         // Every table was written, and every row of every table fills what the server needs.
         val written = test.catalog.tables.associate { table -> table.name to test.replica.all(table.name) }
