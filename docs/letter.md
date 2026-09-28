@@ -1,7 +1,7 @@
 # The Letter
 
-> M8 (`.scratch/m8-letter-tally-wants/`): `get_review_digest` is built (M8-07); the Letter in the apps
-> and the routine follow (M8-08, M8-09).
+> M8 (`.scratch/m8-letter-tally-wants/`): `get_review_digest` (M8-07) and the Letter in both apps
+> (M8-08) are built; the routine follows (M8-09).
 
 The Letter is a text about a finished week (or month) that a scheduled Claude routine writes and
 GoalMaker keeps as that review's summary (spec, stories 100 to 103; [ADR 0012](adr/0012-the-letter-written-by-a-routine.md)).
@@ -52,11 +52,12 @@ digest's shape are pinned by the `digest` group of `contracts/vectors/reviews.js
 ## In the apps
 
 - **The Letter step** comes before the look-back when the review has a summary: the period's dates as
-  the headline in the accent color, a "by Claude" mark, the letter in light Markdown at a reading
-  width (about 680 px on Windows), and a filled Continue. Without a letter the review starts at the
-  look-back as before.
-- **The Reviews screen** marks a review with a letter by an accent envelope and shows its first line;
-  opening it lands on the Letter step.
+  the headline in the accent color, a "by Claude" mark, the letter in light Markdown (with `#` to
+  `###` headings, [archive](archive.md)) at a reading width (about 680 px on Windows; on the phone the
+  top bar folds away while it is read), and a filled Continue (Enter on Windows). Without a letter
+  the review starts at the look-back as before, and back from the look-back returns to the letter.
+- **The Reviews screen** marks a review with a letter by an accent envelope and shows its first line
+  of text (the first heading only when there is nothing else); opening it lands on the Letter step.
 - **The review reminder** says "Your letter for the week is here" when the letter arrived before it
   rings, and opens the Letter step (`letterWaiting` in `contracts/vectors/reminders.json`).
 - The apps never edit a letter. Asking Claude, or running the routine again, replaces it.
