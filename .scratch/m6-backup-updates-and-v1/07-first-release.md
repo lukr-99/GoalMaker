@@ -1,6 +1,6 @@
 # M6-07: The owner's setup and the first release
 
-**Status:** in progress · **Milestone:** M6
+**Status:** in progress (with M6-04) · **Milestone:** M6
 
 ## Scope
 - The one-time setup the roadmap has carried since M0, following `docs/setup/`: create the cloud
@@ -27,3 +27,9 @@ The cloud project has its schema, settings, sender and the connector; the phone 
 updated to it.
 
 Left: the PC from the installer, and closing signups once both are in.
+
+## Close-out (2026-09-28)
+
+Both devices run installed releases (1.2.0 is out from the public repository) and signups on the
+cloud project are closed. What is left is M6-04's check that the main PC updates itself from GitHub;
+then the old releases bucket can stop being fed.

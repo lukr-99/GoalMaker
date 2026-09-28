@@ -35,6 +35,11 @@ instantly. Reminders are scheduled locally on each device and fire on both. Clau
 a remote MCP server (the **connector**) that exposes GoalMaker tools and ritual prompts. A quick chat
 through the Gemini free tier follows as M7.
 
+GoalMaker is for one person (ADR 0011). After v1 it grows three personal extensions in M8: a
+**Letter** a Claude routine writes about each week, **Tally** for where time actually went on the
+phone and the PC, and **Wants**, a wishlist where every want waits out a cooldown before it is
+bought or dropped.
+
 ## User Stories
 
 ### Capture and organize
@@ -268,6 +273,41 @@ through the Gemini free tier follows as M7.
     publishes a signed manifest to the update bucket and drafts a GitHub Release, so that shipping is
     one command.
 
+### Letter, Tally and Wants (M8, after v1)
+
+Story numbers continue from 99 (the list above repeats 88 once; those numbers stay as they are).
+
+99. As the owner, I want a navigation with room for more places than today's tab bar and overflow
+    menu hold, so that new places are easy to find instead of hidden.
+100. As the owner, I want a scheduled Claude routine to write me a letter about my week from
+     GoalMaker and my other apps, so that patterns I missed are waiting for me.
+101. As the owner, I want the weekly review to open on that letter when there is one, and the review
+     reminder to say it has arrived, so that I read it before I reflect.
+102. As the owner, I want past letters on the Reviews screen, so that I can read how earlier weeks
+     looked.
+103. As the owner, I want Claude to get a whole week or month from GoalMaker in one call, so that a
+     routine doesn't have to piece it together.
+104. As the owner, I want to note something I'd like to buy with the reason I want it, a link and a
+     price, so that the wish is written down instead of acted on.
+105. As the owner, I want every want to wait out a cooldown set by its price, with thresholds I can
+     change, so that impulse buys cool off.
+106. As the owner, I want one notification on the day wants become ready, so that I decide while I
+     still remember why I wanted them.
+107. As the owner, I want to mark a want bought or dropped with a note, and see bought against
+     dropped and the money not spent in stats, so that I learn what I really wanted.
+108. As the owner, I want Claude to check a want's current price and alternatives and record what it
+     found and what I decided, so that the decision is informed.
+109. As the owner, I want to see where my time went on the phone and the PC, per category and per
+     day, so that I can compare it with what I meant to do.
+110. As the owner, I want time in a project's folder on the PC to count toward that project, so that
+     I see how much each project got.
+111. As the owner, I want the raw record of apps and windows to stay on each device and only daily
+     totals per category to sync, so that the most private data never leaves the device.
+112. As the owner, I want to add my own categories and rules, so that time is sorted my way on both
+     devices.
+113. As the owner, I want Tally in stats, in the weekly review and through the connector, so that
+     Claude and the Letter can say how much of the week was coding.
+
 ## Implementation Decisions
 
 ### Architecture
@@ -307,6 +347,11 @@ through the Gemini free tier follows as M7.
 - `activity_log`: actor (`owner | claude | system`), action, entity, before and after snapshots,
   undone flag.
 - `connector_links`: hashed secret, created at, last used at, revoked at.
+- M8 adds `wants` (title, reason, link, price and currency, area, cooldown days, cools until,
+  decision `bought | dropped` with decided at and a note, the last price Claude checked with when and
+  where, made by), a `want_cooldowns` setting on `profiles`, and Tally's `tally_days` (day, device,
+  device kind, category, project, minutes), `tally_categories` and `tally_rules`. A review's
+  `summary` is where the Letter is kept; no column is added for it.
 - Every synced row carries `id` (UUID made on the device), `owner_id`, `created_at`, `updated_at`
   (set by the server), `deleted_at` (tombstone) and `version`.
 
@@ -342,7 +387,10 @@ through the Gemini free tier follows as M7.
 
 Recurrence expansion, streak calculation, day rollover, composer parsing, sync merge, semantic
 version comparison and release-manifest verification each have a versioned vector file in
-`contracts/vectors/`, run by both apps' tests.
+`contracts/vectors/`, run by both apps' tests. M8 adds `wants.json` (cooldowns, states, the ready
+notification, the stats block) and `tally.json` (rule matching, idle, daily totals, project from a
+window title), and extends `reviews.json` (the digest), `reminders.json` (the letter waiting) and
+`composer.json` (`/want`).
 
 ### Claude connector
 
@@ -365,6 +413,30 @@ An `assistant` Edge Function runs a tool loop over the shared tool module using 
 tier, behind a provider interface so other models (such as a local Ollama model on the PC) can be
 tried later. Not part of v1.
 
+### Letter, Tally and Wants (M8)
+
+- **Letter (ADR 0012, [docs/letter.md](letter.md)):** a scheduled Claude routine calls
+  `get_review_digest` (one period in one answer, built by the same code as the review prompts), reads
+  the owner's other apps through their own connectors, and saves the letter with
+  `save_review_summary`, passing the digest's period start. The apps show a review's summary as its
+  Letter: the guided review's first step when there is one, an envelope mark and the first line on
+  the Reviews screen, and a review reminder that says the letter is here. GoalMaker sends no email.
+- **Wants ([docs/wants.md](wants.md)):** a synced `wants` table. The cooldown comes from the price
+  through thresholds in the profile (7 days under 1,000, 30 under 10,000, 90 above, 30 without a
+  price, in the owner's currency), changeable in the Wants place and per want. After it a want is
+  ready until decided. One notification a day at a chosen time lists the wants that became ready,
+  derived like the review reminders, with no reminder rows. Claude checks prices with its own web
+  search; GoalMaker never fetches from a shop.
+- **Tally (ADR 0013, [docs/tally.md](tally.md)):** off until turned on per device. Android reads
+  `UsageStatsManager` events under the usage access special permission and keeps nothing raw of its
+  own; Windows tracks the foreground window with `SetWinEventHook`, checks titles every 15 seconds,
+  counts 5 minutes without input (or a locked or sleeping PC) as idle except in a Video window, and
+  keeps a raw log for 30 days. Both turn their records into daily minutes per category (and project
+  on the PC, from an editor's window title matched against projects' folders) on the planning day,
+  and only those totals sync.
+- **Navigation:** a prototype chooses a navigation with room for more places before Wants and Tally
+  arrive (M8-01).
+
 ### Reviews content
 
 A versioned prompt library (about 100 prompts with categories and triggers) ships as a content file
@@ -374,14 +446,14 @@ statistics.
 ### Android
 
 Kotlin, Jetpack Compose with **Material 3 Expressive** (pinned alpha, ADR 0005), Navigation 3,
-the shared SQLite replica on `androidx.sqlite` (ADR 0007), WorkManager, Glance widgets, supabase-kt, Vico charts, Haze blur, Kizitonwose Calendar,
+the shared SQLite replica on `androidx.sqlite` (ADR 0007), WorkManager, Glance widgets, supabase-kt, charts drawn on Compose `Canvas`, Haze blur, Kizitonwose Calendar,
 Reorderable, Konfetti, a Markdown renderer. Min SDK 26, compile SDK 37 (the Expressive alpha needs
 it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build:
 `com.goalmaker.app.debug`, version suffix `-dev`, local stack by default.
 
 ### Windows
 
-.NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), LiveCharts2, toast notifications
+.NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), charts drawn by its own WPF controls, toast notifications
 through the Windows SDK projection (unpackaged, without the Windows App SDK; ADR 0009),
 NHotkey (global hotkey), Markdig, the Supabase C# client, the shared SQLite replica through
 Microsoft.Data.Sqlite (ADR 0007).
@@ -425,7 +497,8 @@ project; deploys run through the CLI. See ADR 0001.
 
 ## Out of Scope (v1)
 
-- Other users, sharing, collaboration.
+- Other users, sharing, collaboration. GoalMaker is for personal use only (ADR 0011); the shared habit
+  challenges idea was removed from the roadmap on 2026-09-28.
 - Any paid LLM API; in-app chat before M7.
 - OAuth for the connector (secret link in v1).
 - Firebase or any push service.

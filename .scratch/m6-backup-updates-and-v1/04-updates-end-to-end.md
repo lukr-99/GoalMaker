@@ -1,6 +1,6 @@
 # M6-04: Updates through the channel, end to end
 
-**Status:** in progress · **Milestone:** M6
+**Status:** in progress (one check left) · **Milestone:** M6
 
 ## Scope
 - The update seams and the signed manifest are M0-06 and were checked on Windows against the local
@@ -29,3 +29,10 @@ a 0.1.0 release build signed in to the cloud project, found 1.0.0, verified and 
 
 Left: the same on Windows, the manual download when the updater cannot finish (story 94), and an
 update the owner postpones.
+
+## Close-out (2026-09-28)
+
+For a personal app, one thing is left: the main PC, which already runs an installed release, finds
+the next release on GitHub, verifies it and installs it (with M6-07). The manual download link is in
+both apps since 1.2.0. Postponing an update, and seeing a bad manifest refused on a real device, move
+to "After v1" in the roadmap; the refusals are already pinned by the release-manifest vectors.

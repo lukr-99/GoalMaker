@@ -3,6 +3,9 @@
 The spec is [docs/spec.md](spec.md). Each milestone lands in the order backend → Android → Windows,
 and each has markdown issues under `.scratch/<milestone>/`.
 
+GoalMaker is built for the owner's personal use only (ADR 0011): nothing shared or multi-user is
+planned, and the shared habit challenges idea was taken off the roadmap on 2026-09-28.
+
 ## Process
 
 1. Spec grilling (done; the record stays with the owner, not in the repository)
@@ -23,9 +26,12 @@ and each has markdown issues under `.scratch/<milestone>/`.
    their board, the week and month calendar with dragging, the Android Today and Habits widgets,
    projects through the connector, share to GoalMaker, the Windows mini windows and Add to Startup
    Profiles; checked through the endpoint against the local stack)
-10. **M6: v1.0** (planned as issues 2026-09-20: backup and restore, updates end to end, the
-    accessibility pass, hardening, and the first release)
-11. M7 and the post-v1 list
+10. **M6: v1.0** (planned as issues 2026-09-20; 1.0.0 published 2026-09-21, 1.2.0 on 2026-09-23 from
+    the public repository; backup and restore, the problems place and the release are built, and
+    the close-out below is what is left)
+11. **M7: quick chat** (next; issues still to write in `.scratch/m7-quick-chat/`)
+12. **M8: Letter, Tally, Wants** (planned as issues 2026-09-28 in `.scratch/m8-letter-tally-wants/`)
+13. The post-v1 list
 
 ## Milestones
 
@@ -77,12 +83,59 @@ both apps, the accessibility pass, hardening, and the first release with the own
 Where a problem shows (one place in Settings with a quiet mark, not across the top of Today).
 Issues: `.scratch/m6-backup-updates-and-v1/`.
 
+**Close-out (decided 2026-09-28).** For a personal app M6 is done when three things hold:
+
+1. The main PC, which already runs an installed release, updates itself once from the latest GitHub
+   Release (M6-04 and M6-07).
+2. Android shows the "replica won't open" screen Windows already has, instead of closing (M6-06).
+3. A session the server refuses while an app is open sends the owner to sign-in on both apps without
+   losing the outbox (M6-06).
+
+Everything else M6 listed moves to "After v1" below: postponing an update, the rest of the
+accessibility pass (keyboard reach on Windows, Android focus order, the largest text size), a full
+disk and sync under pressure.
+
 ### M7: quick chat
 
 The `assistant` Edge Function over the shared tool module with the Gemini free tier behind a
 provider interface; the composer switches between quick-add and chat.
 
+### M8: Letter, Tally, Wants
+
+Three personal extensions, each released on its own, after a navigation that has room for them.
+Issues: `.scratch/m8-letter-tally-wants/`.
+
+- **Navigation (M8-01, M8-02):** the tab bar and the overflow dots are full. A prototype picks a
+  navigation that scales, then both apps get it before any new place arrives.
+- **Wants (M8-03 to M8-06, release 1.3.0 with the navigation):** a wishlist where every want carries
+  its reason and waits out a cooldown set by its price (thresholds the owner can change), one daily
+  notification for wants that became ready, a Wants place with Cooling, Ready and Decided filters,
+  `/want` in the composer, a Wants block in stats, and connector tools so Claude can check prices
+  with its own web search and record the decision ([docs/wants.md](wants.md)).
+- **Letter (M8-07 to M8-09, release 1.4.0):** a Claude routine writes a weekly letter from
+  GoalMaker's `get_review_digest` and the owner's other apps' own connectors, saved as the review's
+  summary and read as the first step of the guided review (ADR 0012, [docs/letter.md](letter.md)).
+- **Tally (M8-10 to M8-14, release 1.5.0):** where time actually went on the phone and the PC, as
+  daily minutes per category (and per project on the PC), with raw data kept on each device (ADR
+  0013, [docs/tally.md](tally.md)); a Tally place, blocks in stats and the review, and
+  `get_time_tally` in the connector.
+
 ## After v1
+
+From M6's close-out (2026-09-28):
+
+- Postponing an update, and refusing a bad manifest shown on a real device
+- The rest of the accessibility pass: keyboard reach on Windows (mini windows, tray flyout,
+  quick-add), Android focus order and the composer's chips, both apps at the largest text size
+- Hardening: a full disk, sync under pressure (a device off for weeks, two devices on one row, the
+  purge crossing a pull)
+- Habit reminders with check-in from the notification
+- A yearly review you can start, and the January nudge to set yearly goals (story 66)
+- UI tests: Maestro flows, Compose UI tests, a Windows start-up smoke test
+- Small spec gaps: the 1-hour snooze on Android, filters on Projects, Calendar and Archive,
+  important reminders through Do Not Disturb
+
+From the spec:
 
 - Connector OAuth 2.1 with a sign-in page on Cloudflare Pages (`web/`)
 - Read-only calendar feeds

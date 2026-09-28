@@ -38,6 +38,11 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   ([docs/mini-windows.md](docs/mini-windows.md)), and starting with Windows, with Add to Startup
   Profiles when that app is installed ([docs/startup.md](docs/startup.md)).
 
+**Next:** M6's close-out, M7 (quick chat), then M8: a navigation with room to grow, Wants
+([docs/wants.md](docs/wants.md)), the Letter ([docs/letter.md](docs/letter.md)) and Tally
+([docs/tally.md](docs/tally.md)). GoalMaker is for personal use only (ADR 0011). The plan is in
+[docs/roadmap.md](docs/roadmap.md).
+
 No release has been published yet. GoalMaker is built for one person, so there is no server of ours
 to join: running it means standing up your own project, sender and signing keys, which
 [docs/setup/your-own-copy.md](docs/setup/your-own-copy.md) walks through from a clean clone.

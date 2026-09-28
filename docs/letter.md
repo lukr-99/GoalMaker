@@ -1,0 +1,78 @@
+# The Letter
+
+> Planned in M8 (`.scratch/m8-letter-tally-wants/`, M8-07 to M8-09). Not built yet.
+
+The Letter is a text about a finished week (or month) that a scheduled Claude routine writes and
+GoalMaker keeps as that review's summary (spec, stories 100 to 103; [ADR 0012](adr/0012-the-letter-written-by-a-routine.md)).
+It is meant to be read before the review, not instead of it: the owner reads the letter, then looks
+back, reflects and rates the week as always ([reviews](reviews.md)).
+
+## Who does what
+
+| Part | Lives in | Does |
+|---|---|---|
+| The routine | Claude (a scheduled routine on the owner's plan) | Gathers, writes, saves, and may email |
+| `get_review_digest` | The connector | One period of GoalMaker in one answer |
+| Other apps' connectors | Those apps | Their own data, straight to the routine |
+| `save_review_summary` | The connector | Stores the letter as the review's `summary` |
+| The Letter step | Both apps | Shows it first in the guided review |
+
+No other app's data passes through GoalMaker's backend, and GoalMaker sends no email.
+
+## `get_review_digest`
+
+`get_review_digest(kind = weekly | monthly, period?)` returns, as JSON:
+
+- `period`: kind, start and end (the start is what `save_review_summary` must be given back);
+- `done`: tasks finished, by day, with area and project;
+- `open`: tasks still open, overdue ones, and slipping ones with their move counts;
+- `goals`: the period's goals with progress against where they should be by now;
+- `habits`: each habit's periods met, missed and skipped, and its streak;
+- `projects`: items moved to Done in the period, per project;
+- `triggers`: the reactive prompt triggers that fired, with their subjects ([reviews](reviews.md));
+- `review`: this period's mood, energy and reflections if the review was already done, and the last
+  period's letter;
+- `next`: the next period's planned tasks, deadlines and goals set so far;
+- `wants`: wants that became ready or were decided in the period, and those ready next period
+  ([wants](wants.md));
+- `tally`: minutes per category and per project, per device kind ([tally](tally.md)).
+
+The prompts `weekly_review` and `monthly_review` are built from the same digest, so the two never
+disagree.
+
+**Which period by default:** the week or month that holds **yesterday's** planning day. Run on Sunday
+evening, that is the week ending now; run on Monday morning, the week just gone. The rule and the
+digest's shape are pinned by the `digest` group of `contracts/vectors/reviews.json`.
+
+## In the apps
+
+- **The Letter step** comes before the look-back when the review has a summary: the period's dates as
+  the headline in the accent color, a "by Claude" mark, the letter in light Markdown at a reading
+  width (about 680 px on Windows), and a filled Continue. Without a letter the review starts at the
+  look-back as before.
+- **The Reviews screen** marks a review with a letter by an accent envelope and shows its first line;
+  opening it lands on the Letter step.
+- **The review reminder** says "Your letter for the week is here" when the letter arrived before it
+  rings, and opens the Letter step (`letterWaiting` in `contracts/vectors/reminders.json`).
+- The apps never edit a letter. Asking Claude, or running the routine again, replaces it.
+
+## The routine
+
+The owner's one-time step: in Claude, create a scheduled routine for **Sunday 18:00** (the owner's
+time zone) with GoalMaker turned on, plus any of the other connectors, and this prompt. A monthly
+routine is the same prompt with `monthly` on the 1st at 07:00.
+
+> Use GoalMaker. Call get_review_digest with kind weekly and no period. If these connectors are on,
+> also read them for the same dates: the Me app (journal and people, upcoming birthdays), Drawer
+> (deadlines and what expires soon), Learning (progress). Skip any that are off without saying so.
+>
+> Write me a letter about the week, in plain words, as a friend who has read all of it. Sections, as
+> short Markdown headings: what went well, what slipped, patterns I might have missed, what is
+> coming up (birthdays, deadlines, wants that become ready), and one focus for next week. Be specific
+> and use the numbers. At most 350 words. No lists longer than five lines.
+>
+> Save it with save_review_summary, kind weekly, and period set to the digest's period start.
+> Don't change anything else in GoalMaker or in any other app.
+
+Optional last line, when a Gmail connector is on: "Then email me the letter with the subject
+'Letter for the week of <period start>'."
