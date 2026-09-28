@@ -3,6 +3,9 @@
 // doesn't serve functions). It makes its own user and link in the database and deletes them after.
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.13";
 import { postgres } from "../_shared/deps.ts";
+import { localNow } from "../_shared/rules/day.ts";
+import { defaultPeriod } from "../_shared/rules/digest.ts";
+import { planningDay } from "../_shared/rules/planningDay.ts";
 import { reviewId } from "../_shared/rules/reviews.ts";
 import { cooldownsId } from "../_shared/rules/wants.ts";
 
@@ -974,6 +977,87 @@ Deno.test({
           if (Deno.env.get("GOALMAKER_UPDATE_SNAPSHOTS") === "1") await Deno.writeTextFile(file, text);
           assertEquals(text, await Deno.readTextFile(file), `${name} changed; the snapshot is the text before M8-07`);
         }
+      });
+
+      const digestOf = async (args: Record<string, string>) => {
+        const result = await client.tool("get_review_digest", args);
+        assert(!result.isError, result.text);
+        return JSON.parse(result.text);
+      };
+      const id = (n: number) => `d1e57000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+      const ids = (items: { id: string }[]) => items.map((item) => item.id);
+
+      await t.step("a seeded week comes back whole in one call", async () => {
+        const week = await digestOf({ kind: "weekly", period: "2026-08-19" });
+        assertEquals(week.period, { kind: "weekly", start: "2026-08-17", end: "2026-08-23" });
+        assertEquals(week.done, [
+          { day: "2026-08-18", tasks: [{ id: id(11), title: "Book the dentist", area: "Health", project: null }] },
+          { day: "2026-08-19", tasks: [{ id: id(12), title: "Prune the roses", area: null, project: "Garden" }] },
+        ]);
+        assertEquals(ids(week.open.left), [id(13)]);
+        assertEquals(week.open.left[0].moves, 4);
+        assertEquals(ids(week.open.overdue).sort(), [id(13), id(14), id(15)].sort());
+        assertEquals(ids(week.open.slipping), [id(13)]);
+        assertEquals(week.goals, [{
+          id: id(20),
+          title: "Run 20 km",
+          status: "open",
+          counts: "number",
+          value: 5,
+          target: 20,
+          unit: "km",
+          progress: 25,
+          expected_by_now: 100,
+          reached: false,
+        }]);
+        assertEquals(
+          week.habits.map((habit: Json) => [habit.name, habit.met, habit.missed, habit.skipped, habit.periods]),
+          [["Read", 2, 5, 0, 7], ["Stretch", 1, 5, 1, 7]],
+        );
+        assertEquals(week.projects, [{ project: "Garden", done: [{ id: id(12), title: "Prune the roses" }] }]);
+        assertEquals(week.triggers.map((one: Json) => one.trigger), [
+          "goal_behind",
+          "habit_missed",
+          "task_slipping",
+          "busy_period",
+        ]);
+        assertEquals(week.review, {
+          mood: 4,
+          energy: 3,
+          reflections: [{ prompt: "wins/proud", answer: "The dentist, finally." }],
+          has_letter: false,
+        });
+        assertEquals(week.last_letter, { period_start: "2026-08-10", letter: "Last week was calm." });
+        assertEquals([week.next.start, week.next.end], ["2026-08-24", "2026-08-30"]);
+        assertEquals(ids(week.next.tasks), [id(15)]);
+        assertEquals(ids(week.next.deadlines), [id(17), id(15)]);
+        assertEquals(ids(week.next.goals), [id(21)]);
+        assertEquals(ids(week.wants.became_ready), [id(40)]);
+        assertEquals(week.wants.decided.map((want: Json) => [want.title, want.decision, want.decided_on]), [
+          ["Kettle", "bought", "2026-08-20"],
+        ]);
+        assertEquals(ids(week.wants.ready_next), [id(42)]);
+      });
+
+      await t.step("without a period it is the one holding yesterday", async () => {
+        const today = planningDay(localNow("Europe/Prague", new Date()), 4);
+        for (const kind of ["weekly", "monthly"] as const) {
+          const found = await digestOf({ kind });
+          const expected = defaultPeriod(kind, today);
+          assertEquals(found.period, { kind, start: expected.start, end: expected.end });
+        }
+        assertEquals((await digestOf({})).period.kind, "weekly");
+        const nonsense = await client.tool("get_review_digest", { period: "last week" });
+        assert(nonsense.isError, nonsense.text);
+      });
+
+      await t.step("a monthly digest reads the whole month", async () => {
+        const month = await digestOf({ kind: "monthly", period: "2026-08-31" });
+        assertEquals(month.period, { kind: "monthly", start: "2026-08-01", end: "2026-08-31" });
+        assertEquals(month.done.flatMap((day: Json) => ids(day.tasks)), [id(10), id(11), id(12)]);
+        assertEquals(month.goals.map((goal: Json) => goal.title), ["Tidy the garden"]);
+        assertEquals([month.next.start, month.next.end], ["2026-09-01", "2026-09-30"]);
+        assertEquals(month.last_letter, null);
       });
     } finally {
       await sql`delete from auth.users where id = ${REVIEWER}`;
