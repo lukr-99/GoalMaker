@@ -185,6 +185,7 @@ public sealed class AppGraph : IDisposable
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
         SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode);
         Shell = new ShellViewModel(Auth, SignIn, Problems, runOnUi);
+        Places = new PlacesViewModel(Settings, strings);
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
@@ -468,6 +469,9 @@ public sealed class AppGraph : IDisposable
     public SignInViewModel SignIn { get; }
 
     public ShellViewModel Shell { get; }
+
+    /// <summary>The sidebar's pinned places and Go to (ADR 0014).</summary>
+    public PlacesViewModel Places { get; }
 
     /// <summary>What went wrong while nobody was watching (docs/problems.md).</summary>
     public ProblemLog Problems { get; } = new(TimeProvider.System);
