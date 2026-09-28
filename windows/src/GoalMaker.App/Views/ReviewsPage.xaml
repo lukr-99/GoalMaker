@@ -36,8 +36,15 @@
                     </ui:Button>
                     <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding OpenCommand}" Content="{Binding Action}"
                                Foreground="{DynamicResource GM.AccentBrush}" />
+                    <!-- A review with a letter carries an accent envelope. -->
+                    <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Center" Symbol="Mail24"
+                                   Foreground="{DynamicResource GM.AccentBrush}"
+                                   Visibility="{Binding HasLetter, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="{DynamicResource Reviews.Letter}" />
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Title}" FontSize="14" />
+                        <TextBlock Text="{Binding Letter}" FontSize="13" TextTrimming="CharacterEllipsis"
+                                   Visibility="{Binding HasLetter, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
                     </StackPanel>
                 </DockPanel>

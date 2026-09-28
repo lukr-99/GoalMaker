@@ -83,13 +83,15 @@ public sealed class ToastReminderNotifications
 
     /// <summary>
     /// Shows the reminder to write a review, for the planning day it rang on. Clicking it or Review opens
-    /// the review; Not now keeps it quiet for the rest of the day on every device (docs/reviews.md).
+    /// the review, on the letter when a Claude routine wrote one first, and then the reminder says so
+    /// (<paramref name="letter"/>); Not now keeps it quiet for the rest of the day on every device
+    /// (docs/reviews.md, docs/letter.md).
     /// </summary>
-    public void ShowReview(string ritual, DateOnly day, bool monthly)
+    public void ShowReview(string ritual, DateOnly day, bool monthly, bool letter = false)
     {
         var tag = ritual + "/" + day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var content = new WinRtXml.XmlDocument();
-        content.LoadXml(ReviewContent(tag, monthly).ToString(SaveOptions.DisableFormatting));
+        content.LoadXml(ReviewContent(tag, monthly, letter).ToString(SaveOptions.DisableFormatting));
         var toast = new ToastNotification(content) { Tag = tag, Group = ReviewGroup };
         toast.Activated += (_, args) =>
         {
@@ -239,7 +241,7 @@ public sealed class ToastReminderNotifications
         }
     }
 
-    private XElement ReviewContent(string tag, bool monthly)
+    private XElement ReviewContent(string tag, bool monthly, bool letter)
     {
         XElement Button(string label, ToastAction action) => new(
             "action",
@@ -256,9 +258,14 @@ public sealed class ToastReminderNotifications
                     "binding",
                     new XAttribute("template", "ToastGeneric"),
                     new XElement("text", strings.Get(monthly ? "Reviews.ReminderTitleMonthly" : "Reviews.ReminderTitleWeekly")),
-                    new XElement("text", strings.Get("Reviews.ReminderText")))),
+                    new XElement("text", strings.Get(ReviewText(monthly, letter))))),
             new XElement("actions", Button("Reviews.ReminderStart", ToastAction.Review), Button("Reviews.ReminderSkip", ToastAction.SkipReview)));
     }
+
+    /// <summary>What a review reminder says: that the letter is here when it came first, otherwise the usual nudge.</summary>
+    internal static string ReviewText(bool monthly, bool letter) => !letter
+        ? "Reviews.ReminderText"
+        : monthly ? "Reviews.ReminderLetterMonthly" : "Reviews.ReminderLetterWeekly";
 
     private XElement PlanContent(string day)
     {

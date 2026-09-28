@@ -9,9 +9,10 @@ using GoalMaker.Core.Settings;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The guided review of one period (docs/reviews.md, spec stories 59 to 64): look back, handle what is
-/// still open, reflect on the prompts the library and the period's facts give, rate mood and energy,
-/// and set the next period's goals. Everything is saved as it is answered.
+/// The guided review of one period (docs/reviews.md, spec stories 59 to 64): read the letter when a
+/// Claude routine wrote one (docs/letter.md), look back, handle what is still open, reflect on the
+/// prompts the library and the period's facts give, rate mood and energy, and set the next period's
+/// goals. Everything is saved as it is answered; the letter is only read, never edited.
 /// </summary>
 public sealed partial class ReviewViewModel : ObservableObject
 {
@@ -33,7 +34,7 @@ public sealed partial class ReviewViewModel : ObservableObject
     private bool loading;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLookBack), nameof(IsTasks), nameof(IsReflect), nameof(IsRate), nameof(IsGoals), nameof(IsDone), nameof(NextLabel), nameof(Progress), nameof(CanGoBack))]
+    [NotifyPropertyChangedFor(nameof(IsLetter), nameof(IsLookBack), nameof(IsTasks), nameof(IsReflect), nameof(IsRate), nameof(IsGoals), nameof(IsDone), nameof(NextLabel), nameof(Progress), nameof(CanGoBack))]
     private ReviewStep step = ReviewStep.LookBack;
 
     [ObservableProperty]
@@ -61,6 +62,7 @@ public sealed partial class ReviewViewModel : ObservableObject
     private int? energy;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLetter), nameof(Progress), nameof(CanGoBack))]
     private string summaryText = string.Empty;
 
     public ReviewViewModel(
@@ -117,6 +119,11 @@ public sealed partial class ReviewViewModel : ObservableObject
 
     public IReadOnlyList<RatingViewModel> EnergyRatings { get; private set; } = [];
 
+    public bool IsLetter => Step == ReviewStep.Letter;
+
+    /// <summary>Whether a Claude routine wrote a letter about the period; the review then starts on it.</summary>
+    public bool HasLetter => !string.IsNullOrWhiteSpace(SummaryText);
+
     public bool IsLookBack => Step == ReviewStep.LookBack;
 
     public bool IsTasks => Step == ReviewStep.Tasks;
@@ -129,11 +136,14 @@ public sealed partial class ReviewViewModel : ObservableObject
 
     public bool IsDone => Step == ReviewStep.Done;
 
-    /// <summary>How far the review has come, 0 to 1, for the bar across the top.</summary>
-    public double Progress => ((int)Step + 1) / (double)Enum.GetValues<ReviewStep>().Length;
+    /// <summary>How far the review has come, 0 to 1, for the bar across the top; the Letter counts only when there is one.</summary>
+    public double Progress => HasLetter
+        ? ((int)Step + 1) / (double)Enum.GetValues<ReviewStep>().Length
+        : (int)Step / (double)(Enum.GetValues<ReviewStep>().Length - 1);
 
     public string NextLabel => strings.Get(Step switch
     {
+        ReviewStep.Letter => "Reviews.Continue",
         ReviewStep.Goals => "Reviews.Finish",
         ReviewStep.Done => "Reviews.Close",
         _ => "Reviews.Next",
@@ -144,7 +154,6 @@ public sealed partial class ReviewViewModel : ObservableObject
     {
         Kind = kind;
         PeriodStart = periodStart;
-        Step = ReviewStep.LookBack;
         Start();
     }
 
@@ -234,8 +243,8 @@ public sealed partial class ReviewViewModel : ObservableObject
     /// <summary>The busiest day of the period, which fills a day's bar.</summary>
     public int MostDone => Days.Count == 0 ? 1 : Math.Max(1, Days.Max(day => day.Done));
 
-    /// <summary>Back leaves the first step to the page, not to the review.</summary>
-    public bool CanGoBack => Step != ReviewStep.LookBack;
+    /// <summary>Back leaves the first step to the page, not to the review: the Letter, or the look back without one.</summary>
+    public bool CanGoBack => Step != ReviewStep.Letter && (Step != ReviewStep.LookBack || HasLetter);
 
     public string OpenTasksText => strings.Get(HasOpenTasks ? "Reviews.OpenIntro" : "Reviews.OpenNone");
 
@@ -275,7 +284,7 @@ public sealed partial class ReviewViewModel : ObservableObject
     [RelayCommand]
     private void Back()
     {
-        if (Step == ReviewStep.LookBack)
+        if (!CanGoBack)
         {
             return;
         }
@@ -333,6 +342,7 @@ public sealed partial class ReviewViewModel : ObservableObject
             Mood = review?.Mood;
             Energy = review?.Energy;
             SummaryText = review?.Summary ?? string.Empty;
+            Step = HasLetter ? ReviewStep.Letter : ReviewStep.LookBack;
             Refresh();
             ShowQuestions();
             ShowRatings();

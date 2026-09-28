@@ -1,4 +1,5 @@
 using System.Globalization;
+using GoalMaker.Core.Notes;
 
 namespace GoalMaker.Core.Planning;
 
@@ -34,6 +35,20 @@ public static class ReviewRules
         var start = ReviewReminder.PeriodStart(kind, day);
         return reviews.Any(review =>
             !review.Deleted && review.Kind == kind && review.PeriodStart == start && !string.IsNullOrWhiteSpace(review.Summary));
+    }
+
+    /// <summary>
+    /// The line of a letter the Reviews list shows: its first line of text that isn't a heading, or its
+    /// first heading when it has nothing else, without the Markdown marks. Null when there is no letter.
+    /// </summary>
+    public static string? LetterPreview(string summary)
+    {
+        var lines = LightMarkdown.Parse(summary)
+            .Select(block => (Block: block, Text: string.Concat(block.Spans.Select(span => span.Text)).Trim()))
+            .Where(line => line.Text.Length > 0)
+            .ToList();
+        var chosen = lines.FirstOrDefault(line => line.Block.Heading == 0);
+        return chosen.Block is not null ? chosen.Text : lines.Select(line => line.Text).FirstOrDefault();
     }
 
     /// <summary>The id of <paramref name="owner"/>'s <paramref name="kind"/> review for the period starting on <paramref name="periodStart"/>.</summary>
