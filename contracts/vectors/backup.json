@@ -20,7 +20,9 @@
     "task_tags",
     "reminders",
     "ritual_runs",
-    "reviews"
+    "reviews",
+    "want_cooldowns",
+    "wants"
   ],
   "checks": [
     {

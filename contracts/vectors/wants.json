@@ -1,0 +1,506 @@
+{
+  "schema": 1,
+  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 2026-09-28 is a Monday.",
+  "defaults": {
+    "smallUnder": 1000,
+    "smallDays": 7,
+    "mediumUnder": 10000,
+    "mediumDays": 30,
+    "largeDays": 90,
+    "unpricedDays": 30,
+    "currency": "CZK"
+  },
+  "namespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
+  "cooldownsId": [
+    {
+      "name": "an owner's thresholds have one id",
+      "owner": "11111111-1111-4111-8111-111111111111",
+      "expect": "22fa4550-080e-51d8-86d7-d4e8a02a916d"
+    },
+    {
+      "name": "an owner id in capitals is lowercased first",
+      "owner": "11111111-1111-4111-8111-11111111ABCD",
+      "expect": "de077c7e-b631-5a63-af41-337b9ac6394b"
+    }
+  ],
+  "cooldown": [
+    {
+      "name": "a small price cools for a week",
+      "price": 450,
+      "currency": "CZK",
+      "expect": 7
+    },
+    {
+      "name": "exactly the small threshold is no longer small",
+      "price": 1000,
+      "currency": "CZK",
+      "expect": 30
+    },
+    {
+      "name": "a medium price cools for a month",
+      "price": 2890,
+      "currency": "CZK",
+      "expect": 30
+    },
+    {
+      "name": "exactly the medium threshold is large",
+      "price": 10000,
+      "currency": "CZK",
+      "expect": 90
+    },
+    {
+      "name": "a large price cools for three months",
+      "price": 12900,
+      "currency": "CZK",
+      "expect": 90
+    },
+    {
+      "name": "no price cools for a month",
+      "price": null,
+      "currency": "CZK",
+      "expect": 30
+    },
+    {
+      "name": "another currency is treated as unpriced",
+      "price": 99,
+      "currency": "EUR",
+      "expect": 30
+    },
+    {
+      "name": "a free thing is still small",
+      "price": 0,
+      "currency": "CZK",
+      "expect": 7
+    },
+    {
+      "name": "a picked number of days wins",
+      "price": 12900,
+      "currency": "CZK",
+      "picked": 14,
+      "expect": 14
+    },
+    {
+      "name": "a picked zero means ready at once",
+      "price": 450,
+      "currency": "CZK",
+      "picked": 0,
+      "expect": 0
+    },
+    {
+      "name": "the owner's own thresholds",
+      "price": 1500,
+      "currency": "CZK",
+      "cooldowns": {
+        "smallUnder": 2000,
+        "smallDays": 3,
+        "mediumUnder": 20000,
+        "mediumDays": 14,
+        "largeDays": 60,
+        "unpricedDays": 10,
+        "currency": "CZK"
+      },
+      "expect": 3
+    },
+    {
+      "name": "the owner's own currency",
+      "price": 40,
+      "currency": "EUR",
+      "cooldowns": {
+        "smallUnder": 50,
+        "smallDays": 5,
+        "mediumUnder": 500,
+        "mediumDays": 21,
+        "largeDays": 60,
+        "unpricedDays": 14,
+        "currency": "EUR"
+      },
+      "expect": 5
+    }
+  ],
+  "coolsUntil": [
+    {
+      "name": "added on a Monday for a week",
+      "addedOn": "2026-09-28",
+      "days": 7,
+      "expect": "2026-10-05"
+    },
+    {
+      "name": "across a month end",
+      "addedOn": "2026-09-28",
+      "days": 30,
+      "expect": "2026-10-28"
+    },
+    {
+      "name": "no days means the same day",
+      "addedOn": "2026-09-28",
+      "days": 0,
+      "expect": "2026-09-28"
+    }
+  ],
+  "state": [
+    {
+      "name": "the day before it cools is still cooling",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": null,
+        "deleted": false
+      },
+      "now": "2026-10-04T21:00:00",
+      "dayStartHour": 4,
+      "expect": "cooling"
+    },
+    {
+      "name": "on the day it cools it is ready",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": null,
+        "deleted": false
+      },
+      "now": "2026-10-05T09:00:00",
+      "dayStartHour": 4,
+      "expect": "ready"
+    },
+    {
+      "name": "after midnight but before the day starts it is still the day before",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": null,
+        "deleted": false
+      },
+      "now": "2026-10-05T02:30:00",
+      "dayStartHour": 4,
+      "expect": "cooling"
+    },
+    {
+      "name": "long after, it stays ready until decided",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": null,
+        "deleted": false
+      },
+      "now": "2026-12-01T12:00:00",
+      "dayStartHour": 4,
+      "expect": "ready"
+    },
+    {
+      "name": "bought early is decided",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": "bought",
+        "deleted": false
+      },
+      "now": "2026-09-30T12:00:00",
+      "dayStartHour": 4,
+      "expect": "decided"
+    },
+    {
+      "name": "dropped is decided",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": "dropped",
+        "deleted": false
+      },
+      "now": "2026-10-10T12:00:00",
+      "dayStartHour": 4,
+      "expect": "decided"
+    },
+    {
+      "name": "reopened, it goes back to where its cooldown is",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": null,
+        "deleted": false
+      },
+      "now": "2026-09-30T12:00:00",
+      "dayStartHour": 4,
+      "expect": "cooling"
+    },
+    {
+      "name": "a deleted want has no state",
+      "want": {
+        "coolsUntil": "2026-10-05",
+        "decision": null,
+        "deleted": true
+      },
+      "now": "2026-10-10T12:00:00",
+      "dayStartHour": 4,
+      "expect": null
+    }
+  ],
+  "progress": [
+    {
+      "name": "just added",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05",
+        "decision": null
+      },
+      "today": "2026-09-28",
+      "expect": 0.0
+    },
+    {
+      "name": "halfway through a fortnight",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-12",
+        "decision": null
+      },
+      "today": "2026-10-05",
+      "expect": 0.5
+    },
+    {
+      "name": "ready",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05",
+        "decision": null
+      },
+      "today": "2026-10-06",
+      "expect": 1.0
+    },
+    {
+      "name": "decided early is full",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05",
+        "decision": "dropped"
+      },
+      "today": "2026-09-29",
+      "expect": 1.0
+    },
+    {
+      "name": "no days is full",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-09-28",
+        "decision": null
+      },
+      "today": "2026-09-28",
+      "expect": 1.0
+    }
+  ],
+  "ready": [
+    {
+      "name": "the first notification names only today's",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Keyboard",
+          "coolsUntil": "2026-10-01",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "lastNotified": null,
+      "today": "2026-10-05",
+      "expect": [
+        "a"
+      ]
+    },
+    {
+      "name": "days missed since the last one are caught up, oldest first",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Keyboard",
+          "coolsUntil": "2026-10-03",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "c",
+          "title": "Book",
+          "coolsUntil": "2026-10-02",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "lastNotified": "2026-10-02",
+      "today": "2026-10-05",
+      "expect": [
+        "b",
+        "a"
+      ]
+    },
+    {
+      "name": "two on one day go by title",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "lastNotified": "2026-10-04",
+      "today": "2026-10-05",
+      "expect": [
+        "b",
+        "a"
+      ]
+    },
+    {
+      "name": "decided and deleted wants are left out",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": "bought",
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": true
+        },
+        {
+          "id": "c",
+          "title": "Lamp",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "lastNotified": "2026-10-04",
+      "today": "2026-10-05",
+      "expect": [
+        "c"
+      ]
+    },
+    {
+      "name": "nothing new since today's notification",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "lastNotified": "2026-10-05",
+      "today": "2026-10-05",
+      "expect": []
+    }
+  ],
+  "stats": [
+    {
+      "name": "bought, dropped and the money not spent",
+      "currency": "CZK",
+      "wants": [
+        {
+          "price": 2890,
+          "currency": "CZK",
+          "decision": "bought",
+          "deleted": false
+        },
+        {
+          "price": 12900,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false
+        },
+        {
+          "price": 450,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false
+        },
+        {
+          "price": null,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false
+        },
+        {
+          "price": 99,
+          "currency": "EUR",
+          "decision": "dropped",
+          "deleted": false
+        },
+        {
+          "price": 3400,
+          "currency": "CZK",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "price": 5000,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": true
+        }
+      ],
+      "expect": {
+        "bought": 1,
+        "dropped": 4,
+        "notSpent": 13350
+      }
+    },
+    {
+      "name": "nothing decided yet",
+      "currency": "CZK",
+      "wants": [
+        {
+          "price": 3400,
+          "currency": "CZK",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "bought": 0,
+        "dropped": 0,
+        "notSpent": 0
+      }
+    },
+    {
+      "name": "halves of a crown add up exactly",
+      "currency": "CZK",
+      "wants": [
+        {
+          "price": 19.5,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false
+        },
+        {
+          "price": 0.5,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "bought": 0,
+        "dropped": 2,
+        "notSpent": 20
+      }
+    }
+  ]
+}

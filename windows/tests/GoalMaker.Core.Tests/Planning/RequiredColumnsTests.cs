@@ -33,6 +33,7 @@ public sealed class RequiredColumnsTests : IDisposable
         var projects = new ProjectList(test.Replica, rows, () => { });
         var reminders = new ReminderList(test.Replica, rows, () => { }, () => TimeZoneInfo.Utc);
         var tasks = new TaskList(test.Replica, rows, areas, tags, projects, () => { }, () => Day);
+        var wants = new WantList(test.Replica, rows, () => { }, () => Day);
 
         // One row in every synced table, each through the list that owns it.
         Assert.NotNull(areas.Create("Health"));
@@ -53,6 +54,8 @@ public sealed class RequiredColumnsTests : IDisposable
         Assert.NotNull(projects.AddMilestone(project.Id, "M6"));
         rituals.Record(RitualRunList.PlanTomorrow, Day);
         Assert.NotNull(reviews.Open(ReviewRules.Weekly, Day));
+        Assert.NotNull(wants.Add(new WantDraft("Trail shoes", "The old ones have holes", Price: 3400)));
+        Assert.True(wants.SetCooldowns(WantCooldowns.Default with { SmallDays = 5 }));
 
         // Every table was written, and every row of every table fills what the server needs.
         foreach (var table in test.Catalog.Tables)
