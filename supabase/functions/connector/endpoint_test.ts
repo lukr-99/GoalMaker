@@ -3,6 +3,7 @@
 // doesn't serve functions). It makes its own user and link in the database and deletes them after.
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.13";
 import { postgres } from "../_shared/deps.ts";
+import { cooldownsId } from "../_shared/rules/wants.ts";
 
 const enabled = Deno.env.get("GOALMAKER_CONNECTOR_TEST") === "1";
 const api = Deno.env.get("GOALMAKER_API_URL") ?? "http://127.0.0.1:55321";
@@ -694,6 +695,127 @@ Deno.test({
         const nowhere = await client.tool("update_settings", { time_zone: "Middle/Earth" });
         assert(nowhere.isError, nowhere.text);
         await client.tool("update_settings", { time_zone: "Europe/Prague", day_start_hour: 4 });
+      });
+
+      await t.step("wants are added, price checked, decided and undone through the connector", async () => {
+        // This step makes more calls than the minute's budget has left after the ones before it.
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const tools = (await client.call("tools/list")).tools.map((tool: Json) => tool.name);
+        for (const name of ["get_wants", "add_want", "update_want", "decide_want", "record_price_check"]) {
+          assert(tools.includes(name), `${name} in ${tools}`);
+        }
+        const wantOf = (text: string) => /\(want id ([0-9a-f-]{36})\)/.exec(text)![1];
+        const rowOf = async (id: string) =>
+          (await sql`
+            select cooldown_days, (cools_until - added_on) as waits, currency, made_by, decision, decision_note,
+                   checked_price, checked_note
+            from public.wants where id = ${id}`)[0];
+
+        // The defaults of wants.json: 7 days under 1,000, 30 under 10,000, and 30 with no price.
+        const cheap = await client.tool("add_want", {
+          title: "Headphone pads",
+          reason: "The old ones cracked",
+          price: 500,
+        });
+        assert(!cheap.isError, cheap.text);
+        assertStringIncludes(cheap.text, "by Claude");
+        const cheapId = wantOf(cheap.text);
+        assertEquals(await rowOf(cheapId), {
+          cooldown_days: 7,
+          waits: 7,
+          currency: "CZK",
+          made_by: "claude",
+          decision: null,
+          decision_note: "",
+          checked_price: null,
+          checked_note: "",
+        });
+        const edge = await client.tool("add_want", { title: "Kettle", reason: "Ours leaks", price: 1000 });
+        assertEquals((await rowOf(wantOf(edge.text))).cooldown_days, 30, "exactly 1,000 is no longer small");
+        const unpriced = await client.tool("add_want", { title: "Tent", reason: "Summer trips" });
+        assertEquals((await rowOf(wantOf(unpriced.text))).cooldown_days, 30);
+        const foreign = await client.tool("add_want", {
+          title: "Book",
+          reason: "Recommended",
+          price: 20,
+          currency: "eur",
+        });
+        assertEquals((await rowOf(wantOf(foreign.text))).currency, "EUR");
+        assertEquals((await rowOf(wantOf(foreign.text))).cooldown_days, 30, "another currency cools like no price");
+        const picked = await client.tool("add_want", {
+          title: "Lamp",
+          reason: "Dark desk",
+          price: 50000,
+          cooldown_days: 2,
+        });
+        assertEquals((await rowOf(wantOf(picked.text))).cooldown_days, 2);
+        const [log] = await sql`
+          select actor from public.activity_log where entity = 'wants' and entity_id = ${cheapId} and action = 'create'`;
+        assertEquals(log.actor, "claude");
+
+        // The owner's own thresholds are the ones the apps use too.
+        await sql`
+          insert into public.want_cooldowns (id, owner_id, small_days) values (${await cooldownsId(
+          OWNER,
+        )}, ${OWNER}, 3)`;
+        const mine = await client.tool("add_want", { title: "Socks", reason: "Holes", price: 200 });
+        assertEquals((await rowOf(wantOf(mine.text))).cooldown_days, 3);
+
+        const noReason = await client.tool("add_want", { title: "Anything", reason: "  " });
+        assert(noReason.isError, noReason.text);
+        const badCurrency = await client.tool("add_want", { title: "Anything", reason: "Why not", currency: "euro" });
+        assert(badCurrency.isError, badCurrency.text);
+
+        const edited = await client.tool("update_want", { id: cheapId, title: "Headphone ear pads", area: "Home" });
+        assert(!edited.isError, edited.text);
+        assertStringIncludes(edited.text, "@Home");
+        assertEquals((await rowOf(cheapId)).cooldown_days, 7, "an edit never moves the cooldown");
+
+        const checked = await client.tool("record_price_check", {
+          id: cheapId,
+          price: 390,
+          where: "Alza, https://www.alza.cz/pads",
+          alternatives: "Generic pads 150 CZK at Mall",
+        });
+        assert(!checked.isError, checked.text);
+        assertStringIncludes(checked.text, "Last checked: 390 CZK");
+        const afterCheck = await rowOf(cheapId);
+        assertEquals(afterCheck.checked_price, 390);
+        assertStringIncludes(afterCheck.checked_note, "Alternatives: Generic pads 150 CZK at Mall");
+
+        const cooling = await client.tool("get_wants");
+        assertStringIncludes(cooling.text, "Cooling:");
+        assertStringIncludes(cooling.text, "Why: The old ones cracked");
+        const lampReady = await client.tool("get_wants", { state: "ready" });
+        assertEquals(lampReady.text, "No ready wants.");
+
+        const bought = await client.tool("decide_want", { id: cheapId, decision: "bought", note: "The cheaper pads" });
+        assert(!bought.isError, bought.text);
+        assertEquals((await rowOf(cheapId)).decision, "bought");
+        const decided = await client.tool("get_wants", { state: "decided" });
+        assertStringIncludes(decided.text, "Headphone ear pads · 500 CZK · bought");
+        assertStringIncludes(decided.text, "Note: The cheaper pads");
+
+        const history = await client.tool("get_activity", { limit: 10 });
+        const decision = history.text.split("\n").find((line) => line.startsWith("- update") && line.includes(cheapId));
+        assert(decision !== undefined, history.text);
+        const undone = await client.tool("undo_change", { id: /\(change id ([0-9]+)/.exec(decision)![1] });
+        assert(!undone.isError, undone.text);
+        assertEquals((await rowOf(cheapId)).decision, null, "undo takes the decision back");
+
+        const dropped = await client.tool("decide_want", { id: cheapId, decision: "dropped" });
+        assert(!dropped.isError, dropped.text);
+        const reopened = await client.tool("decide_want", { id: cheapId, decision: "reopen" });
+        assert(!reopened.isError, reopened.text);
+        assertEquals((await rowOf(cheapId)).decision, null);
+        const again = await client.tool("decide_want", { id: cheapId, decision: "reopen" });
+        assert(again.isError, again.text);
+
+        const stranger = await client.tool("decide_want", {
+          id: "c0ffee00-0000-4000-8000-0000000000aa",
+          decision: "bought",
+        });
+        assert(stranger.isError, stranger.text);
       });
 
       await t.step("the 121st call in a minute is refused", async () => {

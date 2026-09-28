@@ -42,6 +42,7 @@ import {
   repositoryKey,
 } from "../rules/projects.ts";
 import { AREA_COLORS, colorForNewArea } from "./palette.ts";
+import { WantList } from "./wantList.ts";
 
 export interface Area {
   id: string;
@@ -591,6 +592,11 @@ export class Planner {
     const id = crypto.randomUUID();
     await this.db`insert into public.tags (id, name) values (${id}, ${trimmed})`;
     return { id, name: trimmed };
+  }
+
+  /** The owner's wants, through the same connection and planning day. */
+  wants(): WantList {
+    return new WantList(this.db, async () => (await this.now()).today);
   }
 
   /** Every goal that is not deleted, newest period first, in the order the apps keep them. */
