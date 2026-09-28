@@ -1,6 +1,6 @@
 # M6-06: Hardening before the release
 
-**Status:** in progress · **Milestone:** M6
+**Status:** in progress (two paths left) · **Milestone:** M6
 
 ## Scope
 - The paths that only show up in real use: no network at sign-in and mid-sync, a session that
@@ -50,3 +50,10 @@ Android, and sync under pressure.
 A full disk, a session the server refuses while the app is open, keyboard reach on Windows, and both
 apps at the largest system text size. Worth doing on the real devices during M6-07, not guessed at
 here.
+
+## Close-out (2026-09-28)
+
+Two paths are left for v1: Android shows the "replica won't open" screen Windows already has
+instead of closing, and a session the server refuses while an app is open sends the owner to
+sign-in on both apps without losing the outbox. A full disk and sync under pressure move to
+"After v1" in the roadmap.

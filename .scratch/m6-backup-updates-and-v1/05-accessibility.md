@@ -1,6 +1,6 @@
 # M6-05: The accessibility pass
 
-**Status:** in progress · **Milestone:** M6
+**Status:** closed for v1 · **Milestone:** M6
 
 ## Scope
 - Every screen on both apps read by a screen reader (TalkBack, Narrator): a name for every control
@@ -30,3 +30,10 @@ rather than the whole row, so the checkbox and the ring stay their own controls.
 Left: keyboard reach on Windows (the mini windows, the tray flyout, the quick-add box), Android focus
 order and the composer's chips, and both apps at the largest system text size. Those need the apps in
 hand rather than a scan.
+
+## Close-out (2026-09-28)
+
+GoalMaker is for one person (ADR 0011), so the rest of the pass moves to "After v1" in the roadmap:
+keyboard reach on Windows (mini windows, tray flyout, quick-add), Android focus order and the
+composer's chips, and both apps at the largest text size. What was done stays enforced by
+tools/check_accessibility.py.

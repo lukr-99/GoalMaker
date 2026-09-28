@@ -1,6 +1,6 @@
 # M6-09: Logging an amount without leaving the page
 
-**Status:** done (Windows) · **Milestone:** M6
+**Status:** done · **Milestone:** M6
 
 ## Scope
 - A habit that counts or measures something (8 glasses, 30 minutes) is checked in by tapping its
@@ -26,3 +26,8 @@
 more, and a small field with Enter or a tick for a number. The panel stays, reached by the ring or
 the menu, and the mini window keeps its own shorter row. Android keeps the panel: the phone has no
 room for a field beside the ring, and the ring is already one tap away.
+
+## Close-out (2026-09-28)
+
+Done on both apps: Windows takes the amount in the row, and Android keeps the panel on purpose (the
+ring is one tap away and the phone has no room for a field beside it).
