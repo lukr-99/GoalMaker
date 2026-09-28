@@ -119,12 +119,31 @@ Top to bottom: the date and a one-line summary ("3 of 7 done, 2 habits left"), t
 timed items (tasks with a time and reminders), habits for today as a compact row of rings, other
 tasks, then overdue items and this week's goals, both collapsed.
 
+### Navigation (ADR 0014, from M8)
+
+**Phone.** The bottom bar has five tabs: four places the owner pins (Today, Tomorrow, Inbox and
+Projects by default) and **Places**. Places is a page of live tiles, two columns, one per place:
+Today and Habits and Goals as rings, Inbox and Wants as big counts, Tally as its stacked bar, the
+Letter on a hero tile, the rest with their one-line summary. A pinned tile carries a small pin. The
+line under the title says what is in the bar and has **Edit**: the tiles wiggle (unless reduce
+motion is on) and each shows a pin toggle, filled in the accent when pinned. At four pins the unpinned
+tiles grey out and the line says to unpin one first; the last pin can't be removed. A place opened
+from Places shows a back arrow to it. The Places tab shows a count for what waits in places that
+are not pinned. The top bar keeps sync, Plan tomorrow and Settings.
+
+**Windows.** The sidebar starts with **Go to…** (Ctrl+K), then a **Pinned** group (Today,
+Tomorrow, Inbox and Projects by default, no limit), then **All places**, which collapses, then
+Settings at the bottom. Any page pins or unpins itself from a Pin button on its toolbar. Ctrl+K opens
+a box that filters places as you type; arrows move, Enter opens, Esc closes. The sidebar still
+collapses to icons and remembers that.
+
+Pins are a device setting, so the phone and the PC keep their own. New places (Wants, Tally) arrive
+unpinned, on the Places page and under All places.
+
 ### Windows
 
-A sidebar with Today, Tomorrow, Inbox, Habits, Goals, Projects, Calendar, Reviews and Stats, and
-Settings at the bottom. It collapses to icons and remembers that. The area and tag filters live on
-each list's toolbar line, with the sync state and a filled Plan tomorrow button, all on one line
-([lists](../lists.md#filtering)).
+The area and tag filters live on each list's toolbar line, with the sync state and a filled Plan
+tomorrow button, all on one line ([lists](../lists.md#filtering)).
 
 ## Identity
 

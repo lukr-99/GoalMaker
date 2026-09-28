@@ -153,6 +153,14 @@ A pattern on an app, a window title or a folder that puts time into a Tally cate
 One of the app's top-level screens the navigation leads to (Today, Habits, Projects, Wants, ...).
 _Avoid_: Tab, page (when the navigation target is meant)
 
+**Pin**:
+A place the owner put in the phone's bottom bar (four at most) or the Windows sidebar's Pinned group;
+each device keeps its own.
+
+**Places hub**:
+The phone's fifth tab: a page of live tiles, one per place, where pins are edited.
+_Avoid_: More, menu
+
 **Connector**:
 The remote MCP server through which Claude apps read and change GoalMaker data.
 _Avoid_: Integration, plugin, bot
