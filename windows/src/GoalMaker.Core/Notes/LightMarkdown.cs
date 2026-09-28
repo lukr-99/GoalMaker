@@ -3,13 +3,14 @@ using System.Text;
 namespace GoalMaker.Core.Notes;
 
 /// <summary>
-/// The light Markdown task notes use (docs/archive.md, contracts/vectors/markdown.json): lines, list
-/// lines starting with "- " or "* ", **bold**, *italic*, and bare http(s) links. Anything unmatched
-/// stays as it was typed.
+/// The light Markdown task notes and letters use (docs/archive.md, contracts/vectors/markdown.json):
+/// lines, headings starting with "# " to "### ", list lines starting with "- " or "* ", **bold**,
+/// *italic*, and bare http(s) links. Anything unmatched stays as it was typed.
 /// </summary>
 public static class LightMarkdown
 {
     private const string Trailing = ".,;:!?)";
+    private const int MaxHeading = 3;
     private static readonly string[] Schemes = ["https://", "http://"];
 
     public static IReadOnlyList<MarkdownBlock> Parse(string text)
@@ -22,10 +23,23 @@ public static class LightMarkdown
         return [.. text.Replace("\r", string.Empty, StringComparison.Ordinal).Split('\n').Select(line =>
         {
             var start = line.TrimStart();
+            var level = HeadingLevel(start);
+            if (level > 0)
+            {
+                return new MarkdownBlock(false, Inline(start[(level + 1)..].Trim()), level);
+            }
+
             return start.StartsWith("- ", StringComparison.Ordinal) || start.StartsWith("* ", StringComparison.Ordinal)
                 ? new MarkdownBlock(true, Inline(start[2..]))
                 : new MarkdownBlock(false, Inline(line));
         })];
+    }
+
+    // "# " to "### ": the level, or 0 when the line isn't a heading.
+    private static int HeadingLevel(string line)
+    {
+        var hashes = line.TakeWhile(character => character == '#').Count();
+        return hashes is >= 1 and <= MaxHeading && line.Length > hashes && line[hashes] == ' ' ? hashes : 0;
     }
 
     private static List<MarkdownSpan> Inline(string line)

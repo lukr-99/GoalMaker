@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -23,13 +24,18 @@ import com.goalmaker.app.domain.notes.LightMarkdown
 import com.goalmaker.app.domain.notes.MarkdownBlock
 import com.goalmaker.app.ui.theme.AppTheme
 
-/** A task's notes in light Markdown (docs/archive.md): lines, list items, bold, italic and links you can open. */
+/**
+ * A task's notes or a letter in light Markdown (docs/archive.md): lines, headings, list items, bold,
+ * italic and links you can open.
+ */
 @Composable
 fun MarkdownNotes(text: String, modifier: Modifier = Modifier) {
     val blocks = remember(text) { LightMarkdown.parse(text) }
     Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = modifier) {
         blocks.forEach { block ->
-            if (block.bullet) {
+            if (block.heading > 0) {
+                Line(block, headingStyle(block.heading), Modifier.padding(top = if (block.heading == 1) 12.dp else 8.dp))
+            } else if (block.bullet) {
                 Row {
                     Text("\u2022", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 8.dp))
                     Line(block)
@@ -42,7 +48,14 @@ fun MarkdownNotes(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun Line(block: MarkdownBlock) {
+private fun headingStyle(level: Int): TextStyle = when (level) {
+    1 -> MaterialTheme.typography.titleLarge
+    2 -> MaterialTheme.typography.titleMedium
+    else -> MaterialTheme.typography.titleSmall
+}.copy(fontWeight = FontWeight.SemiBold)
+
+@Composable
+private fun Line(block: MarkdownBlock, style: TextStyle = MaterialTheme.typography.bodyLarge, modifier: Modifier = Modifier) {
     val linkColor = AppTheme.colors.accent
     val line = buildAnnotatedString {
         block.spans.forEach { span ->
@@ -60,5 +73,5 @@ private fun Line(block: MarkdownBlock) {
             }
         }
     }
-    Text(line, style = MaterialTheme.typography.bodyLarge)
+    Text(line, style = style, modifier = modifier)
 }
