@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.WantItem
 import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.WantState
@@ -261,6 +262,7 @@ private fun WantCard(
         WantState.DECIDED -> stringResource(if (want.decision == WantRules.BOUGHT) R.string.wants_status_bought else R.string.wants_status_dropped)
     }
     val price = want.price?.let { WantMoney.format(it, want.currency, locale) }
+    val maker = if (want.madeBy == ProjectRules.CLAUDE) stringResource(R.string.wants_by_claude) else null
 
     Surface(
         shape = AppTheme.shapes.row,
@@ -281,7 +283,7 @@ private fun WantCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        listOfNotNull(price, status).joinToString(" · "),
+                        listOfNotNull(price, status, maker).joinToString(" · "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (row.state == WantState.READY) colors.accent else colors.textMuted,
                     )

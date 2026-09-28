@@ -704,6 +704,7 @@
     <sys:String x:Key="Wants.StatusDays">{0} days to go</sys:String>
     <sys:String x:Key="Wants.StatusBought">bought</sys:String>
     <sys:String x:Key="Wants.StatusDropped">dropped</sys:String>
+    <sys:String x:Key="Wants.ByClaude">by Claude</sys:String>
     <sys:String x:Key="Wants.Why">WHY</sys:String>
     <sys:String x:Key="Wants.Checked">LAST PRICE FOUND</sys:String>
     <sys:String x:Key="Wants.Note">NOTE</sys:String>
