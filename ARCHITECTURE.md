@@ -39,6 +39,7 @@ composition root creates everything
 ### Android (`android/app`, package `com.goalmaker.app`)
 
 - `domain/`: `version/SemanticVersion`, `update/` (manifest, parser, update policy),
+  `navigation/PlaceRules` (pinned places, ADR 0014),
   `notes/LightMarkdown`, `share/SharedCapture` (what another app shared, as a composer line and
   notes), `account/` (email, sign-in code), `settings/ThemeMode`, `sync/` (`SyncRules`, the
   synced-table catalog, outbox entries, cursors). Pure Kotlin.
@@ -55,7 +56,8 @@ composition root creates everything
   (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
   `WorkManagerSyncScheduler`), `planning/` (`AlarmReminderScheduler`, `ReminderNotifications`,
   `ReminderReceiver`), `activity/` and `connector/` (PostgREST readers), `diagnostics/CrashLog`.
-- `ui/`: `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `components/`
+- `ui/`: `places/` (the Places hub and its live tiles, ADR 0014),
+  `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `components/`
   (the shared ring, chips, emoji field and logo), `signin/`, `lists/` (Today, Tomorrow, Inbox),
   `plan/`, `task/`, `goals/`, `habits/`, `review/`, `stats/`, `projects/`, `calendar/`, `archive/`,
   `activity/`, `areas/`, `connector/`, `settings/`, `share/` (the sheet a share from another app
