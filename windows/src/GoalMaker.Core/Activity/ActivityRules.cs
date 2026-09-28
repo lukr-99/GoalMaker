@@ -10,7 +10,7 @@ public static class ActivityRules
     {
         var subject = entity switch
         {
-            "tasks" or "task_steps" or "goals" => Text(after, "title"),
+            "tasks" or "task_steps" or "goals" or "wants" => Text(after, "title"),
             "areas" or "tags" or "habits" => Text(after, "name"),
             _ => null,
         };
@@ -51,6 +51,10 @@ public static class ActivityRules
             "habits" when Changed("name") => "renamed",
             "habit_checkins" => Text(after, "skipped") == "true" ? "skipped" : Amount(after, "value") >= 1 ? "checked" : "unchecked",
             "habit_pauses" => Text(after, "ends_on") is not null ? "resumed" : "paused",
+            "wants" when Changed("decision") && Text(after, "decision") == "bought" => "bought",
+            "wants" when Changed("decision") && Text(after, "decision") == "dropped" => "dropped",
+            "wants" when Changed("decision") => "reopened",
+            "wants" when Changed("title") => "renamed",
             _ => "edited",
         };
     }

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Pinned places and the Places hub (ADR 0014, docs/design/spec.md, Navigation). A place is one of the app's top-level screens; Settings is not a place, it always has its own button. 'places': every place in the order the Places hub and the Windows sidebar's All places list them; Wants and Tally join this list when they are built. 'limits': how many pins a device kind holds, null for no limit. 'defaults': the pins a device starts with. 'pin': pinning a place adds it at the end; a place already pinned, an unknown place, or a fifth pin on the phone leaves the pins as they are and says the pin was refused. 'unpin': removing a pin, except that the last one stays (refused). 'stored': the pins read back from a device's settings: unknown places and repeats are dropped, a phone keeps its first four, and nothing left means the defaults. 'count': the number on the Places tab, the sum of what waits in places that are not pinned.",
+  "description": "Pinned places and the Places hub (ADR 0014, docs/design/spec.md, Navigation). A place is one of the app's top-level screens; Settings is not a place, it always has its own button. 'places': every place in the order the Places hub and the Windows sidebar's All places list them; Wants joined in M8-04; Tally joins when it is built. 'limits': how many pins a device kind holds, null for no limit. 'defaults': the pins a device starts with. 'pin': pinning a place adds it at the end; a place already pinned, an unknown place, or a fifth pin on the phone leaves the pins as they are and says the pin was refused. 'unpin': removing a pin, except that the last one stays (refused). 'stored': the pins read back from a device's settings: unknown places and repeats are dropped, a phone keeps its first four, and nothing left means the defaults. 'count': the number on the Places tab, the sum of what waits in places that are not pinned.",
   "places": [
     "today",
     "tomorrow",
@@ -9,6 +9,7 @@
     "habits",
     "goals",
     "projects",
+    "wants",
     "reviews",
     "stats",
     "archive"

@@ -107,6 +107,8 @@
     { "name": "a command", "marked": "[[command:/plan]]", "expect": { "title": "", "command": { "name": "plan", "argument": "", "known": true } } },
     { "name": "a command's argument isn't parsed", "marked": "[[command:/habit]] Read 20 pages #daily", "expect": { "title": "", "command": { "name": "habit", "argument": "Read 20 pages #daily", "known": true } } },
     { "name": "commands ignore case", "marked": "[[command:/Plan]]", "expect": { "title": "", "command": { "name": "plan", "argument": "", "known": true } } },
+    { "name": "a want with its title", "marked": "[[command:/want]] Trail shoes", "expect": { "title": "", "command": { "name": "want", "argument": "Trail shoes", "known": true } } },
+    { "name": "a want without a title yet", "marked": "[[command:/want]]", "expect": { "title": "", "command": { "name": "want", "argument": "", "known": true } } },
     { "name": "an unknown command", "marked": "[[command:/dance]] now", "expect": { "title": "", "command": { "name": "dance", "argument": "now", "known": false } } },
     { "name": "a slash without a letter isn't a command", "marked": "/ 2 split", "expect": { "title": "/ 2 split" } }
   ]
