@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,6 +37,7 @@ import com.goalmaker.app.application.planning.ReviewItem
 import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -45,7 +45,12 @@ import java.time.format.DateTimeFormatter
 /** The reviews waiting to be written and the ones already written (docs/reviews.md). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReviewsScreen(viewModel: ReviewsViewModel, onBack: () -> Unit, onOpen: (String, LocalDate) -> Unit) {
+fun ReviewsScreen(
+    viewModel: ReviewsViewModel,
+    onBack: (() -> Unit)?,
+    onOpen: (String, LocalDate) -> Unit,
+    actions: @Composable () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val written = state.past.map { it.kind to it.periodStart }.toSet()
@@ -55,11 +60,8 @@ fun ReviewsScreen(viewModel: ReviewsViewModel, onBack: () -> Unit, onOpen: (Stri
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.reviews_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                    }
-                },
+                navigationIcon = { PlaceNavigationIcon(onBack) },
+                actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )
         },

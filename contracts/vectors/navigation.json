@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "description": "Pinned places and the Places hub (ADR 0014, docs/design/spec.md, Navigation). A place is one of the app's top-level screens; Settings is not a place, it always has its own button. 'places': every place in the order the Places hub and the Windows sidebar's All places list them; Wants and Tally join this list when they are built. 'limits': how many pins a device kind holds, null for no limit. 'defaults': the pins a device starts with. 'pin': pinning a place adds it at the end; a place already pinned, an unknown place, or a fifth pin on the phone leaves the pins as they are and says the pin was refused. 'unpin': removing a pin, except that the last one stays (refused). 'stored': the pins read back from a device's settings: unknown places and repeats are dropped, a phone keeps its first four, and nothing left means the defaults. 'count': the number on the Places tab, the sum of what waits in places that are not pinned.",
+  "places": [
+    "today",
+    "tomorrow",
+    "inbox",
+    "calendar",
+    "habits",
+    "goals",
+    "projects",
+    "reviews",
+    "stats",
+    "archive"
+  ],
+  "limits": {
+    "phone": 4,
+    "pc": null
+  },
+  "defaults": {
+    "phone": ["today", "tomorrow", "inbox", "projects"],
+    "pc": ["today", "tomorrow", "inbox", "projects"]
+  },
+  "pin": [
+    {
+      "name": "a place joins the end of the pins",
+      "device": "phone",
+      "pins": ["today", "inbox"],
+      "place": "habits",
+      "expect": { "pins": ["today", "inbox", "habits"], "refused": false }
+    },
+    {
+      "name": "the fourth pin on the phone still fits",
+      "device": "phone",
+      "pins": ["today", "tomorrow", "inbox"],
+      "place": "habits",
+      "expect": { "pins": ["today", "tomorrow", "inbox", "habits"], "refused": false }
+    },
+    {
+      "name": "a fifth pin on the phone is refused until one is unpinned",
+      "device": "phone",
+      "pins": ["today", "tomorrow", "inbox", "projects"],
+      "place": "habits",
+      "expect": { "pins": ["today", "tomorrow", "inbox", "projects"], "refused": true }
+    },
+    {
+      "name": "the PC has no limit",
+      "device": "pc",
+      "pins": ["today", "tomorrow", "inbox", "projects"],
+      "place": "habits",
+      "expect": { "pins": ["today", "tomorrow", "inbox", "projects", "habits"], "refused": false }
+    },
+    {
+      "name": "a place already pinned stays where it is",
+      "device": "pc",
+      "pins": ["today", "habits", "inbox"],
+      "place": "habits",
+      "expect": { "pins": ["today", "habits", "inbox"], "refused": true }
+    },
+    {
+      "name": "an unknown place is refused",
+      "device": "pc",
+      "pins": ["today"],
+      "place": "settings",
+      "expect": { "pins": ["today"], "refused": true }
+    }
+  ],
+  "unpin": [
+    {
+      "name": "a pin is removed and the rest keep their order",
+      "pins": ["today", "tomorrow", "inbox", "projects"],
+      "place": "tomorrow",
+      "expect": { "pins": ["today", "inbox", "projects"], "refused": false }
+    },
+    {
+      "name": "the last pin stays",
+      "pins": ["inbox"],
+      "place": "inbox",
+      "expect": { "pins": ["inbox"], "refused": true }
+    },
+    {
+      "name": "a place that is not pinned changes nothing",
+      "pins": ["today", "inbox"],
+      "place": "stats",
+      "expect": { "pins": ["today", "inbox"], "refused": true }
+    }
+  ],
+  "stored": [
+    {
+      "name": "nothing stored yet means the defaults",
+      "device": "phone",
+      "stored": null,
+      "expect": ["today", "tomorrow", "inbox", "projects"]
+    },
+    {
+      "name": "an empty list means the defaults",
+      "device": "pc",
+      "stored": [],
+      "expect": ["today", "tomorrow", "inbox", "projects"]
+    },
+    {
+      "name": "a place that no longer exists is dropped",
+      "device": "phone",
+      "stored": ["today", "focus", "habits"],
+      "expect": ["today", "habits"]
+    },
+    {
+      "name": "repeats are dropped, the first one kept",
+      "device": "pc",
+      "stored": ["inbox", "today", "inbox"],
+      "expect": ["inbox", "today"]
+    },
+    {
+      "name": "a phone keeps its first four",
+      "device": "phone",
+      "stored": ["today", "tomorrow", "inbox", "projects", "habits"],
+      "expect": ["today", "tomorrow", "inbox", "projects"]
+    },
+    {
+      "name": "the PC keeps them all",
+      "device": "pc",
+      "stored": ["stats", "today", "tomorrow", "inbox", "projects", "habits"],
+      "expect": ["stats", "today", "tomorrow", "inbox", "projects", "habits"]
+    },
+    {
+      "name": "only unknown places means the defaults",
+      "device": "phone",
+      "stored": ["focus", "settings"],
+      "expect": ["today", "tomorrow", "inbox", "projects"]
+    }
+  ],
+  "count": [
+    {
+      "name": "what waits in unpinned places adds up",
+      "pins": ["today", "tomorrow", "projects"],
+      "waiting": { "inbox": 6, "reviews": 1 },
+      "expect": 7
+    },
+    {
+      "name": "a pinned place shows its own number, not the hub's",
+      "pins": ["today", "inbox"],
+      "waiting": { "inbox": 6, "reviews": 1 },
+      "expect": 1
+    },
+    {
+      "name": "nothing waiting shows nothing",
+      "pins": ["today"],
+      "waiting": {},
+      "expect": 0
+    }
+  ]
+}

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.domain.sync.SyncRules
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -44,7 +44,12 @@ import java.time.format.DateTimeFormatter
 /** The archive of done tasks (docs/archive.md): search, open one, or reopen it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ArchiveScreen(viewModel: ArchiveViewModel, onBack: () -> Unit, onOpenTask: (String) -> Unit) {
+fun ArchiveScreen(
+    viewModel: ArchiveViewModel,
+    onBack: (() -> Unit)?,
+    onOpenTask: (String) -> Unit,
+    actions: @Composable () -> Unit = {},
+) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -55,11 +60,8 @@ fun ArchiveScreen(viewModel: ArchiveViewModel, onBack: () -> Unit, onOpenTask: (
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.archive_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                    }
-                },
+                navigationIcon = { PlaceNavigationIcon(onBack) },
+                actions = { actions() },
                 scrollBehavior = scrollBehavior,
             )
         },

@@ -40,6 +40,12 @@ public interface ISettingsStore
     /// <summary>Whether the sidebar is collapsed to icons.</summary>
     bool NavigationCollapsed { get; set; }
 
+    /// <summary>
+    /// The places pinned to the top of the sidebar (ADR 0014), in order, read back through
+    /// <c>PlaceRules.Stored</c>: a place that no longer exists is gone and nothing left means the defaults.
+    /// </summary>
+    IReadOnlyList<string> PinnedPlaces { get; set; }
+
     /// <summary>Dev builds only: another Supabase project to use from the next app start.</summary>
     BackendEnvironment? BackendOverride { get; set; }
 

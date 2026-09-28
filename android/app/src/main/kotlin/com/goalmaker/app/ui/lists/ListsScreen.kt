@@ -89,6 +89,7 @@ import com.goalmaker.app.ui.goals.GoalSummaryRow
 import com.goalmaker.app.ui.habits.AmountDialog
 import com.goalmaker.app.ui.habits.HabitRingsRow
 import com.goalmaker.app.ui.habits.HabitRow
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -110,6 +111,7 @@ fun ListsScreen(
     onOpenHabits: () -> Unit,
     tab: ListTab,
     actions: @Composable () -> Unit,
+    onBack: (() -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -188,7 +190,7 @@ fun ListsScreen(
                             Text(subtitle(tab, it), maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     },
-                    navigationIcon = { DayMark(tab, state.lists) },
+                    navigationIcon = { PlaceNavigationIcon(onBack) { DayMark(tab, state.lists) } },
                     actions = { actions() },
                     scrollBehavior = scrollBehavior,
                 )

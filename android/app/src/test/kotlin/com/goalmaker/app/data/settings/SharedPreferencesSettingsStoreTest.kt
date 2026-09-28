@@ -41,6 +41,20 @@ class SharedPreferencesSettingsStoreTest {
     }
 
     @Test
+    fun `the pins start as the defaults, keep their order across a restart, and drop what is gone`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(listOf("today", "tomorrow", "inbox", "projects"), store.pins.value)
+
+        store.setPins(listOf("habits", "today"))
+
+        assertEquals(listOf("habits", "today"), store.pins.value)
+        assertEquals(listOf("habits", "today"), SharedPreferencesSettingsStore(preferences).pins.value)
+
+        preferences.edit(commit = true) { putString("pinned_places", "focus,stats,stats") }
+        assertEquals(listOf("stats"), SharedPreferencesSettingsStore(preferences).pins.value)
+    }
+
+    @Test
     fun `changes apply at once and survive a restart`() {
         val store = SharedPreferencesSettingsStore(preferences)
 

@@ -127,6 +127,8 @@ internal sealed class TestPlanner : IDisposable
 
         public WindowPlacement? MainWindowPlacement { get; set; }
 
+        public IReadOnlyList<string> PinnedPlaces { get; set; } = [];
+
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } = new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);
 
         public string? WeeklyBackupFolder { get; set; }

@@ -683,4 +683,15 @@
     <sys:String x:Key="Reviews.DoneSummary">{0} tasks behind you, and {1} answers written down.</sys:String>
     <sys:String x:Key="Task.Goal">Goal</sys:String>
     <sys:String x:Key="Task.NoGoal">No goal</sys:String>
+    <!-- Pinned places and Go to (ADR 0014) -->
+    <sys:String x:Key="Places.Pinned">Pinned</sys:String>
+    <sys:String x:Key="Places.All">All places</sys:String>
+    <sys:String x:Key="Places.Pin">Pin</sys:String>
+    <sys:String x:Key="Places.Unpin">Unpin</sys:String>
+    <sys:String x:Key="Places.PinToSidebar">Pin to the sidebar</sys:String>
+    <sys:String x:Key="Places.UnpinFromSidebar">Unpin from the sidebar</sys:String>
+    <sys:String x:Key="Places.GoTo">Go to…</sys:String>
+    <sys:String x:Key="Places.GoToShortcut">Ctrl K</sys:String>
+    <sys:String x:Key="Places.GoToHint">Go to a place…</sys:String>
+    <sys:String x:Key="Places.NothingFound">Nothing called that</sys:String>
 </ResourceDictionary>
