@@ -25,6 +25,7 @@ public sealed partial class ComposerViewModel : ObservableObject
     private readonly Func<string, Brush?> areaBrush;
     private readonly Func<DateOnly, DateOnly?> defaultDay;
     private readonly Action? openPlan;
+    private readonly Action<string>? openWant;
     private ComposerDraft draft;
 
     [ObservableProperty]
@@ -36,6 +37,7 @@ public sealed partial class ComposerViewModel : ObservableObject
 
     /// <param name="defaultDay">The day a line without one lands on, from the planning day (null: none).</param>
     /// <param name="openPlan">What `/plan` does (docs/plan-tomorrow.md); null where it can't run.</param>
+    /// <param name="openWant">What `/want` does with its title (docs/wants.md); null where it can't run.</param>
     public ComposerViewModel(
         TaskList tasks,
         AreaList areas,
@@ -47,9 +49,11 @@ public sealed partial class ComposerViewModel : ObservableObject
         Func<string, Brush?> areaBrush,
         Func<DateOnly, DateOnly?> defaultDay,
         Action<Action> runOnUi,
-        Action? openPlan = null)
+        Action? openPlan = null,
+        Action<string>? openWant = null)
     {
         this.openPlan = openPlan;
+        this.openWant = openWant;
         this.tasks = tasks;
         this.areas = areas;
         this.tags = tags;
@@ -74,7 +78,9 @@ public sealed partial class ComposerViewModel : ObservableObject
 
     private bool IsPlanCommand => draft.Command?.Name == PlanRules.Command && openPlan is not null;
 
-    private bool CanAddTask() => (draft.Title.Trim().Length > 0 && draft.Command is null) || IsPlanCommand;
+    private bool IsWantCommand => draft.Command?.Name == WantRules.Command && openWant is not null;
+
+    private bool CanAddTask() => (draft.Title.Trim().Length > 0 && draft.Command is null) || IsPlanCommand || IsWantCommand;
 
     [RelayCommand(CanExecute = nameof(CanAddTask))]
     private void AddTask()
@@ -83,6 +89,14 @@ public sealed partial class ComposerViewModel : ObservableObject
         {
             NewTaskTitle = string.Empty;
             openPlan?.Invoke();
+            return;
+        }
+
+        if (IsWantCommand)
+        {
+            var title = draft.Command!.Argument;
+            NewTaskTitle = string.Empty;
+            openWant?.Invoke(title);
             return;
         }
 

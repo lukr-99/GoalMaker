@@ -1,0 +1,288 @@
+<Page x:Class="GoalMaker.App.Views.WantsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      xmlns:planning="clr-namespace:GoalMaker.Core.Planning;assembly=GoalMaker.Core"
+      Title="{DynamicResource Wants.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Page.Resources>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,2,0,8" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        </Style>
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,10,0,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Padding" Value="16" />
+            <Setter Property="CornerRadius" Value="{DynamicResource GM.CardCorner}" />
+            <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+        </Style>
+
+        <!-- A filter chip: the chosen one carries the accent, as on the phone. -->
+        <Style x:Key="FilterChip" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="GroupName" Value="WantFilter" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid>
+                            <Border x:Name="Tint" CornerRadius="{DynamicResource GM.ChipCorner}" Background="{DynamicResource GM.AccentBrush}" Opacity="0" />
+                            <Border x:Name="Edge" CornerRadius="{DynamicResource GM.ChipCorner}" BorderThickness="1" BorderBrush="{DynamicResource GM.OutlineBrush}" Padding="14,6">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon x:Name="Tick" Symbol="Checkmark16" FontSize="13" Margin="0,0,6,0" Visibility="Collapsed"
+                                                   Foreground="{DynamicResource GM.AccentBrush}" />
+                                    <ContentPresenter VerticalAlignment="Center" TextElement.FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                                      TextElement.Foreground="{DynamicResource GM.TextBrush}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Tint" Property="Opacity" Value="0.2" />
+                                <Setter TargetName="Edge" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Edge" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Edge" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- One want: the ring counting its cooldown down, what it costs and where it stands; opens to decide. -->
+        <DataTemplate x:Key="WantRow" DataType="{x:Type vm:WantRowViewModel}">
+            <Border x:Name="Row" Margin="0,0,0,6" Padding="12,10" CornerRadius="{DynamicResource GM.RowCorner}"
+                    Background="{DynamicResource GM.SurfaceBrush}" BorderThickness="1" BorderBrush="Transparent">
+                <StackPanel>
+                    <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                            HorizontalContentAlignment="Stretch" Command="{Binding ToggleCommand}"
+                            AutomationProperties.Name="{Binding Title}">
+                        <DockPanel>
+                            <Grid DockPanel.Dock="Left" Width="40" Height="40" Margin="0,0,14,0">
+                                <controls:GoalRing Fraction="{Binding Fraction}" Thickness="4" />
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RingText}" FontSize="13"
+                                           FontFamily="{DynamicResource GM.NumberFont}" />
+                                <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Symbol="Checkmark20"
+                                               Foreground="{DynamicResource GM.AccentBrush}"
+                                               Visibility="{Binding ShowsCheck, Converter={StaticResource BoolToVisibility}}" />
+                            </Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Title}" FontSize="14" FontFamily="{DynamicResource GM.BodyStrongFont}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock x:Name="Status" Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Button>
+                    <StackPanel Margin="54,10,0,0" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Why}" />
+                        <TextBlock Text="{Binding Reason}" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,6,0,0" Visibility="{Binding HasLink, Converter={StaticResource BoolToVisibility}}">
+                            <Hyperlink NavigateUri="{Binding Link}" RequestNavigate="OnLink" Foreground="{DynamicResource GM.AccentBrush}">
+                                <Run Text="{Binding Link, Mode=OneWay}" />
+                            </Hyperlink>
+                        </TextBlock>
+                        <StackPanel Visibility="{Binding HasChecked, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Checked}" />
+                            <TextBlock Text="{Binding CheckedText}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding HasDecisionNote, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Note}" />
+                            <TextBlock Text="{Binding DecisionNote}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}">
+                            <ui:TextBox Margin="0,10,0,8" Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="{DynamicResource Wants.NoteOptional}" AutomationProperties.Name="{DynamicResource Wants.NoteOptional}" />
+                            <DockPanel>
+                                <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Content="{DynamicResource Wants.EditOne}" Command="{Binding EditCommand}" />
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:Button Appearance="Primary" Command="{Binding BuyCommand}" Margin="0,0,8,0" Content="{DynamicResource Wants.Buy}">
+                                        <ui:Button.Icon>
+                                            <ui:SymbolIcon Symbol="Checkmark20" />
+                                        </ui:Button.Icon>
+                                    </ui:Button>
+                                    <ui:Button Appearance="Secondary" Command="{Binding DropCommand}" Content="{DynamicResource Wants.Drop}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0" Visibility="{Binding IsDecided, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button Appearance="Secondary" Command="{Binding ReopenCommand}" Content="{DynamicResource Wants.Reopen}" Margin="0,0,8,0" />
+                            <ui:Button Appearance="Transparent" Command="{Binding DeleteCommand}" Content="{DynamicResource Wants.Delete}"
+                                       Foreground="{DynamicResource GM.DangerBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsReady}" Value="True">
+                    <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                    <Setter TargetName="Status" Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Page.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Wants (docs/wants.md): the thresholds, the filters, the wants, and the panels to add and to change the thresholds. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
+                <DockPanel>
+                    <ui:Button DockPanel.Dock="Right" VerticalAlignment="Center" Appearance="Primary" Command="{Binding AddCommand}"
+                               Content="{DynamicResource Wants.Add}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Add24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <controls:HeadlineText Title="{DynamicResource Wants.Title}" FontSize="40" />
+                </DockPanel>
+
+                <DockPanel Margin="0,8,0,10">
+                    <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding EditCooldownsCommand}"
+                               ToolTip="{DynamicResource Wants.CooldownsEdit}" AutomationProperties.Name="{DynamicResource Wants.CooldownsEdit}">
+                        <ui:SymbolIcon Symbol="Options24" Foreground="{DynamicResource GM.AccentBrush}" />
+                    </ui:Button>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0" VerticalAlignment="Center" Text="{Binding CooldownsLine}" />
+                </DockPanel>
+
+                <!-- The thresholds panel. -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12" Visibility="{Binding IsEditingCooldowns, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{DynamicResource Wants.CooldownsTitle}" FontSize="18" FontFamily="{DynamicResource GM.HeadingFont}" Foreground="{DynamicResource GM.AccentBrush}" />
+                        <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Wants.CooldownsHint}" />
+                        <UniformGrid Columns="2" Margin="0,4,0,0">
+                            <StackPanel Margin="0,0,8,8">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Under}" />
+                                <ui:TextBox Text="{Binding SmallUnder, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.Under}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.WaitDays}" />
+                                <ui:TextBox Text="{Binding SmallDays, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.WaitDays}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,8">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Under}" />
+                                <ui:TextBox Text="{Binding MediumUnder, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.Under}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.WaitDays}" />
+                                <ui:TextBox Text="{Binding MediumDays, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.WaitDays}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,8,8">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.MoreWait}" />
+                                <ui:TextBox Text="{Binding LargeDays, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.MoreWait}" />
+                            </StackPanel>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.UnpricedWait}" />
+                                <ui:TextBox Text="{Binding UnpricedDays, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.UnpricedWait}" />
+                            </StackPanel>
+                        </UniformGrid>
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Currency}" />
+                        <ui:TextBox Width="120" HorizontalAlignment="Left" MaxLength="3" CharacterCasing="Upper"
+                                    Text="{Binding CooldownsCurrency, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.Currency}" />
+                        <TextBlock Margin="0,8,0,0" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}" Text="{DynamicResource Wants.CooldownsRefused}"
+                                   Visibility="{Binding CooldownsRefused, Converter={StaticResource BoolToVisibility}}" />
+                        <DockPanel Margin="0,12,0,0">
+                            <ui:Button DockPanel.Dock="Left" Appearance="Transparent" Content="{DynamicResource Wants.Defaults}" Command="{Binding ResetCooldownsCommand}" />
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <ui:Button Appearance="Transparent" Content="{DynamicResource Wants.Cancel}" Command="{Binding CancelCooldownsCommand}" Margin="0,0,8,0" />
+                                <ui:Button Appearance="Primary" Content="{DynamicResource Wants.Save}" Command="{Binding SaveCooldownsCommand}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- The add and edit panel: the reason is required, and a new want shows the cooldown it will get. -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,12" BorderThickness="1" BorderBrush="{DynamicResource GM.AccentBrush}"
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PanelTitle}" FontSize="18" FontFamily="{DynamicResource GM.HeadingFont}" Foreground="{DynamicResource GM.AccentBrush}" />
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.What}" />
+                        <ui:TextBox x:Name="DraftTitle" Text="{Binding DraftTitle, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
+                                    AutomationProperties.Name="{DynamicResource Wants.What}" />
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.WhyField}" />
+                        <ui:TextBox x:Name="DraftReason" Text="{Binding DraftReason, UpdateSourceTrigger=PropertyChanged}" MaxLength="2000" MinLines="2" TextWrapping="Wrap" AcceptsReturn="True"
+                                    PlaceholderText="{DynamicResource Wants.WhyHint}" AutomationProperties.Name="{DynamicResource Wants.WhyField}" />
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Price}" />
+                                <ui:TextBox x:Name="DraftPrice" Text="{Binding DraftPrice, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.Price}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Currency}" />
+                                <ui:TextBox Text="{Binding DraftCurrency, UpdateSourceTrigger=PropertyChanged}" MaxLength="3" CharacterCasing="Upper"
+                                            AutomationProperties.Name="{DynamicResource Wants.Currency}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Link}" />
+                        <ui:TextBox Text="{Binding DraftLink, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.Link}" />
+                        <DockPanel Margin="0,12,0,0" Visibility="{Binding IsAdding, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <ui:Button Appearance="Transparent" Command="{Binding FewerDaysCommand}" ToolTip="{DynamicResource Wants.FewerDays}"
+                                           AutomationProperties.Name="{DynamicResource Wants.FewerDays}">
+                                    <ui:SymbolIcon Symbol="Subtract24" />
+                                </ui:Button>
+                                <ui:Button Appearance="Transparent" Command="{Binding MoreDaysCommand}" ToolTip="{DynamicResource Wants.MoreDays}"
+                                           AutomationProperties.Name="{DynamicResource Wants.MoreDays}">
+                                    <ui:SymbolIcon Symbol="Add24" />
+                                </ui:Button>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionLabel}" Margin="0" Text="{DynamicResource Wants.CoolsFor}" />
+                                <TextBlock Text="{Binding DraftDays}" FontSize="24" FontFamily="{DynamicResource GM.NumberFont}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                            <ui:Button Appearance="Transparent" Content="{DynamicResource Wants.Cancel}" Command="{Binding CancelDraftCommand}" Margin="0,0,8,0" />
+                            <ui:Button x:Name="SaveWant" Appearance="Primary" Content="{DynamicResource Wants.Save}" Command="{Binding SaveDraftCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                    <RadioButton Style="{StaticResource FilterChip}" Content="{Binding ReadyLabel}" IsChecked="{Binding ShowsReady, Mode=OneWay}"
+                                 Command="{Binding ShowCommand}" CommandParameter="{x:Static planning:WantState.Ready}" />
+                    <RadioButton Style="{StaticResource FilterChip}" Content="{Binding CoolingLabel}" IsChecked="{Binding ShowsCooling, Mode=OneWay}"
+                                 Command="{Binding ShowCommand}" CommandParameter="{x:Static planning:WantState.Cooling}" />
+                    <RadioButton Style="{StaticResource FilterChip}" Content="{Binding DecidedLabel}" IsChecked="{Binding ShowsDecided, Mode=OneWay}"
+                                 Command="{Binding ShowCommand}" CommandParameter="{x:Static planning:WantState.Decided}" />
+                </StackPanel>
+
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding EmptyText}" Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource WantRow}" Focusable="False" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Undo for the last decision or deletion, for five seconds. -->
+        <Border Grid.Row="1" Margin="24,0,24,16" Padding="16,6,6,6" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.HeroBrush}"
+                MaxWidth="{DynamicResource GM.WidePageWidth}"
+                Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel>
+                <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Foreground="{DynamicResource GM.HeroAccentBrush}"
+                           Content="{DynamicResource Lists.Undo}" Command="{Binding UndoCommand}" />
+                <TextBlock VerticalAlignment="Center" Text="{Binding UndoText}" Foreground="{DynamicResource GM.OnHeroBrush}" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</Page>

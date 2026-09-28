@@ -17,6 +17,7 @@ public sealed partial class StatsViewModel : ObservableObject
     private readonly GoalList goals;
     private readonly HabitList habits;
     private readonly ReviewList reviews;
+    private readonly WantList? wants;
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
@@ -57,6 +58,21 @@ public sealed partial class StatsViewModel : ObservableObject
     [ObservableProperty]
     private IReadOnlyList<StatsDigest.Rating> ratings = [];
 
+    [ObservableProperty]
+    private bool hasWants;
+
+    [ObservableProperty]
+    private string wantsBought = "0";
+
+    [ObservableProperty]
+    private string wantsDropped = "0";
+
+    [ObservableProperty]
+    private string wantsNotSpent = "0";
+
+    [ObservableProperty]
+    private string wantsCurrency = string.Empty;
+
     public StatsViewModel(
         TaskList tasks,
         GoalList goals,
@@ -65,8 +81,10 @@ public sealed partial class StatsViewModel : ObservableObject
         ISettingsStore settings,
         IStrings strings,
         TimeProvider time,
-        Action<Action> runOnUi)
+        Action<Action> runOnUi,
+        WantList? wants = null)
     {
+        this.wants = wants;
         this.tasks = tasks;
         this.goals = goals;
         this.habits = habits;
@@ -78,6 +96,11 @@ public sealed partial class StatsViewModel : ObservableObject
         goals.Changed += (_, _) => runOnUi(Refresh);
         habits.Changed += (_, _) => runOnUi(Refresh);
         reviews.Changed += (_, _) => runOnUi(Refresh);
+        if (wants is not null)
+        {
+            wants.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
@@ -147,6 +170,18 @@ public sealed partial class StatsViewModel : ObservableObject
         HasHabits = digest.Habits.Count > 0;
         HasRatings = digest.Ratings.Count > 0;
         IsEmpty = digest.Empty;
+
+        // What became of the wants (docs/wants.md), once one has been decided.
+        if (wants is not null)
+        {
+            var currency = wants.Cooldowns().Currency;
+            var decided = WantRules.Stats(wants.All(), currency);
+            WantsBought = decided.Bought.ToString(CultureInfo.CurrentCulture);
+            WantsDropped = decided.Dropped.ToString(CultureInfo.CurrentCulture);
+            WantsNotSpent = decided.NotSpent.ToString("N0", CultureInfo.CurrentCulture);
+            WantsCurrency = currency;
+            HasWants = decided.Bought + decided.Dropped > 0;
+        }
     }
 
     private static string Percent(double fraction) =>

@@ -189,8 +189,13 @@ public sealed class AppGraph : IDisposable
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
+        void OpenWant(string title)
+        {
+            WantsPage.StartAdding(title);
+            PageRequested?.Invoke(this, AppPage.Wants);
+        }
         ComposerViewModel Composer(Func<DateOnly, DateOnly?> defaultDay) =>
-            new(Tasks, Areas, Tags, Projects, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan);
+            new(Tasks, Areas, Tags, Projects, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan, OpenWant);
         ListViewModel List(ListKind kind, Func<DateOnly, DateOnly?> defaultDay) => new(
             kind,
             Tasks,
@@ -230,6 +235,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits));
         Reviews = new ReviewList(replica, newRows, Sync.Request);
+        Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Review = new ReviewViewModel(
             ReviewRules.Weekly,
             ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),
@@ -245,7 +251,8 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             runOnUi);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
-        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi);
+        WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi);
+        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants);
         ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
             Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
@@ -419,11 +426,15 @@ public sealed class AppGraph : IDisposable
     /// <summary>The owner's weekly, monthly and yearly reviews (docs/reviews.md).</summary>
     public ReviewList Reviews { get; private set; } = null!;
 
+    public WantList Wants { get; private set; } = null!;
+
     /// <summary>The owner's projects and their milestones (docs/projects.md).</summary>
     public ProjectList Projects { get; private set; } = null!;
 
     /// <summary>The Reviews page.</summary>
     public ReviewsViewModel ReviewsPage { get; private set; } = null!;
+
+    public WantsViewModel WantsPage { get; private set; } = null!;
 
     /// <summary>The Stats page (docs/stats.md).</summary>
     public StatsViewModel StatsPage { get; private set; } = null!;
@@ -752,6 +763,7 @@ public sealed class AppGraph : IDisposable
         GoalsPage.Refresh();
         HabitsPage.Refresh();
         ReviewsPage.Refresh();
+        WantsPage.Refresh();
         StatsPage.Refresh();
         ProjectsPage.Refresh();
         CalendarPage.Refresh();

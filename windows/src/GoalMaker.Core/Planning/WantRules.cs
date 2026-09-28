@@ -12,6 +12,9 @@ public static class WantRules
     public const string Bought = "bought";
     public const string Dropped = "dropped";
 
+    /// <summary>The composer command that opens the Wants page with a new want (<c>/want Trail shoes</c>).</summary>
+    public const string Command = "want";
+
     /// <summary>The most days a picked cooldown can be.</summary>
     public const int MaxDays = 365;
 
