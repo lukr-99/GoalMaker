@@ -1,6 +1,6 @@
 # M8-01: A navigation with room to grow: the prototype
 
-**Status:** todo · **Milestone:** M8
+**Status:** done · **Milestone:** M8
 
 ## Scope
 - The phone is full on both edges: the bottom bar holds Today, Tomorrow, Inbox, Projects and
@@ -30,3 +30,13 @@
 - Emulator: the prototype at phone size and at the largest text size.
 - Windows: the prototype at the narrowest and the widest window.
 - Endpoint: nothing.
+
+## Result
+
+2026-09-28. The prototype is kept on the branch `prototype/m8-navigation`
+(`docs/design/prototypes/navigation-prototype.html`, never merged): A (Places hub), B (sections), C
+(pinned places with an All sheet and Ctrl+K) and D, the owner's mix. The owner found A good on the
+phone only, B good on Windows only, and C good on both, and chose **D**: C on Windows, and on the
+phone four pins plus A's Places hub in place of the All sheet. A fifth pin is refused until one is
+unpinned, and pins are kept per device. Recorded in ADR 0014 and `docs/design/spec.md` (Navigation);
+built in M8-02, which now carries `navigation.json`.
