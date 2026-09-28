@@ -94,6 +94,10 @@ Handling a reminder writes its state (`dismissed`, `done`, or `snoozed` with a t
 like every other row. Opening the app from a notification counts as dismissing it. Completing the
 task anywhere settles its reminders too, because a reminder whose task is no longer open has no time.
 
+The weekly and monthly review reminders ([reviews](reviews.md)) and the wants notification
+([wants](wants.md)) share the same alarm, so the next of all of them is the one armed, and the alarm
+shows each of them when it goes off.
+
 After every sync, a device takes down each notification on screen that has gone **stale**: its
 reminder was handled or deleted, it was snoozed or its task moved so it is due later, or its task
 finished. A notification whose reminder is still due stays.

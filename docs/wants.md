@@ -1,7 +1,7 @@
 # Wants
 
-> M8: the data and rules (M8-03) and the Wants place (M8-04) are built; the ready notification and the
-> connector tools follow (M8-05, M8-06).
+> M8: the data and rules (M8-03), the Wants place (M8-04) and the ready notification (M8-05) are built;
+> the connector tools follow (M8-06).
 
 A **want** is something the owner would like to buy, written down with the reason, which waits out a
 **cooldown** before it is decided (spec, stories 104 to 108). It stops impulse buys and leaves a
@@ -53,10 +53,14 @@ The states, the cooldown and its edges (the day rollover, a price of exactly 1,0
 
 ## The ready notification
 
-One notification a day, at a time the owner picks (10:00 by default), listing the wants that became
-ready since the last one. It is worked out from the wants themselves, like the review reminders, so
-there are no reminder rows; quiet hours hold it back, and deciding a want takes it out of the
-notification on both devices after the next sync (the `ready` group of `wants.json`).
+One notification a day, at a time the owner picks (10:00 by default, Settings, Planning, "Wants
+ready"; off switches it off), naming the wants that became ready since the last one: a day the device
+was off is caught up in the next one. It is worked out from the wants themselves, like the review
+reminders, so there are no reminder rows, and it shares the device's one alarm. Like the review
+reminders, quiet hours don't move it: the owner picked the time. Tapping it opens the Wants place.
+It goes once every want it named is decided or deleted, on this device at once and on the other
+after its next sync (the `ready` and `notify` groups of `wants.json`). On Android it has its own
+notification channel, so it can be silenced apart from task reminders.
 
 ## In the apps
 
