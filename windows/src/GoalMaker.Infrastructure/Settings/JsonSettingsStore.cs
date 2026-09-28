@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GoalMaker.Core.Backend;
+using GoalMaker.Core.Navigation;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 
@@ -116,6 +117,12 @@ public sealed class JsonSettingsStore : ISettingsStore
     {
         get => document.MainWindowPlacement;
         set => Save(document with { MainWindowPlacement = value });
+    }
+
+    public IReadOnlyList<string> PinnedPlaces
+    {
+        get => PlaceRules.Stored(document.PinnedPlaces, DeviceKind.Pc);
+        set => Save(document with { PinnedPlaces = [.. PlaceRules.Stored(value, DeviceKind.Pc)] });
     }
 
     public IReadOnlyDictionary<string, MiniWindowState> MiniWindows
