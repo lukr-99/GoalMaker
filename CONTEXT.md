@@ -106,6 +106,15 @@ A saved answer to a review prompt.
 **Prompt library**:
 The versioned set of reflection prompts that reviews draw from.
 
+**Letter**:
+The text a Claude routine writes about a finished week or month, stored as that review's summary and
+read as the first step of the review.
+_Avoid_: Report, newsletter
+
+**Review digest**:
+Everything about one review period in one answer, which the connector hands to the routine that
+writes the Letter.
+
 **Day rollover**:
 The hour (04:00 by default) at which "today" becomes the next day.
 
@@ -115,6 +124,34 @@ _Avoid_: Search bar, command palette
 
 **Shortcut**:
 A composer token that sets a field: date words, times, `#tag`, `@Area`, `!`, `?`, `+Project`.
+
+**Want**:
+Something the owner would like to buy, with the reason, that waits out a cooldown before it is
+decided.
+_Avoid_: Wish, purchase (before it is bought)
+
+**Cooldown**:
+The days a want waits before it can be decided, set by its price unless the owner picks them.
+
+**Ready**:
+A want whose cooldown has passed and that is not decided yet.
+
+**Decision**:
+What became of a want: bought or dropped, with the day and an optional note.
+
+**Tally**:
+Where the owner's time actually went on the phone and the PC, as daily minutes per category.
+_Avoid_: Screen time, tracking (in UI copy)
+
+**Tally category**:
+A named kind of time (Coding, Video, Study, ...) that Tally sorts apps and windows into.
+
+**Tally rule**:
+A pattern on an app, a window title or a folder that puts time into a Tally category or a project.
+
+**Place**:
+One of the app's top-level screens the navigation leads to (Today, Habits, Projects, Wants, ...).
+_Avoid_: Tab, page (when the navigation target is meant)
 
 **Connector**:
 The remote MCP server through which Claude apps read and change GoalMaker data.
