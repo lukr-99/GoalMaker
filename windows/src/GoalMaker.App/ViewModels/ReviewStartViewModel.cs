@@ -20,6 +20,9 @@ public sealed class ReviewStartViewModel
 
     public string Subtitle { get; }
 
+    /// <summary>A review with only a letter has no mood, energy or answers to list, so the line isn't drawn empty.</summary>
+    public bool HasSubtitle => Subtitle.Length > 0;
+
     /// <summary>The first line of the letter a Claude routine wrote about the period, or null (docs/letter.md).</summary>
     public string? Letter { get; }
 

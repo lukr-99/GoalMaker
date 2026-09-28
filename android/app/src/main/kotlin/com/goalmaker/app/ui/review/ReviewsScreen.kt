@@ -177,15 +177,15 @@ private fun PastRow(review: ReviewItem, letter: String?, onOpen: () -> Unit, onD
             if (letter != null) {
                 Text(letter, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(
-                listOfNotNull(
-                    review.mood?.let { stringResource(R.string.reviews_mood_short, it) },
-                    review.energy?.let { stringResource(R.string.reviews_energy_short, it) },
-                    review.reflections.count { it.answer.isNotBlank() }.takeIf { it > 0 }?.let { stringResource(R.string.reviews_answers_short, it) },
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodySmall,
-                color = AppTheme.colors.textMuted,
-            )
+            // A review with only a letter has nothing else to say here, so the line isn't drawn empty.
+            val details = listOfNotNull(
+                review.mood?.let { stringResource(R.string.reviews_mood_short, it) },
+                review.energy?.let { stringResource(R.string.reviews_energy_short, it) },
+                review.reflections.count { it.answer.isNotBlank() }.takeIf { it > 0 }?.let { stringResource(R.string.reviews_answers_short, it) },
+            ).joinToString(" · ")
+            if (details.isNotEmpty()) {
+                Text(details, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
+            }
         }
         IconButton(onClick = onDelete) {
             Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.reviews_delete), tint = AppTheme.colors.danger)

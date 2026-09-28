@@ -45,7 +45,8 @@
                         <TextBlock Text="{Binding Title}" FontSize="14" />
                         <TextBlock Text="{Binding Letter}" FontSize="13" TextTrimming="CharacterEllipsis"
                                    Visibility="{Binding HasLetter, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <TextBlock Text="{Binding Subtitle}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding HasSubtitle, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </DockPanel>
             </Border>
