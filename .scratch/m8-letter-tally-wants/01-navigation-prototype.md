@@ -3,9 +3,11 @@
 **Status:** todo · **Milestone:** M8
 
 ## Scope
-- The phone's tab bar and overflow dots are full (Today, Tomorrow, Inbox, Habits, Goals in the bar;
-  Projects, Calendar, Reviews, Stats, Archive, Settings behind the dots), and M8 adds Wants and Tally.
-  The Windows sidebar keeps growing too (spec, story 99; board: "Navigation that scales").
+- The phone is full on both edges: the bottom bar holds Today, Tomorrow, Inbox, Projects and
+  Calendar, and the top bar carries six icons (sync, Habits, Goals, the dots with Reviews, Stats and
+  Archive, Plan tomorrow, Settings). The Windows sidebar already lists eleven places (Today,
+  Tomorrow, Inbox, Goals, Habits, Reviews, Calendar, Projects, Stats, Archive, Settings). M8 adds
+  Wants and Tally (spec, story 99; board: "Navigation that scales").
 - A throwaway prototype (the `prototype` skill) of three or four directions, clickable at phone size
   and at Windows size, for the owner to choose from:
   - a **More** place of big tiles, each with an accent icon and a live count or ring, instead of a menu;
