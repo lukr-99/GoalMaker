@@ -911,6 +911,181 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "want_cooldowns",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "small_under",
+          "kind": "real",
+          "required": true
+        },
+        {
+          "name": "small_days",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "medium_under",
+          "kind": "real",
+          "required": true
+        },
+        {
+          "name": "medium_days",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "large_days",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "unpriced_days",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "currency",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "wants",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "title",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "reason",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "link",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "price",
+          "kind": "real",
+          "required": false
+        },
+        {
+          "name": "currency",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "area_id",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "cooldown_days",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "added_on",
+          "kind": "date",
+          "required": true
+        },
+        {
+          "name": "cools_until",
+          "kind": "date",
+          "required": true
+        },
+        {
+          "name": "decision",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "decided_at",
+          "kind": "timestamp",
+          "required": false
+        },
+        {
+          "name": "decision_note",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "checked_price",
+          "kind": "real",
+          "required": false
+        },
+        {
+          "name": "checked_at",
+          "kind": "timestamp",
+          "required": false
+        },
+        {
+          "name": "checked_note",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "made_by",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
     }
   ]
 }
