@@ -195,6 +195,14 @@ fun SettingsScreen(
                     onTime = viewModel::setMonthlyReviewReminder,
                     onWeekday = {},
                 )
+                ReviewReminderRow(
+                    title = stringResource(R.string.settings_wants_ready),
+                    hint = stringResource(R.string.settings_wants_ready_hint),
+                    time = state.wantsReadyReminder,
+                    weekday = null,
+                    onTime = viewModel::setWantsReadyReminder,
+                    onWeekday = {},
+                )
                 QuietHoursRow(state.quietHours, viewModel::setQuietHours)
                 OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
                 Text(

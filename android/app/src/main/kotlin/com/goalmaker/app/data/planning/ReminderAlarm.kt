@@ -26,6 +26,7 @@ object ReminderAlarm {
 
     /** Set on the intent that opens the app from the Plan tomorrow reminder. */
     const val EXTRA_OPEN_PLAN = "open_plan"
+    const val EXTRA_OPEN_WANTS = "open_wants"
 
     /** The one alarm a device has armed, so arming again replaces it. */
     const val ALARM_REQUEST_CODE = 1

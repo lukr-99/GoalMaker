@@ -21,6 +21,7 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ProjectList
+import com.goalmaker.app.application.planning.ReminderLook
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
@@ -275,12 +276,19 @@ class AppGraph(context: Context) {
         weeklyReviewAt = { settings.weeklyReviewReminder.value },
         weeklyReviewWeekday = { settings.weeklyReviewWeekday.value },
         monthlyReviewAt = { settings.monthlyReviewReminder.value },
+        wants = wants,
+        wantsReadyAt = { settings.wantsReadyReminder.value },
     )
 
     private val planRequest = MutableStateFlow(false)
 
     /** True while the Plan tomorrow reminder asked for the ritual and it isn't on screen yet. */
     val planRequested: StateFlow<Boolean> = planRequest.asStateFlow()
+
+    private val wantsRequest = MutableStateFlow(false)
+
+    /** True while the wants notification asked for the Wants place and it isn't on screen yet. */
+    val wantsRequested: StateFlow<Boolean> = wantsRequest.asStateFlow()
 
     private val reviewRequest = MutableStateFlow<Pair<String, LocalDate>?>(null)
 
@@ -313,6 +321,13 @@ class AppGraph(context: Context) {
         // A sync can leave a series with two open occurrences; every device settles it the same way.
         // A sync can also change when the next reminder is due, and settle reminders on screen here
         // that were handled on the other device, so the alarm is redone and stale ones come down.
+        // A want added, decided or deleted here moves the next alarm and may settle the notification.
+        scope.launch(io) {
+            wants.watch().collect {
+                reminders.rearm()
+                clearStaleWants()
+            }
+        }
         sync.afterRun = { report ->
             if (report.pulled > 0) tasks.repairSeries()
             if (report.pulled > 0 || report.pushed > 0) {
@@ -324,6 +339,7 @@ class AppGraph(context: Context) {
                 reminderNotifications.shownReviews()
                     .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
                     .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
+                clearStaleWants()
             }
         }
         scope.launch {
@@ -405,6 +421,42 @@ class AppGraph(context: Context) {
         planRequest.value = false
     }
 
+    /** The owner opened the app from the wants notification: the Wants place opens. */
+    fun openedForWants() {
+        wantsRequest.value = true
+    }
+
+    // A wants notification goes once every want it names was decided, here or on the other device.
+    private fun clearStaleWants() {
+        reminderNotifications.shownWants()
+            .filter { (_, ids) -> reminders.wantsStale(ids) }
+            .forEach { (day, _) -> reminderNotifications.clearWants(day) }
+    }
+
+    /** The Wants place is on screen, so the request is settled. */
+    fun wantsOpened() {
+        wantsRequest.value = false
+    }
+
+    /**
+     * Shows everything a look found: the task reminders, the evening Plan tomorrow, the review
+     * reminders and the wants that became ready. The alarm and a sign-in both come through here.
+     */
+    fun show(look: ReminderLook) {
+        look.reminders.forEach(reminderNotifications::show)
+        look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
+        look.weeklyReview?.let { day ->
+            reminderNotifications.showReview(RitualRunList.WEEKLY_REVIEW, day, "weekly", ReviewReminder.periodStart("weekly", day))
+        }
+        look.monthlyReview?.let { day ->
+            reminderNotifications.showReview(RitualRunList.MONTHLY_REVIEW, day, "monthly", ReviewReminder.periodStart("monthly", day))
+        }
+        look.wants?.let { due ->
+            val byId = wants.all().associateBy { it.id }
+            reminderNotifications.showWants(due, due.wantIds.mapNotNull { byId[it]?.title })
+        }
+    }
+
     /** The owner opened the app from a review reminder: the review opens and the reminders come down. */
     fun openedForReview(kind: String, periodStart: LocalDate) {
         reviewRequest.value = kind to periodStart
@@ -440,15 +492,7 @@ class AppGraph(context: Context) {
         if (!localOnly) backgroundSync.keepSyncing()
         // Anything that was due while the app was away, and the alarm for what comes next.
         withContext(io) {
-            val look = reminders.catchUp()
-            look.reminders.forEach(reminderNotifications::show)
-            look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
-            look.weeklyReview?.let { day ->
-                reminderNotifications.showReview(RitualRunList.WEEKLY_REVIEW, day, "weekly", ReviewReminder.periodStart("weekly", day))
-            }
-            look.monthlyReview?.let { day ->
-                reminderNotifications.showReview(RitualRunList.MONTHLY_REVIEW, day, "monthly", ReviewReminder.periodStart("monthly", day))
-            }
+            show(reminders.catchUp())
         }
         if (visible && !localOnly) changeFeed.start()
         updateProfile()

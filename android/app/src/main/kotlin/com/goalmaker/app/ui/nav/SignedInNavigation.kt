@@ -107,6 +107,14 @@ fun SignedInNavigation(graph: AppGraph) {
             graph.planOpened()
         }
     }
+    // The wants notification opens the Wants place, pinned or not.
+    val wantsRequested by graph.wantsRequested.collectAsState()
+    LaunchedEffect(wantsRequested) {
+        if (wantsRequested) {
+            select(PlaceRules.WANTS)
+            graph.wantsOpened()
+        }
+    }
     // A review reminder opens the review it asked for, on top of whatever was open.
     val reviewRequested by graph.reviewRequested.collectAsState()
     LaunchedEffect(reviewRequested) {

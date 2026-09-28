@@ -12,4 +12,6 @@ data class ReminderLook(
     val planTomorrow: LocalDate? = null,
     val weeklyReview: LocalDate? = null,
     val monthlyReview: LocalDate? = null,
+    /** The wants that became ready, once a day at the owner's time (docs/wants.md). */
+    val wants: WantsDue? = null,
 )

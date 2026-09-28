@@ -20,6 +20,8 @@ data class SettingsUiState(
     val weeklyReviewReminder: LocalTime?,
     val weeklyReviewWeekday: Int,
     val monthlyReviewReminder: LocalTime?,
+    /** When the notification for wants that became ready rings, or null when it's off. */
+    val wantsReadyReminder: LocalTime? = null,
     /** The theme in use: the chosen one, or the default when none is chosen or it's unknown. */
     val themeId: String,
     val themes: List<ThemeDefinition>,

@@ -6,12 +6,14 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.getSystemService
 import com.goalmaker.app.MainActivity
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.ScheduledReminder
+import com.goalmaker.app.application.planning.WantsDue
 import com.goalmaker.app.domain.planning.Snooze
 import java.time.LocalDate
 
@@ -52,6 +54,11 @@ class ReminderNotifications(private val context: Context) {
                 description = context.getString(R.string.review_reminder_channel_description)
             },
         )
+        system.createNotificationChannel(
+            NotificationChannel(CHANNEL_WANTS, context.getString(R.string.wants_ready_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = context.getString(R.string.wants_ready_channel_description)
+            },
+        )
     }
 
     /**
@@ -79,6 +86,44 @@ class ReminderNotifications(private val context: Context) {
             // Notifications aren't allowed yet; the review is still one tap away in the app.
         }
     }
+
+    /**
+     * Shows the wants that became ready (docs/wants.md): one notification a day, naming them. Tapping it
+     * opens the Wants place; deciding every want it names takes it down on every device.
+     */
+    fun showWants(due: WantsDue, titles: List<String>) {
+        if (titles.isEmpty() || !manager.areNotificationsEnabled()) return
+        val title = if (titles.size == 1) {
+            context.getString(R.string.wants_ready_one, titles.first())
+        } else {
+            context.resources.getQuantityString(R.plurals.wants_ready_many, titles.size, titles.size)
+        }
+        val notification = NotificationCompat.Builder(context, CHANNEL_WANTS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(if (titles.size == 1) context.getString(R.string.wants_ready_text) else titles.joinToString(", "))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(titles.joinToString("\n")))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(openWants())
+            .addExtras(Bundle().apply { putString(EXTRA_WANT_IDS, due.wantIds.joinToString(",")) })
+            .build()
+        try {
+            manager.notify(due.day.toString(), WANTS_ID, notification)
+        } catch (_: SecurityException) {
+            // Notifications aren't allowed yet; the wants are waiting in the app.
+        }
+    }
+
+    /** The wants notifications on screen, as their planning day and the wants they name. */
+    fun shownWants(): List<Pair<LocalDate, List<String>>> = manager.activeNotifications
+        .filter { it.id == WANTS_ID }
+        .mapNotNull { shown ->
+            val day = shown.tag?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+            day to shown.notification.extras.getString(EXTRA_WANT_IDS).orEmpty().split(',').filter(String::isNotBlank)
+        }
+
+    fun clearWants(day: LocalDate) = manager.cancel(day.toString(), WANTS_ID)
 
     /** Takes the review reminder of [ritual] for [day] away. */
     fun clearReview(ritual: String, day: LocalDate) = manager.cancel(tagOf(ritual, day), REVIEW_ID)
@@ -182,6 +227,15 @@ class ReminderNotifications(private val context: Context) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
+    private fun openWants(): PendingIntent = PendingIntent.getActivity(
+        context,
+        WANTS_ID,
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(ReminderAlarm.EXTRA_OPEN_WANTS, true),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
     private fun openReview(kind: String, periodStart: LocalDate): PendingIntent = PendingIntent.getActivity(
         context,
         (REVIEW_ID.toString() + kind + periodStart).hashCode(),
@@ -235,5 +289,8 @@ class ReminderNotifications(private val context: Context) {
         const val ID = 4001
         const val PLAN_ID = 4002
         const val REVIEW_ID = 4003
+        const val WANTS_ID = 4004
+        const val CHANNEL_WANTS = "wants_ready"
+        const val EXTRA_WANT_IDS = "com.goalmaker.app.WANT_IDS"
     }
 }
