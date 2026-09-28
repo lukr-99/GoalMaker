@@ -1,7 +1,7 @@
 # Wants
 
-> M8: the data and rules (M8-03), the Wants place (M8-04) and the ready notification (M8-05) are built;
-> the connector tools follow (M8-06).
+> M8: the data and rules (M8-03), the Wants place (M8-04), the ready notification (M8-05) and the
+> connector tools (M8-06) are built.
 
 A **want** is something the owner would like to buy, written down with the reason, which waits out a
 **cooldown** before it is decided (spec, stories 104 to 108). It stops impulse buys and leaves a
@@ -73,7 +73,10 @@ total of dropped prices in the owner's currency).
 
 ## Through the connector
 
-`get_wants`, `add_want`, `update_want`, `decide_want` (bought or dropped with a note) and
-`record_price_check` (a price, where it was found, alternatives). Claude looks prices up with its own
-web search; GoalMaker never fetches from a shop. `get_review_digest` carries the wants that became
+`get_wants` (by state), `add_want` (the cooldown from the owner's thresholds unless picked),
+`update_want`, `decide_want` (bought or dropped with a note, or reopened) and `record_price_check` (a
+price in the want's currency, where it was found, and alternatives, kept as the checked note).
+Claude looks prices up with its own web search; GoalMaker never fetches from a shop. The tools tell
+Claude to ask the owner before it decides anything. A want Claude adds is made by Claude, and both
+apps say "by Claude" after its price and state ([connector](connector.md)). `get_review_digest` carries the wants that became
 ready or were decided in the period, so the [Letter](letter.md) can mention them.

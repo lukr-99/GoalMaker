@@ -48,6 +48,10 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_activity`, `undo_change` | The latest changes with who made each (owner, Claude or GoalMaker), and undo |
 | `get_settings`, `update_settings` | The time zone and day start every planning day is worked out from |
 | `get_calendar` | A stretch of days with what is planned, what is due, and where a repeat would come round |
+| `get_wants` | The wants that are ready, cooling or decided, each with its reason, price, last price check and note |
+| `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after |
+| `decide_want` | Bought or dropped with a note, or reopened; only what the owner decided in the conversation |
+| `record_price_check` | The price Claude found with its own web search, where, and the alternatives; GoalMaker never fetches from a shop |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
@@ -70,6 +74,14 @@ name. That is what lets Claude Code drop an idea into the right backlog from the
 
 > Use GoalMaker. Add an idea to the project for the folder I'm working in: "Cache the release
 > manifest between checks", priority high, milestone M6.
+
+Wants are decided with the owner, not for them ([wants](wants.md)). For example:
+
+> Use GoalMaker. Which of my wants are ready? Check the prices and ask me about each.
+
+Claude reads the ready wants, looks each price up with its own web search, records what it found
+with `record_price_check`, and asks whether the owner still wants it before `decide_want` marks it
+bought or dropped. A want Claude adds says "by Claude" in both apps.
 
 A goal or a habit Claude touches is the owner's own row, so it turns up on both apps after a sync and
 in the activity log as made by Claude. A check-in is named after its habit and day, exactly as the
