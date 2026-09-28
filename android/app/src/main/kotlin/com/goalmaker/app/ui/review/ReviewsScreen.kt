@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
@@ -108,7 +110,12 @@ fun ReviewsScreen(
             if (state.past.isNotEmpty()) {
                 item("h-past") { SectionHeader(stringResource(R.string.reviews_past)) }
                 items(state.past, key = { it.id }) { review ->
-                    PastRow(review, onOpen = { onOpen(review.kind, review.periodStart) }, onDelete = { viewModel.delete(review.id) })
+                    PastRow(
+                        review,
+                        letter = state.letters[review.id],
+                        onOpen = { onOpen(review.kind, review.periodStart) },
+                        onDelete = { viewModel.delete(review.id) },
+                    )
                 }
             } else {
                 item("empty") {
@@ -148,7 +155,7 @@ private fun StartRow(title: String, subtitle: String, done: Boolean, onClick: ()
 }
 
 @Composable
-private fun PastRow(review: ReviewItem, onOpen: () -> Unit, onDelete: () -> Unit) {
+private fun PastRow(review: ReviewItem, letter: String?, onOpen: () -> Unit, onDelete: () -> Unit) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -157,8 +164,19 @@ private fun PastRow(review: ReviewItem, onOpen: () -> Unit, onDelete: () -> Unit
             .clickable(onClick = onOpen)
             .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
     ) {
+        if (letter != null) {
+            Icon(
+                Icons.Outlined.Email,
+                contentDescription = stringResource(R.string.reviews_letter),
+                tint = AppTheme.colors.accent,
+                modifier = Modifier.padding(end = 12.dp).size(20.dp),
+            )
+        }
         Column(Modifier.weight(1f)) {
             Text(periodText(review.kind, review.periodStart), style = MaterialTheme.typography.bodyLarge)
+            if (letter != null) {
+                Text(letter, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
             Text(
                 listOfNotNull(
                     review.mood?.let { stringResource(R.string.reviews_mood_short, it) },

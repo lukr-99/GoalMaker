@@ -1,5 +1,6 @@
 package com.goalmaker.app.application.planning
 
+import com.goalmaker.app.domain.notes.LightMarkdown
 import com.goalmaker.app.domain.planning.NameBasedUuid
 import com.goalmaker.app.domain.planning.ReviewReminder
 import java.time.LocalDate
@@ -32,6 +33,17 @@ object ReviewRules {
     fun letterWaiting(kind: String, day: LocalDate, reviews: List<ReviewItem>): Boolean {
         val start = ReviewReminder.periodStart(kind, day)
         return reviews.any { !it.deleted && it.kind == kind && it.periodStart == start && it.summary.isNotBlank() }
+    }
+
+    /**
+     * The line of a letter the Reviews list shows: its first line of text that isn't a heading, or its
+     * first heading when it has nothing else, without the Markdown marks. Null when there is no letter.
+     */
+    fun letterPreview(summary: String): String? {
+        val lines = LightMarkdown.parse(summary)
+            .map { block -> block to block.spans.joinToString("") { it.text }.trim() }
+            .filter { (_, text) -> text.isNotEmpty() }
+        return (lines.firstOrNull { (block, _) -> block.heading == 0 } ?: lines.firstOrNull())?.second
     }
 
     /** The id of [owner]'s [kind] review for the period starting on [periodStart]. */

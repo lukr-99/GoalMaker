@@ -576,6 +576,11 @@
     <string name="review_reminder_title_weekly">Weekly review</string>
     <string name="review_reminder_title_monthly">Monthly review</string>
     <string name="review_reminder_text">A quarter of an hour to look back and set what comes next.</string>
+    <string name="review_reminder_letter_weekly">Your letter for the week is here.</string>
+    <string name="review_reminder_letter_monthly">Your letter for the month is here.</string>
+    <string name="reviews_letter">Letter</string>
+    <string name="reviews_letter_by_claude">by Claude</string>
+    <string name="reviews_continue">Continue</string>
     <string name="review_reminder_start">Review</string>
     <string name="review_reminder_skip">Not now</string>
     <string name="settings_weekly_review">Weekly review reminder</string>

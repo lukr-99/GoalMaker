@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.review
 
 import android.app.Application
+import android.content.Context
 import android.os.Looper
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalDraft
@@ -18,6 +19,7 @@ import com.goalmaker.app.application.planning.RitualRunList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.contracts.ContractFiles
+import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.PromptLibrary
@@ -37,6 +39,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
@@ -100,6 +103,60 @@ class ReviewViewModelTest {
                 ),
             )
         }
+    }
+
+    private fun writeLetter(text: String) {
+        val review = reviews.open(ReviewRules.WEEKLY, weekStart)!!
+        reviews.setSummary(review.id, text)
+    }
+
+    @Test
+    fun `with a letter the review starts on it and back returns to it`() = runTest {
+        writeLetter("## What went well\nThe dentist, finally.")
+        val model = viewModel()
+        idle()
+
+        val state = model.uiState.first { it.loaded }
+        assertEquals(ReviewStep.LETTER, state.step)
+        assertEquals(ReviewStep.entries, state.steps)
+        assertTrue(state.letter.startsWith("## What went well"))
+
+        model.next()
+        idle()
+        assertEquals(ReviewStep.LOOK_BACK, model.uiState.value.step)
+        assertTrue(model.back())
+        idle()
+        assertEquals(ReviewStep.LETTER, model.uiState.value.step)
+        assertFalse(model.back())
+    }
+
+    @Test
+    fun `without a letter the review starts on the look back`() = runTest {
+        val model = viewModel()
+        idle()
+
+        val state = model.uiState.first { it.loaded }
+        assertEquals(ReviewStep.LOOK_BACK, state.step)
+        assertFalse(state.hasLetter)
+        assertFalse(ReviewStep.LETTER in state.steps)
+        assertFalse(model.back())
+    }
+
+    @Test
+    fun `the Reviews list marks a letter and shows its first line`() = runTest {
+        writeLetter("## What went well\n\nThe **dentist**, finally.\n- Call the bank")
+        reviews.open(ReviewRules.WEEKLY, weekStart.minusWeeks(1))!!.let { reviews.setMood(it.id, 3) }
+        idle()
+        val store = SharedPreferencesSettingsStore(
+            RuntimeEnvironment.getApplication().getSharedPreferences("reviews-test", Context.MODE_PRIVATE),
+        )
+        val list = ReviewsViewModel(reviews, store, Dispatchers.Unconfined) { today.atTime(9, 0) }
+
+        val state = list.uiState.first { it.loaded && it.past.size == 2 }
+        val withLetter = reviews.find(ReviewRules.WEEKLY, weekStart)!!
+        assertEquals(mapOf(withLetter.id to "The dentist, finally."), state.letters)
+        assertEquals("What went well", ReviewRules.letterPreview("## What went well"))
+        assertEquals(null, ReviewRules.letterPreview("  \n"))
     }
 
     @Test

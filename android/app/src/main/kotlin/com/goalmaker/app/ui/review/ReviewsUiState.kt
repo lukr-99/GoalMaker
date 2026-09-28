@@ -5,7 +5,7 @@ import java.time.LocalDate
 
 /**
  * The Reviews screen: the periods a review can be written for (this week and month, and the ones just
- * gone), and the reviews already written.
+ * gone), and the reviews already written, with the first line of each one's letter by review id.
  */
 data class ReviewsUiState(
     val loaded: Boolean = false,
@@ -14,4 +14,5 @@ data class ReviewsUiState(
     val lastWeekStart: LocalDate = LocalDate.MIN,
     val lastMonthStart: LocalDate = LocalDate.MIN,
     val past: List<ReviewItem> = emptyList(),
+    val letters: Map<String, String> = emptyMap(),
 )
