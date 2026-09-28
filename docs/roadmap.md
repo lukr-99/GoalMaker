@@ -107,7 +107,7 @@ Issues: `.scratch/m8-letter-tally-wants/`.
 
 - **Navigation (M8-01, M8-02):** the tab bar and the overflow dots are full. A prototype picks a
   navigation that scales, then both apps get it before any new place arrives.
-- **Wants (M8-03 to M8-06, release 1.3.0 with the navigation):** a wishlist where every want carries
+- **Wants (M8-03 to M8-06; 1.3.0 shipped the navigation and M8-03 to M8-05 on 2026-09-28, the connector tools of M8-06 follow):** a wishlist where every want carries
   its reason and waits out a cooldown set by its price (thresholds the owner can change), one daily
   notification for wants that became ready, a Wants place with Cooling, Ready and Decided filters,
   `/want` in the composer, a Wants block in stats, and connector tools so Claude can check prices

@@ -28,7 +28,7 @@
 - Endpoint: nothing.
 
 ## Release
-- With M8-01 to M8-06: **1.3.0** (the navigation and Wants).
+- **1.3.0** shipped M8-01 to M8-05 on 2026-09-28; M8-06 (the connector tools) is backend only and follows without an app release.
 
 ## Result
 
