@@ -10,23 +10,21 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import com.goalmaker.app.ui.lists.ListTab
 import com.goalmaker.app.ui.theme.AppTheme
 
 /**
- * The five places the bottom bar reaches, as tabs of one screen: the bar stays put and only what is
- * above it changes, for the lists, Projects and the Calendar alike. What Back does between them lives
- * with the back stack, in [SignedInNavigation].
+ * Every place, as tabs of one screen under one bottom bar (ADR 0014): the pinned places and the
+ * Places hub, and a place opened from the hub, which keeps the bar with Places selected. What Back
+ * does between them lives with the back stack, in [SignedInNavigation].
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
-    current: MainDestination,
-    listTab: ListTab,
-    onSelect: (MainDestination) -> Unit,
-    lists: @Composable (ListTab) -> Unit,
-    projects: @Composable () -> Unit,
-    calendar: @Composable () -> Unit,
+    current: String,
+    pins: List<String>,
+    placesCount: Int,
+    onSelect: (String) -> Unit,
+    content: @Composable (screen: String) -> Unit,
 ) {
     val motion = AppTheme.motion
     val reduced = AppTheme.reduceMotion
@@ -36,21 +34,15 @@ fun MainScreen(
         contentWindowInsets = WindowInsets(0),
         bottomBar = {
             // The keyboard takes the bar's place while something is being typed.
-            if (!WindowInsets.isImeVisible) MainNavigationBar(current, onSelect)
+            if (!WindowInsets.isImeVisible) MainNavigationBar(pins, current, placesCount, onSelect)
         },
     ) { padding ->
-        // The three lists are one screen that switches its own tabs, so here they count as one place.
+        // The three lists are one screen that switches its own tabs, so here they count as one screen.
         AnimatedContent(
-            targetState = current.takeIf { it.tab() == null },
+            targetState = if (PlaceLook.tab(current) != null) PlaceLook.LISTS else current,
             transitionSpec = { transitions.switch() },
             label = "main place",
             modifier = Modifier.padding(padding).consumeWindowInsets(padding),
-        ) { place ->
-            when (place) {
-                MainDestination.PROJECTS -> projects()
-                MainDestination.CALENDAR -> calendar()
-                else -> lists(listTab)
-            }
-        }
+        ) { screen -> content(screen) }
     }
 }

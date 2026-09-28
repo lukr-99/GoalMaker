@@ -4,6 +4,8 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.settings.SettingsStore
+import com.goalmaker.app.domain.navigation.DeviceKind
+import com.goalmaker.app.domain.navigation.PlaceRules
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.planning.ReviewReminder
@@ -91,6 +93,15 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         planTomorrow.value = time
     }
 
+    private val pinned = MutableStateFlow(readPins())
+    override val pins: StateFlow<List<String>> = pinned.asStateFlow()
+
+    override fun setPins(pins: List<String>) {
+        val kept = PlaceRules.stored(pins, DeviceKind.PHONE)
+        preferences.edit { putString(PINS, kept.joinToString(",")) }
+        pinned.value = kept
+    }
+
     private val lock = MutableStateFlow(preferences.getBoolean(APP_LOCK, false))
     override val appLock: StateFlow<Boolean> = lock.asStateFlow()
 
@@ -131,6 +142,9 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         preferences.edit(commit = true) { putBoolean(DEV_SIGN_IN, on) }
     }
 
+    private fun readPins(): List<String> =
+        PlaceRules.stored(preferences.getString(PINS, null)?.split(',')?.filter { it.isNotBlank() }, DeviceKind.PHONE)
+
     private fun readQuietHours(): QuietHours {
         val start = preferences.getInt(QUIET_START, 0)
         val end = preferences.getInt(QUIET_END, 0)
@@ -168,6 +182,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val QUIET_END = "quiet_hours_end"
         const val REMINDED_UNTIL = "reminded_until"
         const val APP_LOCK = "app_lock"
+        const val PINS = "pinned_places"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
         const val WEEKLY_REVIEW_AT = "weekly_review_reminder"
         const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"

@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.AccountTree
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
@@ -76,6 +75,7 @@ import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.text.NumberFormat
 import java.time.LocalDate
@@ -90,7 +90,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalsScreen(viewModel: GoalsViewModel, onBack: () -> Unit) {
+fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     // null: no dialog; an empty id: a new goal.
@@ -114,11 +114,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: () -> Unit) {
             topBar = {
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(R.string.goals_title)) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                        }
-                    },
+                    navigationIcon = { PlaceNavigationIcon(onBack) },
                     actions = {
                         IconButton(onClick = { viewModel.showTree(!state.showTree) }) {
                             if (state.showTree) {
@@ -127,6 +123,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: () -> Unit) {
                                 Icon(Icons.Outlined.AccountTree, contentDescription = stringResource(R.string.goals_show_tree))
                             }
                         }
+                        actions()
                     },
                     scrollBehavior = scrollBehavior,
                 )

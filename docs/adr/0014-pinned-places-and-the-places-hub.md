@@ -10,7 +10,7 @@ A's hub in place of the sheet. **Phone:** the bottom bar holds four places the o
 tab, Places: a page of live tiles for every place (rings, counts, the Tally bar, the Letter), pinned
 ones marked, with an Edit mode where tiles toggle their pin. A fifth pin is refused until one is
 unpinned, and the last pin stays; the Places tab counts what waits in places that are not pinned.
-**Windows:** a Pinned group at the top of the sidebar (no limit, pinned from a page's toolbar), All
+**Windows:** a Pinned group at the top of the sidebar (no limit, pinned from the title bar or a right click), All
 places below it, Settings at the bottom, and Ctrl+K to jump to any place by typing. Pins are a device
 setting, like the theme, so the phone and the PC keep their own. Sections (B) scaled well in the
 sidebar but made every phone place two taps deep; a menu or sheet hides exactly the places worth

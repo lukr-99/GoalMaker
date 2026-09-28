@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.LocalFireDepartment
@@ -61,6 +60,7 @@ import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
@@ -71,7 +71,7 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HabitsScreen(viewModel: HabitsViewModel, onBack: () -> Unit) {
+fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scope = rememberCoroutineScope()
@@ -102,15 +102,12 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: () -> Unit) {
             topBar = {
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(R.string.habits_title)) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
-                        }
-                    },
+                    navigationIcon = { PlaceNavigationIcon(onBack) },
                     actions = {
                         IconButton(onClick = { editing = HabitItem("", "", state.today) }) {
                             Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.habits_add))
                         }
+                        actions()
                     },
                     scrollBehavior = scrollBehavior,
                 )

@@ -133,7 +133,8 @@ are not pinned. The top bar keeps sync, Plan tomorrow and Settings.
 
 **Windows.** The sidebar starts with **Go to…** (Ctrl+K), then a **Pinned** group (Today,
 Tomorrow, Inbox and Projects by default, no limit), then **All places**, which collapses, then
-Settings at the bottom. Any page pins or unpins itself from a Pin button on its toolbar. Ctrl+K opens
+Settings at the bottom, with Activity and Areas and tags beside it. A place pins or unpins itself
+from the Pin toggle in the title bar, or from a right click on its sidebar item. Ctrl+K opens
 a box that filters places as you type; arrows move, Enter opens, Esc closes. The sidebar still
 collapses to icons and remembers that.
 

@@ -33,6 +33,20 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void ThePinsStartAsTheDefaultsKeepTheirOrderAndDropWhatIsGone()
+    {
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Equal(["today", "tomorrow", "inbox", "projects"], store.PinnedPlaces);
+
+        store.PinnedPlaces = ["stats", "today", "habits", "goals", "inbox"];
+
+        Assert.Equal(["stats", "today", "habits", "goals", "inbox"], new JsonSettingsStore(SettingsFile).PinnedPlaces);
+
+        File.WriteAllText(SettingsFile, """{ "Version": 1, "PinnedPlaces": ["focus", "stats", "stats"] }""");
+        Assert.Equal(["stats"], new JsonSettingsStore(SettingsFile).PinnedPlaces);
+    }
+
+    [Fact]
     public void AFileFromBeforeThemesKeepsItsLightOrDarkChoice()
     {
         Directory.CreateDirectory(folder);

@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using GoalMaker.App.Composition;
@@ -7,22 +9,27 @@ using GoalMaker.App.Startup;
 using GoalMaker.App.ViewModels;
 using GoalMaker.App.Views;
 using GoalMaker.Core.Settings;
+using Wpf.Ui.Controls;
 
 namespace GoalMaker.App.Shell;
 
 /// <summary>
 /// The main window. Closing hides it to the tray unless the app is quitting. It reopens where it was
-/// last, when that spot is still on a connected screen, with the sidebar as it was left.
+/// last, when that spot is still on a connected screen, with the sidebar as it was left. The sidebar
+/// is the pinned places and All places, built from this PC's pins, with Go to on Ctrl+K (ADR 0014).
 /// </summary>
 public partial class MainWindow
 {
     private readonly ISettingsStore settings;
     private readonly PlanViewModel plan;
     private readonly DispatcherTimer placementSaver;
+    private readonly bool motionReduced;
     private Type pendingPage = typeof(TodayPage);
 
     public MainWindow(AppGraph graph)
     {
+        Places = graph.Places;
+        motionReduced = graph.Theme.MotionReduced;
         InitializeComponent();
         settings = graph.Settings;
         plan = graph.Plan;
@@ -47,6 +54,24 @@ public partial class MainWindow
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
         }));
+        PlaceSidebar.Build(Navigation.MenuItems, Places, allOpen: true);
+        Places.PinsChanged += (_, _) => RebuildSidebar();
+        Places.PlaceChosen += (_, place) =>
+        {
+            pendingPage = PlaceSidebar.PageOf(place);
+            NavigateWhenReady();
+        };
+        Places.PropertyChanged += OnPlacesChanged;
+        Navigation.Navigated += (_, e) => Places.Current = e.Page is null ? null : PlaceSidebar.PlaceOf(e.Page.GetType());
+        PaletteInput.PreviewKeyDown += OnPaletteKey;
+        PaletteScrim.MouseDown += (_, _) => Places.ClosePaletteCommand.Execute(null);
+        PaletteList.MouseLeftButtonUp += (_, _) =>
+        {
+            if (PaletteList.SelectedItem is PlaceEntry entry)
+            {
+                Places.ChooseCommand.Execute(entry.Id);
+            }
+        };
         Navigation.IsPaneOpen = !settings.NavigationCollapsed;
         Navigation.PaneOpened += (_, _) => settings.NavigationCollapsed = false;
         Navigation.PaneClosed += (_, _) => settings.NavigationCollapsed = true;
@@ -70,6 +95,83 @@ public partial class MainWindow
     }
 
     public bool AllowClose { get; set; }
+
+    /// <summary>The pinned places and Go to, which the sidebar, the title bar's Pin and the Go to box bind to.</summary>
+    public PlacesViewModel Places { get; }
+
+    // The pins changed: build the sidebar again, keep All places as it was, and mark the page on show.
+    private void RebuildSidebar()
+    {
+        var allOpen = Navigation.MenuItems.OfType<NavigationViewItem>()
+            .FirstOrDefault(item => Equals(item.Tag, PlaceSidebar.AllPlaces))?.IsExpanded ?? true;
+        PlaceSidebar.Build(Navigation.MenuItems, Places, allOpen);
+        // The page on show stays open, so mark its item in the new sidebar rather than navigating again.
+        if (Places.Current is { } place)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => PlaceSidebar.MarkActive(Navigation.MenuItems, place));
+        }
+    }
+
+    private void OnPlacesChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(PlacesViewModel.IsCurrentPinned):
+                PinIcon.Symbol = Places.IsCurrentPinned ? SymbolRegular.PinOff24 : SymbolRegular.Pin24;
+                break;
+            case nameof(PlacesViewModel.IsPaletteOpen) when Places.IsPaletteOpen:
+                ShowPalette();
+                break;
+        }
+    }
+
+    // Go to arrives the way a dialog does: a short grow and fade on the emphasized curve, then the
+    // text box takes the keyboard. Reduce motion shows it at once.
+    private void ShowPalette()
+    {
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            PaletteInput.Focus();
+            Keyboard.Focus(PaletteInput);
+        });
+        if (motionReduced)
+        {
+            return;
+        }
+
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var duration = TimeSpan.FromMilliseconds(250);
+        var scale = (ScaleTransform)PaletteBox.RenderTransform;
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.96, 1, duration) { EasingFunction = ease });
+        PaletteBox.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
+        PaletteScrim.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
+    }
+
+    private void OnPaletteKey(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Down:
+                Places.MoveSelection(1);
+                PaletteList.ScrollIntoView(PaletteList.SelectedItem);
+                e.Handled = true;
+                break;
+            case Key.Up:
+                Places.MoveSelection(-1);
+                PaletteList.ScrollIntoView(PaletteList.SelectedItem);
+                e.Handled = true;
+                break;
+            case Key.Enter:
+                Places.ChooseCommand.Execute(null);
+                e.Handled = true;
+                break;
+            case Key.Escape:
+                Places.ClosePaletteCommand.Execute(null);
+                e.Handled = true;
+                break;
+        }
+    }
 
     // The logo draws its arrow (two emphasized beats of 400 ms), holds a moment, and the app fades in
     // under it. Reduce motion skips it; a click skips it too.

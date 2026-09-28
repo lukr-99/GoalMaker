@@ -50,6 +50,8 @@ public sealed record SettingsDocument
 
     public Dictionary<string, MiniWindowState>? MiniWindows { get; init; }
 
+    public List<string>? PinnedPlaces { get; init; }
+
     public string? WeeklyBackupFolder { get; init; }
 
     public DateTimeOffset? WeeklyBackupWritten { get; init; }

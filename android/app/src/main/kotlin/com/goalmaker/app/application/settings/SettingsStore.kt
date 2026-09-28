@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
- * hours, the evening reminder, the app lock and, in dev builds, a backend override.
+ * hours, the evening reminder, the pinned places, the app lock and, in dev builds, a backend
+ * override.
  */
 interface SettingsStore {
     val appearance: StateFlow<Appearance>
@@ -44,6 +45,14 @@ interface SettingsStore {
     val monthlyReviewReminder: StateFlow<LocalTime?>
 
     fun setMonthlyReviewReminder(time: LocalTime?)
+
+    /**
+     * The places pinned to the bottom bar, at most four (ADR 0014), in bar order. Read back through
+     * `PlaceRules.stored`, so a place that no longer exists is gone and an empty list means the defaults.
+     */
+    val pins: StateFlow<List<String>>
+
+    fun setPins(pins: List<String>)
 
     /** Whether this phone asks to be unlocked before it shows the app (docs/sign-in.md); off unless set. */
     val appLock: StateFlow<Boolean>

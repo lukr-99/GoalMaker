@@ -14,6 +14,9 @@
                  WindowBackdropType="None"
                  WindowCornerPreference="Round"
                  WindowStartupLocation="CenterScreen">
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Key="K" Modifiers="Control" Command="{Binding Places.OpenPaletteCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+    </ui:FluentWindow.InputBindings>
     <!-- The theme's background under everything, title bar included (WPF UI owns the window's own). -->
     <Grid Background="{DynamicResource GM.BackgroundBrush}">
         <Grid.RowDefinitions>
@@ -25,6 +28,23 @@
             <ui:TitleBar.Icon>
                 <ui:ImageIcon Source="{DynamicResource GM.LogoIcon}" />
             </ui:TitleBar.Icon>
+            <!-- Pins or unpins the page on show (ADR 0014); only a place that can change shows it. -->
+            <ui:TitleBar.TrailingContent>
+                <ui:Button x:Name="PinButton"
+                           DataContext="{Binding Places, RelativeSource={RelativeSource AncestorType=Window}}"
+                           Command="{Binding TogglePinCurrentCommand}"
+                           Content="{Binding PinLabel}"
+                           AutomationProperties.Name="{Binding PinLabel}"
+                           Appearance="Transparent"
+                           Margin="0,0,8,0"
+                           Padding="10,4"
+                           Foreground="{DynamicResource GM.AccentBrush}"
+                           Visibility="{Binding CanPinCurrent, Converter={StaticResource BoolToVisibility}}">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon x:Name="PinIcon" Symbol="Pin24" Foreground="{DynamicResource GM.AccentBrush}" />
+                    </ui:Button.Icon>
+                </ui:Button>
+            </ui:TitleBar.TrailingContent>
         </ui:TitleBar>
 
         <ui:ProgressRing Grid.Row="1"
@@ -44,59 +64,32 @@
                            IsBackButtonVisible="Collapsed"
                            IsPaneToggleVisible="True"
                            Visibility="{Binding IsSignedIn, Converter={StaticResource BoolToVisibility}}">
-            <ui:NavigationView.MenuItems>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Today}" TargetPageType="{x:Type views:TodayPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="CalendarToday24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Tomorrow}" TargetPageType="{x:Type views:TomorrowPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="CalendarArrowRight24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Inbox}" TargetPageType="{x:Type views:InboxPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="MailInbox24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Goals}" TargetPageType="{x:Type views:GoalsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Flag24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Habits}" TargetPageType="{x:Type views:HabitsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="ArrowRepeatAll24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Reviews}" TargetPageType="{x:Type views:ReviewsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="BookOpen24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Calendar}" TargetPageType="{x:Type views:CalendarPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="CalendarLtr24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Projects}" TargetPageType="{x:Type views:ProjectsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Board24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Stats}" TargetPageType="{x:Type views:StatsPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="DataTrending24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
-            </ui:NavigationView.MenuItems>
+            <!-- Go to (Ctrl+K) opens any page by typing. -->
+            <ui:NavigationView.PaneHeader>
+                <ui:Button x:Name="GoToButton"
+                           DataContext="{Binding Places, RelativeSource={RelativeSource AncestorType=Window}}"
+                           Command="{Binding OpenPaletteCommand}"
+                           AutomationProperties.Name="{DynamicResource Places.GoTo}"
+                           Appearance="Transparent"
+                           HorizontalAlignment="Stretch"
+                           HorizontalContentAlignment="Stretch"
+                           Margin="0,4,0,6"
+                           Padding="11,6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:SymbolIcon Symbol="Search24" Foreground="{DynamicResource GM.AccentBrush}" />
+                        <TextBlock Grid.Column="1" Margin="12,0,0,0" Text="{DynamicResource Places.GoTo}" Foreground="{DynamicResource GM.TextMutedBrush}" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" CornerRadius="4" Padding="6,1" BorderThickness="1" BorderBrush="{DynamicResource GM.OutlineBrush}" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Places.GoToShortcut}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </Border>
+                    </Grid>
+                </ui:Button>
+            </ui:NavigationView.PaneHeader>
             <ui:NavigationView.FooterMenuItems>
-                <ui:NavigationViewItem Content="{DynamicResource Nav.Archive}" TargetPageType="{x:Type views:ArchivePage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Archive24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
                 <ui:NavigationViewItem Content="{DynamicResource Nav.Activity}" TargetPageType="{x:Type views:ActivityPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="History24" />
@@ -119,6 +112,84 @@
                 </ui:NavigationViewItem>
             </ui:NavigationView.FooterMenuItems>
         </ui:NavigationView>
+
+        <!-- Go to (ADR 0014): type to filter, arrows to move, Enter to open, Esc or a click outside to close. -->
+        <Grid x:Name="PaletteLayer"
+              Grid.Row="1"
+              DataContext="{Binding Places, RelativeSource={RelativeSource AncestorType=Window}}"
+              Visibility="{Binding IsPaletteOpen, Converter={StaticResource BoolToVisibility}}">
+            <Border x:Name="PaletteScrim" Background="#59000000" />
+            <Border x:Name="PaletteBox"
+                    Width="520"
+                    Margin="0,56,0,0"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Top"
+                    Background="{DynamicResource GM.SurfaceBrush}"
+                    BorderBrush="{DynamicResource GM.OutlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="{DynamicResource GM.CardCorner}"
+                    RenderTransformOrigin="0.5,0">
+                <Border.RenderTransform>
+                    <ScaleTransform />
+                </Border.RenderTransform>
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="30" ShadowDepth="8" Opacity="0.35" />
+                </Border.Effect>
+                <StackPanel>
+                    <ui:TextBox x:Name="PaletteInput"
+                                Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                                PlaceholderText="{DynamicResource Places.GoToHint}"
+                                AutomationProperties.Name="{DynamicResource Places.GoTo}"
+                                Icon="{ui:SymbolIcon Search24}"
+                                Margin="10"
+                                FontSize="15" />
+                    <ListBox x:Name="PaletteList"
+                             ItemsSource="{Binding Matches}"
+                             SelectedIndex="{Binding SelectedIndex}"
+                             MaxHeight="360"
+                             Margin="6,0,6,8"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             AutomationProperties.Name="{DynamicResource Places.GoTo}">
+                        <!-- The highlighted row: an accent tint and bar, text in the text color, as in the prototype. -->
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Cursor" Value="Hand" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Grid Margin="0,1">
+                                                <Border x:Name="Fill" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.AccentBrush}" Opacity="0" />
+                                                <Border x:Name="Bar" Width="3" Margin="0,8" HorizontalAlignment="Left" CornerRadius="2" Background="{DynamicResource GM.AccentBrush}" Visibility="Collapsed" />
+                                                <ContentPresenter Margin="10,0,0,0" />
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Fill" Property="Opacity" Value="0.08" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Fill" Property="Opacity" Value="0.16" />
+                                                    <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" Padding="6,6" FontSize="14" Foreground="{DynamicResource GM.TextBrush}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <TextBlock Text="{DynamicResource Places.NothingFound}"
+                               Margin="18,0,18,14"
+                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                               Visibility="{Binding HasNoMatches, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- The launch moment: the logo in the theme's colors draws its arrow, then the app shows through. -->
         <Grid x:Name="Intro" Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource GM.BackgroundBrush}">
