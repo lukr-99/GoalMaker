@@ -39,6 +39,7 @@ internal sealed class TestPlanner : IDisposable
         Goals = new GoalList(replica, rows, () => { });
         Habits = new HabitList(replica, rows, () => { });
         Reviews = new ReviewList(replica, rows, () => { });
+        Wants = new WantList(replica, rows, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -66,6 +67,8 @@ internal sealed class TestPlanner : IDisposable
     public HabitList Habits { get; }
 
     public ReviewList Reviews { get; }
+
+    public WantList Wants { get; }
 
     public ProjectList Projects { get; }
 

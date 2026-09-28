@@ -40,10 +40,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.StatsDigest
+import com.goalmaker.app.application.planning.WantStats
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
+import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -82,6 +84,11 @@ fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Comp
                         modifier = Modifier.padding(8.dp),
                     )
                 }
+                // Wants are decided whether or not a task was ever finished.
+                state.wants?.let { wants ->
+                    item("h-wants") { SectionHeader(stringResource(R.string.stats_wants)) }
+                    item("wants") { WantHeroes(wants, state.currency) }
+                }
                 return@LazyColumn
             }
 
@@ -103,6 +110,11 @@ fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Comp
             if (digest.ratings.isNotEmpty()) {
                 item("h-ratings") { SectionHeader(stringResource(R.string.stats_ratings)) }
                 item("ratings") { RatingChart(digest.ratings) }
+            }
+
+            state.wants?.let { wants ->
+                item("h-wants") { SectionHeader(stringResource(R.string.stats_wants)) }
+                item("wants") { WantHeroes(wants, state.currency) }
             }
         }
     }
@@ -129,6 +141,22 @@ private fun Heroes(digest: StatsDigest) {
             label = stringResource(R.string.stats_hero_habits),
             hint = stringResource(R.string.stats_hero_habit_count, digest.habits.size),
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** What became of the wants: how many were bought and dropped, and what the dropped ones would have cost. */
+@Composable
+private fun WantHeroes(wants: WantStats, currency: String) {
+    val locale = LocalConfiguration.current.locales[0]
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        Hero(wants.bought.toString(), stringResource(R.string.stats_wants_bought), "", Modifier.weight(1f))
+        Hero(wants.dropped.toString(), stringResource(R.string.stats_wants_dropped), "", Modifier.weight(1f))
+        Hero(
+            NumberFormat.getIntegerInstance(locale).format(wants.notSpent),
+            stringResource(R.string.stats_wants_not_spent),
+            currency,
+            Modifier.weight(1.3f),
         )
     }
 }

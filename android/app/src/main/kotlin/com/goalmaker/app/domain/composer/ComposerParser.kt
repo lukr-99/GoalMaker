@@ -14,7 +14,7 @@ import java.util.Locale
  * contracts/vectors/composer.json. Pure: the caller passes the local time and the day rollover hour.
  */
 object ComposerParser {
-    val KNOWN_COMMANDS = setOf("plan", "review", "habit", "goal")
+    val KNOWN_COMMANDS = setOf("plan", "review", "habit", "goal", "want")
 
     private const val TRAILING = ".,;:!?"
     private val markerName = Regex("\\p{L}[\\p{L}\\p{N}_-]*")

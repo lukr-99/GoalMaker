@@ -8,7 +8,7 @@ import kotlinx.serialization.json.JsonPrimitive
 object ActivityRules {
     fun change(entity: String, action: String, before: JsonObject?, after: JsonObject): ActivityChange {
         val subject = when (entity) {
-            "tasks", "task_steps", "goals" -> after.text("title")
+            "tasks", "task_steps", "goals", "wants" -> after.text("title")
             "areas", "tags", "habits" -> after.text("name")
             else -> null
         }
@@ -68,6 +68,13 @@ object ActivityRules {
                 else -> "unchecked"
             }
             "habit_pauses" -> if (after.text("ends_on") != null) "resumed" else "paused"
+            "wants" -> when {
+                changed("decision") && after.text("decision") == "bought" -> "bought"
+                changed("decision") && after.text("decision") == "dropped" -> "dropped"
+                changed("decision") -> "reopened"
+                changed("title") -> "renamed"
+                else -> "edited"
+            }
             else -> "edited"
         }
     }

@@ -41,9 +41,12 @@ public static partial class ComposerChips
 
         if (draft.Command is { } command)
         {
-            var runs = command.Name == PlanRules.Command;
-            var note = strings.Get(runs ? "Composer.OpensPlan" : command.Known ? "Composer.Soon" : "Composer.UnknownCommand");
-            Add(SpanKind.Command, "/" + command.Name, note, runs ? SymbolRegular.CalendarEdit24 : SymbolRegular.Code24, Of(SpanKind.Command), muted: !runs);
+            var plan = command.Name == PlanRules.Command;
+            var want = command.Name == WantRules.Command;
+            var runs = plan || want;
+            var note = strings.Get(plan ? "Composer.OpensPlan" : want ? "Composer.OpensWant" : command.Known ? "Composer.Soon" : "Composer.UnknownCommand");
+            var icon = plan ? SymbolRegular.CalendarEdit24 : want ? SymbolRegular.ShoppingBag24 : SymbolRegular.Code24;
+            Add(SpanKind.Command, "/" + command.Name, note, icon, Of(SpanKind.Command), muted: !runs);
             return chips;
         }
 

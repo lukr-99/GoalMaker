@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.navigation.DeviceKind
 import com.goalmaker.app.domain.navigation.PlaceRules
@@ -30,6 +31,7 @@ class PlacesViewModel(
     habits: HabitList,
     goals: GoalList,
     reviews: ReviewList,
+    wants: WantList,
     private val settings: SettingsStore,
     io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -48,11 +50,11 @@ class PlacesViewModel(
     private val digest = combine(
         combine(tasks.watchAll().flowOn(io), habits.watch().flowOn(io), ::Pair),
         goals.watch().flowOn(io),
-        reviews.watch().flowOn(io),
+        combine(reviews.watch().flowOn(io), wants.watch().flowOn(io), ::Pair),
         settings.dayStartHour,
         minutes,
-    ) { (taskList, habitData), (goalList, entries), reviewList, startHour, _ ->
-        PlacesBoard.build(taskList, habitData, goalList, entries, reviewList, PlanningDay.of(clock(), startHour))
+    ) { (taskList, habitData), (goalList, entries), (reviewList, wantList), startHour, _ ->
+        PlacesBoard.build(taskList, habitData, goalList, entries, reviewList, PlanningDay.of(clock(), startHour), wantList)
     }
 
     val uiState: StateFlow<PlacesUiState> = combine(digest, settings.pins, editing) { built, pins, isEditing ->

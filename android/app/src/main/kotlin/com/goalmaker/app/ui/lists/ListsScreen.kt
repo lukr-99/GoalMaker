@@ -72,6 +72,7 @@ import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.PlanRules
+import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
@@ -112,6 +113,7 @@ fun ListsScreen(
     tab: ListTab,
     actions: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenWant: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -202,11 +204,15 @@ fun ListsScreen(
                     ComposerBar(
                         state = composer,
                         chips = composerChips(line, draft, viewModel.today(), state.areas, state.tagNames, state.projects),
-                        canSend = (draft.title.isNotBlank() && draft.command == null) || draft.command?.name == PlanRules.COMMAND,
+                        canSend = (draft.title.isNotBlank() && draft.command == null) ||
+                            draft.command?.name == PlanRules.COMMAND || draft.command?.name == WantRules.COMMAND,
                         onSubmit = {
                             if (draft.command?.name == PlanRules.COMMAND) {
                                 composer.clearText()
                                 onOpenPlan()
+                            } else if (draft.command?.name == WantRules.COMMAND) {
+                                composer.clearText()
+                                onOpenWant(draft.command.argument)
                             } else if (viewModel.submit(draft, tab)) {
                                 composer.clearText()
                             }

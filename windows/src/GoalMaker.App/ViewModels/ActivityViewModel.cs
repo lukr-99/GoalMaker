@@ -155,6 +155,8 @@ public sealed partial class ActivityViewModel : ObservableObject
             "habits" => strings.Get("Activity.Habit", subject),
             "habit_checkins" => strings.Get("Activity.HabitCheckin"),
             "habit_pauses" => strings.Get("Activity.HabitPause"),
+            "wants" => strings.Get("Activity.Want", subject),
+            "want_cooldowns" => strings.Get("Activity.WantCooldowns"),
             _ => entry.Entity,
         };
         return change.Change switch

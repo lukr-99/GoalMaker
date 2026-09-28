@@ -22,6 +22,7 @@ import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReviewList
+import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderService
@@ -237,6 +238,7 @@ class AppGraph(context: Context) {
     val goals = GoalList(replica, newRows, sync::request)
     val habits = HabitList(replica, newRows, sync::request)
     val reviews = ReviewList(replica, newRows, sync::request)
+    val wants = WantList(replica, newRows, sync::request, ::today)
     val projects = ProjectList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 

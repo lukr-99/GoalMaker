@@ -81,6 +81,7 @@ public sealed partial class PlacesViewModel : ObservableObject
         PlaceRules.Projects => "Nav.Projects",
         PlaceRules.Reviews => "Nav.Reviews",
         PlaceRules.Stats => "Nav.Stats",
+        PlaceRules.Wants => "Nav.Wants",
         PlaceRules.Archive => "Nav.Archive",
         Activity => "Nav.Activity",
         Areas => "Nav.AreasAndTags",

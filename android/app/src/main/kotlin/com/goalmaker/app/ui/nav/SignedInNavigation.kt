@@ -66,6 +66,8 @@ import com.goalmaker.app.ui.plan.PlanViewModel
 import com.goalmaker.app.ui.task.TaskKey
 import com.goalmaker.app.ui.task.TaskScreen
 import com.goalmaker.app.ui.task.TaskViewModel
+import com.goalmaker.app.ui.wants.WantsScreen
+import com.goalmaker.app.ui.wants.WantsViewModel
 import com.goalmaker.app.ui.theme.AppTheme
 
 /**
@@ -93,6 +95,8 @@ fun SignedInNavigation(graph: AppGraph) {
     val fromHub = place != PlaceLook.HUB && place !in pins
     BackHandler(enabled = place != home && backStack.size == 1) { select(if (fromHub) PlaceLook.HUB else home) }
     val backToHub: (() -> Unit)? = if (fromHub) ({ select(PlaceLook.HUB) }) else null
+    // A `/want` line opens the Wants place with its add sheet, the title filled in.
+    var wantTitle by rememberSaveable { mutableStateOf<String?>(null) }
     // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
     val problems by graph.problems.problems.collectAsStateWithLifecycle()
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
@@ -147,7 +151,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         }
                         val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
                         val placesViewModel = viewModel {
-                            PlacesViewModel(graph.tasks, graph.habits, graph.goals, graph.reviews, graph.settings, graph.io, LocalDateTime::now)
+                            PlacesViewModel(graph.tasks, graph.habits, graph.goals, graph.reviews, graph.wants, graph.settings, graph.io, LocalDateTime::now)
                         }
                         val placesState by placesViewModel.uiState.collectAsStateWithLifecycle()
                         val calendarViewModel = viewModel {
@@ -182,6 +186,10 @@ fun SignedInNavigation(graph: AppGraph) {
                                     tab = listTab,
                                     actions = actions,
                                     onBack = backToHub,
+                                    onOpenWant = { title ->
+                                        wantTitle = title
+                                        select(PlaceRules.WANTS)
+                                    },
                                 )
                                 PlaceRules.PROJECTS -> ProjectsScreen(
                                     viewModel = projectsViewModel,
@@ -225,6 +233,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                             goals = graph.goals,
                                             habits = graph.habits,
                                             reviews = graph.reviews,
+                                            wants = graph.wants,
                                             settings = graph.settings,
                                             io = graph.io,
                                             clock = LocalDateTime::now,
@@ -239,6 +248,18 @@ fun SignedInNavigation(graph: AppGraph) {
                                         onBack = backToHub,
                                         onOpenTask = { id -> backStack.add(TaskKey(id)) },
                                         actions = actions,
+                                    )
+                                }
+                                PlaceRules.WANTS -> {
+                                    val wantsViewModel = viewModel(key = "wants-tab") {
+                                        WantsViewModel(graph.wants, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
+                                    }
+                                    WantsScreen(
+                                        viewModel = wantsViewModel,
+                                        onBack = backToHub,
+                                        actions = actions,
+                                        addTitle = wantTitle,
+                                        onAddShown = { wantTitle = null },
                                     )
                                 }
                                 else -> PlacesScreen(viewModel = placesViewModel, onOpen = ::select, actions = actions)
@@ -264,6 +285,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 goals = graph.goals,
                                 habits = graph.habits,
                                 reviews = graph.reviews,
+                                wants = graph.wants,
                                 settings = graph.settings,
                                 io = graph.io,
                                 clock = LocalDateTime::now,

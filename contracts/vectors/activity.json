@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals) or name (areas, tags, habits) from 'after', else null.",
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, steps, goals, wants) (tasks, task_steps, goals) or name (areas, tags, habits) from 'after', else null.",
   "cases": [
     {
       "name": "a new task is added",
@@ -619,6 +619,103 @@
       },
       "expect": {
         "change": "resumed",
+        "subject": null
+      }
+    },
+    {
+      "name": "a want is added",
+      "entity": "wants",
+      "action": "create",
+      "before": null,
+      "after": {
+        "title": "Trail shoes",
+        "decision": null
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Trail shoes"
+      }
+    },
+    {
+      "name": "a want is bought",
+      "entity": "wants",
+      "action": "update",
+      "before": {
+        "title": "Trail shoes",
+        "decision": null
+      },
+      "after": {
+        "title": "Trail shoes",
+        "decision": "bought"
+      },
+      "expect": {
+        "change": "bought",
+        "subject": "Trail shoes"
+      }
+    },
+    {
+      "name": "a want is dropped",
+      "entity": "wants",
+      "action": "update",
+      "before": {
+        "title": "Kindle",
+        "decision": null
+      },
+      "after": {
+        "title": "Kindle",
+        "decision": "dropped"
+      },
+      "expect": {
+        "change": "dropped",
+        "subject": "Kindle"
+      }
+    },
+    {
+      "name": "a decided want is reopened",
+      "entity": "wants",
+      "action": "update",
+      "before": {
+        "title": "Kindle",
+        "decision": "dropped"
+      },
+      "after": {
+        "title": "Kindle",
+        "decision": null
+      },
+      "expect": {
+        "change": "reopened",
+        "subject": "Kindle"
+      }
+    },
+    {
+      "name": "a want is renamed",
+      "entity": "wants",
+      "action": "update",
+      "before": {
+        "title": "Desk",
+        "decision": null
+      },
+      "after": {
+        "title": "Standing desk",
+        "decision": null
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "Standing desk"
+      }
+    },
+    {
+      "name": "the want thresholds are edited",
+      "entity": "want_cooldowns",
+      "action": "update",
+      "before": {
+        "small_days": 7
+      },
+      "after": {
+        "small_days": 5
+      },
+      "expect": {
+        "change": "edited",
         "subject": null
       }
     }

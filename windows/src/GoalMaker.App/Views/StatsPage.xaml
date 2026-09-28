@@ -157,6 +157,31 @@
                     </StackPanel>
                 </Border>
             </StackPanel>
+
+            <StackPanel Visibility="{Binding HasWants, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Stats.Wants}" />
+                <primitives:UniformGrid Rows="1">
+                    <Border Style="{StaticResource Card}" Margin="0,0,6,0">
+                        <StackPanel>
+                            <TextBlock Text="{Binding WantsBought}" FontSize="28" Foreground="{DynamicResource GM.AccentBrush}" />
+                            <TextBlock Text="{DynamicResource Stats.WantsBought}" FontSize="12" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="3,0,3,0">
+                        <StackPanel>
+                            <TextBlock Text="{Binding WantsDropped}" FontSize="28" Foreground="{DynamicResource GM.AccentBrush}" />
+                            <TextBlock Text="{DynamicResource Stats.WantsDropped}" FontSize="12" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource Card}" Margin="6,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="{Binding WantsNotSpent}" FontSize="28" Foreground="{DynamicResource GM.AccentBrush}" />
+                            <TextBlock Text="{DynamicResource Stats.WantsNotSpent}" FontSize="12" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Text="{Binding WantsCurrency}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </StackPanel>
+                    </Border>
+                </primitives:UniformGrid>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </Page>

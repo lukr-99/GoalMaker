@@ -11,6 +11,9 @@ import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.StatsRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
+import com.goalmaker.app.application.planning.WantItem
+import com.goalmaker.app.application.planning.WantRules
+import com.goalmaker.app.application.planning.WantState
 import com.goalmaker.app.ui.goals.GoalBoard
 import com.goalmaker.app.ui.habits.HabitBoard
 import java.time.LocalDate
@@ -26,6 +29,7 @@ object PlacesBoard {
         entries: List<GoalEntryItem>,
         reviews: List<ReviewItem>,
         today: LocalDate,
+        wants: List<WantItem> = emptyList(),
     ): PlacesDigest {
         val lists = ListRules.lists(tasks, today)
         val open = tasks.filter { it.state == TaskState.OPEN }
@@ -49,6 +53,8 @@ object PlacesBoard {
             letterWaiting = letterWaiting(reviews, today),
             doneThisWeek = StatsRules.weeks(tasks, today, count = 1).lastOrNull()?.done ?: 0,
             archived = tasks.count { it.state == TaskState.DONE },
+            wantsReady = wants.count { WantRules.state(it, today) == WantState.READY },
+            wantsCooling = wants.count { WantRules.state(it, today) == WantState.COOLING },
         )
     }
 

@@ -10,7 +10,7 @@ namespace GoalMaker.Core.Composer;
 /// </summary>
 public static partial class ComposerParser
 {
-    public static readonly IReadOnlySet<string> KnownCommands = new HashSet<string>(StringComparer.Ordinal) { "plan", "review", "habit", "goal" };
+    public static readonly IReadOnlySet<string> KnownCommands = new HashSet<string>(StringComparer.Ordinal) { "plan", "review", "habit", "goal", "want" };
 
     private const string Trailing = ".,;:!?";
     private const string TrailingButDot = ",;:!?";

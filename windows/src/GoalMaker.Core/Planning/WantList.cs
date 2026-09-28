@@ -179,6 +179,20 @@ public sealed partial class WantList
 
     public bool Delete(string id) => Change(id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
+    /// <summary>Brings a deleted want back, as the undo after a delete does.</summary>
+    public bool Restore(string id)
+    {
+        if (replica.Get(Table, id) is not { } row || row[SyncedTable.DeletedAt] is null)
+        {
+            return false;
+        }
+
+        row[SyncedTable.DeletedAt] = null;
+        replica.Queue(Table, row);
+        requestSync();
+        return true;
+    }
+
     [GeneratedRegex("^[A-Z]{3}$")]
     private static partial Regex Currency();
 

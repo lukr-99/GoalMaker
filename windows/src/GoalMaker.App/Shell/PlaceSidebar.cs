@@ -28,6 +28,7 @@ internal static class PlaceSidebar
         [PlaceRules.Projects] = (typeof(ProjectsPage), SymbolRegular.Board24),
         [PlaceRules.Reviews] = (typeof(ReviewsPage), SymbolRegular.BookOpen24),
         [PlaceRules.Stats] = (typeof(StatsPage), SymbolRegular.DataTrending24),
+        [PlaceRules.Wants] = (typeof(WantsPage), SymbolRegular.ShoppingBag24),
         [PlaceRules.Archive] = (typeof(ArchivePage), SymbolRegular.Archive24),
         [PlacesViewModel.Settings] = (typeof(SettingsPage), SymbolRegular.Settings24),
         [PlacesViewModel.Activity] = (typeof(ActivityPage), SymbolRegular.History24),

@@ -13,12 +13,13 @@ object PlaceRules {
     const val HABITS = "habits"
     const val GOALS = "goals"
     const val PROJECTS = "projects"
+    const val WANTS = "wants"
     const val REVIEWS = "reviews"
     const val STATS = "stats"
     const val ARCHIVE = "archive"
 
     /** Every place, in the order the Places hub lists them. */
-    val PLACES = listOf(TODAY, TOMORROW, INBOX, CALENDAR, HABITS, GOALS, PROJECTS, REVIEWS, STATS, ARCHIVE)
+    val PLACES = listOf(TODAY, TOMORROW, INBOX, CALENDAR, HABITS, GOALS, PROJECTS, WANTS, REVIEWS, STATS, ARCHIVE)
 
     private const val PHONE_LIMIT = 4
 
