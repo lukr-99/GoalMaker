@@ -7,6 +7,8 @@ import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.StatsRules
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.planning.WantList
+import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
 import java.time.LocalDate
@@ -27,6 +29,7 @@ class StatsViewModel(
     goals: GoalList,
     habits: HabitList,
     reviews: ReviewList,
+    wants: WantList,
     private val settings: SettingsStore,
     io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -36,10 +39,14 @@ class StatsViewModel(
         goals.watch().flowOn(io),
         habits.watch().flowOn(io),
         reviews.watch().flowOn(io),
-    ) { taskList, (goalList, entries), habitData, reviewList ->
+        combine(wants.watch().flowOn(io), wants.watchCooldowns().flowOn(io), ::Pair),
+    ) { taskList, (goalList, entries), habitData, reviewList, (wantList, cooldowns) ->
+        val decided = WantRules.stats(wantList, cooldowns.currency)
         StatsUiState(
             loaded = true,
             digest = StatsRules.build(taskList, goalList, entries, habitData, reviewList, today()),
+            wants = decided.takeIf { it.bought + it.dropped > 0 },
+            currency = cooldowns.currency,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
 

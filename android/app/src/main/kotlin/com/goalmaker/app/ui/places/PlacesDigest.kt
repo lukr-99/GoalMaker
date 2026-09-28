@@ -16,6 +16,8 @@ data class PlacesDigest(
     val projectsOpen: Int = 0,
     val projectsDoing: Int = 0,
     val letterWaiting: Boolean = false,
+    val wantsReady: Int = 0,
+    val wantsCooling: Int = 0,
     val doneThisWeek: Int = 0,
     val archived: Int = 0,
 ) {
@@ -24,5 +26,6 @@ data class PlacesDigest(
         get() = buildMap {
             if (inbox > 0) put(PlaceRules.INBOX, inbox)
             if (letterWaiting) put(PlaceRules.REVIEWS, 1)
+            if (wantsReady > 0) put(PlaceRules.WANTS, wantsReady)
         }
 }

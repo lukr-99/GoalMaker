@@ -124,6 +124,16 @@ class WantList(
 
     fun delete(id: String): Boolean = change(id) { values -> values[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
 
+    /** Brings a deleted want back, as the undo after a delete does. */
+    fun restore(id: String): Boolean {
+        val row = replica.get(TABLE, id)?.takeIf { it.text(SyncedTable.DELETED_AT) != null } ?: return false
+        val values = LinkedHashMap(row)
+        values[SyncedTable.DELETED_AT] = JsonNull
+        replica.queue(TABLE, JsonObject(values))
+        requestSync()
+        return true
+    }
+
     private fun check(draft: WantDraft): WantDraft? {
         val title = draft.title.trim().take(MAX_TITLE)
         val reason = draft.reason.trim().take(MAX_REASON)

@@ -732,6 +732,9 @@
     <string name="activity_habit">the habit “%1$s”</string>
     <string name="activity_habit_checkin">a habit check-in</string>
     <string name="activity_habit_pause">a habit pause</string>
+    <string name="activity_want">the want “%1$s”</string>
+    <string name="activity_want_cooldowns">the want cooldowns</string>
+    <string name="activity_bought">%1$s bought %2$s</string>
     <string name="activity_skipped">%1$s skipped %2$s</string>
     <string name="activity_paused">%1$s paused %2$s</string>
     <string name="activity_resumed">%1$s resumed %2$s</string>
@@ -795,4 +798,65 @@
     <string name="places_reviews">Past weeks and months</string>
     <string name="places_stats">%1$d done this week</string>
     <string name="places_archive">%1$d done</string>
+
+    <!-- Wants (docs/wants.md, M8-04) -->
+    <string name="wants_title">Wants</string>
+    <string name="wants_add">Add a want</string>
+    <string name="wants_edit">Edit</string>
+    <string name="wants_ready">Ready</string>
+    <string name="wants_cooling">Cooling</string>
+    <string name="wants_decided">Decided</string>
+    <string name="wants_empty">Nothing wanted yet. Add something you\'d like to buy and why, and it waits out a cooldown before you decide.</string>
+    <string name="wants_none_ready">Nothing is ready to decide.</string>
+    <string name="wants_none_cooling">Nothing is cooling.</string>
+    <string name="wants_none_decided">Nothing decided yet.</string>
+    <string name="wants_status_ready">ready to decide</string>
+    <plurals name="wants_status_days">
+        <item quantity="one">%1$d day to go</item>
+        <item quantity="other">%1$d days to go</item>
+    </plurals>
+    <string name="wants_status_bought">bought</string>
+    <string name="wants_status_dropped">dropped</string>
+    <string name="wants_reason">Why</string>
+    <string name="wants_checked">Last price found</string>
+    <string name="wants_note">Note</string>
+    <string name="wants_note_optional">A note (optional)</string>
+    <string name="wants_buy">Bought</string>
+    <string name="wants_drop">Drop it</string>
+    <string name="wants_reopen">Reopen</string>
+    <string name="wants_delete">Delete</string>
+    <string name="wants_ring">%1$d%% of the cooldown</string>
+    <string name="wants_bought_message">Bought %1$s</string>
+    <string name="wants_dropped_message">Dropped %1$s</string>
+    <string name="wants_deleted_message">Deleted %1$s</string>
+    <string name="wants_title_field">What</string>
+    <string name="wants_reason_field">Why you want it</string>
+    <string name="wants_reason_hint">The reason is the point: you will read it when the cooldown ends.</string>
+    <string name="wants_price">Price</string>
+    <string name="wants_currency">Currency</string>
+    <string name="wants_link">Link</string>
+    <string name="wants_cools_for">Cools for</string>
+    <plurals name="wants_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="wants_fewer_days">One day less</string>
+    <string name="wants_more_days">One day more</string>
+    <string name="wants_save">Save</string>
+    <string name="wants_cooldowns_line">Under %1$s waits %2$d days, under %3$s %4$d, more %5$d, no price %6$d.</string>
+    <string name="wants_cooldowns_edit">Change the cooldowns</string>
+    <string name="wants_cooldowns_title">Cooldowns</string>
+    <string name="wants_cooldowns_hint">A new want waits by its price. Wants already cooling keep their days.</string>
+    <string name="wants_under">Under</string>
+    <string name="wants_wait_days">Waits days</string>
+    <string name="wants_more_wait">More waits days</string>
+    <string name="wants_unpriced_wait">No price waits days</string>
+    <string name="wants_cooldowns_refused">Those don\'t fit together: days are 0 to 365, and the second amount is not below the first.</string>
+    <string name="wants_cooldowns_defaults">Defaults</string>
+    <string name="places_wants">%1$d ready</string>
+    <string name="places_wants_cooling">%1$d cooling</string>
+    <string name="stats_wants">Wants</string>
+    <string name="stats_wants_bought">bought</string>
+    <string name="stats_wants_dropped">dropped</string>
+    <string name="stats_wants_not_spent">not spent</string>
 </resources>

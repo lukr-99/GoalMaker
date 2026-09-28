@@ -14,6 +14,9 @@ object WantRules {
     const val BOUGHT = "bought"
     const val DROPPED = "dropped"
 
+    /** The composer command that opens the Wants place with a new want (`/want Trail shoes`). */
+    const val COMMAND = "want"
+
     /** The most days a picked cooldown can be. */
     const val MAX_DAYS = 365
 
