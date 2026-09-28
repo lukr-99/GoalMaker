@@ -23,6 +23,8 @@ public sealed class ToastReminderNotifications
     private const string Group = "reminders";
     private const string PlanGroup = "plan";
     private const string ReviewGroup = "review";
+    private const string WantsGroup = "wants";
+    private readonly Dictionary<DateOnly, IReadOnlyList<string>> shownWants = [];
     private readonly string appId;
     private readonly IStrings strings;
 
@@ -97,6 +99,54 @@ public sealed class ToastReminderNotifications
             }
         };
         Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>
+    /// Shows the wants that became ready (docs/wants.md): one toast a day naming them. Clicking it opens
+    /// the Wants page; deciding every want it names takes it away on every device.
+    /// </summary>
+    public void ShowWants(WantsDue due, IReadOnlyList<string> titles)
+    {
+        if (titles.Count == 0)
+        {
+            return;
+        }
+
+        var tag = due.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var title = titles.Count == 1 ? strings.Get("Wants.ReadyOne", titles[0]) : strings.Get("Wants.ReadyMany", titles.Count);
+        var content = new XElement(
+            "toast",
+            new XAttribute("launch", new ToastActivation(ToastAction.Wants, tag).Arguments),
+            new XElement(
+                "visual",
+                new XElement(
+                    "binding",
+                    new XAttribute("template", "ToastGeneric"),
+                    new XElement("text", title),
+                    new XElement("text", titles.Count == 1 ? strings.Get("Wants.ReadyText") : string.Join(", ", titles)))));
+        var document = new WinRtXml.XmlDocument();
+        document.LoadXml(content.ToString(SaveOptions.DisableFormatting));
+        var toast = new ToastNotification(document) { Tag = tag, Group = WantsGroup };
+        toast.Activated += (_, args) =>
+        {
+            if (ToastActivation.Parse((args as ToastActivatedEventArgs)?.Arguments) is { } activation)
+            {
+                Activated?.Invoke(this, activation);
+            }
+        };
+        shownWants[due.Day] = due.WantIds;
+        Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>The wants toasts shown since GoalMaker started, as their planning day and the wants they name.</summary>
+    public IReadOnlyList<(DateOnly Day, IReadOnlyList<string> Wants)> ShownWants() =>
+        [.. shownWants.Select(entry => (entry.Key, entry.Value))];
+
+    /// <summary>Takes the wants toast of <paramref name="day"/> away.</summary>
+    public void ClearWants(DateOnly day)
+    {
+        shownWants.Remove(day);
+        Try(() => ToastNotificationManager.History.Remove(day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), WantsGroup, appId));
     }
 
     /// <summary>Takes a review reminder away.</summary>

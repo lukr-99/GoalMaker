@@ -33,6 +33,8 @@ public sealed record SettingsDocument
 
     public TimeOnly? MonthlyReviewReminder { get; init; } = ReviewReminder.DefaultTime;
 
+    public TimeOnly? WantsReadyReminder { get; init; } = WantReminder.DefaultTime;
+
     public DateTimeOffset? RemindedUntil { get; init; }
 
     /// <summary>When the owner last signed in on this PC; missing from older files starts the week anew.</summary>

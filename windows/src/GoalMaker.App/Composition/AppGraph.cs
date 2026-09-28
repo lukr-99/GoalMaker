@@ -117,6 +117,7 @@ public sealed class AppGraph : IDisposable
         Projects = new ProjectList(replica, newRows, Sync.Request);
         Tasks = new TaskList(
             replica, newRows, Areas, Tags, Projects, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
+        Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
 
         // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
         // carries the next one, and toasts show them with the same buttons as the phone.
@@ -129,7 +130,8 @@ public sealed class AppGraph : IDisposable
             reminderTimer,
             Settings,
             TimeProvider.System,
-            Rituals);
+            Rituals,
+            Wants);
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -235,7 +237,6 @@ public sealed class AppGraph : IDisposable
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits));
         Reviews = new ReviewList(replica, newRows, Sync.Request);
-        Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Review = new ReviewViewModel(
             ReviewRules.Weekly,
             ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),
@@ -252,6 +253,8 @@ public sealed class AppGraph : IDisposable
             runOnUi);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi);
+        // A want added, decided or deleted moves the next alarm and may settle the wants toast.
+        Wants.Changed += (_, _) => runOnUi(SettleReminders);
         StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants);
         ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
@@ -610,6 +613,12 @@ public sealed class AppGraph : IDisposable
         {
             toasts.ShowPlanTomorrow(day);
         }
+
+        if (look.Wants is { } ready)
+        {
+            var byId = Wants.All().ToDictionary(want => want.Id);
+            toasts.ShowWants(ready, [.. ready.WantIds.Where(byId.ContainsKey).Select(id => byId[id].Title)]);
+        }
     }
 
     private void SettleReminders()
@@ -628,6 +637,17 @@ public sealed class AppGraph : IDisposable
         foreach (var day in toasts.ShownPlanTomorrow().Where(Reminders.PlanTomorrowStale))
         {
             toasts.ClearPlanTomorrow(day);
+        }
+
+        ClearStaleWants();
+    }
+
+    // A wants toast goes once every want it names was decided, here or on the other device.
+    private void ClearStaleWants()
+    {
+        foreach (var (wantsDay, ids) in toasts.ShownWants().Where(shown => Reminders.WantsStale(shown.Wants)))
+        {
+            toasts.ClearWants(wantsDay);
         }
     }
 
@@ -652,6 +672,12 @@ public sealed class AppGraph : IDisposable
             }
 
             toasts.ClearPlanTomorrow(planDay);
+            return;
+        }
+
+        if (activation.Action == ToastAction.Wants)
+        {
+            WindowRequested?.Invoke(this, AppPage.Wants);
             return;
         }
 
