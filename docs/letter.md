@@ -1,6 +1,7 @@
 # The Letter
 
-> Planned in M8 (`.scratch/m8-letter-tally-wants/`, M8-07 to M8-09). Not built yet.
+> M8 (`.scratch/m8-letter-tally-wants/`): `get_review_digest` is built (M8-07); the Letter in the apps
+> and the routine follow (M8-08, M8-09).
 
 The Letter is a text about a finished week (or month) that a scheduled Claude routine writes and
 GoalMaker keeps as that review's summary (spec, stories 100 to 103; [ADR 0012](adr/0012-the-letter-written-by-a-routine.md)).
@@ -21,24 +22,28 @@ No other app's data passes through GoalMaker's backend, and GoalMaker sends no e
 
 ## `get_review_digest`
 
-`get_review_digest(kind = weekly | monthly, period?)` returns, as JSON:
+`get_review_digest(kind = weekly | monthly, period?)` returns, as JSON (`period` is any day in the
+week or month):
 
 - `period`: kind, start and end (the start is what `save_review_summary` must be given back);
-- `done`: tasks finished, by day, with area and project;
-- `open`: tasks still open, overdue ones, and slipping ones with their move counts;
-- `goals`: the period's goals with progress against where they should be by now;
+- `done`: tasks finished, by the day they were done, with area and project;
+- `open`: `left` (still open and planned in the period, with move counts), `overdue` (every open
+  task planned before today) and `slipping` (left ones moved three times or more);
+- `goals`: the period's goals with progress against where they should be by now, in percent;
 - `habits`: each habit's periods met, missed and skipped, and its streak;
 - `projects`: items moved to Done in the period, per project;
 - `triggers`: the reactive prompt triggers that fired, with their subjects ([reviews](reviews.md));
-- `review`: this period's mood, energy and reflections if the review was already done, and the last
-  period's letter;
+- `review`: this period's mood, energy and reflections if the review was already done;
+  `last_letter`: the last period's letter;
 - `next`: the next period's planned tasks, deadlines and goals set so far;
 - `wants`: wants that became ready or were decided in the period, and those ready next period
   ([wants](wants.md));
-- `tally`: minutes per category and per project, per device kind ([tally](tally.md)).
+- `tally`: minutes per category and per project, per device kind ([tally](tally.md)), once Tally
+  exists (M8-10 to M8-14).
 
-The prompts `weekly_review` and `monthly_review` are built from the same digest, so the two never
-disagree.
+The prompts `weekly_review` and `monthly_review` are built from the same digest (`reviewDigest` in
+`supabase/functions/_shared/planner`, over `rules/digest.ts`), so the two never disagree. Their
+text is pinned by snapshots over a fixed August in the connector's endpoint test.
 
 **Which period by default:** the week or month that holds **yesterday's** planning day. Run on Sunday
 evening, that is the week ending now; run on Monday morning, the week just gone. The rule and the
