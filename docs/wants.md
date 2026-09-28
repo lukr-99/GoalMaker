@@ -1,6 +1,7 @@
 # Wants
 
-> Planned in M8 (`.scratch/m8-letter-tally-wants/`, M8-03 to M8-06). Not built yet.
+> M8: the data and rules are built (M8-03); the Wants place, the notification and the connector tools follow
+> (M8-04 to M8-06).
 
 A **want** is something the owner would like to buy, written down with the reason, which waits out a
 **cooldown** before it is decided (spec, stories 104 to 108). It stops impulse buys and leaves a
@@ -20,12 +21,16 @@ history of what was really wanted.
 | made by | Owner or Claude, like tasks |
 
 `wants` is a synced table (Supabase migration 0016, replica migration 0011) with the usual row
-security, tombstones, activity log and undo, and it is part of the backup.
+security, tombstones, activity log and undo, and it is part of the backup. A want keeps its
+`cooldown_days`, `added_on` and `cools_until` as they were set, and the server checks that it cools
+exactly its days after it was added.
 
 ## Cooldowns
 
-The thresholds live on the profile (`want_cooldowns`), so both apps and the connector work out the
-same cooldown, and the owner changes them from the Wants place:
+The thresholds are one synced row per owner (`want_cooldowns`, its id a UUID version 5 of
+`want-cooldowns/<owner>` so two devices make the same row), so both apps and the connector work out
+the same cooldown, and the owner changes them from the Wants place. Without the row the defaults
+apply:
 
 | Price (in the owner's currency) | Cooldown |
 |---|---|

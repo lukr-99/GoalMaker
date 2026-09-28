@@ -349,7 +349,7 @@ Story numbers continue from 99 (the list above repeats 88 once; those numbers st
 - `connector_links`: hashed secret, created at, last used at, revoked at.
 - M8 adds `wants` (title, reason, link, price and currency, area, cooldown days, cools until,
   decision `bought | dropped` with decided at and a note, the last price Claude checked with when and
-  where, made by), a `want_cooldowns` setting on `profiles`, and Tally's `tally_days` (day, device,
+  where, made by), `want_cooldowns` (one synced row of thresholds per owner), and Tally's `tally_days` (day, device,
   device kind, category, project, minutes), `tally_categories` and `tally_rules`. A review's
   `summary` is where the Letter is kept; no column is added for it.
 - Every synced row carries `id` (UUID made on the device), `owner_id`, `created_at`, `updated_at`
@@ -422,7 +422,7 @@ tried later. Not part of v1.
   Letter: the guided review's first step when there is one, an envelope mark and the first line on
   the Reviews screen, and a review reminder that says the letter is here. GoalMaker sends no email.
 - **Wants ([docs/wants.md](wants.md)):** a synced `wants` table. The cooldown comes from the price
-  through thresholds in the profile (7 days under 1,000, 30 under 10,000, 90 above, 30 without a
+  through the owner's thresholds (one synced row; 7 days under 1,000, 30 under 10,000, 90 above, 30 without a
   price, in the owner's currency), changeable in the Wants place and per want. After it a want is
   ready until decided. One notification a day at a chosen time lists the wants that became ready,
   derived like the review reminders, with no reminder rows. Claude checks prices with its own web
