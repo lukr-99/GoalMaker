@@ -1,6 +1,6 @@
 # M8-04: The Wants place in both apps
 
-**Status:** todo · **Milestone:** M8
+**Status:** done · **Milestone:** M8
 
 ## Scope
 - Android, then Windows: the Wants place in the new navigation (spec, stories 104, 105 and 107).
@@ -26,3 +26,26 @@
   change a threshold; all four themes; the largest text size.
 - Windows: the same, plus the chips and the sheet by keyboard.
 - Endpoint: nothing.
+
+## Result
+
+2026-09-28, both apps.
+
+- **Shared:** Wants joins the places in `navigation.json` (after Projects, unpinned by default),
+  `/want` is a known command in `composer.json`, and `activity.json` words a want's changes (added,
+  bought, dropped, reopened, renamed) and the thresholds (edited). Kotlin and C# pass all three.
+- **Android:** the Wants place (`ui/wants`): the thresholds line with the cooldowns sheet, Ready,
+  Cooling and Decided chips with counts (Ready leads while anything is ready, then the owner's choice
+  sticks), a card per want with a ring that counts the days down and pops once when ready, an accent
+  border on ready wants, and a card that opens to the reason, the link, the last price found, a note
+  and Bought or Drop it (Reopen and Delete once decided), with undo. The add and edit sheet requires
+  the reason and shows the cooldown the price gives, with one day more or less. `/want` from any list
+  opens it with the title. Places has a Wants tile and counts ready wants when Wants is not pinned.
+  Stats has a Wants block (bought, dropped, not spent), shown even before any task is finished.
+- **Windows:** the Wants page with the same parts, the add panel inline at the top, the thresholds
+  panel, filter pills in the accent, an undo bar, `--open wants`, a sidebar entry under All places
+  (pinnable), `/want` from any composer, and the Wants block in Stats.
+- **Tests:** `WantsViewModelTest` (Android) and `WantsViewModelTests` (Windows), plus the contract
+  runs above. Checked on the emulator (`/want`, add, pick days, ready, decide, stats) and on the
+  Windows dev build through UI Automation (add two wants, pick days, ready first). The owner flagged
+  the Windows filter pills as hard to read; their text now takes the theme's text color.

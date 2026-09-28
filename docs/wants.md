@@ -1,7 +1,7 @@
 # Wants
 
-> M8: the data and rules are built (M8-03); the Wants place, the notification and the connector tools follow
-> (M8-04 to M8-06).
+> M8: the data and rules (M8-03) and the Wants place (M8-04) are built; the ready notification and the
+> connector tools follow (M8-05, M8-06).
 
 A **want** is something the owner would like to buy, written down with the reason, which waits out a
 **cooldown** before it is decided (spec, stories 104 to 108). It stops impulse buys and leaves a
@@ -62,8 +62,9 @@ notification on both devices after the next sync (the `ready` group of `wants.js
 
 A Wants place with filter chips in the main area (Cooling, Ready, Decided), each row with an accent
 ring counting the cooldown down and the price, the reason one tap away. The cooldown thresholds sit
-at the top of the place. `/want` in the composer opens the add sheet with the reason required
-(`composer.json`). Stats gains a Wants block: bought against dropped, and the money not spent (the
+at the top of the place. `/want` in the composer opens the add sheet with the title filled in and the reason required
+(`composer.json`); on Windows the add panel opens at the top of the page. The activity log says
+when a want was added, bought, dropped, reopened or renamed (`activity.json`). Stats gains a Wants block: bought against dropped, and the money not spent (the
 total of dropped prices in the owner's currency).
 
 ## Through the connector
