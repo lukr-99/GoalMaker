@@ -8,4 +8,5 @@ public sealed record ReminderLook(
     IReadOnlyList<ScheduledReminder> Reminders,
     DateOnly? PlanTomorrow = null,
     DateOnly? WeeklyReview = null,
-    DateOnly? MonthlyReview = null);
+    DateOnly? MonthlyReview = null,
+    WantsDue? Wants = null);

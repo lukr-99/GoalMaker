@@ -218,6 +218,20 @@
                               SelectedIndex="{Binding MonthlyReviewTime}"
                               IsEnabled="{Binding MonthlyReviewOn}"
                               AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
+                    <DockPanel Margin="0,20,0,8">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding WantsReadyOn}"
+                                         AutomationProperties.Name="{DynamicResource Settings.WantsReady}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Settings.WantsReady}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{Binding WantsReadySummary}" />
+                        </StackPanel>
+                    </DockPanel>
+                    <ComboBox MinWidth="140"
+                              HorizontalAlignment="Left"
+                              ItemsSource="{Binding PlanReminderChoices}"
+                              SelectedIndex="{Binding WantsReadyTime}"
+                              IsEnabled="{Binding WantsReadyOn}"
+                              AutomationProperties.Name="{DynamicResource Settings.WantsReady}" />
                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
                     <StackPanel Orientation="Horizontal">
                         <ComboBox MinWidth="120"

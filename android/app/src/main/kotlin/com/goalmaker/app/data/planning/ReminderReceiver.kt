@@ -63,9 +63,7 @@ class ReminderReceiver : BroadcastReceiver() {
 
                     // The alarm, a reboot, a changed clock: show what is due and arm what follows.
                     else -> {
-                        val look = reminders.catchUp()
-                        look.reminders.forEach(notifications::show)
-                        look.planTomorrow?.let(notifications::showPlanTomorrow)
+                        graph.show(reminders.catchUp())
                     }
                 }
             } finally {

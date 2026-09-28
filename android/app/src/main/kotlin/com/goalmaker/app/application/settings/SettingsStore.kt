@@ -46,6 +46,11 @@ interface SettingsStore {
 
     fun setMonthlyReviewReminder(time: LocalTime?)
 
+    /** When the daily notification for wants that became ready rings (docs/wants.md); 10:00 unless changed, null when off. */
+    val wantsReadyReminder: StateFlow<LocalTime?>
+
+    fun setWantsReadyReminder(time: LocalTime?)
+
     /**
      * The places pinned to the bottom bar, at most four (ADR 0014), in bar order. Read back through
      * `PlaceRules.stored`, so a place that no longer exists is gone and an empty list means the defaults.

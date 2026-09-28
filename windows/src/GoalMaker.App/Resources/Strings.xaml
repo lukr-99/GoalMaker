@@ -739,6 +739,11 @@
     <sys:String x:Key="Wants.CooldownsRefused">Those don't fit together: days are 0 to 365, and the second amount is not below the first.</sys:String>
     <sys:String x:Key="Wants.Defaults">Defaults</sys:String>
     <sys:String x:Key="Composer.OpensWant">adds a want</sys:String>
+    <sys:String x:Key="Wants.ReadyOne">{0} is ready to decide</sys:String>
+    <sys:String x:Key="Wants.ReadyMany">{0} wants are ready to decide</sys:String>
+    <sys:String x:Key="Wants.ReadyText">The cooldown is over. Still want it?</sys:String>
+    <sys:String x:Key="Settings.WantsReady">Wants ready</sys:String>
+    <sys:String x:Key="Settings.WantsReadyHint">Once a day, the wants whose cooldown ended.</sys:String>
     <sys:String x:Key="Stats.Wants">WANTS</sys:String>
     <sys:String x:Key="Stats.WantsBought">bought</sys:String>
     <sys:String x:Key="Stats.WantsDropped">dropped</sys:String>

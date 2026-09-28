@@ -60,6 +60,10 @@ class MainActivity : FragmentActivity() {
             intent.removeExtra(ReminderAlarm.EXTRA_REVIEW_KIND)
             intent.removeExtra(ReminderAlarm.EXTRA_REVIEW_PERIOD)
         }
+        if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_WANTS, false)) {
+            graph.openedForWants()
+            intent.removeExtra(ReminderAlarm.EXTRA_OPEN_WANTS)
+        }
         if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_PLAN, false)) {
             graph.openedForPlan()
             intent.removeExtra(ReminderAlarm.EXTRA_OPEN_PLAN)

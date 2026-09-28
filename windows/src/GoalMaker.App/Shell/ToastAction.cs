@@ -24,4 +24,7 @@ public enum ToastAction
 
     /// <summary>A review reminder's "Not now": quiet for the rest of the planning day.</summary>
     SkipReview,
+
+    /// <summary>The wants toast's body: opens the Wants page.</summary>
+    Wants,
 }

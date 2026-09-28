@@ -31,6 +31,8 @@ class ReminderService(
     private val weeklyReviewAt: () -> LocalTime? = { null },
     private val weeklyReviewWeekday: () -> Int = { ReviewReminder.DEFAULT_WEEKDAY },
     private val monthlyReviewAt: () -> LocalTime? = { null },
+    private val wants: WantList? = null,
+    private val wantsReadyAt: () -> LocalTime? = { null },
 ) {
     /**
      * What arrived since the last look, including anything missed while the device was off, with the
@@ -44,9 +46,10 @@ class ReminderService(
         val planDay = rituals?.let { RitualReminder.due(planTomorrowAt(), dayStartHour(), ranPlanTomorrow(), since, at) }
         val weekly = reviewDue(RitualRunList.WEEKLY_REVIEW, weeklyReviewAt(), since, at)
         val monthly = reviewDue(RitualRunList.MONTHLY_REVIEW, monthlyReviewAt(), since, at)
+        val ready = wants?.let { WantReminder.due(wantsReadyAt(), dayStartHour(), it.all(), since, at) }
         setRemindedUntil(at)
         arm(all, byId, at)
-        return ReminderLook(due, planDay, weekly, monthly)
+        return ReminderLook(due, planDay, weekly, monthly, ready)
     }
 
     /** Which of the notifications on screen ([shown], by reminder id) have to go (docs/reminders.md). */
@@ -55,6 +58,9 @@ class ReminderService(
         val (all, byId) = read()
         return ReminderSchedule.stale(shown, all, byId, now())
     }
+
+    /** Whether the wants notification naming [shown] has to go: every want in it was decided, here or elsewhere. */
+    fun wantsStale(shown: Collection<String>): Boolean = wants?.let { WantReminder.stale(shown, it.all()) } ?: true
 
     /** Whether the Plan tomorrow reminder on screen for [day] has to go: the ritual ran, or the day moved on. */
     fun planTomorrowStale(day: LocalDate): Boolean =
@@ -148,7 +154,8 @@ class ReminderService(
         val ritual = rituals?.let { RitualReminder.next(planTomorrowAt(), dayStartHour(), ranPlanTomorrow(), at) }
         val weekly = reviewNext(RitualRunList.WEEKLY_REVIEW, weeklyReviewAt(), at)
         val monthly = reviewNext(RitualRunList.MONTHLY_REVIEW, monthlyReviewAt(), at)
-        val next = listOfNotNull(task, ritual, weekly, monthly).minOrNull()
+        val ready = wants?.let { WantReminder.next(wantsReadyAt(), dayStartHour(), it.all(), at) }
+        val next = listOfNotNull(task, ritual, weekly, monthly, ready).minOrNull()
         if (next == null) scheduler.cancel() else scheduler.armAt(next)
     }
 }

@@ -17,6 +17,7 @@ public sealed class ReminderService
     private readonly ISettingsStore settings;
     private readonly TimeProvider time;
     private readonly RitualRunList? rituals;
+    private readonly WantList? wants;
 
     public ReminderService(
         ReminderList reminders,
@@ -24,8 +25,10 @@ public sealed class ReminderService
         IReminderScheduler scheduler,
         ISettingsStore settings,
         TimeProvider time,
-        RitualRunList? rituals = null)
+        RitualRunList? rituals = null,
+        WantList? wants = null)
     {
+        this.wants = wants;
         this.reminders = reminders;
         this.tasks = tasks;
         this.scheduler = scheduler;
@@ -56,7 +59,8 @@ public sealed class ReminderService
         Arm(all, byId, now);
         var weekly = ReviewDue(RitualRunList.WeeklyReview, settings.WeeklyReviewReminder, since, now);
         var monthly = ReviewDue(RitualRunList.MonthlyReview, settings.MonthlyReviewReminder, since, now);
-        return new ReminderLook(due, planDay, weekly, monthly);
+        var ready = wants is null ? null : WantReminder.Due(settings.WantsReadyReminder, settings.DayStartHour, wants.All(), since, now);
+        return new ReminderLook(due, planDay, weekly, monthly, ready);
     }
 
     /// <summary>Which of the notifications on screen (<paramref name="shown"/>, by reminder id) have to go.</summary>
@@ -76,6 +80,9 @@ public sealed class ReminderService
 
     /// <summary>Whether the review reminder of <paramref name="ritual"/> on screen for <paramref name="day"/> has to go.</summary>
     public bool ReviewStale(string ritual, DateOnly day) => ReviewReminder.Stale(day, settings.DayStartHour, Ran(ritual), Now);
+
+    /// <summary>Whether the wants toast naming <paramref name="shown"/> has to go: every want in it was decided, here or elsewhere.</summary>
+    public bool WantsStale(IReadOnlyCollection<string> shown) => wants is null || WantReminder.Stale(shown, wants.All());
 
     /// <summary>The review was written or put off on planning <paramref name="day"/>: its reminder stays quiet that day everywhere.</summary>
     public void FinishReview(string ritual, DateOnly day, bool skipped = false)
@@ -177,12 +184,16 @@ public sealed class ReminderService
         ? null
         : ReviewReminder.Next(KindOf(ritual), time, settings.WeeklyReviewWeekday, settings.DayStartHour, Ran(ritual), now);
 
-    // One timer for whichever comes first: a task's reminder or the evening Plan tomorrow reminder.
+    // One timer for whichever comes first: a task's reminder, the evening Plan tomorrow reminder, a review
+    // reminder, or the wants that become ready.
     private void Arm(IReadOnlyList<ReminderItem> all, IReadOnlyDictionary<string, TaskItem> byId, DateTime now)
     {
         var task = ReminderSchedule.Next(all, byId, settings.QuietHours, now)?.At;
         var ritual = rituals is null ? null : RitualReminder.Next(settings.PlanTomorrowReminder, settings.DayStartHour, RanPlanTomorrow(), now);
-        DateTime? next = task is { } a && ritual is { } b ? (a <= b ? a : b) : task ?? ritual;
+        var weekly = ReviewNext(RitualRunList.WeeklyReview, settings.WeeklyReviewReminder, now);
+        var monthly = ReviewNext(RitualRunList.MonthlyReview, settings.MonthlyReviewReminder, now);
+        var ready = wants is null ? null : WantReminder.Next(settings.WantsReadyReminder, settings.DayStartHour, wants.All(), now);
+        var next = new[] { task, ritual, weekly, monthly, ready }.Where(moment => moment is not null).Min();
         if (next is { } at)
         {
             scheduler.ArmAt(at);

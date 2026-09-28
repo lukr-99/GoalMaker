@@ -147,14 +147,31 @@ public sealed class ReminderServiceTests : IDisposable
     }
 
     [Fact]
-    public void SwitchedOffTheEveningArmsNothing()
+    public void SwitchedOffTheRitualsArmNothing()
     {
         planner.Settings.PlanTomorrowReminder = null;
+        planner.Settings.WeeklyReviewReminder = null;
+        planner.Settings.MonthlyReviewReminder = null;
         var withRitual = WithRitual();
 
         withRitual.Rearm();
 
         Assert.Null(scheduler.ArmedAt);
+    }
+
+    // The review reminders share the timer too, so one rings on time with nothing else armed.
+    [Fact]
+    public void TheWeeklyReviewReminderArmsTheTimer()
+    {
+        planner.Settings.PlanTomorrowReminder = null;
+        planner.Settings.MonthlyReviewReminder = null;
+        planner.Settings.WeeklyReviewReminder = new TimeOnly(18, 0);
+        planner.Settings.WeeklyReviewWeekday = 7;
+        var withRitual = WithRitual();
+
+        withRitual.Rearm();
+
+        Assert.Equal(new DateTime(2026, 9, 20, 18, 0, 0), scheduler.ArmedAt);
     }
 
     private ReminderService WithRitual() =>

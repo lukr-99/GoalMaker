@@ -4,6 +4,7 @@ import com.goalmaker.app.contracts.ContractFiles
 import com.goalmaker.app.domain.planning.PlanningDay
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -129,6 +130,45 @@ class WantRulesContractTest {
         assertEquals("b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91", vectors.text("namespace"))
         vectors.cases("cooldownsId").forEach { case ->
             assertEquals(case.text("name"), case.text("expect"), WantRules.cooldownsId(case.text("owner")!!))
+        }
+    }
+
+    @Test
+    fun `every notification moment`() {
+        vectors.cases("notify").forEach { case ->
+            val wants = case.getValue("wants").jsonArray.map { want(it.jsonObject) }
+            val due = WantReminder.due(
+                case.text("time")?.let(LocalTime::parse),
+                case.getValue("dayStartHour").jsonPrimitive.int,
+                wants,
+                LocalDateTime.parse(case.text("since")!!),
+                LocalDateTime.parse(case.text("now")!!),
+            )
+            val expect = case["expect"]?.takeUnless { it is JsonNull }?.jsonObject
+            assertEquals(case.text("name"), expect?.let { WantsDue(LocalDate.parse(it.text("day")!!), it.getValue("wants").jsonArray.map { id -> id.jsonPrimitive.content }) }, due)
+        }
+    }
+
+    @Test
+    fun `every alarm for the notification`() {
+        vectors.cases("notifyNext").forEach { case ->
+            val wants = case.getValue("wants").jsonArray.map { want(it.jsonObject) }
+            val next = WantReminder.next(
+                case.text("time")?.let(LocalTime::parse),
+                case.getValue("dayStartHour").jsonPrimitive.int,
+                wants,
+                LocalDateTime.parse(case.text("now")!!),
+            )
+            assertEquals(case.text("name"), case.text("expect")?.let(LocalDateTime::parse), next)
+        }
+    }
+
+    @Test
+    fun `every stale notification`() {
+        vectors.cases("notifyStale").forEach { case ->
+            val wants = case.getValue("wants").jsonArray.map { want(it.jsonObject) }
+            val shown = case.getValue("shown").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(case.text("name"), case.getValue("expect").jsonPrimitive.boolean, WantReminder.stale(shown, wants))
         }
     }
 }

@@ -58,6 +58,7 @@ class SettingsViewModel(
             weeklyReviewReminder = settings.weeklyReviewReminder.value,
             weeklyReviewWeekday = settings.weeklyReviewWeekday.value,
             monthlyReviewReminder = settings.monthlyReviewReminder.value,
+            wantsReadyReminder = settings.wantsReadyReminder.value,
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
@@ -94,6 +95,9 @@ class SettingsViewModel(
         }
         viewModelScope.launch {
             settings.monthlyReviewReminder.collect { time -> state.update { it.copy(monthlyReviewReminder = time) } }
+        }
+        viewModelScope.launch {
+            settings.wantsReadyReminder.collect { time -> state.update { it.copy(wantsReadyReminder = time) } }
         }
         viewModelScope.launch {
             combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
@@ -140,6 +144,12 @@ class SettingsViewModel(
 
     fun setWeeklyReviewWeekday(weekday: Int) {
         settings.setWeeklyReviewWeekday(weekday)
+        rearm()
+    }
+
+    /** When the notification for wants that became ready rings; the alarm is armed again. */
+    fun setWantsReadyReminder(time: LocalTime?) {
+        settings.setWantsReadyReminder(time)
         rearm()
     }
 

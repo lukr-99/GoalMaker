@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 2026-09-28 is a Monday.",
+  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 'notify': the one notification a day for wants (M8-05): at the owner's time on a planning day, the wants that became ready since the day of the last notification's moment at or before 'since' (the device's last look), up to today; nothing before the time, nothing once shown, nothing when switched off (time null). Quiet hours don't move it: the owner picked the time, like the review reminders. 'notifyNext': the moment the alarm waits for, the time on the first day an undecided want cools that is still to come. 'notifyStale': a notification on screen goes once none of the wants it named is still waiting (decided, deleted or gone). 2026-09-28 is a Monday.",
   "defaults": {
     "smallUnder": 1000,
     "smallDays": 7,
@@ -501,6 +501,306 @@
         "dropped": 2,
         "notSpent": 20
       }
+    }
+  ],
+  "notify": [
+    {
+      "name": "at the time, the wants that became ready today",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "since": "2026-10-05T09:00:00",
+      "now": "2026-10-05T10:05:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Keyboard",
+          "coolsUntil": "2026-10-01",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "day": "2026-10-05",
+        "wants": [
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "before the time, nothing yet",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "since": "2026-10-05T09:00:00",
+      "now": "2026-10-05T09:30:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "days the phone was off are caught up in one notification",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "since": "2026-10-02T20:00:00",
+      "now": "2026-10-05T10:05:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "c",
+          "title": "Book",
+          "coolsUntil": "2026-10-03",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "d",
+          "title": "Old",
+          "coolsUntil": "2026-10-02",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "day": "2026-10-05",
+        "wants": [
+          "c",
+          "a"
+        ]
+      }
+    },
+    {
+      "name": "once shown today, not again",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "since": "2026-10-05T10:05:00",
+      "now": "2026-10-05T12:00:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "nothing ready, nothing shown",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "since": "2026-10-05T09:00:00",
+      "now": "2026-10-05T10:05:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-09",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "decided wants are not named",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "since": "2026-10-05T09:00:00",
+      "now": "2026-10-05T10:05:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": "bought",
+          "deleted": false
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "switched off, nothing shown",
+      "time": null,
+      "dayStartHour": 4,
+      "since": "2026-10-05T09:00:00",
+      "now": "2026-10-05T10:05:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": null
+    }
+  ],
+  "notifyNext": [
+    {
+      "name": "the next day a want cools, at the time",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "now": "2026-10-05T12:00:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-07",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "c",
+          "title": "Lamp",
+          "coolsUntil": "2026-10-06",
+          "decision": "dropped",
+          "deleted": false
+        }
+      ],
+      "expect": "2026-10-07T10:00:00"
+    },
+    {
+      "name": "today, while its time is still to come",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "now": "2026-10-05T09:00:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": "2026-10-05T10:00:00"
+    },
+    {
+      "name": "nothing cooling, nothing armed",
+      "time": "10:00",
+      "dayStartHour": 4,
+      "now": "2026-10-05T09:00:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-01",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": null
+    },
+    {
+      "name": "switched off, nothing armed",
+      "time": null,
+      "dayStartHour": 4,
+      "now": "2026-10-05T09:00:00",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-07",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": null
+    }
+  ],
+  "notifyStale": [
+    {
+      "name": "a want still waiting keeps the notification",
+      "shown": [
+        "a",
+        "b"
+      ],
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": "bought",
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        }
+      ],
+      "expect": false
+    },
+    {
+      "name": "every want decided takes it down, on either device",
+      "shown": [
+        "a",
+        "b"
+      ],
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": "bought",
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-05",
+          "decision": "dropped",
+          "deleted": false
+        }
+      ],
+      "expect": true
+    },
+    {
+      "name": "deleted or gone counts as decided",
+      "shown": [
+        "a",
+        "b"
+      ],
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": true
+        }
+      ],
+      "expect": true
     }
   ]
 }

@@ -146,6 +146,8 @@ public sealed class SignInWatchTests
 
         public WindowPlacement? MainWindowPlacement { get; set; }
 
+        public TimeOnly? WantsReadyReminder { get; set; }
+
         public IReadOnlyList<string> PinnedPlaces { get; set; } = [];
 
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =

@@ -97,6 +97,52 @@ public sealed class WantRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryNotificationMoment()
+    {
+        foreach (var testCase in vectors.GetProperty("notify").EnumerateArray())
+        {
+            var wants = testCase.GetProperty("wants").EnumerateArray().Select(Want).ToList();
+            var due = WantReminder.Due(
+                Time(testCase), testCase.GetProperty("dayStartHour").GetInt32(), wants,
+                Moment(testCase, "since"), Moment(testCase, "now"));
+            var expect = testCase.GetProperty("expect");
+            WantsDue? expected = expect.ValueKind == JsonValueKind.Null
+                ? null
+                : new WantsDue(Day(expect, "day")!.Value, [.. expect.GetProperty("wants").EnumerateArray().Select(id => id.GetString()!)]);
+            Assert.True(Equals(expected, due), Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryAlarmForTheNotification()
+    {
+        foreach (var testCase in vectors.GetProperty("notifyNext").EnumerateArray())
+        {
+            var wants = testCase.GetProperty("wants").EnumerateArray().Select(Want).ToList();
+            var next = WantReminder.Next(Time(testCase), testCase.GetProperty("dayStartHour").GetInt32(), wants, Moment(testCase, "now"));
+            DateTime? expected = Text(testCase, "expect") is { } text ? DateTime.Parse(text, CultureInfo.InvariantCulture) : null;
+            Assert.True(expected == next, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryStaleNotification()
+    {
+        foreach (var testCase in vectors.GetProperty("notifyStale").EnumerateArray())
+        {
+            var wants = testCase.GetProperty("wants").EnumerateArray().Select(Want).ToList();
+            var shown = testCase.GetProperty("shown").EnumerateArray().Select(id => id.GetString()!).ToList();
+            Assert.True(testCase.GetProperty("expect").GetBoolean() == WantReminder.Stale(shown, wants), Name(testCase));
+        }
+    }
+
+    private static TimeOnly? Time(JsonElement testCase) =>
+        Text(testCase, "time") is { } text ? TimeOnly.ParseExact(text, "HH:mm", CultureInfo.InvariantCulture) : null;
+
+    private static DateTime Moment(JsonElement testCase, string name) =>
+        DateTime.Parse(testCase.GetProperty(name).GetString()!, CultureInfo.InvariantCulture);
+
     private static WantCooldowns Cooldowns(JsonElement value) => new(
         value.GetProperty("smallUnder").GetDouble(),
         value.GetProperty("smallDays").GetInt32(),

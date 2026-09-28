@@ -859,4 +859,14 @@
     <string name="stats_wants_bought">bought</string>
     <string name="stats_wants_dropped">dropped</string>
     <string name="stats_wants_not_spent">not spent</string>
+    <string name="wants_ready_channel">Wants ready to decide</string>
+    <string name="wants_ready_channel_description">Once a day, the wants whose cooldown ended.</string>
+    <string name="wants_ready_one">%1$s is ready to decide</string>
+    <plurals name="wants_ready_many">
+        <item quantity="one">%1$d want is ready to decide</item>
+        <item quantity="other">%1$d wants are ready to decide</item>
+    </plurals>
+    <string name="wants_ready_text">The cooldown is over. Still want it?</string>
+    <string name="settings_wants_ready">Wants ready</string>
+    <string name="settings_wants_ready_hint">Once a day, the wants whose cooldown ended.</string>
 </resources>

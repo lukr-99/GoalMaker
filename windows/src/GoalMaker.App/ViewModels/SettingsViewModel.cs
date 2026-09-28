@@ -339,6 +339,27 @@ public sealed partial class SettingsViewModel : ObservableObject
         ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
         : strings.Get("Settings.MonthlyReviewHint");
 
+    /// <summary>Whether the toast for wants that became ready rings (docs/wants.md).</summary>
+    public bool WantsReadyOn
+    {
+        get => settings.WantsReadyReminder is not null;
+        set => SetWantsReady(value ? settings.WantsReadyReminder ?? WantReminder.DefaultTime : null);
+    }
+
+    public int WantsReadyTime
+    {
+        get => settings.WantsReadyReminder is { } time ? (time.Hour * 2) + (time.Minute >= 30 ? 1 : 0) : WantReminder.DefaultTime.Hour * 2;
+        set
+        {
+            var half = Math.Clamp(value, 0, 47);
+            SetWantsReady(new TimeOnly(half / 2, half % 2 * 30));
+        }
+    }
+
+    public string WantsReadySummary => settings.WantsReadyReminder is { } at
+        ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
+        : strings.Get("Settings.WantsReadyHint");
+
     /// <summary>What the quiet hours do, in words.</summary>
     public string QuietHoursSummary => settings.QuietHours.IsOff
         ? strings.Get("Settings.QuietHoursOff")
@@ -596,6 +617,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(WeeklyReviewOn));
         OnPropertyChanged(nameof(WeeklyReviewTime));
         OnPropertyChanged(nameof(WeeklyReviewSummary));
+        quietHoursChanged();
+    }
+
+    private void SetWantsReady(TimeOnly? time)
+    {
+        if (time == settings.WantsReadyReminder)
+        {
+            return;
+        }
+
+        settings.WantsReadyReminder = time;
+        OnPropertyChanged(nameof(WantsReadyOn));
+        OnPropertyChanged(nameof(WantsReadyTime));
+        OnPropertyChanged(nameof(WantsReadySummary));
         quietHoursChanged();
     }
 
