@@ -9,7 +9,8 @@ object ActivityRules {
     fun change(entity: String, action: String, before: JsonObject?, after: JsonObject): ActivityChange {
         val subject = when (entity) {
             "tasks", "task_steps", "goals", "wants" -> after.text("title")
-            "areas", "tags", "habits" -> after.text("name")
+            "areas", "tags", "habits", "tally_categories" -> after.text("name")
+        "tally_rules" -> after.text("pattern")
             else -> null
         }
         val change = when {

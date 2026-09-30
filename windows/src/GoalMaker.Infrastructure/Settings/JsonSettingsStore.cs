@@ -149,6 +149,20 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { WeeklyBackupWritten = value });
     }
 
+    public string DeviceId
+    {
+        get
+        {
+            if (document.DeviceId is not { Length: > 0 } id)
+            {
+                id = Guid.NewGuid().ToString();
+                Save(document with { DeviceId = id });
+            }
+
+            return id;
+        }
+    }
+
     private static SettingsDocument Load(string path)
     {
         try

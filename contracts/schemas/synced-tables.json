@@ -1086,6 +1086,176 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "tally_categories",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "name",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "color",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "emoji",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "position",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "tally_rules",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "match",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "pattern",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "platform",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "category",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "project_id",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "position",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "tally_days",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "day",
+          "kind": "date",
+          "required": true
+        },
+        {
+          "name": "device",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "device_kind",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "category",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "project_id",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "minutes",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
     }
   ]
 }

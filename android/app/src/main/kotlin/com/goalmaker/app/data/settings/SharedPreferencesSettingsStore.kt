@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.time.Instant
 import java.time.LocalTime
+import java.util.UUID
 
 /** [SettingsStore] in private SharedPreferences. None of this is synced or backed up. */
 class SharedPreferencesSettingsStore(private val preferences: SharedPreferences) : SettingsStore {
@@ -129,6 +130,11 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         preferences.edit { putLong(REMINDED_UNTIL, instant.toEpochMilli()) }
     }
 
+    // Committed at once, so the id never changes once a row carries it.
+    override fun tallyDevice(): String = preferences.getString(TALLY_DEVICE, null) ?: UUID.randomUUID().toString().also { id ->
+        preferences.edit(commit = true) { putString(TALLY_DEVICE, id) }
+    }
+
     override fun backendOverride(): BackendEnvironment? {
         val url = preferences.getString(BACKEND_URL, null) ?: return null
         val key = preferences.getString(BACKEND_KEY, null) ?: return null
@@ -193,6 +199,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val QUIET_START = "quiet_hours_start"
         const val QUIET_END = "quiet_hours_end"
         const val REMINDED_UNTIL = "reminded_until"
+        const val TALLY_DEVICE = "tally_device"
         const val APP_LOCK = "app_lock"
         const val PINS = "pinned_places"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"

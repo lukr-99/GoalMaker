@@ -739,6 +739,8 @@
     <string name="activity_habit_pause">a habit pause</string>
     <string name="activity_want">the want “%1$s”</string>
     <string name="activity_want_cooldowns">the want cooldowns</string>
+    <string name="activity_tally_category">the Tally category “%1$s”</string>
+    <string name="activity_tally_rule">a Tally rule</string>
     <string name="activity_bought">%1$s bought %2$s</string>
     <string name="activity_skipped">%1$s skipped %2$s</string>
     <string name="activity_paused">%1$s paused %2$s</string>

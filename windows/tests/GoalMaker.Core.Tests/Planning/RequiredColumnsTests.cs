@@ -9,7 +9,7 @@ namespace GoalMaker.Core.Tests.Planning;
 /// Every list that writes rows fills the columns the server needs a value in
 /// (contracts/schemas/synced-tables.json). A row carries every column, so a null in one of those is
 /// refused on the push whatever default the column has, and the apps' own tests never meet a server.
-/// This walks all fifteen synced tables, so a table nobody writes here is caught too.
+/// This walks every synced table, so a table nobody writes here is caught too.
 /// </summary>
 public sealed class RequiredColumnsTests : IDisposable
 {
@@ -34,6 +34,7 @@ public sealed class RequiredColumnsTests : IDisposable
         var reminders = new ReminderList(test.Replica, rows, () => { }, () => TimeZoneInfo.Utc);
         var tasks = new TaskList(test.Replica, rows, areas, tags, projects, () => { }, () => Day);
         var wants = new WantList(test.Replica, rows, () => { }, () => Day);
+        var tally = new TallyList(test.Replica, rows, () => "d1e57000-0000-4000-8000-00000000aaaa", () => { });
 
         // One row in every synced table, each through the list that owns it.
         Assert.NotNull(areas.Create("Health"));
@@ -56,6 +57,10 @@ public sealed class RequiredColumnsTests : IDisposable
         Assert.NotNull(reviews.Open(ReviewRules.Weekly, Day));
         Assert.NotNull(wants.Add(new WantDraft("Trail shoes", "The old ones have holes", Price: 3400)));
         Assert.True(wants.SetCooldowns(WantCooldowns.Default with { SmallDays = 5 }));
+        var chess = tally.AddCategory("Chess", "teal");
+        Assert.NotNull(chess);
+        Assert.NotNull(tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Windows, chess.Id, project.Id)));
+        Assert.True(tally.RewriteDay(Day, [new TallyTotal(Day, chess.Id, project.Id, 45)]));
 
         // Every table was written, and every row of every table fills what the server needs.
         foreach (var table in test.Catalog.Tables)

@@ -4,7 +4,7 @@ using GoalMaker.Core.Sync;
 
 namespace GoalMaker.Infrastructure.Sync;
 
-/// <summary>The contracts built into the app: synced-tables.json, themes.json, logo.json and the review prompts.</summary>
+/// <summary>The contracts built into the app: synced-tables.json, themes.json, logo.json, the review prompts and Tally's defaults.</summary>
 public static class ContractResources
 {
     public static DesignTokens Themes()
@@ -28,6 +28,14 @@ public static class ContractResources
         using var stream = typeof(ContractResources).Assembly.GetManifestResourceStream("GoalMaker.Contracts.prompts.json")
             ?? throw new InvalidOperationException("prompts.json is not built in.");
         return PromptLibrary.Load(stream);
+    }
+
+    /// <summary>The Tally categories and rules the app ships (docs/tally.md).</summary>
+    public static TallyDefaults TallyDefaults()
+    {
+        using var stream = typeof(ContractResources).Assembly.GetManifestResourceStream("GoalMaker.Contracts.tally-rules.json")
+            ?? throw new InvalidOperationException("tally-rules.json is not built in.");
+        return Core.Planning.TallyDefaults.Load(stream);
     }
 
     public static SyncedTableCatalog SyncedTables()

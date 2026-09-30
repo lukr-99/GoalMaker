@@ -35,6 +35,8 @@ fun activitySentence(row: ActivityRow): String {
         "habit_pauses" -> stringResource(R.string.activity_habit_pause)
         "wants" -> stringResource(R.string.activity_want, subject)
         "want_cooldowns" -> stringResource(R.string.activity_want_cooldowns)
+        "tally_categories" -> stringResource(R.string.activity_tally_category, subject)
+        "tally_rules" -> stringResource(R.string.activity_tally_rule)
         else -> entry.entity
     }
     val days = DateTimeFormatter.ofPattern("EEE d MMM", LocalConfiguration.current.locales[0])

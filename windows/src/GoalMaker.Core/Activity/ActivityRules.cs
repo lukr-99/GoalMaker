@@ -11,7 +11,8 @@ public static class ActivityRules
         var subject = entity switch
         {
             "tasks" or "task_steps" or "goals" or "wants" => Text(after, "title"),
-            "areas" or "tags" or "habits" => Text(after, "name"),
+            "areas" or "tags" or "habits" or "tally_categories" => Text(after, "name"),
+            "tally_rules" => Text(after, "pattern"),
             _ => null,
         };
         var change = (action, entity) switch

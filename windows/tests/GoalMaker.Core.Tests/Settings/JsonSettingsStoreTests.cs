@@ -71,6 +71,16 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void TheDeviceIdIsMadeOnceAndKept()
+    {
+        var id = new JsonSettingsStore(SettingsFile).DeviceId;
+
+        Assert.True(Guid.TryParse(id, out _));
+        Assert.Equal(id, new JsonSettingsStore(SettingsFile).DeviceId);
+        Assert.NotEqual(id, new JsonSettingsStore(Path.Combine(folder, "other.json")).DeviceId);
+    }
+
+    [Fact]
     public void TheEveningReminderIsAt2000UntilMovedOrSwitchedOff()
     {
         Directory.CreateDirectory(folder);
