@@ -104,6 +104,41 @@ class TallyRulesContractTest {
     }
 
     @Test
+    fun `every stats week`() {
+        vectors.cases("weeks").forEach { case ->
+            val rows = case.getValue("rows").jsonArray.map { it.jsonObject }.mapIndexed { index, row ->
+                TallyDay(
+                    id = "row-$index",
+                    day = LocalDate.parse(row.text("day")!!),
+                    device = row.text("deviceKind")!!,
+                    deviceKind = row.text("deviceKind")!!,
+                    category = row.text("category")!!,
+                    project = row.text("projectId"),
+                    minutes = row.getValue("minutes").jsonPrimitive.int,
+                )
+            }
+            val filter = case.getValue("filter").jsonObject
+            val expect = case.getValue("expect").jsonArray.map { it.jsonObject }.map { week ->
+                TallyWeek(
+                    LocalDate.parse(week.text("start")!!),
+                    week.getValue("minutes").jsonPrimitive.int,
+                    week.getValue("categories").jsonArray.map { it.jsonObject }.map { TallyMinutes(it.text("category")!!, it.getValue("minutes").jsonPrimitive.int) },
+                )
+            }
+            assertEquals(
+                case.text("name"),
+                expect,
+                TallyRules.weeks(
+                    rows,
+                    LocalDate.parse(case.text("today")!!),
+                    case.getValue("count").jsonPrimitive.int,
+                    TallyFilter(filter.text("kind"), filter.text("category")),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `the shipped defaults read in full`() {
         assertEquals(TallyRules.OTHER, shipped.categories.last().id)
         assertEquals(TallyRules.VIDEO, shipped.rules.first { it.pattern == "com.google.android.youtube" }.category)

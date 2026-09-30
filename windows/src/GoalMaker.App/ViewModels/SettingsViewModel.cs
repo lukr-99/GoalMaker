@@ -47,7 +47,6 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly Action restartApp;
     private readonly string? releasesPage;
     private readonly Action<string> openInBrowser;
-    private readonly Action<bool>? switchTally;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsSystemTheme), nameof(IsLightTheme), nameof(IsDarkTheme), nameof(PureBlack))]
@@ -124,10 +123,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         Action restartApp,
         string? releasesPage,
         Action<string> openInBrowser,
-        Action<Action> runOnUi,
-        Action<bool>? switchTally = null)
+        Action<Action> runOnUi)
     {
-        this.switchTally = switchTally;
         this.openMini = openMini;
         this.backup = backup;
         this.weekly = weekly;
@@ -431,26 +428,6 @@ public sealed partial class SettingsViewModel : ObservableObject
         StartupProfilesStatus = strings.Get(startupProfiles.Ask(startupProfilesRequest)
             ? "Settings.StartupProfilesAsked"
             : "Settings.StartupProfilesFailed");
-
-    /// <summary>
-    /// Whether Tally follows the window in front on this PC (docs/tally.md, stories 109 to 111). Off until
-    /// the owner turns it on; the tracker starts and stops with it.
-    /// </summary>
-    public bool TallyOn
-    {
-        get => settings.TallyOn;
-        set
-        {
-            if (value == settings.TallyOn)
-            {
-                return;
-            }
-
-            settings.TallyOn = value;
-            switchTally?.Invoke(value);
-            OnPropertyChanged();
-        }
-    }
 
     /// <summary>The folder the weekly export writes into, or empty when it is off (story 92).</summary>
     public string WeeklyBackupFolder

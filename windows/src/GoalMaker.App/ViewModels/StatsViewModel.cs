@@ -9,7 +9,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The Stats page (docs/stats.md, spec stories 64 and 67): tasks finished week by week, goals hit
-/// month by month, how the habits are holding up, and the mood and energy of past reviews.
+/// month by month, how the habits are holding up, the mood and energy of past reviews, what became
+/// of the wants, and where the time went over twelve weeks (Tally, docs/tally.md).
 /// </summary>
 public sealed partial class StatsViewModel : ObservableObject
 {
@@ -18,6 +19,8 @@ public sealed partial class StatsViewModel : ObservableObject
     private readonly HabitList habits;
     private readonly ReviewList reviews;
     private readonly WantList? wants;
+    private readonly TallyList? tally;
+    private readonly Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels;
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
@@ -73,6 +76,18 @@ public sealed partial class StatsViewModel : ObservableObject
     [ObservableProperty]
     private string wantsCurrency = string.Empty;
 
+    [ObservableProperty]
+    private bool hasTally;
+
+    [ObservableProperty]
+    private string tallyTotal = string.Empty;
+
+    [ObservableProperty]
+    private string tallyPerWeek = string.Empty;
+
+    [ObservableProperty]
+    private string tallyFirstWeek = string.Empty;
+
     public StatsViewModel(
         TaskList tasks,
         GoalList goals,
@@ -82,9 +97,13 @@ public sealed partial class StatsViewModel : ObservableObject
         IStrings strings,
         TimeProvider time,
         Action<Action> runOnUi,
-        WantList? wants = null)
+        WantList? wants = null,
+        TallyList? tally = null,
+        Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels = null)
     {
         this.wants = wants;
+        this.tally = tally;
+        this.tallyLabels = tallyLabels;
         this.tasks = tasks;
         this.goals = goals;
         this.habits = habits;
@@ -101,6 +120,11 @@ public sealed partial class StatsViewModel : ObservableObject
             wants.Changed += (_, _) => runOnUi(Refresh);
         }
 
+        if (tally is not null)
+        {
+            tally.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
@@ -112,6 +136,12 @@ public sealed partial class StatsViewModel : ObservableObject
 
     /// <summary>A row per habit that is not archived.</summary>
     public ObservableCollection<StatsHabitViewModel> HabitRows { get; } = [];
+
+    /// <summary>Tally's twelve weeks, the one holding today last, each stacked by category.</summary>
+    public ObservableCollection<TallyBarViewModel> TallyWeeks { get; } = [];
+
+    /// <summary>The categories over the twelve weeks, most first.</summary>
+    public ObservableCollection<TallySegmentViewModel> TallyLegend { get; } = [];
 
     public void Refresh()
     {
@@ -182,6 +212,47 @@ public sealed partial class StatsViewModel : ObservableObject
             WantsCurrency = currency;
             HasWants = decided.Bought + decided.Dropped > 0;
         }
+
+        ShowTally();
+    }
+
+    // Where the time went over twelve weeks, every device together (docs/tally.md), once there is any.
+    private void ShowTally()
+    {
+        if (tally is null || tallyLabels is null)
+        {
+            return;
+        }
+
+        var today = Today();
+        var first = GoalRules.PeriodStart(GoalHorizon.Week, today).AddDays(-7 * (TallyRules.WeekCount - 1));
+        var rows = tally.Days(first, today);
+        var labels = tallyLabels(tally.Categories());
+        var weeks = TallyRules.Weeks(rows, today);
+        var most = Math.Max(1, weeks.Max(week => week.Minutes));
+        TallyWeeks.Clear();
+        foreach (var week in weeks)
+        {
+            TallyWeeks.Add(new TallyBarViewModel(
+                week.Start.ToString("d MMM", CultureInfo.CurrentCulture),
+                week.Minutes > 0 ? labels.Duration(week.Minutes) : string.Empty,
+                (double)week.Minutes / most,
+                [.. week.Categories.Select(group => ((double)group.Minutes, labels.Brush(group.Key!)))],
+                strings.Get("Tally.BarTip", week.Start.ToString("d MMM", CultureInfo.CurrentCulture), labels.Duration(week.Minutes)),
+                week == weeks[^1]));
+        }
+
+        TallyLegend.Clear();
+        foreach (var group in TallyRules.ByCategory(rows))
+        {
+            TallyLegend.Add(new TallySegmentViewModel(labels.Name(group.Key!), labels.Emoji(group.Key!), labels.Duration(group.Minutes), labels.Brush(group.Key!)));
+        }
+
+        var minutes = weeks.Sum(week => week.Minutes);
+        TallyTotal = labels.Duration(minutes);
+        TallyPerWeek = strings.Get("Stats.TallyPerWeek", labels.Duration(minutes / TallyRules.WeekCount));
+        TallyFirstWeek = weeks[0].Start.ToString("d MMM", CultureInfo.CurrentCulture);
+        HasTally = minutes > 0;
     }
 
     private static string Percent(double fraction) =>

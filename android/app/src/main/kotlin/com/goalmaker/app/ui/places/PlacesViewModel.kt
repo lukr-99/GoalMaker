@@ -5,12 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ReviewList
+import com.goalmaker.app.application.planning.TallyCategory
+import com.goalmaker.app.application.planning.TallyFilter
+import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.navigation.DeviceKind
 import com.goalmaker.app.domain.navigation.PlaceRules
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.ui.tally.TallyBoard
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
@@ -20,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
@@ -32,6 +37,8 @@ class PlacesViewModel(
     goals: GoalList,
     reviews: ReviewList,
     wants: WantList,
+    tally: TallyList,
+    private val tallyCategories: List<TallyCategory>,
     private val settings: SettingsStore,
     io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -47,14 +54,23 @@ class PlacesViewModel(
         }
     }
 
+    /** Tally's rows around today and the owner's categories, read again whenever either changes. */
+    private val tallyDays = tally.watch().map {
+        val around = clock().toLocalDate()
+        tally.totals(around.minusDays(1), around.plusDays(1)) to tally.categories()
+    }.flowOn(io)
+
     private val digest = combine(
         combine(tasks.watchAll().flowOn(io), habits.watch().flowOn(io), ::Pair),
         goals.watch().flowOn(io),
-        combine(reviews.watch().flowOn(io), wants.watch().flowOn(io), ::Pair),
+        combine(reviews.watch().flowOn(io), wants.watch().flowOn(io), tallyDays, ::Triple),
         settings.dayStartHour,
         minutes,
-    ) { (taskList, habitData), (goalList, entries), (reviewList, wantList), startHour, _ ->
-        PlacesBoard.build(taskList, habitData, goalList, entries, reviewList, PlanningDay.of(clock(), startHour), wantList)
+    ) { (taskList, habitData), (goalList, entries), (reviewList, wantList, tallyData), startHour, _ ->
+        val today = PlanningDay.of(clock(), startHour)
+        val (rows, own) = tallyData
+        val tallyToday = TallyBoard.day(rows, today, TallyFilter(), TallyBoard.lookup(tallyCategories, own))
+        PlacesBoard.build(taskList, habitData, goalList, entries, reviewList, today, wantList).copy(tallyToday = tallyToday.slices)
     }
 
     val uiState: StateFlow<PlacesUiState> = combine(digest, settings.pins, editing) { built, pins, isEditing ->

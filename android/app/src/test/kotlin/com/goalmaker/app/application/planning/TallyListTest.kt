@@ -10,6 +10,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -125,6 +126,48 @@ class TallyListTest {
         assertEquals("p-chess", tally.rules().last().project)
         val sorted = TallyRules.sortSample(TallySample(TallyRules.ANDROID, "com.chess"), tally.rules(), emptyList())
         assertEquals(chess.id, sorted.category)
+    }
+
+    @Test
+    fun `a category is updated in place and deleted as a tombstone`() {
+        val chess = tally.addCategory("Chess", "teal")!!
+        val music = tally.addCategory("Music", "pink")!!
+
+        assertTrue(tally.updateCategory(chess.id, " Board games ", "green", "🎲"))
+        assertFalse("a color outside the palette is refused", tally.updateCategory(chess.id, "Games", "Not a color"))
+        assertFalse(tally.updateCategory(chess.id, " ", "green"))
+
+        val updated = tally.categories().first()
+        assertEquals(TallyCategory(chess.id, "Board games", "green", "🎲", position = 0), updated)
+        assertEquals(listOf(chess.id, music.id), tally.categories().map(TallyCategory::id))
+
+        tally.rewrite(day, listOf(TallyTotal(day, chess.id, null, 25)))
+        assertTrue(tally.deleteCategory(chess.id))
+        assertFalse("a deleted category can't be deleted again", tally.deleteCategory(chess.id))
+        assertFalse(tally.updateCategory(chess.id, "Chess", "teal"))
+        assertEquals(listOf("Music"), tally.categories().map(TallyCategory::name))
+        assertNotNull(test.replica.get("tally_categories", chess.id)!!.text("deleted_at"))
+        assertEquals("the time sorted into it stays", listOf(chess.id to 25), tally.totals(day, day).map { it.category to it.minutes })
+    }
+
+    @Test
+    fun `a rule is updated in place, keeping its turn, and deleted as a tombstone`() {
+        val first = tally.addRule(TallyRule(TallyRules.APP, "com.chess", TallyRules.ANDROID, "games"))!!
+        val second = tally.addRule(TallyRule(TallyRules.TITLE, "lesson", TallyRules.WINDOWS, "study"))!!
+
+        assertTrue(tally.updateRule(first.id!!, TallyRule(TallyRules.TITLE, " chess ", TallyRules.ANY, "study")))
+        assertFalse("a title rule can't be for Android alone", tally.updateRule(first.id!!, TallyRule(TallyRules.TITLE, "chess", TallyRules.ANDROID, "study")))
+        assertFalse(tally.updateRule("no-such-rule", TallyRule(TallyRules.APP, "x", TallyRules.ANY, "study")))
+
+        assertEquals(
+            listOf(TallyRule(TallyRules.TITLE, "chess", TallyRules.ANY, "study", id = first.id), second),
+            tally.rules(),
+        )
+
+        assertTrue(tally.deleteRule(first.id!!))
+        assertFalse(tally.deleteRule(first.id!!))
+        assertEquals(listOf(second), tally.rules())
+        assertNotNull(test.replica.get("tally_rules", first.id!!)!!.text("deleted_at"))
     }
 
     @Test

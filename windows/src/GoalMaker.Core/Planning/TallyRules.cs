@@ -32,6 +32,9 @@ public static partial class TallyRules
     /// <summary>A day holds at most this many minutes, per device and category.</summary>
     public const int MaxMinutes = 1440;
 
+    /// <summary>How many weeks the stats block shows.</summary>
+    public const int WeekCount = 12;
+
     private const string Namespace = "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91";
     private const string VsCode = " - Visual Studio Code";
     private const string VisualStudio = " - Microsoft Visual Studio";
@@ -153,6 +156,32 @@ public static partial class TallyRules
         ];
     }
 
+    /// <summary>
+    /// The stats block: the <paramref name="count"/> weeks (Monday to Sunday) ending with the one that
+    /// holds <paramref name="today"/>, oldest first, each with its minutes and its categories most first.
+    /// Rows are kept by device kind (phone, pc, or null for both) and category (null for all); a week
+    /// with nothing is there with no minutes. Every device's minutes add up.
+    /// </summary>
+    public static IReadOnlyList<TallyWeek> Weeks(IEnumerable<TallyDay> rows, DateOnly today, int count = WeekCount, string? kind = null, string? category = null)
+    {
+        var last = GoalRules.PeriodStart(GoalHorizon.Week, today);
+        var wanted = Math.Max(count, 0);
+        var kept = rows.Where(row => (kind is null || row.DeviceKind == kind) && (category is null || row.Category == category)).ToList();
+        return [.. Enumerable.Range(0, wanted).Select(step =>
+        {
+            var start = last.AddDays(-7 * (wanted - 1 - step));
+            var end = start.AddDays(6);
+            var week = kept.Where(row => row.Day >= start && row.Day <= end).ToList();
+            return new TallyWeek(start, week.Sum(row => row.Minutes), ByCategory(week));
+        })];
+    }
+
+    /// <summary>The rows' minutes by category, most first, then by key.</summary>
+    public static IReadOnlyList<TallyMinutes> ByCategory(IEnumerable<TallyDay> rows) => Group(rows, row => row.Category);
+
+    /// <summary>The rows' minutes by project, most first, then by key, with the time on no project last.</summary>
+    public static IReadOnlyList<TallyMinutes> ByProject(IEnumerable<TallyDay> rows) => Group(rows, row => row.ProjectId);
+
     /// <summary>The id every device gives its row for a day, category and project, so rewriting a day replaces it.</summary>
     public static string DayId(string owner, DateOnly day, string device, string category, string? project) =>
         NameBasedUuid.Of(
@@ -165,6 +194,17 @@ public static partial class TallyRules
         var name = Separator().Split(TrailingSeparators().Replace((path ?? string.Empty).Trim(), string.Empty))[^1].Trim().ToLowerInvariant();
         return name.Length == 0 ? null : name;
     }
+
+    // Minutes summed by a key, without the empty ones, most first, then by key with none last.
+    private static List<TallyMinutes> Group(IEnumerable<TallyDay> rows, Func<TallyDay, string?> key) =>
+    [
+        .. rows.GroupBy(key)
+            .Select(group => new TallyMinutes(group.Key, group.Sum(row => row.Minutes)))
+            .Where(group => group.Minutes > 0)
+            .OrderByDescending(group => group.Minutes)
+            .ThenBy(group => group.Key is null)
+            .ThenBy(group => group.Key ?? string.Empty, StringComparer.Ordinal),
+    ];
 
     private static bool Matches(TallyRule rule, TallySample sample, string? folder)
     {
