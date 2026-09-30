@@ -7,6 +7,7 @@ import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import java.time.LocalTime
+import java.util.UUID
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
@@ -100,5 +101,13 @@ class SharedPreferencesSettingsStoreTest {
 
         store.setPlanTomorrowReminder(null)
         assertEquals(null, SharedPreferencesSettingsStore(preferences).planTomorrowReminder.value)
+    }
+
+    @Test
+    fun `the Tally device id is made once and kept across a restart`() {
+        val id = SharedPreferencesSettingsStore(preferences).tallyDevice()
+
+        assertEquals(id, UUID.fromString(id).toString())
+        assertEquals(id, SharedPreferencesSettingsStore(preferences).tallyDevice())
     }
 }

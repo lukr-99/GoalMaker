@@ -69,6 +69,9 @@ interface SettingsStore {
 
     fun setRemindedUntil(instant: Instant)
 
+    /** This install's random id, made the first time it is asked for, that names its Tally rows (docs/tally.md). */
+    fun tallyDevice(): String
+
     /** Dev builds only: another Supabase project to use from the next app start. */
     fun backendOverride(): BackendEnvironment?
 

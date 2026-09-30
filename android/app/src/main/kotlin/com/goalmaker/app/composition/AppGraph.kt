@@ -24,6 +24,8 @@ import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderLook
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewRules
+import com.goalmaker.app.application.planning.TallyDefaults
+import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -126,6 +128,9 @@ class AppGraph(context: Context) {
 
     /** The review prompts the app ships (docs/reviews.md). */
     val prompts: PromptLibrary = PromptLibrary.load(appContext.assets.open("prompts.json"))
+
+    /** The Tally categories and rules the app ships (docs/tally.md). */
+    val tallyDefaults: TallyDefaults = TallyDefaults.load(appContext.assets.open("tally-rules.json"))
 
     // A dev build skips sign-in and keeps its rows on the phone unless Settings → Developer turns
     // signing in back on; a release build always signs in and syncs (docs/sign-in.md).
@@ -241,6 +246,7 @@ class AppGraph(context: Context) {
     val habits = HabitList(replica, newRows, sync::request)
     val reviews = ReviewList(replica, newRows, sync::request)
     val wants = WantList(replica, newRows, sync::request, ::today)
+    val tally = TallyList(replica, newRows, sync::request, settings::tallyDevice)
     val projects = ProjectList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 
