@@ -121,6 +121,29 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <!-- Where the period's time went (Tally, docs/tally.md), once there is any. -->
+                    <StackPanel Visibility="{Binding HasTally, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Tally}" />
+                        <TextBlock Text="{Binding TallyTotal}" FontSize="20" FontFamily="{DynamicResource GM.NumberFont}" Typography.NumeralAlignment="Tabular" />
+                        <controls:StackedBar Height="16" Margin="0,6,0,8" Flat="True" Parts="{Binding TallyParts}" />
+                        <ItemsControl ItemsSource="{Binding TallyLegend}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
+                                        <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Name}" Margin="0,0,6,0" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Value}" FontFamily="{DynamicResource GM.NumberFont}"
+                                                   Typography.NumeralAlignment="Tabular" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                     <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.Goals}"
                                Visibility="{Binding HasPeriodGoals, Converter={StaticResource BoolToVisibility}}" />
                     <ItemsControl ItemsSource="{Binding PeriodGoals}" Focusable="False">

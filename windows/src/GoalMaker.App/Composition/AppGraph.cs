@@ -119,6 +119,7 @@ public sealed class AppGraph : IDisposable
             replica, newRows, Areas, Tags, Projects, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Tally = new TallyList(replica, newRows, () => Settings.DeviceId, Sync.Request);
+        var tallyDefaults = ContractResources.TallyDefaults();
 
         // Tally on this PC (docs/tally.md, ADR 0013): the window in front, sorted by the owner's rules and
         // the shipped ones. The raw log stays in the tally folder; only the day totals reach the replica.
@@ -126,7 +127,7 @@ public sealed class AppGraph : IDisposable
             new WindowsForegroundSource(),
             new DiskTallyLog(Paths.Tally),
             Tally,
-            ContractResources.TallyDefaults().Rules,
+            tallyDefaults.Rules,
             Projects.All,
             () => Settings.DayStartHour,
             TimeProvider.System);
@@ -253,6 +254,8 @@ public sealed class AppGraph : IDisposable
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits));
         Reviews = new ReviewList(replica, newRows, Sync.Request);
+        // Tally's categories by name and palette color, the shipped ones and the owner's (docs/tally.md).
+        TallyLabels NameTally(IReadOnlyList<TallyCategory> own) => new(tallyDefaults, own, strings, Theme.SwatchBrush);
         Review = new ReviewViewModel(
             ReviewRules.Weekly,
             ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),
@@ -266,12 +269,17 @@ public sealed class AppGraph : IDisposable
             Settings,
             strings,
             TimeProvider.System,
-            runOnUi);
+            runOnUi,
+            Tally,
+            NameTally);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi);
         // A want added, decided or deleted moves the next alarm and may settle the wants toast.
         Wants.Changed += (_, _) => runOnUi(SettleReminders);
-        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants);
+        TallyPage = new TallyViewModel(
+            Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
+            [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
+        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally);
         ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
             Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
@@ -336,8 +344,7 @@ public sealed class AppGraph : IDisposable
             restartApp,
             releases?.ReleasesPage,
             OpenInBrowser,
-            runOnUi,
-            SwitchTally);
+            runOnUi);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
 
@@ -461,6 +468,9 @@ public sealed class AppGraph : IDisposable
     public ReviewsViewModel ReviewsPage { get; private set; } = null!;
 
     public WantsViewModel WantsPage { get; private set; } = null!;
+
+    /// <summary>The Tally page (docs/tally.md): the switch, where the time went, and the owner's rules and categories.</summary>
+    public TallyViewModel TallyPage { get; private set; } = null!;
 
     /// <summary>The Stats page (docs/stats.md).</summary>
     public StatsViewModel StatsPage { get; private set; } = null!;
@@ -757,7 +767,7 @@ public sealed class AppGraph : IDisposable
         toasts.Clear(activation.ReminderId);
     }
 
-    // Tally follows the switch in Settings at once; switching it off writes what it has.
+    // Tally follows the switch on its page at once; switching it off writes what it has.
     private void SwitchTally(bool on)
     {
         if (on)
@@ -836,6 +846,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.Refresh();
         ReviewsPage.Refresh();
         WantsPage.Refresh();
+        TallyPage.Refresh();
         StatsPage.Refresh();
         ProjectsPage.Refresh();
         CalendarPage.Refresh();

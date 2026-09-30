@@ -86,6 +86,7 @@ public sealed class ThemeApplier : IDisposable
             _ => !SystemParameters.ClientAreaAnimation,
         };
         resources["GM.ReduceMotion"] = MotionReduced;
+        SetMotion(Tokens.Motion);
         SetLogo(theme.Logo);
         Applied?.Invoke(this, EventArgs.Empty);
     }
@@ -101,6 +102,10 @@ public sealed class ThemeApplier : IDisposable
     /// <summary>An area color's chip text color in the current mode, or null for an unknown color id.</summary>
     public Brush? AreaBrush(string colorId) =>
         Tokens.AreaColor(colorId) is { } area ? ToBrush(IsDark ? area.Dark.Content : area.Light.Content) : null;
+
+    /// <summary>An area color's swatch, the same in light and dark: for dots and chart bars. Null for an unknown color id.</summary>
+    public Brush? SwatchBrush(string colorId) =>
+        Tokens.AreaColor(colorId) is { } area ? ToBrush(area.Swatch) : null;
 
     /// <summary>
     /// A static face cut by tools/build_windows_fonts.py, by the name FontFaces gives it. The URI names
@@ -272,6 +277,13 @@ public sealed class ThemeApplier : IDisposable
         resources["GM.CardPadding"] = new Thickness(density.CardPadding);
         resources["GM.RowGap"] = new Thickness(0, 0, 0, density.RowGap);
         resources["GM.RowMinHeight"] = (double)density.RowMinHeight;
+    }
+
+    // The durations charts and panels move with (docs/design/spec.md, "Motion and feedback").
+    private void SetMotion(MotionTokens motion)
+    {
+        resources["GM.QuickDuration"] = new Duration(TimeSpan.FromMilliseconds(motion.Quick));
+        resources["GM.StandardDuration"] = new Duration(TimeSpan.FromMilliseconds(motion.Standard));
     }
 
     private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)

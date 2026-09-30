@@ -108,6 +108,35 @@ public sealed class TallyRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryWeeksBlock()
+    {
+        foreach (var testCase in vectors.GetProperty("weeks").EnumerateArray())
+        {
+            var filter = testCase.GetProperty("filter");
+            var rows = testCase.GetProperty("rows").EnumerateArray().Select(row => new TallyDay(
+                string.Empty,
+                Day(row, "day"),
+                string.Empty,
+                row.GetProperty("deviceKind").GetString()!,
+                row.GetProperty("category").GetString()!,
+                Text(row, "projectId"),
+                row.GetProperty("minutes").GetInt32()));
+            var actual = TallyRules.Weeks(
+                rows, Day(testCase, "today"), testCase.GetProperty("count").GetInt32(), Text(filter, "kind"), Text(filter, "category"));
+            var expected = testCase.GetProperty("expect").EnumerateArray().ToList();
+            Assert.True(expected.Count == actual.Count, Name(testCase));
+            foreach (var (week, want) in actual.Zip(expected))
+            {
+                Assert.True(Day(want, "start") == week.Start, Name(testCase));
+                Assert.True(want.GetProperty("minutes").GetInt32() == week.Minutes, Name(testCase));
+                var categories = want.GetProperty("categories").EnumerateArray()
+                    .Select(category => new TallyMinutes(category.GetProperty("category").GetString()!, category.GetProperty("minutes").GetInt32()));
+                Assert.True(categories.SequenceEqual(week.Categories), Name(testCase));
+            }
+        }
+    }
+
     private static List<TallyRule> Rules(JsonElement value) =>
     [
         .. value.EnumerateArray().Select(rule => new TallyRule(

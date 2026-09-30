@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
+using GoalMaker.Infrastructure.Sync;
 
 namespace GoalMaker.App.Tests;
 
@@ -103,11 +104,46 @@ public sealed class StatsViewModelTests : IDisposable
         Assert.Equal("1", page.DoneValue);
     }
 
+    [Fact]
+    public void TheTallyBlockShowsTwelveWeeksStackedByCategoryOnceThereIsTime()
+    {
+        Assert.False(Page().HasTally);
+
+        planner.TallyDay(Today, TallyRules.Pc, "coding", 120);
+        planner.TallyDay(Today, TallyRules.Phone, "video", 60);
+        planner.TallyDay(WeekStart.AddDays(-14), TallyRules.Phone, "video", 90);
+        planner.TallyDay(WeekStart.AddDays(-7 * 12), TallyRules.Pc, "coding", 600);
+        var page = Page();
+
+        Assert.True(page.HasTally);
+        Assert.Equal(TallyRules.WeekCount, page.TallyWeeks.Count);
+        Assert.True(page.TallyWeeks[^1].IsCurrent);
+        Assert.Equal(1d, page.TallyWeeks[^1].Fraction);
+        Assert.Equal([120d, 60d], page.TallyWeeks[^1].Parts.Select(part => part.Amount));
+        Assert.Equal(0.5, page.TallyWeeks[^3].Fraction);
+        Assert.Equal(string.Empty, page.TallyWeeks[^2].Value);
+        Assert.Equal("Tally.HoursMinutes(4,30)", page.TallyTotal);
+        Assert.Equal(
+            [("Video", "Tally.HoursMinutes(2,30)"), ("Coding", "Tally.Hours(2)")],
+            page.TallyLegend.Select(segment => (segment.Name, segment.Value)));
+    }
+
     private StatsViewModel Page()
     {
         planner.Time.SetUtcNow(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
+        var defaults = ContractResources.TallyDefaults();
         return new StatsViewModel(
-            planner.Tasks, planner.Goals, planner.Habits, planner.Reviews, planner.Settings, planner.Strings, planner.Time, action => action());
+            planner.Tasks,
+            planner.Goals,
+            planner.Habits,
+            planner.Reviews,
+            planner.Settings,
+            planner.Strings,
+            planner.Time,
+            action => action(),
+            planner.Wants,
+            planner.Tally,
+            own => new TallyLabels(defaults, own, planner.Strings, _ => null));
     }
 
     private TaskItem Add(string title) => planner.Tasks.Add(ComposerParser.Parse(title, planner.Time.GetLocalNow().DateTime))!;
