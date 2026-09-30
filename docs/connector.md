@@ -122,16 +122,10 @@ $env:GOALMAKER_CONNECTOR_TEST = '1'; npx deno test --allow-read --allow-env --al
 
 CI runs both in the Supabase job.
 
-## A weekly summary routine
+## The weekly letter routine
 
-A scheduled Claude routine (or any assistant that can use MCP connectors) can leave a summary of the
-week waiting in GoalMaker (spec, story 75). Schedule it for Sunday evening with GoalMaker turned on
-and a prompt like this:
-
-> Use GoalMaker. Look at my week: get_completed_tasks for what I finished, get_today for what is
-> still open or overdue, and get_review_summaries for last week's summary. Write a short summary of
-> my week in plain words: what I got done, what slipped, and one focus for next week, in at most
-> six sentences. Save it with save_review_summary, kind weekly. Don't change any tasks.
-
-The summary is saved as the week's review (the `reviews` table, one row per week, so running it again
-replaces it) and shows in the activity log as made by Claude. The apps' review screens arrive in M4.
+A scheduled Claude routine can leave a letter about the week waiting in GoalMaker (spec, stories 75
+and 100): it reads the week with `get_review_digest`, writes the letter, and saves it with
+`save_review_summary`. The routine, its prompt and the owner's one-time setup are in
+[the Letter](letter.md). The letter is saved as the week's review (one row per week, so running it
+again replaces it), shows in the activity log as made by Claude, and both apps open the review on it.

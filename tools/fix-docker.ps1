@@ -95,7 +95,9 @@ if (-not (Test-Path -LiteralPath $desktop)) {
     return
 }
 
-Start-Process -FilePath $desktop
+# Through Explorer, so a shell inside a packaged app (an agent's) doesn't hand Docker its file
+# redirection, which makes every socket unopenable (docs/pitfalls.md).
+Start-Process -FilePath (Join-Path $env:WINDIR 'explorer.exe') -ArgumentList "`"$desktop`""
 Write-Host 'Starting Docker Desktop, waiting for the engine...'
 $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
 while ((Get-Date) -lt $deadline) {
