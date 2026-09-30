@@ -1,3 +1,4 @@
+import { addDays, type Day } from "./day.ts";
 import { compareText, type TaskItem, type TaskState } from "./task.ts";
 
 /**
@@ -36,6 +37,8 @@ export interface ProjectItem {
   notes: string;
   position: number;
   deleted: boolean;
+  /** Days a done item stays on the board after it was finished; null keeps it until archived by hand. */
+  archiveAfterDays?: number | null;
 }
 
 export interface ProjectMilestone {
@@ -58,6 +61,24 @@ export interface Column {
  */
 export function shows(filter: string, madeBy: string | null | undefined): boolean {
   return filter === "owner" || filter === "claude" ? (madeBy ?? "owner") === filter : true;
+}
+
+/**
+ * Whether an item is on its board (contracts/vectors/projects.json 'archive'): anything not done is;
+ * a done item is until it is archived by hand or `archiveAfterDays` days after the planning day it was
+ * finished, and null days keep it until it is archived by hand.
+ */
+export function onBoard(
+  state: TaskState,
+  completedOn: Day | null,
+  archiveAfterDays: number | null,
+  archivedByHand: boolean,
+  today: Day,
+): boolean {
+  if (state !== "done") return true;
+  if (archivedByHand) return false;
+  if (archiveAfterDays === null || completedOn === null) return true;
+  return today < addDays(completedOn, archiveAfterDays);
 }
 
 /** The column a new item of this type lands in: an idea in the backlog, anything else in to do. */

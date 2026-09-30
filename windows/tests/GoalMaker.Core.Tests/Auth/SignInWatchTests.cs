@@ -154,6 +154,8 @@ public sealed class SignInWatchTests
 
         public IReadOnlyList<string> PinnedPlaces { get; set; } = [];
 
+        public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];
+
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =
             new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);
 

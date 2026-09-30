@@ -126,7 +126,10 @@ class TaskList(
         replica.inTransaction {
             drop.forEach { id ->
                 replica.get(TABLE, id)?.let { row ->
-                    replica.queue(TABLE, JsonObject(row + mapOf("status" to JsonPrimitive("dropped"), "completed_at" to JsonNull)))
+                    replica.queue(
+                        TABLE,
+                        JsonObject(row + mapOf("status" to JsonPrimitive("dropped"), "completed_at" to JsonNull, BOARD_ARCHIVED_AT to JsonNull)),
+                    )
                 }
             }
         }
@@ -208,6 +211,8 @@ class TaskList(
             val values = LinkedHashMap(row)
             values["status"] = JsonPrimitive(status)
             values["completed_at"] = if (status == "done") JsonPrimitive(rows.timestamp()) else JsonNull
+            // Only a done item stays off its board; the server clears it too (docs/projects.md).
+            if (status != "done") values[BOARD_ARCHIVED_AT] = JsonNull
             boardColumn(values)?.let { column ->
                 values["board_column"] = JsonPrimitive(ProjectRules.finished(stateOf(status), column))
             }
@@ -227,6 +232,8 @@ class TaskList(
             val values = LinkedHashMap(row)
             values["status"] = JsonPrimitive("open")
             values["completed_at"] = JsonNull
+            // A reopened item comes back to its board, as the server would have it.
+            values[BOARD_ARCHIVED_AT] = JsonNull
             boardColumn(values)?.let { column ->
                 values["board_column"] = JsonPrimitive(ProjectRules.finished(TaskState.OPEN, column))
             }
@@ -301,6 +308,9 @@ class TaskList(
      * column its type calls for; taking it out leaves a plain task with no column and no milestone.
      */
     fun setProject(id: String, projectId: String?, itemType: String = ProjectRules.TASK) = change(id) { row ->
+        // An item that leaves its project leaves its archived mark behind too.
+        val before = (row["project_id"] as? JsonPrimitive)?.takeUnless { it == JsonNull }?.content
+        if (projectId != before) row[BOARD_ARCHIVED_AT] = JsonNull
         row["project_id"] = projectId?.let(::JsonPrimitive) ?: JsonNull
         if (projectId == null) {
             row["board_column"] = JsonNull
@@ -321,7 +331,20 @@ class TaskList(
             TaskState.OPEN -> if (current.state == TaskState.DONE) setDone(id, false)
             else -> Unit
         }
-        change(id) { row -> row["board_column"] = JsonPrimitive(column) }
+        change(id) { row ->
+            row["board_column"] = JsonPrimitive(column)
+            if (column != ProjectRules.DONE) row[BOARD_ARCHIVED_AT] = JsonNull
+        }
+    }
+
+    /**
+     * Takes a done project item off its board by hand, or puts it back (docs/projects.md). Only a done
+     * item can leave; putting one back works whatever it is, and reopening an item brings it back anyway.
+     */
+    fun setBoardArchived(id: String, archived: Boolean) {
+        val current = find(id) ?: return
+        if (archived && (current.state != TaskState.DONE || current.projectId == null)) return
+        change(id) { row -> row[BOARD_ARCHIVED_AT] = if (archived) JsonPrimitive(rows.timestamp()) else JsonNull }
     }
 
     /** What kind of item this is: a task, an idea or a bug. */
@@ -386,6 +409,7 @@ class TaskList(
         milestoneId = row.text("milestone_id"),
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         madeBy = row.text("made_by") ?: ProjectRules.OWNER,
+        boardArchivedAt = row.text(BOARD_ARCHIVED_AT),
     )
 
     private companion object {
@@ -394,6 +418,7 @@ class TaskList(
         const val SERIES_ID = "series_id"
         const val GOAL_ID = "goal_id"
         const val GOALS = "goals"
+        const val BOARD_ARCHIVED_AT = "board_archived_at"
         const val MAX_TITLE = 500
         const val MAX_NOTES = 20_000
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")

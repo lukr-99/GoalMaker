@@ -29,6 +29,14 @@ public static class ProjectRules
     public const string Claude = "claude";
     public const string Everyone = "all";
 
+    /// <summary>How many days a done item stays on a new project's board (supabase/migrations/0018_board_archive.sql).</summary>
+    public const int DefaultArchiveAfterDays = 14;
+
+    /// <summary>The fewest and the most days a project can keep done items on its board.</summary>
+    public const int FewestArchiveDays = 1;
+
+    public const int MostArchiveDays = 365;
+
     /// <summary>The four columns, left to right.</summary>
     public static readonly IReadOnlyList<string> Columns = [Backlog, Todo, Doing, Done];
 
@@ -90,6 +98,31 @@ public static class ProjectRules
         Owner or Claude => (madeBy ?? Owner) == filter,
         _ => true,
     };
+
+    /// <summary>
+    /// Whether an item is on its board (contracts/vectors/projects.json 'archive'): anything not done is;
+    /// a done item is until it is archived by hand or <paramref name="archiveAfterDays"/> days after the
+    /// planning day it was finished, and null days keep it until it is archived by hand.
+    /// </summary>
+    public static bool OnBoard(TaskState state, DateOnly? completedOn, int? archiveAfterDays, bool archivedByHand, DateOnly today)
+    {
+        if (state != TaskState.Done)
+        {
+            return true;
+        }
+
+        if (archivedByHand)
+        {
+            return false;
+        }
+
+        if (archiveAfterDays is not { } days || completedOn is not { } finished)
+        {
+            return true;
+        }
+
+        return today < finished.AddDays(days);
+    }
 
     /// <summary>The four columns of a project with their items in order; a column with nothing in it stays.</summary>
     public static IReadOnlyList<ProjectColumn> Board(IReadOnlyList<TaskItem> items) =>

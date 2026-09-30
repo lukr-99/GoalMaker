@@ -46,6 +46,7 @@ import {
   MAKER_FILTERS,
   MAKERS,
   moved,
+  onBoard,
   order,
   PRIORITIES,
   shows,
@@ -177,6 +178,17 @@ Deno.test("reviews.json: review ids and periods", async () => {
   }
   for (const vector of file.periods) {
     assertEquals(periodStart(vector.kind, vector.day), vector.start, `${vector.kind} ${vector.day}`);
+  }
+});
+
+Deno.test("projects.json: done items leave the board", async () => {
+  const file = await vectors("projects.json");
+  for (const vector of file.archive) {
+    assertEquals(
+      onBoard(vector.state, vector.completedOn, vector.archiveAfterDays, vector.archivedByHand, vector.today),
+      vector.onBoard,
+      vector.name,
+    );
   }
 });
 

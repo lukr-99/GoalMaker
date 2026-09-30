@@ -604,6 +604,17 @@
     <sys:String x:Key="Projects.MadeByOwner">Me</sys:String>
     <sys:String x:Key="Projects.MadeByClaude">Claude</sys:String>
     <sys:String x:Key="Projects.ByClaude">by Claude</sys:String>
+    <sys:String x:Key="Projects.Archive">Archive</sys:String>
+    <sys:String x:Key="Projects.ArchivedItem">Archived: {0}</sys:String>
+    <sys:String x:Key="Projects.ArchivedCount">{0} archived</sys:String>
+    <sys:String x:Key="Projects.PutBack">Put back</sys:String>
+    <sys:String x:Key="Projects.Reopen">Reopen</sys:String>
+    <sys:String x:Key="Projects.ArchiveAfter">Done items leave the board after</sys:String>
+    <sys:String x:Key="Projects.ArchiveDay">{0} day</sys:String>
+    <sys:String x:Key="Projects.ArchiveDays">{0} days</sys:String>
+    <sys:String x:Key="Projects.ArchiveNever">Never</sys:String>
+    <sys:String x:Key="Projects.Fold">Fold {0}</sys:String>
+    <sys:String x:Key="Projects.Unfold">Unfold {0}</sys:String>
 
     <!-- Stats (docs/stats.md) -->
     <sys:String x:Key="Nav.Stats">Stats</sys:String>

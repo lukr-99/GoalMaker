@@ -33,6 +33,8 @@ data class TaskItem(
     val position: Double = 0.0,
     /** Who made it, the owner or Claude; set once when it is made (docs/projects.md). */
     val madeBy: String = ProjectRules.OWNER,
+    /** When the owner took this done item off its project's board by hand, or null (docs/projects.md). */
+    val boardArchivedAt: String? = null,
 ) {
     /** The day it was finished, by the server's timestamp, or null while it is not done. */
     val completedDay: LocalDate? get() {

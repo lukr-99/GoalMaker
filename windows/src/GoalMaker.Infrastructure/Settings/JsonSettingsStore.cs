@@ -131,6 +131,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { PinnedPlaces = [.. PlaceRules.Stored(value, DeviceKind.Pc)] });
     }
 
+    /// <summary>Only the four columns count, each once, so a file edited by hand can't fold something unknown.</summary>
+    public IReadOnlyList<string> FoldedBoardColumns
+    {
+        get => Known(document.FoldedBoardColumns ?? []);
+        set => Save(document with { FoldedBoardColumns = [.. Known(value)] });
+    }
+
     public IReadOnlyDictionary<string, MiniWindowState> MiniWindows
     {
         get => document.MiniWindows ?? [];
@@ -168,6 +175,9 @@ public sealed class JsonSettingsStore : ISettingsStore
             return id;
         }
     }
+
+    private static List<string> Known(IEnumerable<string> columns) =>
+        [.. ProjectRules.Columns.Where(columns.Contains)];
 
     private static SettingsDocument Load(string path)
     {

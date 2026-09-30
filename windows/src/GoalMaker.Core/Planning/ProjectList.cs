@@ -12,6 +12,7 @@ public sealed class ProjectList
 {
     private const string Table = "projects";
     private const string MilestoneTable = "project_milestones";
+    private const string ArchiveAfterDays = "archive_after_days";
     private const int MaxName = 120;
     private const int MaxDescription = 2000;
     private const int MaxLink = 500;
@@ -80,6 +81,8 @@ public sealed class ProjectList
 
         var values = Values(clean);
         values["position"] = All().Select(project => project.Position).DefaultIfEmpty(-1).Max() + 1;
+        // A null would mean "never" rather than the server's default, so a new project says 14.
+        values[ArchiveAfterDays] = ProjectRules.DefaultArchiveAfterDays;
         if (rows.Create(Table, values) is not { } row)
         {
             return null;
@@ -102,6 +105,14 @@ public sealed class ProjectList
     /// <summary>Marks a project active, paused or done.</summary>
     public bool SetStatus(string id, string status) =>
         Statuses.Contains(status) && Change(Table, id, row => row["status"] = status);
+
+    /// <summary>
+    /// How many days a done item stays on the project's board after it was finished, 1 to 365, or null
+    /// to keep done items until they are archived by hand. False for any other number or a project that is gone.
+    /// </summary>
+    public bool SetArchiveAfterDays(string id, int? days) =>
+        days is null or (>= ProjectRules.FewestArchiveDays and <= ProjectRules.MostArchiveDays)
+        && Change(Table, id, row => row[ArchiveAfterDays] = days);
 
     /// <summary>Deletes a project softly; its items stay as plain tasks.</summary>
     public bool Delete(string id) => Change(Table, id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
@@ -188,6 +199,12 @@ public sealed class ProjectList
         Notes = (string?)row["notes"] ?? string.Empty,
         Position = row["position"] is JsonValue place && place.TryGetValue<double>(out var at) ? at : 0,
         Deleted = row[SyncedTable.DeletedAt] is not null,
+        ArchiveAfterDays = row[ArchiveAfterDays] switch
+        {
+            JsonValue value when value.TryGetValue<long>(out var days) => (int)days,
+            JsonValue value when value.TryGetValue<int>(out var days) => days,
+            _ => null,
+        },
     };
 
     private static ProjectMilestone ToMilestone(JsonObject row) => new(

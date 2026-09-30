@@ -46,7 +46,10 @@ public sealed record TaskItem(
     double Position = 0,
 
     /// <summary>Who made it, the owner or Claude; set once when it is made (docs/projects.md).</summary>
-    string MadeBy = ProjectRules.Owner)
+    string MadeBy = ProjectRules.Owner,
+
+    /// <summary>When the owner took this done item off its board by hand; null while it is not (docs/projects.md).</summary>
+    string? BoardArchivedAt = null)
 {
     /// <summary>The day it was finished, by the server's timestamp, or null while it is not done.</summary>
     public DateOnly? CompletedDay =>

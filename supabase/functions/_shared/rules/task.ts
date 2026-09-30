@@ -35,6 +35,8 @@ export interface TaskItem {
   position?: number;
   /** Who made it, owner or claude; set once when it is made (docs/projects.md). */
   madeBy?: string;
+  /** A done project item the owner took off the board by hand (supabase/migrations/0018). */
+  boardArchived?: boolean;
 }
 
 /** Text order, the way Kotlin and C# compare strings (UTF-16 code units). */

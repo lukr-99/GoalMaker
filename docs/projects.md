@@ -41,6 +41,24 @@ The column and the task's own state move together, so a board and a list never d
 Items are ordered inside a column by priority (urgent, high, normal, low), then by the position the
 owner dragged them to, then by when they were created.
 
+## Done items leave the board
+
+A done item leaves the board a number of days after the planning day it was finished: the project's
+own number (Supabase `projects.archive_after_days`, 1 to 365), 14 unless the owner changed it, or
+never. Any done item can also be archived by hand (`tasks.board_archived_at`). Leaving the board is
+only about the board: the task stays done, in the archive, in search and in stats, and the end of
+Done says how many left, with a way to put one back. Reopening an item, dropping it or taking it out
+of its project brings it back; the server clears the mark itself, so an app from before this change
+can reopen one too. The rule is pinned by the `archive` group of `contracts/vectors/projects.json`
+(migration 0018).
+
+On the phone the board has two views, switched in its header and remembered on the device: one
+column at a time with tabs and counts, or the columns stacked with each section folding away (Done
+folded at first). On Windows the columns stay side by side, and each can fold to a narrow strip with
+its name and count. A done item's menu has Archive, with Undo. In the list of archived items, one
+archived by hand can be put back, and one that left with time can be reopened into To do. The
+project's edit form sets the days: 7, 14, 30, 90 or never.
+
 ## Who made an item
 
 Every task says who made it: **the owner** or **Claude**. Anything typed into an app is the owner's.
@@ -59,8 +77,8 @@ made says "by Claude" in small print.
 
 ## In the apps
 
-Windows shows the four columns side by side as a board, Android the same items as a grouped list,
-one group per column with a move action. Android reaches Projects from the bottom bar, beside Today,
+Windows shows the four columns side by side as a board. Android shows one column at a time under
+tabs, or all four as a list with a section per column, and moves an item from its menu. Android reaches Projects from the bottom bar, beside Today,
 Tomorrow, the Inbox and the Calendar, and starts a new project from the + beside its project picker.
 Both offer the project list with its status, area, repository
 and folder, how many items each project still has waiting, and the milestones of the project on show.
@@ -85,6 +103,10 @@ exists, renames and removes milestones, changes a project's own fields including
 deletes a project, which leaves its items behind as plain tasks. A new project's name, repository and folder each have to be free, because those are what the
 match above reads and two projects sharing one would make it a toss-up. A folder sitting inside
 another project's folder is fine, since the deepest folder wins.
+
+The board Claude reads leaves out the done items that left it and says how many; `update_project`
+sets how long done items stay (`archive_after_days`, or null for only by hand), and
+`update_project_item` with `archived` takes a done item off the board or puts it back.
 
 ## Storage
 

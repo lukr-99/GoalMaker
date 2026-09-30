@@ -95,6 +95,26 @@ public sealed class ProjectRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryArchive()
+    {
+        foreach (var testCase in vectors.GetProperty("archive").EnumerateArray())
+        {
+            var completedOn = testCase.GetProperty("completedOn");
+            var days = testCase.GetProperty("archiveAfterDays");
+            Assert.True(
+                testCase.GetProperty("onBoard").GetBoolean() == ProjectRules.OnBoard(
+                    State(testCase.GetProperty("state").GetString()),
+                    completedOn.ValueKind == JsonValueKind.Null ? null : Day(completedOn.GetString()!),
+                    days.ValueKind == JsonValueKind.Null ? null : days.GetInt32(),
+                    testCase.GetProperty("archivedByHand").GetBoolean(),
+                    Day(testCase.GetProperty("today").GetString()!)),
+                Name(testCase));
+        }
+    }
+
+    private static DateOnly Day(string text) => DateOnly.ParseExact(text, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
     private static IReadOnlyList<TaskItem> Items(JsonElement testCase) =>
     [
         .. testCase.GetProperty("items").EnumerateArray().Select(item => new TaskItem(

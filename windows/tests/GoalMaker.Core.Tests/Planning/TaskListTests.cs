@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Tests.Sync;
@@ -213,6 +214,74 @@ public sealed class TaskListTests : IDisposable
         Assert.True(Assert.Single(tasks.All()).TopPriority);
         tasks.SetTopPriority(run.Id, false);
         Assert.False(Assert.Single(tasks.All()).TopPriority);
+    }
+
+    [Fact]
+    public void OnlyADoneProjectItemCanBeArchivedByHand()
+    {
+        var tasks = Tasks();
+        var board = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        var loose = tasks.Add("Run")!;
+        tasks.SetDone(loose.Id, true);
+
+        Assert.False(tasks.SetBoardArchived(board.Id, true));
+        Assert.False(tasks.SetBoardArchived(loose.Id, true));
+        tasks.SetBoardColumn(board.Id, ProjectRules.Done);
+        Assert.True(tasks.SetBoardArchived(board.Id, true));
+        Assert.Equal("2026-09-18T12:00:00.000000Z", tasks.Find(board.Id)!.BoardArchivedAt);
+
+        Assert.True(tasks.SetBoardArchived(board.Id, false));
+        Assert.Null(tasks.Find(board.Id)!.BoardArchivedAt);
+    }
+
+    [Fact]
+    public void ReopeningAnArchivedItemBringsItBackInTheRowItQueues()
+    {
+        var tasks = Tasks();
+        var board = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        tasks.SetBoardColumn(board.Id, ProjectRules.Done);
+        tasks.SetBoardArchived(board.Id, true);
+
+        tasks.SetDone(board.Id, false);
+
+        Assert.Null(test.Replica.Get("tasks", board.Id)!["board_archived_at"]);
+        var queued = JsonNode.Parse(test.Replica.Outbox().Last(entry => entry.RowId == board.Id).Payload)!;
+        Assert.Equal("open", (string?)queued["status"]);
+        Assert.Null(queued["board_archived_at"]);
+    }
+
+    [Fact]
+    public void MovingAnArchivedItemOutOfDoneOrOutOfItsProjectBringsItBack()
+    {
+        var tasks = Tasks();
+        var moved = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        var taken = tasks.Add(Draft("Cache the feed +GoalMaker"))!;
+        foreach (var id in new[] { moved.Id, taken.Id })
+        {
+            tasks.SetBoardColumn(id, ProjectRules.Done);
+            tasks.SetBoardArchived(id, true);
+        }
+
+        tasks.SetBoardColumn(moved.Id, ProjectRules.Doing);
+        tasks.SetProject(taken.Id, null);
+
+        Assert.Null(tasks.Find(moved.Id)!.BoardArchivedAt);
+        Assert.Equal(TaskState.Open, tasks.Find(moved.Id)!.State);
+        Assert.Null(tasks.Find(taken.Id)!.BoardArchivedAt);
+        Assert.Equal(TaskState.Done, tasks.Find(taken.Id)!.State);
+    }
+
+    [Fact]
+    public void DroppingAnArchivedItemBringsItBack()
+    {
+        var tasks = Tasks();
+        var board = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        tasks.SetBoardColumn(board.Id, ProjectRules.Done);
+        tasks.SetBoardArchived(board.Id, true);
+
+        tasks.Drop(board.Id);
+
+        Assert.Null(tasks.Find(board.Id)!.BoardArchivedAt);
     }
 
     [Fact]

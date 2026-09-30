@@ -21,4 +21,7 @@ public sealed record ProjectItem(string Id, string Name)
     public double Position { get; init; }
 
     public bool Deleted { get; init; }
+
+    /// <summary>Days a done item stays on the board after it was finished; null keeps it until archived by hand.</summary>
+    public int? ArchiveAfterDays { get; init; } = ProjectRules.DefaultArchiveAfterDays;
 }

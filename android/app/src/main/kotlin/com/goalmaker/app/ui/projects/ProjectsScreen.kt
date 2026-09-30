@@ -23,11 +23,14 @@ import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.TaskAlt
+import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -37,10 +40,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -49,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +65,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
@@ -67,6 +77,7 @@ import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
+import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
@@ -90,6 +101,8 @@ fun ProjectsScreen(
     var editing by remember { mutableStateOf<ProjectItem?>(null) }
     var adding by remember { mutableStateOf(false) }
     var addingItem by remember { mutableStateOf(false) }
+    var showArchived by remember { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(ProjectRules.TODO) }
     val snackbars = remember { SnackbarHostState() }
     val resources = LocalResources.current
 
@@ -97,7 +110,11 @@ fun ProjectsScreen(
     LaunchedEffect(viewModel) {
         viewModel.undo.collect { event ->
             val message = resources.getString(
-                if (event.kind == UndoEvent.Kind.DONE) R.string.lists_done_message else R.string.projects_removed_message,
+                when (event.kind) {
+                    UndoEvent.Kind.DONE -> R.string.lists_done_message
+                    UndoEvent.Kind.ARCHIVED -> R.string.projects_archived_message
+                    else -> R.string.projects_removed_message
+                },
                 event.title,
             )
             val result = snackbars.showSnackbar(message, actionLabel = resources.getString(R.string.lists_undo), duration = SnackbarDuration.Short)
@@ -159,9 +176,32 @@ fun ProjectsScreen(
                         Text(stringResource(R.string.projects_add_item), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
-                item("made-by") { MakerSwitch(state.madeBy, onPick = viewModel::showMadeBy) }
-                state.board.forEach { column ->
-                    item("h-${column.column}") { SectionHeader(columnName(column.column) + " · " + column.items.size) }
+                item("made-by") {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        MakerSwitch(state.madeBy, onPick = viewModel::showMadeBy, modifier = Modifier.weight(1f))
+                        ViewSwitch(state.view, onPick = viewModel::showView)
+                    }
+                }
+                // The phone shows one column at a time behind tabs, or the columns stacked with each one
+                // folding away, so a long Done no longer pushes everything else down (docs/projects.md).
+                val shown = if (state.view == BoardView.COLUMNS) {
+                    item("tabs") { ColumnTabs(state.board, tab, onPick = { tab = it }) }
+                    state.board.filter { it.column == tab }
+                } else {
+                    state.board
+                }
+                shown.forEach { column ->
+                    val open = state.view == BoardView.COLUMNS || column.column !in state.collapsed
+                    if (state.view == BoardView.LIST) {
+                        item("h-${column.column}") {
+                            SectionHeader(
+                                text = columnName(column.column) + " · " + column.items.size,
+                                expanded = open,
+                                onToggle = { viewModel.toggleColumn(column.column) },
+                            )
+                        }
+                    }
+                    if (!open) return@forEach
                     if (column.items.isEmpty()) {
                         item("empty-${column.column}") {
                             Text(
@@ -179,20 +219,44 @@ fun ProjectsScreen(
                             onOpen = { onOpenTask(task.id) },
                             onMove = { to -> viewModel.move(task, to) },
                             onPriority = { priority -> viewModel.setPriority(task.id, priority) },
+                            onArchive = { viewModel.archive(task) },
                             onRemove = { viewModel.removeFromProject(task) },
                         )
+                    }
+                    if (column.column == ProjectRules.DONE && state.archived.isNotEmpty()) {
+                        item("archived") { ArchivedLink(state.archived.size, onOpen = { showArchived = true }) }
                     }
                 }
             }
         }
     }
 
+    // The list closes by itself once the last item is back on the board.
+    val nothingArchived = state.archived.isEmpty()
+    LaunchedEffect(nothingArchived) { if (nothingArchived) showArchived = false }
+    if (showArchived && !nothingArchived) {
+        ArchivedDialog(
+            items = state.archived,
+            onOpen = { task ->
+                showArchived = false
+                onOpenTask(task.id)
+            },
+            onPutBack = viewModel::putBack,
+            onReopen = { task -> viewModel.move(task, ProjectRules.TODO) },
+            onDismiss = { showArchived = false },
+        )
+    }
+
     if (adding || editing != null) {
         ProjectDialog(
             project = editing,
-            onSave = { draft ->
+            onSave = { draft, archiveAfterDays ->
                 val current = editing
-                if (current == null) viewModel.addProject(draft) else viewModel.updateProject(current.id, draft)
+                if (current == null) {
+                    viewModel.addProject(draft, archiveAfterDays)
+                } else {
+                    viewModel.updateProject(current.id, draft, archiveAfterDays)
+                }
                 adding = false
                 editing = null
             },
@@ -269,12 +333,12 @@ private fun ProjectPicker(state: ProjectsUiState, onPick: (String) -> Unit, modi
 
 /** Whose items the board shows: everyone's, the owner's, or Claude's (docs/projects.md). */
 @Composable
-private fun MakerSwitch(madeBy: String, onPick: (String) -> Unit) {
+private fun MakerSwitch(madeBy: String, onPick: (String) -> Unit, modifier: Modifier = Modifier) {
     // A narrow phone scrolls the chips sideways rather than cutting the last one off.
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        modifier = modifier.horizontalScroll(rememberScrollState()),
     ) {
         Text(
             stringResource(R.string.projects_made_by),
@@ -285,6 +349,107 @@ private fun MakerSwitch(madeBy: String, onPick: (String) -> Unit) {
             ChoiceChip(selected = madeBy == filter, onClick = { onPick(filter) }, label = makerName(filter))
         }
     }
+}
+
+/** Switches the board between one column at a time and the stacked list; the icon shows where it leads. */
+@Composable
+private fun ViewSwitch(view: BoardView, onPick: (BoardView) -> Unit) {
+    val toList = view == BoardView.COLUMNS
+    IconButton(onClick = { onPick(if (toList) BoardView.LIST else BoardView.COLUMNS) }) {
+        Icon(
+            if (toList) Icons.Outlined.ViewAgenda else Icons.Outlined.ViewColumn,
+            contentDescription = stringResource(if (toList) R.string.projects_view_list else R.string.projects_view_columns),
+        )
+    }
+}
+
+/** The four columns as tabs, each with how many items it holds; the one picked is the one on show. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ColumnTabs(board: List<ProjectColumn>, selected: String, onPick: (String) -> Unit) {
+    val index = board.indexOfFirst { it.column == selected }.coerceAtLeast(0)
+    PrimaryScrollableTabRow(
+        selectedTabIndex = index,
+        edgePadding = 0.dp,
+        containerColor = Color.Transparent,
+        contentColor = AppTheme.colors.accent,
+        indicator = {
+            TabRowDefaults.PrimaryIndicator(
+                modifier = Modifier.tabIndicatorOffset(index, matchContentSize = true),
+                width = Dp.Unspecified,
+                color = AppTheme.colors.accent,
+            )
+        },
+    ) {
+        board.forEach { column ->
+            Tab(
+                selected = column.column == selected,
+                onClick = { onPick(column.column) },
+                selectedContentColor = AppTheme.colors.accent,
+                unselectedContentColor = AppTheme.colors.textMuted,
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(columnName(column.column), maxLines = 1)
+                        Text(column.items.size.toString(), style = MaterialTheme.typography.labelMedium)
+                    }
+                },
+            )
+        }
+    }
+}
+
+/** The line at the end of Done that says how many items left the board, and opens them. */
+@Composable
+private fun ArchivedLink(count: Int, onOpen: () -> Unit) {
+    TextButton(onClick = onOpen) {
+        Icon(Icons.Outlined.Inventory2, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(pluralStringResource(R.plurals.projects_archived_count, count, count), modifier = Modifier.padding(start = 8.dp))
+    }
+}
+
+/**
+ * The done items that left the board. One archived by hand can be put back in Done; one that left
+ * with time would only leave again, so it offers to reopen it in To do instead.
+ */
+@Composable
+private fun ArchivedDialog(
+    items: List<TaskItem>,
+    onOpen: (TaskItem) -> Unit,
+    onPutBack: (TaskItem) -> Unit,
+    onReopen: (TaskItem) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.projects_archived_title)) },
+        text = {
+            LazyColumn {
+                item("hint") {
+                    Text(
+                        stringResource(R.string.projects_archived_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AppTheme.colors.textMuted,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                }
+                items(items, key = { it.id }) { task ->
+                    val byHand = task.boardArchivedAt != null
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        Text(
+                            task.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 2,
+                            modifier = Modifier.weight(1f).clickable { onOpen(task) }.padding(vertical = 12.dp),
+                        )
+                        TextButton(onClick = { if (byHand) onPutBack(task) else onReopen(task) }) {
+                            Text(stringResource(if (byHand) R.string.projects_put_back else R.string.projects_reopen))
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.projects_close)) } },
+    )
 }
 
 /** How many items a board still has waiting, or nothing at all when it is clear. */
@@ -337,6 +502,7 @@ private fun ItemRow(
     onOpen: () -> Unit,
     onMove: (String) -> Unit,
     onPriority: (String) -> Unit,
+    onArchive: () -> Unit,
     onRemove: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -414,6 +580,16 @@ private fun ItemRow(
                         },
                     )
                 }
+                // Only a done item can leave the board by hand.
+                if (task.state == TaskState.DONE) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.projects_archive)) },
+                        onClick = {
+                            menu = false
+                            onArchive()
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.projects_remove_item)) },
                     onClick = {
@@ -429,7 +605,7 @@ private fun ItemRow(
 @Composable
 private fun ProjectDialog(
     project: ProjectItem?,
-    onSave: (ProjectDraft) -> Unit,
+    onSave: (ProjectDraft, Int?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -438,6 +614,7 @@ private fun ProjectDialog(
     var repository by remember { mutableStateOf(project?.repositoryUrl.orEmpty()) }
     var folder by remember { mutableStateOf(project?.localFolder.orEmpty()) }
     var status by remember { mutableStateOf(project?.status ?: ProjectRules.ACTIVE) }
+    var archiveAfterDays by remember { mutableStateOf(if (project == null) ProjectRules.ARCHIVE_AFTER_DAYS else project.archiveAfterDays) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -453,6 +630,14 @@ private fun ProjectDialog(
                         ChoiceChip(selected = status == choice, onClick = { status = choice }, label = statusName(choice))
                     }
                 }
+                // A number set elsewhere, say by Claude, stays one of the choices rather than being lost.
+                val days = (ARCHIVE_CHOICES + listOfNotNull(project?.archiveAfterDays)).distinct().sorted()
+                Choices(
+                    R.string.projects_archive_after,
+                    days.map(Int::toString) + NEVER,
+                    archiveAfterDays?.toString() ?: NEVER,
+                    { choice -> archiveChoiceName(choice) },
+                ) { choice -> archiveAfterDays = choice.toIntOrNull() }
                 if (onDelete != null) {
                     TextButton(onClick = onDelete, modifier = Modifier.padding(top = 8.dp)) {
                         Icon(Icons.Outlined.Delete, contentDescription = null, tint = AppTheme.colors.danger, modifier = Modifier.size(18.dp))
@@ -479,6 +664,7 @@ private fun ProjectDialog(
                             localFolder = folder.ifBlank { null },
                             notes = project?.notes.orEmpty(),
                         ),
+                        archiveAfterDays,
                     )
                 },
             ) { Text(stringResource(R.string.goals_save)) }
@@ -552,6 +738,15 @@ private fun Field(value: String, onChange: (String) -> Unit, label: Int) {
         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
     )
 }
+
+/** The days offered for how long done items stay on the board, besides never (docs/projects.md). */
+private val ARCHIVE_CHOICES = listOf(7, 14, 30, 90)
+private const val NEVER = "never"
+
+@Composable
+private fun archiveChoiceName(choice: String): String = choice.toIntOrNull()
+    ?.let { days -> pluralStringResource(R.plurals.projects_archive_days, days, days) }
+    ?: stringResource(R.string.projects_archive_never)
 
 @Composable
 private fun columnName(column: String): String = stringResource(

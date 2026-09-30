@@ -49,6 +49,9 @@ public interface ISettingsStore
     /// </summary>
     IReadOnlyList<string> PinnedPlaces { get; set; }
 
+    /// <summary>The board columns folded to a narrow strip, the same on every project's board (docs/projects.md).</summary>
+    IReadOnlyList<string> FoldedBoardColumns { get; set; }
+
     /// <summary>Dev builds only: another Supabase project to use from the next app start.</summary>
     BackendEnvironment? BackendOverride { get; set; }
 

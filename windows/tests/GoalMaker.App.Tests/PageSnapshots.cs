@@ -344,7 +344,7 @@ public sealed class PageSnapshots
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
         using var theme = Theme(planner);
-        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, strings, _ => { }, action => action(), planner.Time);
+        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, planner.Settings, strings, _ => { }, action => action(), planner.Time);
         projects.NewCommand.Execute(null);
         projects.ProjectName = "GoalMaker";
         projects.ProjectDescription = "The planner on the phone and the PC.";
@@ -375,10 +375,29 @@ public sealed class PageSnapshots
         planner.Projects.Add(new ProjectDraft("Relay") { Status = ProjectRules.Paused });
         planner.Projects.Add(new ProjectDraft("Treeline") { Status = ProjectRules.Finished });
         projects.Refresh();
+        // Two items that left the board: one finished a month ago, one archived by hand, with the list open.
+        foreach (var title in new[] { "Sign-in codes", "The first board" })
+        {
+            projects.NewItemTitle = title;
+            projects.AddItemCommand.Execute(null);
+            planner.Tasks.SetBoardColumn(planner.Task(title).Id, ProjectRules.Done);
+        }
+
+        var old = planner.Replica.Get("tasks", planner.Task("Sign-in codes").Id)!;
+        old["completed_at"] = "2026-08-14T10:00:00.000000Z";
+        planner.Replica.Put("tasks", old);
+        planner.Tasks.SetBoardArchived(planner.Task("The first board").Id, true);
+        projects.Refresh();
+        var done = projects.Columns.Single(column => column.Column == ProjectRules.Done);
+        done.ToggleArchivedCommand.Execute(null);
         // A card just finished, so the undo bar is on show.
         projects.Columns.Single(column => column.Column == ProjectRules.Todo).Items[0].MoveCommand.Execute(ProjectRules.Done);
 
         Save(new ProjectsPage(projects), folder, "projects", new Size(1100, 700));
+
+        // Done folded to its strip, so the other columns take the room.
+        done.FoldCommand.Execute(null);
+        Save(new ProjectsPage(projects), folder, "projects-folded", new Size(1100, 700));
     });
 
     [Fact(Explicit = true)]

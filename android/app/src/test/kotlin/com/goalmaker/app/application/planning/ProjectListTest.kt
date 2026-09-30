@@ -4,8 +4,11 @@ import android.app.Application
 import com.goalmaker.app.data.replica.TestReplica
 import java.time.Instant
 import java.time.LocalDate
+import kotlinx.serialization.json.JsonNull
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -153,5 +156,105 @@ class ProjectListTest {
         assertNull(plain.projectId)
         assertNull(plain.boardColumn)
         assertNull(plain.milestoneId)
+    }
+
+    @Test
+    fun `a new project keeps done items 14 days, and the owner can change it or say never`() {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        assertEquals(14, project.archiveAfterDays)
+        // Written into the row, since a null there would mean never rather than the server's default.
+        assertEquals("14", test.replica.get("projects", project.id)!!["archive_after_days"].toString())
+
+        assertTrue(projects.setArchiveAfterDays(project.id, 30))
+        assertEquals(30, projects.get(project.id)!!.archiveAfterDays)
+
+        assertTrue(projects.setArchiveAfterDays(project.id, null))
+        assertNull(projects.get(project.id)!!.archiveAfterDays)
+    }
+
+    @Test
+    fun `days outside 1 to 365 are refused`() {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+
+        assertFalse(projects.setArchiveAfterDays(project.id, 0))
+        assertFalse(projects.setArchiveAfterDays(project.id, 366))
+        assertFalse(projects.setArchiveAfterDays("gone", 7))
+        assertEquals(14, projects.get(project.id)!!.archiveAfterDays)
+    }
+
+    // A done item of a project, archived by hand.
+    private fun archived(): String {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val item = tasks.add("Ship the board")!!
+        tasks.setProject(item.id, project.id)
+        tasks.setBoardColumn(item.id, ProjectRules.DONE)
+        tasks.setBoardArchived(item.id, true)
+        assertEquals("2026-09-20T12:00:00.000000Z", tasks.find(item.id)!!.boardArchivedAt)
+        return item.id
+    }
+
+    @Test
+    fun `a done item can be archived by hand and put back`() {
+        val id = archived()
+
+        tasks.setBoardArchived(id, false)
+
+        assertNull(tasks.find(id)!!.boardArchivedAt)
+        assertEquals(TaskState.DONE, tasks.find(id)!!.state)
+    }
+
+    @Test
+    fun `only a done item of a project can be archived`() {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val open = tasks.add("Ship the board")!!
+        tasks.setProject(open.id, project.id)
+        val plain = tasks.add("Call the dentist")!!
+        tasks.setDone(plain.id, true)
+
+        tasks.setBoardArchived(open.id, true)
+        tasks.setBoardArchived(plain.id, true)
+
+        assertNull(tasks.find(open.id)!!.boardArchivedAt)
+        assertNull(tasks.find(plain.id)!!.boardArchivedAt)
+    }
+
+    @Test
+    fun `reopening an archived item brings it back in the row it queues`() {
+        val id = archived()
+
+        tasks.setDone(id, false)
+
+        assertNull(tasks.find(id)!!.boardArchivedAt)
+        assertEquals(JsonNull, test.replica.get("tasks", id)!!["board_archived_at"])
+    }
+
+    @Test
+    fun `moving an archived item out of Done brings it back`() {
+        val id = archived()
+
+        tasks.setBoardColumn(id, ProjectRules.DOING)
+
+        val item = tasks.find(id)!!
+        assertEquals(TaskState.OPEN, item.state)
+        assertNull(item.boardArchivedAt)
+    }
+
+    @Test
+    fun `an archived item taken out of its project leaves the mark behind`() {
+        val id = archived()
+
+        tasks.setProject(id, null)
+
+        assertNull(tasks.find(id)!!.boardArchivedAt)
+    }
+
+    @Test
+    fun `dropping an archived item brings it back too`() {
+        val id = archived()
+
+        tasks.drop(id)
+
+        assertNull(tasks.find(id)!!.boardArchivedAt)
+        assertNotNull(tasks.find(id))
     }
 }

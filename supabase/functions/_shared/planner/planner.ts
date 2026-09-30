@@ -163,6 +163,8 @@ export interface ProjectFields {
   repository?: string | null;
   folder?: string | null;
   notes?: string;
+  /** Days a done item stays on the board; null keeps it until archived by hand; undefined leaves it. */
+  archiveAfterDays?: number | null;
 }
 
 export interface Habit extends HabitItem {
@@ -794,7 +796,8 @@ export class Planner {
   /** Every project that isn't deleted, active first, then paused, then done, in the owner's order. */
   async projects(): Promise<ProjectItem[]> {
     const rows = await this.db`
-      select id::text, name, description, area_id::text, status, repository_url, local_folder, notes, position
+      select id::text, name, description, area_id::text, status, repository_url, local_folder, notes, position,
+             archive_after_days
       from public.projects where deleted_at is null
       order by (status = 'done'), (status = 'paused'), position, lower(name)`;
     return rows.map(toProject);
@@ -1125,9 +1128,32 @@ export class Planner {
     await this.db`
       update public.projects set name = ${name}, description = ${description}, area_id = ${areaId},
         status = ${fields.status ?? project.status}, repository_url = ${repository}, local_folder = ${folder},
-        notes = ${notes}
+        notes = ${notes},
+        archive_after_days = ${
+      fields.archiveAfterDays === undefined
+        ? project.archiveAfterDays ?? null
+        : cleanArchiveDays(fields.archiveAfterDays)
+    }
       where id = ${id}`;
     return await this.findProject(id);
+  }
+
+  /**
+   * Takes a done project item off its board, or puts it back (docs/projects.md). Only a done item can
+   * be archived; reopening one brings it back on its own.
+   */
+  async archiveItem(id: string, archived: boolean): Promise<TaskItem> {
+    const task = await this.live(id);
+    if (task.projectId === null || task.projectId === undefined) {
+      throw new PlannerError(`"${task.title}" is not a project item, so it has no board to leave.`);
+    }
+    if (archived && task.state !== "done") {
+      throw new PlannerError(`"${task.title}" is not done. Only a done item leaves the board.`);
+    }
+    await this.db`
+      update public.tasks set board_archived_at = case when ${archived}::boolean then now() else null end
+      where id = ${id}`;
+    return (await this.task(id))!;
   }
 
   /** Deletes a project. Its items stay behind as plain tasks rather than going with it. */
@@ -1327,6 +1353,7 @@ export class Planner {
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
              series_id::text, goal_id::text, moved_count, position,
              project_id::text, item_type, board_column, priority, milestone_id::text, made_by,
+             board_archived_at is not null as board_archived,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
@@ -1488,6 +1515,7 @@ function toProject(row: any): ProjectItem {
     notes: row.notes,
     position: row.position,
     deleted: false,
+    archiveAfterDays: row.archive_after_days ?? null,
   };
 }
 
@@ -1517,11 +1545,20 @@ function toTask(row: any): TaskItem {
     milestoneId: row.milestone_id,
     position: row.position ?? 0,
     madeBy: row.made_by ?? "owner",
+    boardArchived: row.board_archived ?? false,
   };
 }
 
 export function isUuid(text: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text);
+}
+
+function cleanArchiveDays(days: number | null): number | null {
+  if (days === null) return null;
+  if (!Number.isInteger(days) || days < 1 || days > 365) {
+    throw new PlannerError("Done items stay on the board 1 to 365 days, or until they are archived by hand.");
+  }
+  return days;
 }
 
 function cleanTitle(text: string): string {

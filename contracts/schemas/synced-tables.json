@@ -466,6 +466,11 @@
           "required": true
         },
         {
+          "name": "archive_after_days",
+          "kind": "integer",
+          "required": false
+        },
+        {
           "name": "created_at",
           "kind": "timestamp",
           "required": true
@@ -639,6 +644,11 @@
           "name": "position",
           "kind": "real",
           "required": true
+        },
+        {
+          "name": "board_archived_at",
+          "kind": "timestamp",
+          "required": false
         },
         {
           "name": "created_at",
