@@ -11,8 +11,12 @@ the code, and the app is yours on that device until you sign out.
 
 A session is kept on the device and refreshed in the background. A refresh that fails because the
 device is offline changes nothing: the app stays signed in and tries again later. A refresh the
-server refuses (the token is gone, the project was reset) signs the device out, and the code comes
-again.
+server refuses (the token is gone, the project was reset), or a 401 that a fresh session doesn't
+cure, signs the device out while the app is open: the sign-in screen comes back with one line saying
+the session ended, and on Windows the last address filled in. The replica and its outbox stay, so
+signing in again with the same address sends what was waiting. Signing in as someone else empties
+the replica first, and sync only ever pushes the signed-in owner's rows. Only the sign-out in
+Settings empties the device.
 
 ## The PC's week
 

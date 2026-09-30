@@ -169,8 +169,10 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 - Supabase over HTTPS with the publishable key plus the user's session. Dev builds use the local
   stack over plain HTTP (Android: debug-only network security config), with a dev-only override in
   Settings → Developer. Each backend gets its own replica file, so switching never mixes rows.
-- Sync talks to PostgREST directly with generic JSON rows: 401, 408, 429 and 5xx mean "offline, try
-  later"; any other error marks that one row as refused and the run goes on. Realtime is a nudge
+- Sync talks to PostgREST directly with generic JSON rows: 408, 429 and 5xx mean "offline, try
+  later"; a 401 renews the session once and tries again, and a second 401 or a renewal the server
+  refuses ends the session (signed out, the replica and outbox kept, no retries); any other error
+  marks that one row as refused and the run goes on. Realtime is a nudge
   only (Android keeps it open only while the app is on screen); its payloads are never applied.
 - Sign-in failures map to plain states (wrong or expired code, too many requests, offline, other);
   the Supabase clients refresh sessions and retry with their own backoff.
