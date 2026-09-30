@@ -112,7 +112,7 @@ Issues: `.scratch/m8-letter-tally-wants/`.
   notification for wants that became ready, a Wants place with Cooling, Ready and Decided filters,
   `/want` in the composer, a Wants block in stats, and connector tools so Claude can check prices
   with its own web search and record the decision ([docs/wants.md](wants.md)).
-- **Letter (M8-07 to M8-09, release 1.4.0):** a Claude routine writes a weekly letter from
+- **Letter (M8-07 to M8-09; 1.4.0 shipped it on 2026-09-30, with the wants tools of M8-06):** a Claude routine writes a weekly letter from
   GoalMaker's `get_review_digest` and the owner's other apps' own connectors, saved as the review's
   summary and read as the first step of the guided review (ADR 0012, [docs/letter.md](letter.md)).
 - **Tally (M8-10 to M8-14, release 1.5.0):** where time actually went on the phone and the PC, as
