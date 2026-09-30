@@ -120,6 +120,21 @@ public sealed class AppGraph : IDisposable
         Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Tally = new TallyList(replica, newRows, () => Settings.DeviceId, Sync.Request);
 
+        // Tally on this PC (docs/tally.md, ADR 0013): the window in front, sorted by the owner's rules and
+        // the shipped ones. The raw log stays in the tally folder; only the day totals reach the replica.
+        TallyTracker = new TallyTracker(
+            new WindowsForegroundSource(),
+            new DiskTallyLog(Paths.Tally),
+            Tally,
+            ContractResources.TallyDefaults().Rules,
+            Projects.All,
+            () => Settings.DayStartHour,
+            TimeProvider.System);
+        if (Settings.TallyOn)
+        {
+            TallyTracker.Start();
+        }
+
         // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
         // carries the next one, and toasts show them with the same buttons as the phone.
         reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
@@ -321,7 +336,8 @@ public sealed class AppGraph : IDisposable
             restartApp,
             releases?.ReleasesPage,
             OpenInBrowser,
-            runOnUi);
+            runOnUi,
+            SwitchTally);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
 
@@ -435,6 +451,9 @@ public sealed class AppGraph : IDisposable
     /// <summary>This PC's Tally totals and the owner's own categories and rules (docs/tally.md).</summary>
     public TallyList Tally { get; private set; } = null!;
 
+    /// <summary>Follows the window in front while Tally is on, and writes this PC's day totals on the sync timer.</summary>
+    public TallyTracker TallyTracker { get; private set; } = null!;
+
     /// <summary>The owner's projects and their milestones (docs/projects.md).</summary>
     public ProjectList Projects { get; private set; } = null!;
 
@@ -521,6 +540,9 @@ public sealed class AppGraph : IDisposable
         SystemEvents.TimeChanged -= OnTimeChanged;
         reminderTimer.Dispose();
 
+        // The open stretch and the touched days go into the replica before it closes.
+        TallyTracker.Dispose();
+
         // Nothing hears the buttons once GoalMaker has quit; the reminders wait in the replica.
         toasts.ClearAll();
         periodicSync?.Cancel();
@@ -572,9 +594,11 @@ public sealed class AppGraph : IDisposable
         ForgetOtherAccounts(signedIn.UserId);
         Sync.Request();
         runOnUi(LookAtReminders);
+        periodicSync = new CancellationTokenSource();
+        _ = SyncPeriodicallyAsync(periodicSync.Token);
         if (localOnly)
         {
-            // Nothing leaves this PC: no Realtime and no sync on a timer.
+            // Nothing leaves this PC: no Realtime, and the timer only writes Tally's day totals.
             return;
         }
 
@@ -583,9 +607,6 @@ public sealed class AppGraph : IDisposable
         {
             _ = changeFeed.StartAsync(token);
         }
-
-        periodicSync = new CancellationTokenSource();
-        _ = SyncPeriodicallyAsync(periodicSync.Token);
     }
 
     // Shows what arrived since the last look, including anything missed while the PC slept, and arms
@@ -736,6 +757,19 @@ public sealed class AppGraph : IDisposable
         toasts.Clear(activation.ReminderId);
     }
 
+    // Tally follows the switch in Settings at once; switching it off writes what it has.
+    private void SwitchTally(bool on)
+    {
+        if (on)
+        {
+            TallyTracker.Start();
+        }
+        else
+        {
+            TallyTracker.Stop();
+        }
+    }
+
     // A timer doesn't run while the PC sleeps, and a changed clock moves every reminder.
     private void OnPowerModeChanged(object? sender, PowerModeChangedEventArgs e)
     {
@@ -834,7 +868,15 @@ public sealed class AppGraph : IDisposable
         {
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                runOnUi(Sync.Request);
+                runOnUi(() =>
+                {
+                    // Tally's touched days are written first, so their totals go out with this run.
+                    TallyTracker.Flush();
+                    if (!localOnly)
+                    {
+                        Sync.Request();
+                    }
+                });
             }
         }
         catch (OperationCanceledException)

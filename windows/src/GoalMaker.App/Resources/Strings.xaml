@@ -460,6 +460,10 @@
     <sys:String x:Key="Settings.StartupProfilesFailed">Startup Profiles could not be reached. Open it once, then try again.</sys:String>
     <sys:String x:Key="Settings.MiniWindows">Mini windows</sys:String>
     <sys:String x:Key="Settings.MiniWindowsHint">Small windows you can keep on the desktop while you work. Pin one to keep it above other apps; it remembers where you left it.</sys:String>
+    <sys:String x:Key="Settings.Tally">Tally</sys:String>
+    <sys:String x:Key="Settings.TallyOn">Tally where my time goes on this PC</sys:String>
+    <sys:String x:Key="Settings.TallyKept">GoalMaker notes the app and window in front and keeps that record on this PC for 30 days. The clock stops after 5 minutes without input, unless it is a video, and while the PC is locked or asleep.</sys:String>
+    <sys:String x:Key="Settings.TallySynced">Only the minutes per category and project for each day sync. App names and window titles never leave this PC.</sys:String>
     <sys:String x:Key="Mini.Today">Today</sys:String>
     <sys:String x:Key="Mini.Habits">Habits</sys:String>
     <sys:String x:Key="Mini.OpenThis">Open this in a mini window</sys:String>

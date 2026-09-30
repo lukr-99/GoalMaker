@@ -1,6 +1,6 @@
 # M8-12: Tally on Windows: the foreground tracker
 
-**Status:** todo · **Milestone:** M8
+**Status:** in progress (the desktop check is left) · **Milestone:** M8
 
 ## Scope
 - In the tray app, off until switched on (spec, stories 109 to 111; ADR 0013):
@@ -27,3 +27,32 @@
 - Windows: switch it on, work in VS Code in this repository, watch a video, walk away for 6 minutes,
   lock; check the day's totals and the GoalMaker project's minutes in the replica and on the server.
 - Endpoint: nothing.
+
+## Result
+
+2026-09-30, Windows.
+
+- `IForegroundSource` (Core) and `WindowsForegroundSource` (Infrastructure):
+  `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`, the executable through the window's process, the title
+  on each look, `GetLastInputInfo`, and lock and sleep from the session and power events.
+- `TallyTracker` (Core, with a `TimeProvider`): a switch, a lock or sleep looks at once, and a timer
+  looks every 15 seconds; nothing polls faster. A new app or title ends a stretch; five minutes
+  without input ends it at the last input plus five minutes, unless it is Video; lock and sleep end it
+  at once, and a tick more than two minutes late counts as sleep.
+- The raw log (`ITallyLog`, `DiskTallyLog`): one `yyyy-MM-dd.jsonl` a day in
+  `%LOCALAPPDATA%\GoalMaker\tally\` (`GoalMaker-dev` for dev builds), each line with the category
+  and project as sorted then, kept 30 days. It never syncs and is not in backups.
+- On the five-minute sync timer, at switch-off and at shutdown, `Flush` writes the open stretch,
+  removes old files, and rewrites each touched day with `TallyRules.DayTotals` and
+  `TallyList.RewriteDay`, reading the neighbor days' files so the 04:00 cut comes out right.
+- Until the Tally place exists (M8-13), a Tally card in Settings with the switch and what is recorded
+  and what syncs.
+- `GoalMaker.Infrastructure` now references the Windows desktop framework for `SystemEvents`, which
+  also carries `ProtectedData`, so that package reference went.
+- **Checked:** 508 Windows tests (13 new: switches, titles, idle, lock and sleep, Video, a late tick,
+  the project from a VS Code title, the 30-day cleanup, the rewrite across 04:00, a day waiting for
+  sign-in, one look every 15 seconds, the disk log), `dotnet format` and the accessibility scan.
+- **Known:** UWP apps show as `ApplicationFrameHost.exe` and elevated windows as Other; a stretch
+  across the autumn clock change can be dropped.
+- **Left:** the desktop check: VS Code in this repository counting toward GoalMaker, a video, six
+  minutes away, a lock, and the totals in the replica and on the server.
