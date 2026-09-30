@@ -81,6 +81,19 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void TallyIsOffUntilTurnedOn()
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(SettingsFile, """{ "Version": 1 }""");
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.False(store.TallyOn);
+
+        store.TallyOn = true;
+
+        Assert.True(new JsonSettingsStore(SettingsFile).TallyOn);
+    }
+
+    [Fact]
     public void TheEveningReminderIsAt2000UntilMovedOrSwitchedOff()
     {
         Directory.CreateDirectory(folder);
