@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "description": "Tally (docs/tally.md, ADR 0013). 'match': where a sample goes. A sample is a 'platform' (android or windows), an 'app' (package or executable) and on Windows a 'title'. The owner's 'own' rules come first, then 'defaults' in order (the whole of contracts/content/tally-rules.json when 'defaults' is \"shipped\"); the first match wins, nothing matched is 'other'. An 'app' rule is the whole name ignoring case; a 'title' rule is contained in the title ignoring case, on Windows only; a 'folder' rule is the name of the folder an editor's title names, ignoring case; a rule's 'platform' is android, windows or any. A rule's own 'project' wins; otherwise, on Windows, the editor's folder names the project (see 'project'). 'folder': the folder an editor's title names: Visual Studio Code (code.exe) the part before ' - Visual Studio Code' and after the last other ' - ', Android Studio (studio64.exe) the part before the first ' \u2013 ', Visual Studio (devenv.exe) the part before ' - Microsoft Visual Studio' without a trailing '(...)'; a leading '\u25cf' (unsaved) and spaces are dropped; anything else is null. 'project': the one project whose local folder's last part is that folder name, ignoring case; none when no project or several have it. 'idle': whether the clock runs: never while 'locked' or 'asleep', and not once 'secondsSinceInput' reaches 300, unless the category is 'video'. 'days': a device's 'intervals' (local times) as planning-day totals: each interval is cut where a planning day starts ('startHour'), time two intervals share counts once for the one that started first, and each day, category and project gets its seconds rounded to the nearest minute (half a minute rounds up), at most 1440; days with no minutes are left out, the rest ordered by day, category, then project (none first). 'ids': a tally day's id is a UUID version 5 of 'tally/<owner, lower case>/<day>/<device, lower case>/<category>/<project or ->' in 'namespace'.",
+  "namespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
+  "match": [
+    {"name": "an app rule, ignoring case", "sample": {"platform": "windows", "app": "Code.EXE", "title": "notes.md - Journal - Visual Studio Code"}, "defaults": "shipped", "expect": {"category": "coding", "project": null}},
+    {"name": "a browser goes by its title", "sample": {"platform": "windows", "app": "chrome.exe", "title": "Lo-fi beats - YouTube - Google Chrome"}, "defaults": "shipped", "expect": {"category": "video", "project": null}},
+    {"name": "an editor comes before the title rules", "sample": {"platform": "windows", "app": "code.exe", "title": "youtube.ts - Scraper - Visual Studio Code"}, "defaults": "shipped", "expect": {"category": "coding", "project": null}},
+    {"name": "an Android package", "sample": {"platform": "android", "app": "com.google.android.youtube"}, "defaults": "shipped", "expect": {"category": "video", "project": null}},
+    {"name": "nothing matched is Other", "sample": {"platform": "windows", "app": "notepad.exe", "title": "Untitled - Notepad"}, "defaults": "shipped", "expect": {"category": "other", "project": null}},
+    {"name": "a Windows rule doesn't match on Android", "sample": {"platform": "android", "app": "discord.exe"}, "defaults": "shipped", "expect": {"category": "other", "project": null}},
+    {"name": "title rules are Windows only, even when the rule says any", "sample": {"platform": "android", "app": "com.example.reader", "title": "Wikipedia"}, "own": [{"match": "title", "pattern": "wikipedia", "platform": "any", "category": "reading"}], "defaults": [], "expect": {"category": "other", "project": null}},
+    {"name": "the owner's rule comes before a default", "sample": {"platform": "windows", "app": "chrome.exe", "title": "Chess lesson - YouTube - Google Chrome"}, "own": [{"match": "title", "pattern": "chess lesson", "platform": "windows", "category": "study"}], "defaults": "shipped", "expect": {"category": "study", "project": null}},
+    {"name": "the first of the owner's rules wins", "sample": {"platform": "windows", "app": "chrome.exe", "title": "Rust book - Google Chrome"}, "own": [{"match": "title", "pattern": "rust", "platform": "any", "category": "study"}, {"match": "app", "pattern": "chrome.exe", "platform": "windows", "category": "work"}], "defaults": [], "expect": {"category": "study", "project": null}},
+    {"name": "an app rule is the whole name, not a part", "sample": {"platform": "android", "app": "com.whatsapp.w4b"}, "defaults": "shipped", "expect": {"category": "other", "project": null}},
+    {"name": "a folder rule names the editor's folder", "sample": {"platform": "windows", "app": "code.exe", "title": "main.py - thesis - Visual Studio Code"}, "own": [{"match": "folder", "pattern": "Thesis", "platform": "windows", "category": "study"}], "defaults": "shipped", "expect": {"category": "study", "project": null}},
+    {"name": "an owner's rule can name a project", "sample": {"platform": "android", "app": "com.github.android"}, "own": [{"match": "app", "pattern": "com.github.android", "platform": "android", "category": "coding", "project": "p-goalmaker"}], "defaults": [], "expect": {"category": "coding", "project": "p-goalmaker"}},
+    {"name": "an editor's folder names the project on Windows", "sample": {"platform": "windows", "app": "code.exe", "title": "● SyncEngine.kt - GoalMaker - Visual Studio Code"}, "defaults": "shipped", "projects": [{"id": "p-goalmaker", "localFolder": "C:\\Users\\me\\Code\\GoalMaker"}, {"id": "p-tarot", "localFolder": "C:\\Users\\me\\Code\\Tarot2Go"}], "expect": {"category": "coding", "project": "p-goalmaker"}}
+  ],
+  "folder": [
+    {"name": "Visual Studio Code with a file open", "app": "code.exe", "title": "SyncEngine.kt - GoalMaker - Visual Studio Code", "expect": "GoalMaker"},
+    {"name": "Visual Studio Code with an unsaved file", "app": "code.exe", "title": "● SyncEngine.kt - GoalMaker - Visual Studio Code", "expect": "GoalMaker"},
+    {"name": "Visual Studio Code with only the folder", "app": "code.exe", "title": "GoalMaker - Visual Studio Code", "expect": "GoalMaker"},
+    {"name": "a file whose name has a dash", "app": "code.exe", "title": "a - b.md - Notes - Visual Studio Code", "expect": "Notes"},
+    {"name": "Android Studio", "app": "studio64.exe", "title": "GoalMaker \u2013 SyncEngine.kt [GoalMaker.app.main]", "expect": "GoalMaker"},
+    {"name": "Visual Studio", "app": "devenv.exe", "title": "GoalMaker - Microsoft Visual Studio", "expect": "GoalMaker"},
+    {"name": "Visual Studio while it runs", "app": "devenv.exe", "title": "GoalMaker (Running) - Microsoft Visual Studio", "expect": "GoalMaker"},
+    {"name": "Visual Studio Insiders", "app": "devenv.exe", "title": "GoalMaker - Microsoft Visual Studio Insiders", "expect": "GoalMaker"},
+    {"name": "a browser is no editor", "app": "chrome.exe", "title": "GoalMaker - Visual Studio Code", "expect": null},
+    {"name": "Visual Studio Code's welcome page", "app": "code.exe", "title": "Welcome", "expect": null},
+    {"name": "no title", "app": "code.exe", "title": null, "expect": null}
+  ],
+  "project": [
+    {"name": "the folder's name, ignoring case", "folder": "goalmaker", "projects": [{"id": "p-goalmaker", "localFolder": "F:\\Code\\GoalMaker"}], "expect": "p-goalmaker"},
+    {"name": "a trailing slash on the project's folder", "folder": "Treeline", "projects": [{"id": "p-treeline", "localFolder": "C:/Users/me/Code/treeline/"}], "expect": "p-treeline"},
+    {"name": "no project has it", "folder": "Scratch", "projects": [{"id": "p-goalmaker", "localFolder": "F:\\Code\\GoalMaker"}], "expect": null},
+    {"name": "two projects share the name", "folder": "app", "projects": [{"id": "p-one", "localFolder": "C:\\One\\app"}, {"id": "p-two", "localFolder": "C:\\Two\\app"}], "expect": null},
+    {"name": "a project without a folder", "folder": "GoalMaker", "projects": [{"id": "p-goalmaker", "localFolder": null}], "expect": null},
+    {"name": "no folder", "folder": null, "projects": [{"id": "p-goalmaker", "localFolder": "F:\\Code\\GoalMaker"}], "expect": null}
+  ],
+  "idle": [
+    {"name": "just typed", "secondsSinceInput": 10, "category": "coding", "locked": false, "asleep": false, "expect": true},
+    {"name": "a moment before five minutes", "secondsSinceInput": 299, "category": "coding", "locked": false, "asleep": false, "expect": true},
+    {"name": "five minutes without input", "secondsSinceInput": 300, "category": "coding", "locked": false, "asleep": false, "expect": false},
+    {"name": "video without input still counts", "secondsSinceInput": 3600, "category": "video", "locked": false, "asleep": false, "expect": true},
+    {"name": "locked", "secondsSinceInput": 5, "category": "coding", "locked": true, "asleep": false, "expect": false},
+    {"name": "asleep, even for video", "secondsSinceInput": 5, "category": "video", "locked": false, "asleep": true, "expect": false}
+  ],
+  "days": [
+    {"name": "one interval", "startHour": 4, "intervals": [{"start": "2026-09-28T09:00", "end": "2026-09-28T10:30", "category": "coding", "project": null}], "expect": [{"day": "2026-09-28", "category": "coding", "project": null, "minutes": 90}]},
+    {"name": "midnight is not the day's end", "startHour": 4, "intervals": [{"start": "2026-09-28T23:30", "end": "2026-09-29T01:00", "category": "video", "project": null}], "expect": [{"day": "2026-09-28", "category": "video", "project": null, "minutes": 90}]},
+    {"name": "the rollover cuts an interval", "startHour": 4, "intervals": [{"start": "2026-09-29T03:40", "end": "2026-09-29T04:20", "category": "games", "project": null}], "expect": [{"day": "2026-09-28", "category": "games", "project": null, "minutes": 20}, {"day": "2026-09-29", "category": "games", "project": null, "minutes": 20}]},
+    {"name": "a day that starts at midnight", "startHour": 0, "intervals": [{"start": "2026-09-28T23:30", "end": "2026-09-29T00:15", "category": "chat", "project": null}], "expect": [{"day": "2026-09-28", "category": "chat", "project": null, "minutes": 30}, {"day": "2026-09-29", "category": "chat", "project": null, "minutes": 15}]},
+    {"name": "shared time counts once, for the one that started first", "startHour": 4, "intervals": [{"start": "2026-09-28T10:20", "end": "2026-09-28T10:40", "category": "chat", "project": null}, {"start": "2026-09-28T10:00", "end": "2026-09-28T10:30", "category": "work", "project": null}], "expect": [{"day": "2026-09-28", "category": "chat", "project": null, "minutes": 10}, {"day": "2026-09-28", "category": "work", "project": null, "minutes": 30}]},
+    {"name": "an interval inside another adds nothing", "startHour": 4, "intervals": [{"start": "2026-09-28T10:00", "end": "2026-09-28T11:00", "category": "work", "project": null}, {"start": "2026-09-28T10:10", "end": "2026-09-28T10:20", "category": "chat", "project": null}], "expect": [{"day": "2026-09-28", "category": "work", "project": null, "minutes": 60}]},
+    {"name": "seconds add up before rounding", "startHour": 4, "intervals": [{"start": "2026-09-28T10:00:00", "end": "2026-09-28T10:00:40", "category": "social", "project": null}, {"start": "2026-09-28T11:00:00", "end": "2026-09-28T11:00:40", "category": "social", "project": null}], "expect": [{"day": "2026-09-28", "category": "social", "project": null, "minutes": 1}]},
+    {"name": "half a minute rounds up, less rounds away", "startHour": 4, "intervals": [{"start": "2026-09-28T10:00:00", "end": "2026-09-28T10:00:30", "category": "social", "project": null}, {"start": "2026-09-28T11:00:00", "end": "2026-09-28T11:00:29", "category": "chat", "project": null}], "expect": [{"day": "2026-09-28", "category": "social", "project": null, "minutes": 1}]},
+    {"name": "projects are kept apart, none first", "startHour": 4, "intervals": [{"start": "2026-09-28T09:00", "end": "2026-09-28T10:00", "category": "coding", "project": "p-tarot"}, {"start": "2026-09-28T10:00", "end": "2026-09-28T10:15", "category": "coding", "project": null}, {"start": "2026-09-28T11:00", "end": "2026-09-28T11:45", "category": "coding", "project": "p-goalmaker"}], "expect": [{"day": "2026-09-28", "category": "coding", "project": null, "minutes": 15}, {"day": "2026-09-28", "category": "coding", "project": "p-goalmaker", "minutes": 45}, {"day": "2026-09-28", "category": "coding", "project": "p-tarot", "minutes": 60}]},
+    {"name": "an empty or backwards interval is nothing", "startHour": 4, "intervals": [{"start": "2026-09-28T10:00", "end": "2026-09-28T10:00", "category": "work", "project": null}, {"start": "2026-09-28T12:00", "end": "2026-09-28T11:00", "category": "work", "project": null}], "expect": []},
+    {"name": "nothing is nothing", "startHour": 4, "intervals": [], "expect": []}
+  ],
+  "ids": [
+    {"owner": "11111111-1111-1111-1111-111111111111", "day": "2026-09-28", "device": "D1E57000-0000-4000-8000-00000000AAAA", "category": "coding", "project": null, "expect": "dd3d1a73-2ee0-5651-bb6c-c2dc58c07fac"},
+    {"owner": "11111111-1111-1111-1111-111111111111", "day": "2026-09-28", "device": "d1e57000-0000-4000-8000-00000000aaaa", "category": "coding", "project": "p-goalmaker", "expect": "46b3d020-0d1d-5c26-bfa8-d39763ec3c86"}
+  ]
+}
