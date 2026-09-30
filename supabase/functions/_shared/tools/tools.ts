@@ -186,11 +186,12 @@ function areaText(area: Area): string {
 /** One entry of the activity log as one line, the way the Activity screen reads it. */
 function changeText(change: Change): string {
   const who = change.actor === "claude" ? "Claude" : change.actor === "system" ? "GoalMaker" : "the owner";
+  const way = change.via === "chat" ? " through the chat" : "";
   const what = change.label === null ? change.entity : `${change.entity} "${change.label}"`;
   const undone = change.undone ? " · undone" : "";
   // The row is named as well as the change: without it there is no telling which task a line is about,
   // and undoing the latest change of the wrong row is a quiet way to lose work.
-  return `- ${change.action} ${what}, by ${who} at ${change.at}${undone} ` +
+  return `- ${change.action} ${what}, by ${who}${way} at ${change.at}${undone} ` +
     `(change id ${change.id}, row ${change.entityId})`;
 }
 

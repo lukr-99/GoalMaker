@@ -6,6 +6,9 @@ export type Db = TransactionSql;
 /** Who a change is logged as (supabase/migrations/0004_activity_log.sql). */
 export type Actor = "claude" | "owner";
 
+/** Which way a change came in, when the activity log should say so (0019): the quick chat. */
+export type Via = "chat";
+
 export type Resolution =
   | { kind: "owner"; ownerId: string }
   | { kind: "unknown" }
@@ -41,12 +44,18 @@ export async function resolveLink(sql: Sql, secret: string, callsPerMinute = 120
 /**
  * Runs `work` in one transaction as the owner: the `authenticated` role with the owner's JWT claims,
  * so every query goes through row security exactly as the apps' do, and the actor header the
- * activity log reads, so changes show who made them.
+ * activity log reads, so changes show who made them, and, with `via`, which way they came in.
  */
-export function asOwner<T>(sql: Sql, ownerId: string, actor: Actor, work: (db: Db) => Promise<T>): Promise<T> {
+export function asOwner<T>(
+  sql: Sql,
+  ownerId: string,
+  actor: Actor,
+  work: (db: Db) => Promise<T>,
+  via?: Via,
+): Promise<T> {
   return sql.begin(async (db) => {
     const claims = JSON.stringify({ sub: ownerId, role: "authenticated" });
-    const headers = JSON.stringify({ "x-goalmaker-actor": actor });
+    const headers = JSON.stringify({ "x-goalmaker-actor": actor, ...(via ? { "x-goalmaker-via": via } : {}) });
     await db`select set_config('request.jwt.claims', ${claims}, true), set_config('request.headers', ${headers}, true)`;
     await db`set local role authenticated`;
     return await work(db);
