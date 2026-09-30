@@ -52,6 +52,8 @@ Off until the owner turns it on in the Tally place.
   per project, and filter chips (Phone, PC, a category) in the main area.
 - **Stats:** a Tally block over the last twelve weeks.
 - **The review:** a Tally block in the look-back.
-- **The connector:** `get_time_tally(from, to, by = category | project | device)` and a `tally`
-  section in `get_review_digest`. Comparing time with what was planned is left to Claude and the
-  [Letter](letter.md).
+- **The connector:** `get_time_tally(from, to, by = category | project | device)`, this week by
+  default, and a `tally` section in `get_review_digest` (the minutes in all, and by category, project
+  and device). A default category is named by its key (coding is Coding), since the deployed function
+  doesn't read the shipped file; a test keeps the two equal. Comparing time with what was planned is
+  left to Claude and the [Letter](letter.md).

@@ -933,6 +933,28 @@ async function seedAugust(sql: postgres.Sql, owner: string) {
             '2026-08-20T10:00:00Z', 'owner'),
            (${id(42)}, ${owner}, 'Tent', 'Summer trips', null, 30, '2026-07-26', '2026-08-25', null, null, 'claude')`;
 
+  // A fortnight of Tally: a PC coding in the Garden project and a phone watching video, an own category,
+  // and a rule whose pattern names an app, which must never come back through the connector.
+  await sql`
+    insert into public.tally_categories (id, owner_id, name, color) values (${id(50)}, ${owner}, 'Music', 'lime')`;
+  await sql`
+    insert into public.tally_rules (id, owner_id, match, pattern, platform, category)
+    values (${id(51)}, ${owner}, 'app', 'SecretGame.exe', 'windows', 'games')`;
+  for (let offset = 0; offset < 14; offset++) {
+    const day = new Date(Date.UTC(2026, 7, 10 + offset)).toISOString().slice(0, 10);
+    await sql`
+      insert into public.tally_days (id, owner_id, day, device, device_kind, category, project_id, minutes)
+      values (${crypto.randomUUID()}, ${owner}, ${day}, 'd1e57000-0000-4000-8000-00000000aaaa', 'pc', 'coding',
+              ${id(2)}, 60),
+             (${crypto.randomUUID()}, ${owner}, ${day}, 'd1e57000-0000-4000-8000-00000000bbbb', 'phone', 'video',
+              null, 30)`;
+  }
+  await sql`
+    insert into public.tally_days (id, owner_id, day, device, device_kind, category, minutes)
+    values (${crypto.randomUUID()}, ${owner}, '2026-08-20', 'd1e57000-0000-4000-8000-00000000aaaa', 'pc', ${
+    id(50)
+  }, 45)`;
+
   await sql`
     insert into public.reviews (id, owner_id, kind, period_start, summary, mood, energy, reflections)
     values (${await reviewId(owner, "weekly", "2026-08-10")}, ${owner}, 'weekly', '2026-08-10',
@@ -1049,6 +1071,40 @@ Deno.test({
         assertEquals((await digestOf({})).period.kind, "weekly");
         const nonsense = await client.tool("get_review_digest", { period: "last week" });
         assert(nonsense.isError, nonsense.text);
+      });
+
+      await t.step("time is grouped by category, project and device, and never names an app", async () => {
+        const fortnight = { from: "2026-08-10", to: "2026-08-23" };
+        const byCategory = await client.tool("get_time_tally", fortnight);
+        assert(!byCategory.isError, byCategory.text);
+        assertStringIncludes(byCategory.text, "by category: 21 h 45 min over 14 days");
+        assertStringIncludes(byCategory.text, "- Coding · 14 h · 64%");
+        assertStringIncludes(byCategory.text, "- Video · 7 h · 32%");
+        assertStringIncludes(byCategory.text, "- Music · 45 min · 3%");
+        const byProject = await client.tool("get_time_tally", { ...fortnight, by: "project" });
+        assertStringIncludes(byProject.text, "- Garden · 14 h");
+        assertStringIncludes(byProject.text, "- No project · 7 h 45 min");
+        const byDevice = await client.tool("get_time_tally", { ...fortnight, by: "device" });
+        assertStringIncludes(byDevice.text, "- PC · 14 h 45 min");
+        assertStringIncludes(byDevice.text, "- Phone · 7 h");
+        const none = await client.tool("get_time_tally", { from: "2026-07-01", to: "2026-07-07" });
+        assertStringIncludes(none.text, "No Tally time");
+        const backwards = await client.tool("get_time_tally", { from: "2026-08-23", to: "2026-08-10" });
+        assert(backwards.isError, backwards.text);
+
+        const week = await digestOf({ kind: "weekly", period: "2026-08-19" });
+        assertEquals(week.tally, {
+          minutes: 675,
+          by_category: [{ category: "Coding", minutes: 420 }, { category: "Video", minutes: 210 }, {
+            category: "Music",
+            minutes: 45,
+          }],
+          by_project: [{ project: "Garden", minutes: 420 }, { project: "No project", minutes: 255 }],
+          by_device: [{ device: "PC", minutes: 465 }, { device: "Phone", minutes: 210 }],
+        });
+        for (const answer of [byCategory.text, byProject.text, byDevice.text, JSON.stringify(week)]) {
+          assert(!answer.includes("SecretGame"), `an app's name came back: ${answer}`);
+        }
       });
 
       await t.step("a monthly digest reads the whole month", async () => {
