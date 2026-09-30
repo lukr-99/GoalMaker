@@ -17,6 +17,7 @@ public sealed partial class SignInViewModel : ObservableObject
     private readonly SignInWatch watch;
     private readonly IStrings strings;
     private readonly Func<string, CancellationToken, Task<string?>>? devCode;
+    private string? signedInEmail;
 
     // The mail lands within a second or so on a local stack; after this the owner types it.
     private static readonly TimeSpan Wait = TimeSpan.FromMilliseconds(600);
@@ -40,6 +41,9 @@ public sealed partial class SignInViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     private string errorText = string.Empty;
+
+    [ObservableProperty]
+    private bool sessionEnded;
 
     public SignInViewModel(
         IAuthGateway auth,
@@ -70,6 +74,42 @@ public sealed partial class SignInViewModel : ObservableObject
 
     /// <summary>"Sign in as dev@goalmaker.test", so the address is never a surprise.</summary>
     public string DevAccountText => strings.Get("SignIn.DevAccount", DevSignIn.Email);
+
+    /// <summary>
+    /// Follows the session (the shell calls it on the UI thread). A sign-out starts again at the email
+    /// step. When the server ended the session, the screen says so and fills in the address that was
+    /// signed in, since signing in as it again is what sends the waiting changes (docs/sign-in.md).
+    /// </summary>
+    public void Apply(AuthSession session)
+    {
+        if (session is AuthSession.SignedIn signedIn)
+        {
+            signedInEmail = signedIn.Email;
+            SessionEnded = false;
+            return;
+        }
+
+        if (session is not AuthSession.SignedOut signedOut)
+        {
+            return;
+        }
+
+        SessionEnded = signedOut.SessionEnded;
+        if (signedInEmail is null)
+        {
+            return;
+        }
+
+        IsCodeStep = false;
+        Code = string.Empty;
+        if (SessionEnded && signedInEmail.Length > 0)
+        {
+            Email = signedInEmail;
+        }
+
+        ErrorText = string.Empty;
+        signedInEmail = null;
+    }
 
     /// <summary>
     /// The dev account in one press: its code goes to the stack's mailbox like any other, and is read

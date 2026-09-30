@@ -10,9 +10,12 @@ namespace GoalMaker.Infrastructure.Postgrest;
 /// Calls to PostgREST (<c>/rest/v1/...</c>) as the signed-in user: the publishable key and the user's
 /// access token. A failure is <see cref="RemoteUnavailableException"/> when trying again later can help
 /// (offline, a timeout, an expired token, the server busy) and <see cref="RemoteRejectedException"/>,
-/// with the database's SQLSTATE when there is one, when it can't.
+/// with the database's SQLSTATE when there is one, when it can't. A refused session is
+/// <see cref="RemoteUnauthorizedException"/>, and <paramref name="unauthorized"/> hears of it, so a
+/// call outside sync gets the session renewed or ended too (docs/sign-in.md).
 /// </summary>
-public sealed class PostgrestHttp(HttpClient http, string baseUrl, string publishableKey, Func<string?> accessToken)
+public sealed class PostgrestHttp(
+    HttpClient http, string baseUrl, string publishableKey, Func<string?> accessToken, Action? unauthorized = null)
 {
     private readonly string restUrl = baseUrl.TrimEnd('/') + "/rest/v1/";
 
@@ -53,9 +56,14 @@ public sealed class PostgrestHttp(HttpClient http, string baseUrl, string publis
             }
 
             var status = (int)response.StatusCode;
-            var temporary = response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.RequestTimeout
-                or HttpStatusCode.TooManyRequests || status >= 500;
             var message = $"HTTP {status}: {(text.Length <= 300 ? text : text[..300])}";
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                unauthorized?.Invoke();
+                throw new RemoteUnauthorizedException(message);
+            }
+
+            var temporary = response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || status >= 500;
             throw temporary ? new RemoteUnavailableException(message) : new RemoteRejectedException(message, SqlState(text));
         }
     }

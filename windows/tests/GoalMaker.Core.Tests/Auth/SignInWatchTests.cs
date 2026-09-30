@@ -116,6 +116,10 @@ public sealed class SignInWatchTests
             Session = new AuthSession.SignedOut();
             return Task.CompletedTask;
         }
+
+        public Task<SessionRenewal> RenewAsync(CancellationToken cancellationToken) => Task.FromResult(SessionRenewal.Renewed);
+
+        public Task EndSessionAsync() => Task.CompletedTask;
     }
 
     private sealed class FakeSettings : ISettingsStore

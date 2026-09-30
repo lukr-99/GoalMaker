@@ -11,8 +11,20 @@ namespace GoalMaker.Core.Sync;
 /// to send back: a table that has never pulled has no watermark, and no watermark means a full resync,
 /// which clears the table first, so pulling from it would wipe the replica on every run.
 /// </para>
+/// <para>
+/// With <paramref name="owner"/>, a run only pushes the signed-in owner's rows. Signing in as someone
+/// else empties the replica first (<see cref="SessionSync"/>), and this makes sure a run racing that
+/// never sends the last owner's outbox to the new account. With nobody signed in, a run stops before
+/// it starts, as offline, the way a call without a token does.
+/// </para>
 /// </summary>
-public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRemoteTables remote, TimeProvider time, bool pulls = true)
+public sealed class SyncEngine(
+    SyncedTableCatalog catalog,
+    IReplica replica,
+    IRemoteTables remote,
+    TimeProvider time,
+    bool pulls = true,
+    Func<string?>? owner = null)
 {
     public const int PageSize = 500;
 
@@ -21,6 +33,11 @@ public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRe
         var pushed = 0;
         var rejected = 0;
         var pulled = 0;
+        if (owner is not null && owner() is null)
+        {
+            return new SyncReport(0, 0, 0, Offline: true, Problem: "Not signed in.");
+        }
+
         try
         {
             foreach (var entry in replica.Outbox())
@@ -30,6 +47,11 @@ public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRe
                 {
                     // The server owns updated_at (docs/sync.md), so it is never sent.
                     var row = JsonNode.Parse(entry.Payload)!.AsObject();
+                    if (owner is not null && (string?)row[SyncedTable.OwnerId] != owner())
+                    {
+                        continue;
+                    }
+
                     row.Remove(SyncedTable.UpdatedAt);
                     var stored = await remote.UpsertAsync(entry.Entity, row, cancellationToken).ConfigureAwait(false);
                     replica.CompletePush(entry, Normalize(table, stored));
@@ -54,7 +76,8 @@ public sealed class SyncEngine(SyncedTableCatalog catalog, IReplica replica, IRe
         }
         catch (RemoteUnavailableException error)
         {
-            return new SyncReport(pushed, rejected, pulled, Offline: true, Problem: error.Message);
+            return new SyncReport(
+                pushed, rejected, pulled, Offline: true, Problem: error.Message, Unauthorized: error is RemoteUnauthorizedException);
         }
     }
 
