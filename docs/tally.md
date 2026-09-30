@@ -1,6 +1,7 @@
 # Tally
 
-> Planned in M8 (`.scratch/m8-letter-tally-wants/`, M8-10 to M8-14). Not built yet.
+> M8 (`.scratch/m8-letter-tally-wants/`): the data, the defaults and the sorting rules are built
+> (M8-10); the phone, the PC, the places and the connector follow (M8-11 to M8-14).
 
 Tally shows where the owner's time actually went on the phone and the PC (spec, stories 109 to 113).
 The raw record of apps and windows stays on each device; only daily minutes per category (and
@@ -28,8 +29,9 @@ or a **folder** (from an editor's title), on Android, Windows or both. The owner
 the defaults and the first match wins; nothing matched is Other. On the PC, an editor's window title
 (VS Code, Android Studio, Visual Studio) names its folder, which is matched against projects' local
 folders the way `find_project` does, so time in the folder counts toward the project. The phone never
-links time to a project. Matching, the project from a title, idle and the daily totals are pinned by
-`contracts/vectors/tally.json`.
+links time to a project, not even through a rule. An editor's title gives the folder's name only,
+so a project is found when exactly one project's local folder has that name. Matching, the project
+from a title, idle and the daily totals are pinned by `contracts/vectors/tally.json`.
 
 ## On each device
 
