@@ -39,8 +39,8 @@ week or month):
 - `next`: the next period's planned tasks, deadlines and goals set so far;
 - `wants`: wants that became ready or were decided in the period, and those ready next period
   ([wants](wants.md));
-- `tally`: minutes per category and per project, per device kind ([tally](tally.md)), once Tally
-  exists (M8-10 to M8-14).
+- `tally`: the period's minutes in all, and by category, project and device ([tally](tally.md)),
+  empty while Tally is off.
 
 The prompts `weekly_review` and `monthly_review` are built from the same digest (`reviewDigest` in
 `supabase/functions/_shared/planner`, over `rules/digest.ts`), so the two never disagree. Their
@@ -74,8 +74,9 @@ routine is the same prompt with `monthly` on the 1st at 07:00.
 > (deadlines and what expires soon), Learning (progress). Skip any that are off without saying so.
 >
 > Write me a letter about the week, in plain words, as a friend who has read all of it. Sections, as
-> short Markdown headings: what went well, what slipped, patterns I might have missed, what is
-> coming up (birthdays, deadlines, wants that become ready), and one focus for next week. Be specific
+> short Markdown headings: what went well, what slipped, patterns I might have missed (including
+> where my time went, from the digest's tally, against what I planned), what is coming up
+> (birthdays, deadlines, wants that become ready), and one focus for next week. Be specific
 > and use the numbers. At most 350 words. No lists longer than five lines. Leave out a section
 > the week gives nothing for. When the week was quiet, say so in a few sentences and don't pad it.
 > Never invent anything the data doesn't show.

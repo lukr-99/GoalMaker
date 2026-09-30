@@ -3,6 +3,14 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## The endpoint test fails once right after an edit
+
+2026-09-28 and 2026-09-30. `supabase functions serve` reloads the function when a file under
+`supabase/functions` changes, and a test run that starts a moment after an edit (or `deno fmt`) can
+hit it halfway: steps fail at random, often `get_activity` missing rows it just wrote, and the next
+run passes. Wait a few seconds after editing before running `endpoint_test.ts`, and rerun once before
+chasing a failure that only an edit could explain.
+
 ## Deleting a merged base branch closes the pull request stacked on it
 
 2026-09-29, M8-06 and M8-07. #10 was stacked on #9's branch. Merging #9 with `--delete-branch` did
