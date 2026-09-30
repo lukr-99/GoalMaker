@@ -14,10 +14,9 @@ import com.goalmaker.app.application.planning.UsageSource
 import java.time.Instant
 
 /**
- * [UsageSource] over [UsageStatsManager] (docs/tally.md). An activity coming to the front opens a
- * stretch for its app and going to the back closes it; the screen going off or the lock screen showing
- * closes every open one. Time on the home screen and in the system's bars is left out. Nothing read
- * here is kept.
+ * [UsageSource] over [UsageStatsManager] (docs/tally.md). An app is in front from the moment one of
+ * its activities resumes until another app resumes, the screen goes off or the lock screen shows.
+ * Time on the home screen and in the system's bars is left out. Nothing read here is kept.
  */
 class UsageStatsSource(private val context: Context) : UsageSource {
 
@@ -49,59 +48,78 @@ class UsageStatsSource(private val context: Context) : UsageSource {
         } ?: return emptyList()
         val start = from.toEpochMilli()
         val end = to.toEpochMilli()
-        // Keyed by package and activity, since one activity can resume before another of the same app pauses.
-        val open = LinkedHashMap<Pair<String, String?>, Long>()
-        val seen = HashSet<Pair<String, String?>>()
+        val home = homeScreens()
         val stretches = mutableListOf<UsageInterval>()
-        var stopped = false
-        fun close(key: Pair<String, String?>, since: Long, at: Long) {
+        // One app is in front at a time: from its first resume until another app resumes or the clock
+        // stops. Activities inside an app come and go (a trampoline may resume and never pause), so
+        // only the package counts. A pause ends the app's time only if nothing of it resumes again.
+        var app: String? = null
+        var since = 0L
+        var pausedAt: Long? = null
+        var anything = false
+        fun leave(at: Long) {
+            val current = app ?: return
             val begin = since.coerceAtLeast(start)
-            val finish = at.coerceAtMost(end)
-            if (finish > begin) stretches += UsageInterval(key.first, Instant.ofEpochMilli(begin), Instant.ofEpochMilli(finish))
+            val finish = (pausedAt ?: at).coerceAtMost(end)
+            if (finish > begin) stretches += UsageInterval(current, Instant.ofEpochMilli(begin), Instant.ofEpochMilli(finish))
+            app = null
+            pausedAt = null
         }
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             val at = event.timeStamp
+            val name = event.packageName
             when (event.eventType) {
-                RESUMED -> {
-                    val key = event.packageName to event.className
-                    seen += key
-                    open.putIfAbsent(key, at)
-                }
-                PAUSED -> {
-                    val key = event.packageName to event.className
-                    val since = open.remove(key)
-                    // An app already in front when the window began shows only as it leaves.
-                    when {
-                        since != null -> close(key, since, at)
-                        key !in seen && !stopped -> close(key, start, at)
+                RESUMED -> when {
+                    home.skips(name, event.className) -> leave(at)
+                    name == app -> pausedAt = null
+                    else -> {
+                        leave(at)
+                        app = name
+                        since = at
                     }
-                    seen += key
                 }
-                SCREEN_OFF, KEYGUARD_SHOWN, SHUTDOWN -> {
-                    open.forEach { (key, since) -> close(key, since, at) }
-                    open.clear()
-                    stopped = true
+                PAUSED -> when {
+                    name == app -> pausedAt = at
+                    // Only a pause before anything else says the app was in front when the window began,
+                    // which is the start of a planning day; later, a pause without a resume is noise.
+                    !anything && !home.skips(name, event.className) -> {
+                        app = name
+                        since = start
+                        pausedAt = at
+                    }
                 }
+                SCREEN_OFF, KEYGUARD_SHOWN, SHUTDOWN -> leave(at)
+                else -> continue
             }
+            anything = true
         }
-        open.forEach { (key, since) -> close(key, since, end) }
-        // The home screen and the system's own bars aren't time spent in anything.
-        val skipped = homePackages() + SYSTEM_UI
-        return stretches.filter { it.app !in skipped }.sortedBy { it.start }
+        leave(end)
+        return stretches
     }
 
-    // Every installed launcher, since the owner may have more than one.
-    private fun homePackages(): Set<String> {
-        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+    /**
+     * What counts as no app at all: every installed launcher, the system's bars, and home activities
+     * that aren't a launcher, such as the Settings app's FallbackHome, which shows while the phone
+     * starts (its negative priority says it is only a fallback, and the rest of Settings still counts).
+     */
+    private fun homeScreens(): HomeScreens {
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
         val found = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.packageManager.queryIntentActivities(home, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()))
+            context.packageManager.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()))
         } else {
             @Suppress("DEPRECATION")
-            context.packageManager.queryIntentActivities(home, PackageManager.MATCH_ALL)
+            context.packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
         }
-        return found.mapNotNull { it.activityInfo?.packageName }.toSet()
+        return HomeScreens(
+            packages = found.filter { it.priority >= 0 }.mapNotNull { it.activityInfo?.packageName }.toSet() + SYSTEM_UI,
+            activities = found.mapNotNull { it.activityInfo }.map { it.packageName to it.name }.toSet(),
+        )
+    }
+
+    private class HomeScreens(val packages: Set<String>, val activities: Set<Pair<String, String?>>) {
+        fun skips(app: String, activity: String?): Boolean = app in packages || (app to activity) in activities
     }
 
     private companion object {
