@@ -88,6 +88,7 @@ fun SettingsScreen(
     onOpenActivity: () -> Unit = {},
     problems: List<Problem> = emptyList(),
     onProblemsRead: () -> Unit = {},
+    tally: TallyViewModel? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Opening Settings is reading them, so the mark on the gear goes (docs/problems.md).
@@ -210,6 +211,12 @@ fun SettingsScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            // Here until the Tally place is built (M8-13).
+            if (tally != null) {
+                Section(stringResource(R.string.settings_tally)) {
+                    TallyCard(tally)
+                }
             }
             Section(stringResource(R.string.settings_claude)) {
                 OutlinedButton(onClick = onOpenConnector) { Text(stringResource(R.string.connector_open)) }
@@ -367,7 +374,7 @@ private fun Label(text: String) {
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     title: String,
     hint: String,
     checked: Boolean,

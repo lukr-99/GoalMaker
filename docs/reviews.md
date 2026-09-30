@@ -8,7 +8,8 @@ are the same row ([`contracts/vectors/reviews.json`](../contracts/vectors/review
 
 A review holds the owner's mood and energy (1 to 5), the summary a Claude routine may write
 ([connector](connector.md)), and the **reflections**: the prompts it asked and the answers written,
-in the order they were asked.
+in the order they were asked. The summary is the [Letter](letter.md): when there is one, the guided
+review starts on it, and the apps only show it, never edit it.
 
 ## The prompt library
 

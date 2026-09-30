@@ -72,12 +72,23 @@
             <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
                 <ui:Button Command="{Binding BackCommand}" Content="{DynamicResource Reviews.Back}"
                            Visibility="{Binding CanGoBack, Converter={StaticResource BoolToVisibility}}" />
-                <ui:Button Margin="8,0,0,0" Appearance="Primary" Command="{Binding NextCommand}" Content="{Binding NextLabel}" />
+                <ui:Button Margin="8,0,0,0" Appearance="Primary" Command="{Binding NextCommand}" Content="{Binding NextLabel}"
+                           IsDefault="{Binding IsLetter}" />
             </StackPanel>
         </DockPanel>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
             <StackPanel>
+                <!-- The letter a Claude routine wrote about the period (docs/letter.md): read at a reading width, never edited. -->
+                <StackPanel MaxWidth="680" HorizontalAlignment="Left" Margin="0,8,0,24"
+                            Visibility="{Binding IsLetter, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding PeriodText}" FontSize="28" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                               Foreground="{DynamicResource GM.AccentBrush}" TextWrapping="Wrap" />
+                    <TextBlock Margin="0,4,0,16" Text="{DynamicResource Reviews.LetterByClaude}" FontSize="12"
+                               Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <controls:MarkdownView Markdown="{Binding SummaryText}" TextElement.FontSize="15" />
+                </StackPanel>
+
                 <!-- Look back. -->
                 <StackPanel Visibility="{Binding IsLookBack, Converter={StaticResource BoolToVisibility}}">
                     <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Reviews.LookBack}" />

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Light Markdown in task notes (docs/archive.md). A note splits into lines (\\n, with \\r dropped); each line is a block, a list item when it starts, after spaces, with '- ' or '* '. Inside a line: **bold**, *italic* (not when the stars touch a space on the inside), and http:// or https:// links running to the next space, without a trailing . , ; : ! ? or ). Unmatched markers stay as text. Spans leave out styles they don't have; an empty note has no blocks.",
+  "description": "Light Markdown in task notes and letters (docs/archive.md, docs/letter.md). A note splits into lines (\\n, with \\r dropped); each line is a block: a heading of level 1 to 3 ('heading') when it starts, after spaces, with one to three '#' and a space, its text trimmed; otherwise a list item when it starts, after spaces, with '- ' or '* '. Inside a line: **bold**, *italic* (not when the stars touch a space on the inside), and http:// or https:// links running to the next space, without a trailing . , ; : ! ? or ). Unmatched markers stay as text. Spans leave out styles they don't have; an empty note has no blocks.",
   "cases": [
     {"name": "plain text is one line", "text": "Pack the night before", "blocks": [{"bullet": false, "spans": [{"text": "Pack the night before"}]}]},
     {"name": "bold in the middle", "text": "Check the **passport** first", "blocks": [{"bullet": false, "spans": [{"text": "Check the "}, {"text": "passport", "bold": true}, {"text": " first"}]}]},
@@ -23,6 +23,12 @@
     {"name": "a dash without a space isn't a list", "text": "-5 degrees", "blocks": [{"bullet": false, "spans": [{"text": "-5 degrees"}]}]},
     {"name": "styles inside a list line", "text": "- **Passport** and *visa*", "blocks": [{"bullet": true, "spans": [{"text": "Passport", "bold": true}, {"text": " and "}, {"text": "visa", "italic": true}]}]},
     {"name": "emoji pass through", "text": "🏠 **home**", "blocks": [{"bullet": false, "spans": [{"text": "🏠 "}, {"text": "home", "bold": true}]}]},
-    {"name": "no text, no blocks", "text": "", "blocks": []}
+    {"name": "no text, no blocks", "text": "", "blocks": []},
+    {"name": "a heading", "text": "## What went well", "blocks": [{"bullet": false, "heading": 2, "spans": [{"text": "What went well"}]}]},
+    {"name": "three heading levels", "text": "# Week\n## Wins\n### Small ones", "blocks": [{"bullet": false, "heading": 1, "spans": [{"text": "Week"}]}, {"bullet": false, "heading": 2, "spans": [{"text": "Wins"}]}, {"bullet": false, "heading": 3, "spans": [{"text": "Small ones"}]}]},
+    {"name": "four hashes are text", "text": "#### Too deep", "blocks": [{"bullet": false, "spans": [{"text": "#### Too deep"}]}]},
+    {"name": "a hash without a space is text", "text": "#hashtag", "blocks": [{"bullet": false, "spans": [{"text": "#hashtag"}]}]},
+    {"name": "styles inside a heading", "text": "## One **focus** next week", "blocks": [{"bullet": false, "heading": 2, "spans": [{"text": "One "}, {"text": "focus", "bold": true}, {"text": " next week"}]}]},
+    {"name": "a letter with headings, a list and a link", "text": "## What slipped\nThe bank call moved *four* times.\n- Call on Monday\n- Read https://example.com/guide.", "blocks": [{"bullet": false, "heading": 2, "spans": [{"text": "What slipped"}]}, {"bullet": false, "spans": [{"text": "The bank call moved "}, {"text": "four", "italic": true}, {"text": " times."}]}, {"bullet": true, "spans": [{"text": "Call on Monday"}]}, {"bullet": true, "spans": [{"text": "Read "}, {"text": "https://example.com/guide", "link": "https://example.com/guide"}, {"text": "."}]}]}
   ]
 }

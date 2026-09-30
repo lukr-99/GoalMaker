@@ -154,6 +154,26 @@ class ReminderRulesContractTest {
     }
 
     @Test
+    fun `every letter waiting`() {
+        vectors.getValue("letterWaiting").jsonArray.map { it.jsonObject }.forEach { case ->
+            val reviews = case.getValue("reviews").jsonArray.map { it.jsonObject }.mapIndexed { index, review ->
+                ReviewItem(
+                    id = "r$index",
+                    kind = review.getValue("kind").jsonPrimitive.content,
+                    periodStart = date(review.getValue("periodStart"))!!,
+                    summary = review.getValue("summary").jsonPrimitive.content,
+                    deleted = review["deleted"]?.jsonPrimitive?.boolean ?: false,
+                )
+            }
+            assertEquals(
+                name(case),
+                case.getValue("letter").jsonPrimitive.boolean,
+                ReviewRules.letterWaiting(case.getValue("kind").jsonPrimitive.content, date(case.getValue("day"))!!, reviews),
+            )
+        }
+    }
+
+    @Test
     fun `every ritual run id`() {
         vectors.getValue("ritualIds").jsonArray.map { it.jsonObject }.forEach { case ->
             assertEquals(

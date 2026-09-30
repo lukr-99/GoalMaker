@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import java.time.Instant
 import java.time.LocalTime
+import java.util.UUID
 
 /** [SettingsStore] in private SharedPreferences. None of this is synced or backed up. */
 class SharedPreferencesSettingsStore(private val preferences: SharedPreferences) : SettingsStore {
@@ -129,6 +130,26 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         preferences.edit { putLong(REMINDED_UNTIL, instant.toEpochMilli()) }
     }
 
+    // Committed at once, so the id never changes once a row carries it.
+    override fun tallyDevice(): String = preferences.getString(TALLY_DEVICE, null) ?: UUID.randomUUID().toString().also { id ->
+        preferences.edit(commit = true) { putString(TALLY_DEVICE, id) }
+    }
+
+    private val tally = MutableStateFlow(preferences.getBoolean(TALLY_ON, false))
+    override val tallyOn: StateFlow<Boolean> = tally.asStateFlow()
+
+    override fun setTallyOn(on: Boolean) {
+        preferences.edit { putBoolean(TALLY_ON, on) }
+        tally.value = on
+    }
+
+    override fun tallyReadUntil(): Instant? =
+        preferences.getLong(TALLY_READ_UNTIL, -1L).takeIf { it >= 0 }?.let(Instant::ofEpochMilli)
+
+    override fun setTallyReadUntil(instant: Instant?) {
+        preferences.edit { if (instant == null) remove(TALLY_READ_UNTIL) else putLong(TALLY_READ_UNTIL, instant.toEpochMilli()) }
+    }
+
     override fun backendOverride(): BackendEnvironment? {
         val url = preferences.getString(BACKEND_URL, null) ?: return null
         val key = preferences.getString(BACKEND_KEY, null) ?: return null
@@ -193,6 +214,9 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val QUIET_START = "quiet_hours_start"
         const val QUIET_END = "quiet_hours_end"
         const val REMINDED_UNTIL = "reminded_until"
+        const val TALLY_DEVICE = "tally_device"
+        const val TALLY_ON = "tally_on"
+        const val TALLY_READ_UNTIL = "tally_read_until"
         const val APP_LOCK = "app_lock"
         const val PINS = "pinned_places"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"

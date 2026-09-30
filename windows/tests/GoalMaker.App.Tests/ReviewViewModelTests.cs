@@ -168,6 +168,68 @@ public sealed class ReviewViewModelTests : IDisposable
         Assert.True(list.IsEmpty);
     }
 
+    [Fact]
+    public void WithALetterTheReviewStartsOnItAndBackReturnsToIt()
+    {
+        WriteLetter("## What went well\nThe dentist, finally.");
+        var page = Page();
+
+        Assert.True(page.IsLetter);
+        Assert.True(page.HasLetter);
+        Assert.False(page.CanGoBack);
+        Assert.Equal("Reviews.Continue", page.NextLabel);
+        Assert.Equal(1 / 7.0, page.Progress, 9);
+
+        page.NextCommand.Execute(null);
+        Assert.True(page.IsLookBack);
+        Assert.True(page.CanGoBack);
+        Assert.Equal("Reviews.Next", page.NextLabel);
+
+        page.BackCommand.Execute(null);
+        Assert.True(page.IsLetter);
+    }
+
+    [Fact]
+    public void WithoutALetterTheReviewStartsOnTheLookBack()
+    {
+        var page = Page();
+
+        Assert.True(page.IsLookBack);
+        Assert.False(page.HasLetter);
+        Assert.False(page.CanGoBack);
+        Assert.Equal(1 / 6.0, page.Progress, 9);
+    }
+
+    [Fact]
+    public void TheReviewsPageMarksALetterAndShowsItsFirstLine()
+    {
+        WriteLetter("## What went well\n\nThe **dentist**, finally.\n- Call the bank");
+        var other = planner.Reviews.Open(ReviewRules.Weekly, WeekStart.AddDays(-7))!;
+        planner.Reviews.SetMood(other.Id, 3);
+        var list = new ReviewsViewModel(planner.Reviews, planner.Settings, planner.Strings, planner.Time, (_, _) => { }, action => action());
+
+        Assert.Equal(2, list.Past.Count);
+        Assert.Equal("The dentist, finally.", list.Past[0].Letter);
+        Assert.True(list.Past[0].HasLetter);
+        Assert.False(list.Past[1].HasLetter);
+        Assert.Equal("What went well", ReviewRules.LetterPreview("## What went well"));
+        Assert.Null(ReviewRules.LetterPreview("  \n"));
+    }
+
+    [Fact]
+    public void AReviewReminderSaysTheLetterIsHereOnlyWhenOneCameFirst()
+    {
+        Assert.Equal("Reviews.ReminderText", GoalMaker.App.Shell.ToastReminderNotifications.ReviewText(monthly: false, letter: false));
+        Assert.Equal("Reviews.ReminderLetterWeekly", GoalMaker.App.Shell.ToastReminderNotifications.ReviewText(monthly: false, letter: true));
+        Assert.Equal("Reviews.ReminderLetterMonthly", GoalMaker.App.Shell.ToastReminderNotifications.ReviewText(monthly: true, letter: true));
+    }
+
+    private void WriteLetter(string text)
+    {
+        var review = planner.Reviews.Open(ReviewRules.Weekly, WeekStart)!;
+        planner.Reviews.SetSummary(review.Id, text);
+    }
+
     private static string PromptsPath()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

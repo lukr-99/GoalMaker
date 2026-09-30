@@ -42,6 +42,7 @@ import {
   repositoryKey,
 } from "../rules/projects.ts";
 import { AREA_COLORS, colorForNewArea } from "./palette.ts";
+import { TallyDays } from "./tallyDays.ts";
 import { WantList } from "./wantList.ts";
 
 export interface Area {
@@ -592,6 +593,11 @@ export class Planner {
     const id = crypto.randomUUID();
     await this.db`insert into public.tags (id, name) values (${id}, ${trimmed})`;
     return { id, name: trimmed };
+  }
+
+  /** The owner's Tally minutes, through the same connection. */
+  tally(): TallyDays {
+    return new TallyDays(this.db);
   }
 
   /** The owner's wants, through the same connection and planning day. */

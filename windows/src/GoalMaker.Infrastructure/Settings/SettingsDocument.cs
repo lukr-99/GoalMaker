@@ -57,4 +57,8 @@ public sealed record SettingsDocument
     public string? WeeklyBackupFolder { get; init; }
 
     public DateTimeOffset? WeeklyBackupWritten { get; init; }
+
+    public bool TallyOn { get; init; }
+
+    public string? DeviceId { get; init; }
 }

@@ -2,6 +2,7 @@ package com.goalmaker.app.domain.notes
 
 import com.goalmaker.app.contracts.ContractFiles
 import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -26,6 +27,7 @@ class LightMarkdownContractTest {
                             link = span["link"]?.jsonPrimitive?.content,
                         )
                     },
+                    heading = block["heading"]?.jsonPrimitive?.int ?: 0,
                 )
             }
             assertEquals(case.getValue("name").jsonPrimitive.content, expected, LightMarkdown.parse(case.getValue("text").jsonPrimitive.content))

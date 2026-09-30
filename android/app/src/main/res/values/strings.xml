@@ -578,6 +578,11 @@
     <string name="review_reminder_title_weekly">Weekly review</string>
     <string name="review_reminder_title_monthly">Monthly review</string>
     <string name="review_reminder_text">A quarter of an hour to look back and set what comes next.</string>
+    <string name="review_reminder_letter_weekly">Your letter for the week is here.</string>
+    <string name="review_reminder_letter_monthly">Your letter for the month is here.</string>
+    <string name="reviews_letter">Letter</string>
+    <string name="reviews_letter_by_claude">by Claude</string>
+    <string name="reviews_continue">Continue</string>
     <string name="review_reminder_start">Review</string>
     <string name="review_reminder_skip">Not now</string>
     <string name="settings_weekly_review">Weekly review reminder</string>
@@ -736,6 +741,8 @@
     <string name="activity_habit_pause">a habit pause</string>
     <string name="activity_want">the want “%1$s”</string>
     <string name="activity_want_cooldowns">the want cooldowns</string>
+    <string name="activity_tally_category">the Tally category “%1$s”</string>
+    <string name="activity_tally_rule">a Tally rule</string>
     <string name="activity_bought">%1$s bought %2$s</string>
     <string name="activity_skipped">%1$s skipped %2$s</string>
     <string name="activity_paused">%1$s paused %2$s</string>
@@ -872,4 +879,12 @@
     <string name="wants_ready_text">The cooldown is over. Still want it?</string>
     <string name="settings_wants_ready">Wants ready</string>
     <string name="settings_wants_ready_hint">Once a day, the wants whose cooldown ended.</string>
+    <string name="settings_tally">Tally</string>
+    <string name="settings_tally_switch">Count where phone time goes</string>
+    <string name="settings_tally_hint">Adds up the minutes you spend in each kind of app, like video or chat, for each day. Only those minutes sync, never the apps.</string>
+    <string name="tally_access_title">Allow usage access</string>
+    <string name="tally_access_read">What is read: which apps were in front and for how long, from Android\'s own usage history, which keeps about a week. It stays on this phone.</string>
+    <string name="tally_access_syncs">What syncs: the minutes per category for each day, never the apps.</string>
+    <string name="tally_access_how">Find GoalMaker in the list, allow it, then come back.</string>
+    <string name="tally_access_open">Open usage access</string>
 </resources>

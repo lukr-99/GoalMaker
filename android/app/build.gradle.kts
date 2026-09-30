@@ -5,8 +5,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
  * Copies the files both apps share into generated assets, byte for byte, so the repository copies
  * stay the only ones anyone edits: the replica migrations as assets/replica/NNNN_name.sql and the
  * synced-table contract as assets/synced-tables.json (ADR 0007), the theme tokens as
- * assets/themes.json, the logo's shape as assets/logo.json and the variable fonts with their licenses
- * as assets/fonts/<family>/ (ADR 0008).
+ * assets/themes.json, the logo's shape as assets/logo.json, the review prompts and Tally's defaults as
+ * assets/prompts.json and assets/tally-rules.json, and the variable fonts with their licenses as
+ * assets/fonts/<family>/ (ADR 0008).
  */
 abstract class SharedAssets : DefaultTask() {
     @get:InputDirectory
@@ -29,6 +30,10 @@ abstract class SharedAssets : DefaultTask() {
     @get:PathSensitive(PathSensitivity.NONE)
     abstract val prompts: RegularFileProperty
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val tallyRules: RegularFileProperty
+
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val fonts: DirectoryProperty
@@ -48,6 +53,7 @@ abstract class SharedAssets : DefaultTask() {
         themes.get().asFile.copyTo(output.resolve("themes.json"))
         logo.get().asFile.copyTo(output.resolve("logo.json"))
         prompts.get().asFile.copyTo(output.resolve("prompts.json"))
+        tallyRules.get().asFile.copyTo(output.resolve("tally-rules.json"))
         val fontRoot = fonts.get().asFile
         fontRoot.walkTopDown()
             .filter { it.isFile && (it.extension == "ttf" || it.name == "OFL.txt") }
@@ -122,6 +128,7 @@ val sharedAssets = tasks.register<SharedAssets>("sharedAssets") {
     themes.set(repositoryRoot.resolve("contracts/design/themes.json"))
     logo.set(repositoryRoot.resolve("contracts/design/logo.json"))
     prompts.set(repositoryRoot.resolve("contracts/content/prompts.json"))
+    tallyRules.set(repositoryRoot.resolve("contracts/content/tally-rules.json"))
     fonts.set(repositoryRoot.resolve("fonts"))
     outputDirectory.set(layout.buildDirectory.dir("generated/shared-assets"))
 }

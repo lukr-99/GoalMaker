@@ -1,6 +1,6 @@
 # M8-10: Tally: data, categories and the sorting rules
 
-**Status:** todo · **Milestone:** M8
+**Status:** done · **Milestone:** M8
 
 ## Scope
 - Supabase migration 0017 and replica migration 0012 (ADR 0013; [tally](../../docs/tally.md)):
@@ -32,3 +32,30 @@
 ## Check
 - Emulator and Windows: the replicas migrate; nothing visible yet.
 - Endpoint: nothing yet.
+
+## Result
+
+2026-09-30, the server, the shared rules and both apps.
+
+- **Supabase 0017 and replica 0012:** `tally_days`, `tally_rules` and `tally_categories`, synced with
+  row security and tombstones. The server refuses a phone row with a project, a title or folder rule
+  on Android, and more than 1,440 minutes. Only rules and categories go through the activity log.
+  pgTAP (21 tests, one of them that a tally day's columns can't hold an app or a window), the full
+  and isolated 0016 to 0017 runs, the replica chain and the synced-tables check against the server
+  all pass. `backup.json` carries the three tables; both apps' backups follow the catalog.
+- **`contracts/content/tally-rules.json`:** 9 categories and 48 rules, checked by the new
+  `tools/check_tally_rules.py` in CI. Editors come before the title rules, so `youtube.ts` in VS Code
+  is still Coding.
+- **`contracts/vectors/tally.json`** (50 cases) and the same rules in `rules/tally.ts`, Kotlin and
+  C#: matching, editor folders (VS Code, Android Studio, Visual Studio), projects, idle, daily totals
+  with the rollover and overlaps, and the ids. The ports found three gaps in the first version, now
+  pinned: a phone sample never gets a project (not even from a rule), a folder rule never matches
+  without a folder, and the activity log names a category by its name and a rule by its pattern
+  (`activity.json`).
+- **Changed from the scope:** an editor's title only gives the folder's name, not its path, so "a
+  folder inside a project's" can't be told from a title; a project is found when exactly one
+  project's folder has that name, and two with the same name give none.
+- **`TallyList` on both apps:** rewrites this device's rows for a day (only what changed), reads
+  totals, and keeps the owner's categories and rules; each install makes its device id once.
+- **Checked:** 374 Android tests with build and lint, 495 Windows tests and `dotnet format`, 50 Deno
+  cases, pgTAP, the migration harness and repository validation. Nothing is visible in the apps yet.

@@ -32,7 +32,9 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `add_reminder`, `remove_reminder` | At a local time, or minutes before the task's time |
 | `add_step`, `check_step`, `update_step`, `remove_step` | A task's checklist |
 | `finish_plan_tomorrow`, `finish_review` | Records a ritual, which quiets its reminder on both devices |
-| `save_review_summary`, `get_review_summaries` | A review's summary, mood, energy and the reflections written in it |
+| `save_review_summary`, `get_review_summaries` | A review's summary, mood, energy and the reflections written in it; the summary is also the [Letter](letter.md) |
+| `get_review_digest` | One week or month in one JSON answer, for the Letter routine: done, left and overdue, goals, habits, the board, triggers, the review and last letter, the next period, wants and Tally's time. The week or month holding yesterday by default |
+| `get_time_tally` | Where time went on the phone and the PC ([Tally](tally.md)), by category, project or device, this week by default; never by app, since apps never leave the device |
 | `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
 | `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
@@ -121,16 +123,10 @@ $env:GOALMAKER_CONNECTOR_TEST = '1'; npx deno test --allow-read --allow-env --al
 
 CI runs both in the Supabase job.
 
-## A weekly summary routine
+## The weekly letter routine
 
-A scheduled Claude routine (or any assistant that can use MCP connectors) can leave a summary of the
-week waiting in GoalMaker (spec, story 75). Schedule it for Sunday evening with GoalMaker turned on
-and a prompt like this:
-
-> Use GoalMaker. Look at my week: get_completed_tasks for what I finished, get_today for what is
-> still open or overdue, and get_review_summaries for last week's summary. Write a short summary of
-> my week in plain words: what I got done, what slipped, and one focus for next week, in at most
-> six sentences. Save it with save_review_summary, kind weekly. Don't change any tasks.
-
-The summary is saved as the week's review (the `reviews` table, one row per week, so running it again
-replaces it) and shows in the activity log as made by Claude. The apps' review screens arrive in M4.
+A scheduled Claude routine can leave a letter about the week waiting in GoalMaker (spec, stories 75
+and 100): it reads the week with `get_review_digest`, writes the letter, and saves it with
+`save_review_summary`. The routine, its prompt and the owner's one-time setup are in
+[the Letter](letter.md). The letter is saved as the week's review (one row per week, so running it
+again replaces it), shows in the activity log as made by Claude, and both apps open the review on it.

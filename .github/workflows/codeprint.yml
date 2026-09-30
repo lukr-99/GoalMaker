@@ -35,6 +35,9 @@ jobs:
       - name: The review prompt library is sound
         run: python tools/check_prompts.py
 
+      - name: The Tally defaults are sound
+        run: python tools/check_tally_rules.py
+
       - name: Every control has something a screen reader can read
         run: python tools/check_accessibility.py
 

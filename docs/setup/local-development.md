@@ -35,8 +35,9 @@ GoalMaker's stack uses ports 553xx, so it runs beside other local Supabase proje
 stack and keeps its data; add `--no-backup` to drop it.
 
 If Docker Desktop won't start with "The file cannot be accessed by the system" about a socket in
-`%LOCALAPPDATA%\Docker\run` or `%LOCALAPPDATA%\docker-secrets-engine`, rename that folder (for
-example to `run.stale`) and start Docker again; it recreates it.
+`%LOCALAPPDATA%\Docker\run` or `%LOCALAPPDATA%\docker-secrets-engine`, it was probably started
+from inside a packaged app such as Claude's desktop app ([pitfalls](../pitfalls.md)). Quit it and
+start it through Explorer: `explorer.exe "C:\Program Files\Docker\Docker\Docker Desktop.exe"`.
 
 ## Android
 

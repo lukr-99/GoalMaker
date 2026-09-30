@@ -23,6 +23,10 @@ import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderLook
 import com.goalmaker.app.application.planning.ReviewList
+import com.goalmaker.app.application.planning.ReviewRules
+import com.goalmaker.app.application.planning.TallyDefaults
+import com.goalmaker.app.application.planning.TallyList
+import com.goalmaker.app.application.planning.TallyTracker
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -55,6 +59,7 @@ import com.goalmaker.app.data.connector.PostgrestConnectorLinks
 import com.goalmaker.app.data.diagnostics.CrashLog
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
 import com.goalmaker.app.data.planning.ReminderNotifications
+import com.goalmaker.app.data.planning.UsageStatsSource
 import com.goalmaker.app.data.replica.ReplicaFileName
 import com.goalmaker.app.data.replica.ReplicaMigrator
 import com.goalmaker.app.data.replica.SqliteReplica
@@ -126,6 +131,9 @@ class AppGraph(context: Context) {
 
     /** The review prompts the app ships (docs/reviews.md). */
     val prompts: PromptLibrary = PromptLibrary.load(appContext.assets.open("prompts.json"))
+
+    /** The Tally categories and rules the app ships (docs/tally.md). */
+    val tallyDefaults: TallyDefaults = TallyDefaults.load(appContext.assets.open("tally-rules.json"))
 
     // A dev build skips sign-in and keeps its rows on the phone unless Settings → Developer turns
     // signing in back on; a release build always signs in and syncs (docs/sign-in.md).
@@ -257,6 +265,17 @@ class AppGraph(context: Context) {
     val habits = HabitList(replica, newRows, sync::request)
     val reviews = ReviewList(replica, newRows, sync::request)
     val wants = WantList(replica, newRows, sync::request, ::today)
+    val tally = TallyList(replica, newRows, sync::request, settings::tallyDevice)
+
+    /** Tally on this phone (docs/tally.md): counts nothing until the owner turns it on and grants usage access. */
+    val tallyTracker = TallyTracker(
+        usage = UsageStatsSource(appContext),
+        tally = tally,
+        defaults = tallyDefaults.rules,
+        settings = settings,
+        now = Instant::now,
+        zone = ZoneId::systemDefault,
+    )
     val projects = ProjectList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 
@@ -369,6 +388,7 @@ class AppGraph(context: Context) {
                     appLock.cameBack()
                     if (signedIn) {
                         if (!localOnly) changeFeed.start()
+                        scope.launch(io) { if (replicaOpened()) tallyTracker.track() }
                         sync.request()
                     }
                 }
@@ -422,6 +442,8 @@ class AppGraph(context: Context) {
         val session = auth.session.first { it != AuthSession.Loading } as? AuthSession.SignedIn ?: return true
         // The worker can come before the sign-in is handled; someone else's rows never go up.
         accountSync.prepare(session.userId)
+        // Tally's totals go out with this push (docs/tally.md).
+        withContext(io) { tallyTracker.track() }
         val reached = !sync.syncNow().offline
         // What came in may change what the home screen shows (docs/widgets.md).
         Widgets.refresh(appContext)
@@ -480,10 +502,22 @@ class AppGraph(context: Context) {
         look.reminders.forEach(reminderNotifications::show)
         look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
         look.weeklyReview?.let { day ->
-            reminderNotifications.showReview(RitualRunList.WEEKLY_REVIEW, day, "weekly", ReviewReminder.periodStart("weekly", day))
+            reminderNotifications.showReview(
+                RitualRunList.WEEKLY_REVIEW,
+                day,
+                "weekly",
+                ReviewReminder.periodStart("weekly", day),
+                letter = ReviewRules.letterWaiting("weekly", day, reviews.all()),
+            )
         }
         look.monthlyReview?.let { day ->
-            reminderNotifications.showReview(RitualRunList.MONTHLY_REVIEW, day, "monthly", ReviewReminder.periodStart("monthly", day))
+            reminderNotifications.showReview(
+                RitualRunList.MONTHLY_REVIEW,
+                day,
+                "monthly",
+                ReviewReminder.periodStart("monthly", day),
+                letter = ReviewRules.letterWaiting("monthly", day, reviews.all()),
+            )
         }
         look.wants?.let { due ->
             val byId = wants.all().associateBy { it.id }

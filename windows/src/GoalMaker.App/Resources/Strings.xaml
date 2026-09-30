@@ -162,6 +162,8 @@
     <sys:String x:Key="Activity.Bought">{0} bought {1}</sys:String>
     <sys:String x:Key="Activity.Want">the want “{0}”</sys:String>
     <sys:String x:Key="Activity.WantCooldowns">the want cooldowns</sys:String>
+    <sys:String x:Key="Activity.TallyCategory">the Tally category “{0}”</sys:String>
+    <sys:String x:Key="Activity.TallyRule">a Tally rule</sys:String>
     <sys:String x:Key="Activity.Reopened">{0} reopened {1}</sys:String>
     <sys:String x:Key="Activity.Moved">{0} moved {1} to {2}</sys:String>
     <sys:String x:Key="Activity.MovedOff">{0} took the day off {1}</sys:String>
@@ -459,6 +461,10 @@
     <sys:String x:Key="Settings.StartupProfilesFailed">Startup Profiles could not be reached. Open it once, then try again.</sys:String>
     <sys:String x:Key="Settings.MiniWindows">Mini windows</sys:String>
     <sys:String x:Key="Settings.MiniWindowsHint">Small windows you can keep on the desktop while you work. Pin one to keep it above other apps; it remembers where you left it.</sys:String>
+    <sys:String x:Key="Settings.Tally">Tally</sys:String>
+    <sys:String x:Key="Settings.TallyOn">Tally where my time goes on this PC</sys:String>
+    <sys:String x:Key="Settings.TallyKept">GoalMaker notes the app and window in front and keeps that record on this PC for 30 days. The clock stops after 5 minutes without input, unless it is a video, and while the PC is locked or asleep.</sys:String>
+    <sys:String x:Key="Settings.TallySynced">Only the minutes per category and project for each day sync. App names and window titles never leave this PC.</sys:String>
     <sys:String x:Key="Mini.Today">Today</sys:String>
     <sys:String x:Key="Mini.Habits">Habits</sys:String>
     <sys:String x:Key="Mini.OpenThis">Open this in a mini window</sys:String>
@@ -630,6 +636,8 @@
     <sys:String x:Key="Reviews.ReminderTitleWeekly">Weekly review</sys:String>
     <sys:String x:Key="Reviews.ReminderTitleMonthly">Monthly review</sys:String>
     <sys:String x:Key="Reviews.ReminderText">A quarter of an hour to look back and set what comes next.</sys:String>
+    <sys:String x:Key="Reviews.ReminderLetterWeekly">Your letter for the week is here.</sys:String>
+    <sys:String x:Key="Reviews.ReminderLetterMonthly">Your letter for the month is here.</sys:String>
     <sys:String x:Key="Reviews.ReminderStart">Review</sys:String>
     <sys:String x:Key="Reviews.ReminderSkip">Not now</sys:String>
     <sys:String x:Key="Settings.WeeklyReview">Weekly review reminder</sys:String>
@@ -706,6 +714,10 @@
     <sys:String x:Key="Wants.StatusBought">bought</sys:String>
     <sys:String x:Key="Wants.StatusDropped">dropped</sys:String>
     <sys:String x:Key="Wants.ByClaude">by Claude</sys:String>
+    <sys:String x:Key="Reviews.LetterByClaude">by Claude</sys:String>
+    <sys:String x:Key="Reviews.Continue">Continue</sys:String>
+    <sys:String x:Key="Reviews.Letter">Letter</sys:String>
+
     <sys:String x:Key="Wants.Why">WHY</sys:String>
     <sys:String x:Key="Wants.Checked">LAST PRICE FOUND</sys:String>
     <sys:String x:Key="Wants.Note">NOTE</sys:String>

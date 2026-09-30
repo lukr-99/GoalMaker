@@ -37,6 +37,7 @@ class ReviewsViewModel(
             lastWeekStart = ReviewLookBack.previousStart(ReviewRules.WEEKLY, ReviewRules.periodStart(ReviewRules.WEEKLY, today)),
             lastMonthStart = ReviewLookBack.previousStart(ReviewRules.MONTHLY, ReviewRules.periodStart(ReviewRules.MONTHLY, today)),
             past = all.filter(ReviewItem::written),
+            letters = all.mapNotNull { review -> ReviewRules.letterPreview(review.summary)?.let { review.id to it } }.toMap(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReviewsUiState())
 

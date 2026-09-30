@@ -7,8 +7,8 @@ using GoalMaker.Core.Notes;
 namespace GoalMaker.App.Controls;
 
 /// <summary>
-/// A task's notes in light Markdown (docs/archive.md): one text line per block, list items with a
-/// bullet, bold, italic, and links that open in the browser.
+/// A task's notes or a letter in light Markdown (docs/archive.md): one text line per block, headings
+/// in a larger semibold, list items with a bullet, bold, italic, and links that open in the browser.
 /// </summary>
 public sealed class MarkdownView : StackPanel
 {
@@ -33,6 +33,13 @@ public sealed class MarkdownView : StackPanel
         foreach (var block in LightMarkdown.Parse(Markdown ?? string.Empty))
         {
             var line = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 2) };
+            if (block.Heading > 0)
+            {
+                line.FontSize = block.Heading switch { 1 => 20, 2 => 17, _ => 15 };
+                line.FontWeight = FontWeights.SemiBold;
+                line.Margin = new Thickness(0, block.Heading == 1 ? 12 : 8, 0, 4);
+            }
+
             if (block.Bullet)
             {
                 line.Inlines.Add(new Run("\u2022  "));

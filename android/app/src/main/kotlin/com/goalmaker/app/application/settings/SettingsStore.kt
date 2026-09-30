@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
- * hours, the evening reminder, the pinned places, the app lock and, in dev builds, a backend
+ * hours, the evening reminder, the pinned places, the app lock, Tally and, in dev builds, a backend
  * override.
  */
 interface SettingsStore {
@@ -68,6 +68,19 @@ interface SettingsStore {
     fun remindedUntil(): Instant?
 
     fun setRemindedUntil(instant: Instant)
+
+    /** This install's random id, made the first time it is asked for, that names its Tally rows (docs/tally.md). */
+    fun tallyDevice(): String
+
+    /** Whether Tally counts which apps this phone has in front (docs/tally.md); off until the owner turns it on. */
+    val tallyOn: StateFlow<Boolean>
+
+    fun setTallyOn(on: Boolean)
+
+    /** How far Tally has read the phone's usage history; null before its first read. */
+    fun tallyReadUntil(): Instant?
+
+    fun setTallyReadUntil(instant: Instant?)
 
     /** Dev builds only: another Supabase project to use from the next app start. */
     fun backendOverride(): BackendEnvironment?

@@ -25,6 +25,7 @@ import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.domain.navigation.PlaceRules
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
+import com.goalmaker.app.ui.settings.TallyViewModel
 import com.goalmaker.app.ui.activity.ActivityKey
 import com.goalmaker.app.ui.activity.ActivityScreen
 import com.goalmaker.app.ui.activity.ActivityViewModel
@@ -365,6 +366,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenActivity = { backStack.add(ActivityKey) },
                             problems = problems,
                             onProblemsRead = graph.problems::read,
+                            tally = viewModel { TallyViewModel(graph.tallyTracker, graph.io) },
                         )
                     }
                     entry<ConnectorKey> {

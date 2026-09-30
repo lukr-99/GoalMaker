@@ -9,10 +9,17 @@
     <ProjectReference Include="..\GoalMaker.Core\GoalMaker.Core.csproj" />
   </ItemGroup>
 
+  <!--
+    SystemEvents (lock, unlock, sleep and wake) for Tally's foreground source, and DPAPI for the session.
+    The app runs on this framework anyway.
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageReference Include="Supabase" Version="8.1.1" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
   </ItemGroup>
 
   <!-- The shared replica schema, synced-table contract, theme tokens and logo, built in (ADR 0007, 0008). -->
@@ -27,6 +34,8 @@
                       LogicalName="GoalMaker.Contracts.logo.json" />
     <EmbeddedResource Include="$(RepositoryRoot)\contracts\content\prompts.json"
                       LogicalName="GoalMaker.Contracts.prompts.json" />
+    <EmbeddedResource Include="$(RepositoryRoot)\contracts\content\tally-rules.json"
+                      LogicalName="GoalMaker.Contracts.tally-rules.json" />
   </ItemGroup>
 
   <ItemGroup>

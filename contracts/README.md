@@ -4,7 +4,8 @@ Behavior that the Android app (Kotlin) and the Windows app (C#) must implement i
 here as data. Both test suites load the same files, so a disagreement fails CI in whichever app is
 wrong. The Claude connector's TypeScript rules (`supabase/functions/_shared/rules/rules_test.ts`) run
 the planning files too: lists, plan, recurrence, archive, the ritual ids in reminders, reviews, goals,
-habits and projects.
+habits and projects, and `wants_test.ts`, `digest_test.ts` and `tally_test.ts` run wants, the
+review digest and Tally.
 
 | File | Rule | Kotlin test | C# test |
 | --- | --- | --- | --- |
@@ -28,6 +29,7 @@ habits and projects.
 | `vectors/backup.json` | The export's format, what a restore refuses, and which row wins ([backup](../docs/backup.md)) | `BackupRulesContractTest` | `BackupRulesContractTests` |
 | `vectors/calendar.json` | The week and month grids and what lands on a day ([calendar](../docs/calendar.md)) | `CalendarRulesContractTest` | `CalendarRulesContractTests` |
 | `vectors/wants.json` | Want cooldowns, states, the ready notification, the stats block and the thresholds id ([wants](../docs/wants.md)) | `WantRulesContractTest` | `WantRulesContractTests` |
+| `vectors/tally.json` | Tally: which category and project time goes to, editor folders, idle, and daily totals and their ids ([tally](../docs/tally.md)) | `TallyRulesContractTest` | `TallyRulesContractTests` |
 | `vectors/navigation.json` | Pinned places, the phone's limit of four, stored pins and the Places count (ADR 0014) | `PlaceRulesContractTest` | `PlaceRulesContractTests` |
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |
 | `schemas/synced-tables.json` | Every synced column once, for both replicas and the JSON mapping | (`tools/check_synced_tables.py`) | (`tools/check_synced_tables.py`) |
@@ -37,6 +39,10 @@ habits and projects.
 `content/prompts.json` is not a vector file but shipped content: the review prompt library both
 apps and the connector read ([reviews](../docs/reviews.md)). `tools/check_prompts.py` validates it,
 and the rotation over it is pinned by `vectors/reviews.json`.
+
+`content/tally-rules.json` is shipped content too: Tally's default categories and sorting rules
+([tally](../docs/tally.md)). `tools/check_tally_rules.py` validates it, and the matching over it is
+pinned by `vectors/tally.json`.
 
 ## Rules for changing a contract
 
