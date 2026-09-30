@@ -199,6 +199,55 @@ export function dayTotals(intervals: TallyInterval[], startHour: number): TallyT
   );
 }
 
+/** A synced Tally row as the connector reads it: minutes, never an app or a window. */
+export interface TallyRow {
+  day: Day;
+  deviceKind: "phone" | "pc";
+  category: string;
+  projectId: string | null;
+  minutes: number;
+}
+
+export type TallyGrouping = "category" | "project" | "device";
+
+/** One line of a grouping: the key (a category, a project id or null, a device kind) and its minutes. */
+export interface TallyGroup {
+  key: string | null;
+  minutes: number;
+}
+
+/** A default category's name, from its key: coding is Coding (contracts/content/tally-rules.json). */
+export function defaultCategoryName(key: string): string {
+  return key.length === 0 ? key : key[0].toUpperCase() + key.slice(1);
+}
+
+/**
+ * The rows' minutes grouped by category, project or device kind, most first, then by key with none
+ * last. Every device's minutes add up, so a phone and a PC in the same category count together.
+ */
+export function groupTally(rows: TallyRow[], by: TallyGrouping): TallyGroup[] {
+  const sums = new Map<string | null, number>();
+  for (const row of rows) {
+    const key = by === "category" ? row.category : by === "project" ? row.projectId : row.deviceKind;
+    sums.set(key, (sums.get(key) ?? 0) + row.minutes);
+  }
+  return [...sums]
+    .map(([key, minutes]) => ({ key, minutes }))
+    .filter((group) => group.minutes > 0)
+    .sort((a, b) =>
+      b.minutes - a.minutes ||
+      (a.key === null ? 1 : b.key === null ? -1 : a.key < b.key ? -1 : a.key > b.key ? 1 : 0)
+    );
+}
+
+/** "3 h 5 min", "45 min" or "2 h". */
+export function durationText(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest} min`;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} min`;
+}
+
 /** The id every device gives its row for a day, category and project, so rewriting a day replaces it. */
 export function tallyDayId(
   owner: string,

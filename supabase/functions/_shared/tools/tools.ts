@@ -28,6 +28,7 @@ import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
 import * as format from "./format.ts";
 import { digestTools } from "./digestTools.ts";
+import { tallyTools } from "./tallyTools.ts";
 import { wantTools } from "./wantTools.ts";
 
 /**
@@ -1585,4 +1586,5 @@ export const tools: Tool[] = [
   },
   ...wantTools,
   ...digestTools,
+  ...tallyTools,
 ];

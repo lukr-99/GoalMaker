@@ -33,7 +33,8 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `add_step`, `check_step`, `update_step`, `remove_step` | A task's checklist |
 | `finish_plan_tomorrow`, `finish_review` | Records a ritual, which quiets its reminder on both devices |
 | `save_review_summary`, `get_review_summaries` | A review's summary, mood, energy and the reflections written in it; the summary is also the [Letter](letter.md) |
-| `get_review_digest` | One week or month in one JSON answer, for the Letter routine: done, left and overdue, goals, habits, the board, triggers, the review and last letter, the next period and wants. The week or month holding yesterday by default |
+| `get_review_digest` | One week or month in one JSON answer, for the Letter routine: done, left and overdue, goals, habits, the board, triggers, the review and last letter, the next period, wants and Tally's time. The week or month holding yesterday by default |
+| `get_time_tally` | Where time went on the phone and the PC ([Tally](tally.md)), by category, project or device, this week by default; never by app, since apps never leave the device |
 | `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
 | `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
 | `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |

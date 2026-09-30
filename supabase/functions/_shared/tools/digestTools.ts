@@ -6,6 +6,7 @@ import { defaultPeriod, type Digest, type DigestKind, periodOf } from "../rules/
 import { periodEnd as goalPeriodEnd } from "../rules/goals.ts";
 import type { TaskItem } from "../rules/task.ts";
 import * as format from "./format.ts";
+import { tallySummary } from "./tallyTools.ts";
 import type { Tool } from "./tools.ts";
 
 /**
@@ -128,7 +129,8 @@ export const digestTools: Tool[] = [
       "period's goals against where they should be by now, each habit's met, missed and skipped periods and its " +
       "streak, project items done, what the period's data asks about, this period's review so far and the last " +
       "period's letter, what the next period already holds, and the wants that became ready, were decided, or " +
-      "are ready next. Without a period it is the week or month holding yesterday, so a Sunday evening run and a " +
+      "are ready next, and where the time went (Tally minutes by category, project and device, when Tally is on). " +
+      "Without a period it is the week or month holding yesterday, so a Sunday evening run and a " +
       "Monday morning run both mean the week just finishing. Pass the period's start to save_review_summary.",
     input: {
       kind: z.enum(["weekly", "monthly"]).optional().describe("weekly or monthly; weekly by default."),
@@ -150,7 +152,9 @@ export const digestTools: Tool[] = [
       const found = await reviewDigest(planner, period);
       const names = format.names(await planner.areas(), [], new Map(), await planner.projects());
       const days = await completedDays(planner, found);
-      return JSON.stringify(digestJson(found, names, (task) => days.get(task.id) ?? null), null, 2);
+      // Tally's minutes for the period (docs/tally.md): categories, projects and devices, never apps.
+      const tally = await tallySummary(planner, await planner.tally().between(period.start, period.end));
+      return JSON.stringify({ ...digestJson(found, names, (task) => days.get(task.id) ?? null), tally }, null, 2);
     },
   },
 ];
