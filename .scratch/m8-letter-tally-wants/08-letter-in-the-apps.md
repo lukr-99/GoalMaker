@@ -1,6 +1,6 @@
 # M8-08: The Letter in both apps
 
-**Status:** in progress (the emulator and Windows checks are left) · **Milestone:** M8
+**Status:** done · **Milestone:** M8
 
 ## Scope
 - Android, then Windows (spec, stories 101 and 102; [letter](../../docs/letter.md)):
@@ -57,3 +57,7 @@
 - **Left:** the emulator and Windows checks: a summary saved through the connector, the reminder
   mentioning it, a long letter scrolling, the four themes and the largest text size, and the reading
   width in a wide and a narrow window.
+- **Checked (2026-09-29):** on the emulator and the Windows dev app against the local stack, a letter
+  saved through the connector opened the review on both, scrolled with the top bar folding away on
+  the phone, took Enter and Back on Windows and wrapped in a narrow window; the reminder rang with
+  the letter's words and opened it.

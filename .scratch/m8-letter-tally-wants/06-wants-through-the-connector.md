@@ -1,6 +1,6 @@
 # M8-06: Wants through the connector
 
-**Status:** in progress (the device check is left) · **Milestone:** M8
+**Status:** done · **Milestone:** M8
 
 ## Scope
 - Tools over `rules/wants.ts` (spec, story 108): `get_wants` (by state), `add_want` (the cooldown
@@ -45,3 +45,6 @@
   tests, with a Windows test for "by Claude".
 - **Left:** the emulator and Windows check that a want Claude adds and decides appears and settles
   on both.
+- **Checked (2026-09-28):** on the emulator and the Windows dev app against the local stack, a want
+  Claude added and decided showed by Claude with its price check and note on both. On the cloud
+  (2026-09-30), `get_wants` answers through the reconnected connector.
