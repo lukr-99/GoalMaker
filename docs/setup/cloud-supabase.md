@@ -153,3 +153,25 @@ another, the code is accepted by Resend and never arrives. A domain of your own 
 - **Table Editor → profiles:** one row, yours.
 - **Storage:** a private bucket `releases` (created by migration 0002).
 - A release build signs in and shows your email in Settings.
+
+## 8. The quick chat's model key
+
+The quick chat ([assistant.md](../assistant.md)) needs a Gemini API key. Until it is set, the chat
+answers "unavailable" and everything else works.
+
+1. In [Google AI Studio](https://aistudio.google.com/apikey), sign in and create an API key. The free
+   tier is enough; don't turn billing on for it.
+2. Give it to the project as a function secret, and deploy the function:
+
+   ```powershell
+   npx supabase secrets set GEMINI_API_KEY=<the key> --project-ref <project ref>
+   npx supabase functions deploy assistant --project-ref <project ref>
+   npx supabase secrets list --project-ref <project ref>     # shows the name, never the value
+   ```
+
+   To keep the key out of your shell history, put `GEMINI_API_KEY=<the key>` in a file outside the
+   repository and run `npx supabase secrets set --env-file <that file> --project-ref <project ref>`
+   instead, then delete the file. Never put the key in the repository, the apps or a committed file.
+3. Push migration 0019 first (`npx supabase db push`, step 2): the function counts its limits there.
+
+To change the key, set it again; to turn the chat off, `npx supabase secrets unset GEMINI_API_KEY`.

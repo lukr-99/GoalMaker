@@ -13,7 +13,7 @@ signed update channel on GitHub Releases (ADR 0010).
   Android app  ──┐                           ┌── Claude apps (MCP, the connector's secret link)
   (Kotlin)       │  HTTPS, user session      │
                  ├──────────► Supabase ◄─────┘
-  Windows app  ──┤   Auth · Postgres (RLS) · Realtime · Edge Functions (connector)
+  Windows app  ──┤   Auth · Postgres (RLS) · Realtime · Edge Functions (connector, assistant)
   (.NET/WPF)     │              ▲
                  │              │ migrations, deploys (CLI)
                  │       supabase/ folder
@@ -49,16 +49,19 @@ composition root creates everything
   `planning/`: the lists that read and write the replica (`TaskList`, `StepList`, `GoalList`,
   `HabitList`, `ReviewList`, `ProjectList`, `ReminderList`, `RitualRunList`) and the rules beside
   them (`ListRules`, `PlanRules`, `ArchiveRules`, `GoalRules`, `HabitRules`, `ReviewRules`,
-  `ReviewLookBack`, `StatsRules`, `ProjectRules`, `CalendarRules`, `ReminderRules`).
+  `ReviewLookBack`, `StatsRules`, `ProjectRules`, `CalendarRules`, `ReminderRules`),
+  `assistant/` (the `AssistantClient` port for the quick chat and its replies).
 - `data/`: `SupabaseAuthGateway`, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`,
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
   (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
   `WorkManagerSyncScheduler`), `planning/` (`AlarmReminderScheduler`, `ReminderNotifications`,
-  `ReminderReceiver`), `activity/` and `connector/` (PostgREST readers), `diagnostics/CrashLog`.
+  `ReminderReceiver`), `activity/` and `connector/` (PostgREST readers), `assistant/SupabaseAssistantClient`,
+  `diagnostics/CrashLog`.
 - `ui/`: `places/` (the Places hub and its live tiles, ADR 0014),
   `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `components/`
   (the shared ring, chips, emoji field and logo), `signin/`, `lists/` (Today, Tomorrow, Inbox),
+  `chat/` (the quick chat's switch and thread in the composer),
   `plan/`, `task/`, `goals/`, `habits/`, `review/`, `stats/`, `projects/`, `calendar/`, `archive/`,
   `activity/`, `areas/`, `connector/`, `settings/`, `share/` (the sheet a share from another app
   opens), `widget/` (the Glance home screen widgets), `nav/` (Navigation 3 back stack).
@@ -69,11 +72,12 @@ composition root creates everything
 
 - `GoalMaker.Core` (net10.0): the same domain and application code as Android's, in C#
   (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`,
-  `Notes`, `Startup` (starting with Windows and the Startup Profiles contract)).
+  `Notes`, `Startup` (starting with Windows and the Startup Profiles contract), `Assistant` (the
+  quick chat's client port and replies)).
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
   `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
-  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Planning/TimerReminderScheduler` and
+  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Assistant/SupabaseAssistantClient`, `Planning/TimerReminderScheduler` and
   `Startup/` (GoalMaker's own value under Run, and finding Startup Profiles).
 - `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
   `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon with the Today
@@ -121,11 +125,17 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 
 - `connector/`: the Claude connector, a stateless MCP server (docs/connector.md). It resolves the
   secret in its URL to the owner and runs every call in one transaction as that owner.
-- `_shared/`: what the connector (and the M7 quick chat) share: `owner.ts` (the owner-scoped
+- `assistant/`: the quick chat (M7, docs/assistant.md). The apps call it with the owner's own session
+  (the gateway checks the JWT); it runs a tool loop over the connector's tools minus the ones that
+  delete, with Gemini's free tier behind the `ChatProvider` interface in `_shared/assistant/`, each
+  tool in a transaction as the owner, logged as the owner's change through the chat. Its limits are
+  counted in `assistant_usage`; the `GEMINI_API_KEY` function secret holds the model key.
+- `_shared/`: what the connector and the quick chat share: `owner.ts` (the owner-scoped
   transaction), `planner/` (data access that does what the apps' lists do), `tools/` and
-  `prompts/`, and `rules/`, the planning rules ported from Kotlin and C#, which run the same vectors
-  in `contracts/vectors/`. `deno task test` runs them; `connector/endpoint_test.ts` drives the
-  running function on the local stack.
+  `prompts/`, `assistant/` (the chat's provider interface, Gemini and fake providers, prompt and
+  tool loop), and `rules/`, the planning rules ported from Kotlin and C#, which run the same vectors
+  in `contracts/vectors/`. `deno task test` runs them; `connector/endpoint_test.ts` and
+  `assistant/endpoint_test.ts` drive the running functions on the local stack.
 
 ## Data flow
 

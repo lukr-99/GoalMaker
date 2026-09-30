@@ -2,7 +2,8 @@
 
 Every change to a synced row is written to the server's activity log by a trigger, with who made it
 (you, Claude through the [connector](connector.md), or GoalMaker itself), the row before and after,
-and when (spec, stories 19 and 72). The log isn't part of the replica, so the apps read it online,
+and when (spec, stories 19 and 72). A change made through the [quick chat](assistant.md) is the
+owner's, and its entry also says it came through the chat (`via = 'chat'`, migration 0019). The log isn't part of the replica, so the apps read it online,
 the latest 60 changes, newest first. Entries older than 90 days are purged with the tombstones.
 
 ## What a change says
