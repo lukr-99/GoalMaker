@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday. 'rotation': the prompt ids a review asks, from contracts/content/prompts.json: the prompts that suit the review's kind and carry no trigger, walking the categories in file order from the one after the last id in 'shown', taking from each the prompt of that category that was shown longest ago (never shown first, then file order); with 'category' the case asks that one category for one prompt instead. 'reactive': the triggered prompts the period's facts call for, in this order, each with the habit, task or goal that triggered it: a goal at least 0.2 behind 'expected' (furthest behind first), a habit missing at least half of its periods when it has two or more (most missed first), a task moved three times or more (most moves first), the habit with a streak of 7 or more (longest first), a goal at least 0.2 ahead, 'goals/none' when the period had no goals, and, for weekly and monthly reviews only, 'periods/quiet' when the done tasks are at most half the average and 'periods/busy' when they are at least one and a half times it; ties are broken by name. 'promptTexts': a prompt's text with '{period}' replaced by week, month or year and '{subject}' by the subject.",
+  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday. 'rotation': the prompt ids a review asks, from contracts/content/prompts.json: the prompts that suit the review's kind and carry no trigger, walking the categories in file order from the one after the last id in 'shown', taking from each the prompt of that category that was shown longest ago (never shown first, then file order); with 'category' the case asks that one category for one prompt instead. 'reactive': the triggered prompts the period's facts call for, in this order, each with the habit, task or goal that triggered it: a goal at least 0.2 behind 'expected' (furthest behind first), a habit missing at least half of its periods when it has two or more (most missed first), a task moved three times or more (most moves first), the habit with a streak of 7 or more (longest first), a goal at least 0.2 ahead, 'goals/none' when the period had no goals, and, for weekly and monthly reviews only, 'periods/quiet' when the done tasks are at most half the average and 'periods/busy' when they are at least one and a half times it; ties are broken by name. 'promptTexts': a prompt's text with '{period}' replaced by week, month or year and '{subject}' by the subject. 'digest': the review digest the connector's get_review_digest and review prompts are built from (docs/letter.md), run by the TypeScript rules only. Its 'periods' are the period a digest means when none is named: the one holding yesterday's planning day, from the owner's local time and the hour their day starts. Its 'week' is a small fixed week, 2026-08-17 to 2026-08-23, read on 2026-08-24, and what each section of its digest holds, by id. 'done' is in the order tasks were done; 'left' and 'earlier' are open tasks planned inside the period and before it, by day; 'overdue' is every open task planned before today; 'slipping' the left ones moved three times or more; a habit's 'missed' counts missed periods only, while the facts the triggers read count every period not met; 'finished' are project items done in the period; 'nextDeadlines' is by deadline; the wants are those whose cooldown ends in the period, those decided in it, and the undecided ones whose cooldown ends in the next one.",
   "namespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
   "ids": [
     {
@@ -432,5 +432,326 @@
       "subject": "Run 80 km",
       "expect": "“Run 80 km” is ahead of plan. What is working?"
     }
-  ]
+  ],
+  "digest": {
+    "periods": [
+      {
+        "name": "Sunday evening means the week ending now",
+        "kind": "weekly",
+        "local": "2026-08-23T18:00",
+        "startHour": 4,
+        "start": "2026-08-17",
+        "end": "2026-08-23"
+      },
+      {
+        "name": "Monday morning means the week just gone",
+        "kind": "weekly",
+        "local": "2026-08-24T08:00",
+        "startHour": 4,
+        "start": "2026-08-17",
+        "end": "2026-08-23"
+      },
+      {
+        "name": "02:00 on a Tuesday is still Monday, so still the week just gone",
+        "kind": "weekly",
+        "local": "2026-08-25T02:00",
+        "startHour": 4,
+        "start": "2026-08-17",
+        "end": "2026-08-23"
+      },
+      {
+        "name": "Tuesday after the rollover means this week",
+        "kind": "weekly",
+        "local": "2026-08-25T05:00",
+        "startHour": 4,
+        "start": "2026-08-24",
+        "end": "2026-08-30"
+      },
+      {
+        "name": "the 1st of a month means the month just gone",
+        "kind": "monthly",
+        "local": "2026-09-01T07:00",
+        "startHour": 4,
+        "start": "2026-08-01",
+        "end": "2026-08-31"
+      },
+      {
+        "name": "the middle of a month means that month",
+        "kind": "monthly",
+        "local": "2026-08-20T12:00",
+        "startHour": 4,
+        "start": "2026-08-01",
+        "end": "2026-08-31"
+      },
+      {
+        "name": "a February is 28 days",
+        "kind": "monthly",
+        "local": "2027-03-01T09:00",
+        "startHour": 4,
+        "start": "2027-02-01",
+        "end": "2027-02-28"
+      }
+    ],
+    "week": {
+      "period": {
+        "kind": "weekly",
+        "start": "2026-08-17",
+        "end": "2026-08-23"
+      },
+      "today": "2026-08-24",
+      "tasks": [
+        {
+          "id": "t10",
+          "title": "Last week's errand",
+          "state": "done",
+          "plannedDate": "2026-08-11",
+          "completedAt": "2026-08-11T12:00:00.000000Z"
+        },
+        {
+          "id": "t11",
+          "title": "Book the dentist",
+          "state": "done",
+          "plannedDate": "2026-08-18",
+          "completedAt": "2026-08-18T09:00:00.000000Z",
+          "areaId": "health"
+        },
+        {
+          "id": "t12",
+          "title": "Prune the roses",
+          "state": "done",
+          "plannedDate": "2026-08-19",
+          "completedAt": "2026-08-19T16:00:00.000000Z",
+          "projectId": "garden"
+        },
+        {
+          "id": "t13",
+          "title": "Call the bank",
+          "state": "open",
+          "plannedDate": "2026-08-20",
+          "movedCount": 4
+        },
+        {
+          "id": "t14",
+          "title": "An old errand",
+          "state": "open",
+          "plannedDate": "2026-08-12"
+        },
+        {
+          "id": "t15",
+          "title": "Plan the trip",
+          "state": "open",
+          "plannedDate": "2026-08-25",
+          "deadline": "2026-08-28"
+        },
+        {
+          "id": "t16",
+          "title": "Let it go",
+          "state": "dropped",
+          "plannedDate": "2026-08-19"
+        },
+        {
+          "id": "t17",
+          "title": "Renew the passport",
+          "state": "open",
+          "deadline": "2026-08-27"
+        }
+      ],
+      "completedOn": {
+        "t10": "2026-08-11",
+        "t11": "2026-08-18",
+        "t12": "2026-08-19"
+      },
+      "goals": [
+        {
+          "id": "g20",
+          "title": "Run 20 km",
+          "horizon": "week",
+          "periodStart": "2026-08-17",
+          "mode": "number",
+          "target": 20,
+          "unit": "km"
+        },
+        {
+          "id": "g21",
+          "title": "Read a book",
+          "horizon": "week",
+          "periodStart": "2026-08-24",
+          "mode": "done"
+        },
+        {
+          "id": "g22",
+          "title": "Tidy the garden",
+          "horizon": "month",
+          "periodStart": "2026-08-01",
+          "mode": "done"
+        }
+      ],
+      "entries": {
+        "g20": [
+          5
+        ]
+      },
+      "habits": [
+        {
+          "id": "h30",
+          "name": "Read",
+          "cadence": "daily",
+          "startsOn": "2026-08-01"
+        },
+        {
+          "id": "h31",
+          "name": "Stretch",
+          "cadence": "daily",
+          "startsOn": "2026-08-17"
+        }
+      ],
+      "checkins": [
+        {
+          "habitId": "h30",
+          "day": "2026-08-17",
+          "value": 1
+        },
+        {
+          "habitId": "h30",
+          "day": "2026-08-18",
+          "value": 1
+        },
+        {
+          "habitId": "h31",
+          "day": "2026-08-17",
+          "value": 1
+        },
+        {
+          "habitId": "h31",
+          "day": "2026-08-18",
+          "value": 0,
+          "skipped": true
+        }
+      ],
+      "wants": [
+        {
+          "id": "w40",
+          "title": "Headphones",
+          "coolsUntil": "2026-08-18"
+        },
+        {
+          "id": "w41",
+          "title": "Kettle",
+          "coolsUntil": "2026-08-12",
+          "decision": "bought",
+          "decidedOn": "2026-08-20"
+        },
+        {
+          "id": "w42",
+          "title": "Tent",
+          "coolsUntil": "2026-08-25"
+        }
+      ],
+      "reviews": [
+        {
+          "kind": "weekly",
+          "periodStart": "2026-08-10",
+          "summary": "Last week was calm."
+        },
+        {
+          "kind": "weekly",
+          "periodStart": "2026-08-17",
+          "summary": "",
+          "mood": 4,
+          "energy": 3
+        }
+      ],
+      "expect": {
+        "done": [
+          "t11",
+          "t12"
+        ],
+        "left": [
+          "t13"
+        ],
+        "earlier": [
+          "t14"
+        ],
+        "overdue": [
+          "t13",
+          "t14"
+        ],
+        "slipping": [
+          "t13"
+        ],
+        "goals": [
+          {
+            "id": "g20",
+            "value": 5,
+            "fraction": 0.25,
+            "expected": 1
+          }
+        ],
+        "habits": [
+          {
+            "id": "h30",
+            "met": 2,
+            "missed": 5,
+            "skipped": 0,
+            "periods": 7,
+            "streak": 0
+          },
+          {
+            "id": "h31",
+            "met": 1,
+            "missed": 5,
+            "skipped": 1,
+            "periods": 7,
+            "streak": 0
+          }
+        ],
+        "finished": [
+          "t12"
+        ],
+        "triggers": [
+          {
+            "trigger": "goal_behind",
+            "subject": "Run 20 km"
+          },
+          {
+            "trigger": "habit_missed",
+            "subject": "Stretch"
+          },
+          {
+            "trigger": "task_slipping",
+            "subject": "Call the bank"
+          },
+          {
+            "trigger": "busy_period",
+            "subject": null
+          }
+        ],
+        "review": "2026-08-17",
+        "lastLetter": "2026-08-10",
+        "next": {
+          "start": "2026-08-24",
+          "end": "2026-08-30"
+        },
+        "nextTasks": [
+          "t15"
+        ],
+        "nextDeadlines": [
+          "t17",
+          "t15"
+        ],
+        "nextGoals": [
+          "g21"
+        ],
+        "wantsReady": [
+          "w40"
+        ],
+        "wantsDecided": [
+          "w41"
+        ],
+        "wantsReadyNext": [
+          "w42"
+        ]
+      }
+    }
+  }
 }

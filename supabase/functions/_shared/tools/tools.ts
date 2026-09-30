@@ -27,6 +27,7 @@ import { seriesOf } from "../rules/occurrences.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
 import * as format from "./format.ts";
+import { digestTools } from "./digestTools.ts";
 import { wantTools } from "./wantTools.ts";
 
 /**
@@ -1531,8 +1532,9 @@ export const tools: Tool[] = [
     title: "Save a review summary",
     description:
       "Saves the summary of a weekly or monthly review (a few sentences: wins, lessons, focus), for the week or " +
-      "month that contains the given day. Saving again for the same period replaces the summary. A scheduled " +
-      "routine can call this to leave the owner a weekly summary.",
+      "month that contains the given day. Saving again for the same period replaces the summary. It is also the " +
+      "Letter: a scheduled routine that wrote the owner a letter about the week from get_review_digest saves it " +
+      "here, with period set to the digest's period start, and both apps show it before the review.",
     input: {
       kind: z.enum(["weekly", "monthly"]).describe("weekly or monthly."),
       period: day.optional().describe("Any day in the week or month; today by default."),
@@ -1582,4 +1584,5 @@ export const tools: Tool[] = [
     },
   },
   ...wantTools,
+  ...digestTools,
 ];
