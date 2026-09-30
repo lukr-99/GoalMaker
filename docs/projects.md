@@ -55,7 +55,9 @@ can reopen one too. The rule is pinned by the `archive` group of `contracts/vect
 On the phone the board has two views, switched in its header and remembered on the device: one
 column at a time with tabs and counts, or the columns stacked with each section folding away (Done
 folded at first). On Windows the columns stay side by side, and each can fold to a narrow strip with
-its name and count.
+its name and count. A done item's menu has Archive, with Undo. In the list of archived items, one
+archived by hand can be put back, and one that left with time can be reopened into To do. The
+project's edit form sets the days: 7, 14, 30, 90 or never.
 
 ## Who made an item
 
@@ -75,8 +77,8 @@ made says "by Claude" in small print.
 
 ## In the apps
 
-Windows shows the four columns side by side as a board, Android the same items as a grouped list,
-one group per column with a move action. Android reaches Projects from the bottom bar, beside Today,
+Windows shows the four columns side by side as a board. Android shows one column at a time under
+tabs, or all four as a list with a section per column, and moves an item from its menu. Android reaches Projects from the bottom bar, beside Today,
 Tomorrow, the Inbox and the Calendar, and starts a new project from the + beside its project picker.
 Both offer the project list with its status, area, repository
 and folder, how many items each project still has waiting, and the milestones of the project on show.
