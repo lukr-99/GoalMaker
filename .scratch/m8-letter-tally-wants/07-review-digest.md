@@ -1,6 +1,6 @@
 # M8-07: The review digest through the connector
 
-**Status:** in progress (the check on the cloud project is left) · **Milestone:** M8
+**Status:** done · **Milestone:** M8
 
 ## Scope
 - `get_review_digest(kind = weekly | monthly, period?)`, read-only (spec, story 103; ADR 0012;
@@ -49,3 +49,6 @@
   and monthly (against the rule, since the function's clock can't be set; the Sunday and Monday
   cases are in the vectors), a bad period refused, and a monthly digest. The apps are untouched.
 - **Left:** the tool on the cloud project from a Claude chat, once the connector is deployed.
+- **Checked on the cloud (2026-09-30):** after 0017 and the connector's version 8, `get_review_digest`
+  from a Claude session returned the week with the owner's real tasks, habits and triggers, and an
+  empty `tally` while Tally is off.

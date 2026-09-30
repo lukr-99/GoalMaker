@@ -6,7 +6,8 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 
 ## Status
 
-**M0 to M5 are built.** What works today, on both apps unless it says otherwise:
+**M0 to M6 and M8 are built; 1.5.0 is the latest release.** What works today, on both apps unless it
+says otherwise:
 
 - **Delivery (M0):** sign-in with an emailed 6-digit code ([docs/sign-in.md](docs/sign-in.md)),
   sessions kept across restarts, a signed update channel on GitHub Releases that both apps verify
@@ -37,13 +38,21 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
   the pinnable Today and Habits mini windows on Windows
   ([docs/mini-windows.md](docs/mini-windows.md)), and starting with Windows, with Add to Startup
   Profiles when that app is installed ([docs/startup.md](docs/startup.md)).
+- **v1 (M6):** a versioned backup and a checked restore ([docs/backup.md](docs/backup.md)), updates
+  from the latest GitHub Release, the Problems place in Settings, and hardening: a session the server
+  refuses sends the app to sign-in with the outbox kept, and a replica that won't open says so.
+- **Wants, the Letter and Tally (M8):** pinned places and a Places hub with room to grow; Wants, a
+  wishlist where everything waits out a cooldown before it is bought or dropped
+  ([docs/wants.md](docs/wants.md)); the Letter, a weekly letter a Claude routine writes from
+  `get_review_digest` that opens the review ([docs/letter.md](docs/letter.md)); and Tally, where time
+  went on the phone and the PC by category and project, with only daily minutes leaving the device
+  ([docs/tally.md](docs/tally.md)).
 
-**Next:** M6's close-out, M7 (quick chat), then M8: a navigation with room to grow, Wants
-([docs/wants.md](docs/wants.md)), the Letter ([docs/letter.md](docs/letter.md)) and Tally
-([docs/tally.md](docs/tally.md)). GoalMaker is for personal use only (ADR 0011). The plan is in
+**Next:** M7, the quick chat in the composer (planned in `.scratch/m7-quick-chat/`, waiting on the
+owner's decisions). GoalMaker is for personal use only (ADR 0011). The plan is in
 [docs/roadmap.md](docs/roadmap.md).
 
-No release has been published yet. GoalMaker is built for one person, so there is no server of ours
+Releases are on GitHub, and both apps update from the latest one. GoalMaker is built for one person, so there is no server of ours
 to join: running it means standing up your own project, sender and signing keys, which
 [docs/setup/your-own-copy.md](docs/setup/your-own-copy.md) walks through from a clean clone.
 
@@ -98,9 +107,9 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
 - **Local data:** the Windows app keeps its session (DPAPI-encrypted), settings and crash log in
   `%LOCALAPPDATA%\GoalMaker` (`GoalMaker-dev` for dev builds); the Android app keeps its session,
   settings and its own `files/crash.log` in private app storage, excluded from Android backups.
-- **Backup:** a versioned full export and a checked restore arrive in M6, before any destructive
-  change is allowed. Until then, tasks live in the Supabase project (with its own backups on paid
-  plans) and in each device's replica; there is no export yet.
+- **Backup:** a versioned full export both apps read and a checked restore that merges and never
+  wipes, plus a weekly automatic export on Windows ([docs/backup.md](docs/backup.md)). The raw Tally
+  record never leaves its device and is in no backup; its daily minutes are.
 
 ## Delivery
 

@@ -27,10 +27,11 @@ planned, and the shared habit challenges idea was taken off the roadmap on 2026-
    projects through the connector, share to GoalMaker, the Windows mini windows and Add to Startup
    Profiles; checked through the endpoint against the local stack)
 10. **M6: v1.0** (planned as issues 2026-09-20; 1.0.0 published 2026-09-21, 1.2.0 on 2026-09-23 from
-    the public repository; backup and restore, the problems place and the release are built, and
-    the close-out below is what is left)
+    the public repository; the M6-06 hardening shipped in 1.5.0 on 2026-09-30, and the one close-out
+    item left is the main PC updating itself from a release)
 11. **M7: quick chat** (next; issues still to write in `.scratch/m7-quick-chat/`)
-12. **M8: Letter, Tally, Wants** (planned as issues 2026-09-28 in `.scratch/m8-letter-tally-wants/`)
+12. **M8: Letter, Tally, Wants** (planned 2026-09-28; built and shipped in 1.3.0, 1.4.0 and 1.5.0 by
+    2026-09-30; a few checks with real data are left in the issues)
 13. The post-v1 list
 
 ## Milestones
