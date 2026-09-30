@@ -114,14 +114,17 @@ function matches(rule: TallyRule, sample: TallySample, folder: string | null): b
       return sample.app.trim().toLowerCase() === pattern;
     case "title":
       return sample.platform === "windows" && (sample.title ?? "").toLowerCase().includes(pattern);
-    case "folder":
-      return folderName(folder) === folderName(pattern);
+    case "folder": {
+      const name = folderName(folder);
+      return name !== null && name === folderName(pattern);
+    }
   }
 }
 
 /**
  * Where a sample goes: the first of the owner's rules that matches, then the first default, then
- * Other. A rule's own project wins; otherwise, on Windows, the editor's folder names the project.
+ * Other. On Windows a rule's own project wins, otherwise the editor's folder names the project; the
+ * phone never links time to a project.
  */
 export function sortSample(
   sample: TallySample,
@@ -131,7 +134,7 @@ export function sortSample(
 ): TallySort {
   const folder = sample.platform === "windows" ? editorFolder(sample.app, sample.title) : null;
   const rule = [...own, ...defaults].find((one) => matches(one, sample, folder));
-  const project = rule?.project ?? (sample.platform === "windows" ? projectFor(folder, projects) : null);
+  const project = sample.platform === "windows" ? rule?.project ?? projectFor(folder, projects) : null;
   return { category: rule?.category ?? OTHER, project };
 }
 

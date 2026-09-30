@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, steps, goals, wants) (tasks, task_steps, goals) or name (areas, tags, habits) from 'after', else null.",
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals, wants), name (areas, tags, habits, tally_categories) or pattern (tally_rules) from 'after', else null.",
   "cases": [
     {
       "name": "a new task is added",
@@ -717,6 +717,35 @@
       "expect": {
         "change": "edited",
         "subject": null
+      }
+    },
+    {
+      "name": "a Tally category is named by its name",
+      "entity": "tally_categories",
+      "action": "create",
+      "before": null,
+      "after": {
+        "name": "Music"
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Music"
+      }
+    },
+    {
+      "name": "a Tally rule is named by its pattern",
+      "entity": "tally_rules",
+      "action": "update",
+      "before": {
+        "category": "video"
+      },
+      "after": {
+        "pattern": "Chess lesson",
+        "category": "study"
+      },
+      "expect": {
+        "change": "edited",
+        "subject": "Chess lesson"
       }
     }
   ]
