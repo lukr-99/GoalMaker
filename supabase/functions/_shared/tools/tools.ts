@@ -22,7 +22,16 @@ import {
 } from "../rules/goals.ts";
 import { goalAmounts, habitPeriodStart, habitState, ring, streak } from "../rules/habits.ts";
 import { lists } from "../rules/listRules.ts";
-import { board, COLUMNS, MAKER_FILTERS, MAKERS, PRIORITIES, type ProjectItem, shows } from "../rules/projects.ts";
+import {
+  board,
+  COLUMNS,
+  MAKER_FILTERS,
+  MAKERS,
+  onBoard,
+  PRIORITIES,
+  type ProjectItem,
+  shows,
+} from "../rules/projects.ts";
 import { seriesOf } from "../rules/occurrences.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
@@ -1119,7 +1128,9 @@ export const tools: Tool[] = [
     description:
       "One project's board as the apps show it: Backlog, To do, Doing and Done, each with its items in the order " +
       "the board puts them (priority first, then where they were dragged), plus the project's milestones and notes. " +
-      "An item Claude made says so.",
+      "An item Claude made says so. Done items leave the board a number of days after they were finished (14 unless " +
+      "the project says otherwise) or when archived by hand; the board says how many, and search_tasks and get_task " +
+      "still find them.",
     input: {
       project: projectRef,
       made_by: z.enum(MAKER_FILTERS as [string, ...string[]]).optional().describe(
@@ -1131,15 +1142,31 @@ export const tools: Tool[] = [
     run: async (planner, args) => {
       const project = await planner.findProject(args.project);
       const filter = (args.made_by as string | undefined) ?? "all";
+      const today = (await planner.now()).today;
       const items = (await planner.tasks())
         .filter((task) => task.projectId === project.id && shows(filter, task.madeBy));
-      return format.board(
+      const shown: TaskItem[] = [];
+      for (const item of items) {
+        const completedOn = item.state === "done" && item.completedAt !== null
+          ? await planner.dayOf(item.completedAt)
+          : null;
+        if (onBoard(item.state, completedOn, project.archiveAfterDays ?? null, item.boardArchived ?? false, today)) {
+          shown.push(item);
+        }
+      }
+      const text = format.board(
         project,
-        board(items),
+        board(shown),
         await namesOf(planner),
         await milestonesOf(planner, project),
         filter,
       );
+      const archived = items.length - shown.length;
+      if (archived === 0) return text;
+      const rule = project.archiveAfterDays == null
+        ? "archived by hand"
+        : `done over ${project.archiveAfterDays} days ago or archived by hand`;
+      return `${text}\n${archived} done item(s) are off the board (${rule}); search_tasks finds them.`;
     },
   },
   {
@@ -1277,14 +1304,18 @@ export const tools: Tool[] = [
     title: "Edit a project item",
     description:
       "Changes what an item is and where it belongs: its type, its priority, its milestone, or the project it is " +
-      "in. Everything else about it is edited with update_task, and move_project_item moves it between columns. " +
-      "An empty milestone takes it off one; an empty project makes it a plain task again.",
+      "in, and takes a done item off the board or puts it back. Everything else about it is edited with " +
+      "update_task, and move_project_item moves it between columns. An empty milestone takes it off one; an empty " +
+      "project makes it a plain task again.",
     input: {
       id: itemId,
       type: itemType.optional(),
       priority: priority.optional(),
       milestone: z.string().optional().describe("A milestone of its project, by name or id; empty for none."),
       project: z.string().optional().describe("Move it to this project, or empty to take it out of one."),
+      archived: z.boolean().optional().describe(
+        "true takes a done item off the board (it stays done and in search); false puts it back.",
+      ),
     },
     readOnly: false,
     destructive: false,
@@ -1308,6 +1339,7 @@ export const tools: Tool[] = [
         priority: args.priority,
         milestoneId: milestone,
       });
+      if (args.archived !== undefined && project !== null) await planner.archiveItem(args.id, args.archived);
       const item = (await planner.task(args.id))!;
       const names = await namesOf(planner);
       if (project === null) return `Out of its project, a plain task again:\n${format.taskLine(item, names)}`;
@@ -1342,7 +1374,8 @@ export const tools: Tool[] = [
     name: "update_project",
     title: "Edit a project",
     description:
-      "Changes a project's name, description, area, status, repository, folder or notes. What is left out stays " +
+      "Changes a project's name, description, area, status, repository, folder, notes, or how long done items " +
+      "stay on its board. What is left out stays " +
       "as it was. Marking it paused or done is what takes it off the working list without losing the board. A new " +
       "name, repository or folder has to be free, for the same reason create_project asks.",
     input: {
@@ -1354,12 +1387,20 @@ export const tools: Tool[] = [
       repository: z.string().optional().describe("The repository URL, or empty for none."),
       folder: z.string().optional().describe("The folder it lives in, or empty for none."),
       notes: z.string().optional(),
+      archive_after_days: z.number().int().min(1).max(365).nullable().optional().describe(
+        "Days a done item stays on the board after it was finished; null keeps them until archived by hand. 14 by default.",
+      ),
     },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
       const found = await planner.findProject(args.project);
-      const project = await planner.updateProject(found.id, { ...args, project: undefined });
+      const project = await planner.updateProject(found.id, {
+        ...args,
+        project: undefined,
+        archive_after_days: undefined,
+        archiveAfterDays: args.archive_after_days,
+      });
       return ["Updated:", format.projectLine(project, await namesOf(planner), await planner.tasks())].join("\n");
     },
   },
