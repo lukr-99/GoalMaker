@@ -3,6 +3,20 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## Deleting a merged base branch closes the pull request stacked on it
+
+2026-09-29, M8-06 and M8-07. #10 was stacked on #9's branch. Merging #9 with `--delete-branch` did
+not move #10 to `main`: GitHub closed it, and a closed pull request can't be retargeted, so it had to
+be opened again as #11. Merge the lower one without deleting its branch, retarget the one above to
+`main` (`gh pr edit <n> --base main`), and only then delete the branch.
+
+## A dev build signs in to the cloud when GoalMaker.local.props names it
+
+2026-09-28. `windows/GoalMaker.local.props` sets `GoalMakerSupabaseUrl` for release builds, and
+`Directory.Build.props` imports it for every build, so a plain `dotnet build` dev app pointed at the
+cloud project. The sign-in screen's footer names the backend; check it before signing in. For a local
+check, build with `-p:GoalMakerSupabaseUrl=http://127.0.0.1:55321` and the local publishable key.
+
 ## A remote that never answers is a full resync every run
 
 2026-09-23, dev builds without sign-in. The first local-only sync pushed to a remote that keeps
@@ -61,6 +75,15 @@ powershell -ExecutionPolicy Bypass -File tools\fix-docker.ps1
 
 The folders left behind stay until a restart of Windows clears the orphans, which is also the one
 thing that always fixes this; the script removes the old ones once they have become deletable.
+
+**Started from an agent, it happens every time.** 2026-09-28: Claude's desktop app is a packaged
+app, and Docker Desktop started from its shell with `Start-Process` inherits the package's file
+redirection. Its sockets then land in the package's own cache (`AppData\Local\Packages\Claude_...`),
+where Windows can't open them even when they are brand new, so a clean `run` folder fails the same
+way on the very next socket. Renames made from that shell only touch the redirected copy. Start it
+outside the package, through Explorer, which `tools/fix-docker.ps1` now does:
+`explorer.exe "C:\Program Files\Docker\Docker\Docker Desktop.exe"`. Never pick Reset to factory
+defaults; it wipes images and volumes.
 
 ## The apps' tests never meet the server
 
