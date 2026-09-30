@@ -26,6 +26,7 @@ import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.TallyDefaults
 import com.goalmaker.app.application.planning.TallyList
+import com.goalmaker.app.application.planning.TallyTracker
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -54,6 +55,7 @@ import com.goalmaker.app.data.auth.SupabaseAuthGateway
 import com.goalmaker.app.data.connector.PostgrestConnectorLinks
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
 import com.goalmaker.app.data.planning.ReminderNotifications
+import com.goalmaker.app.data.planning.UsageStatsSource
 import com.goalmaker.app.data.replica.ReplicaFileName
 import com.goalmaker.app.data.replica.ReplicaMigrator
 import com.goalmaker.app.data.replica.SqliteReplica
@@ -247,6 +249,16 @@ class AppGraph(context: Context) {
     val reviews = ReviewList(replica, newRows, sync::request)
     val wants = WantList(replica, newRows, sync::request, ::today)
     val tally = TallyList(replica, newRows, sync::request, settings::tallyDevice)
+
+    /** Tally on this phone (docs/tally.md): counts nothing until the owner turns it on and grants usage access. */
+    val tallyTracker = TallyTracker(
+        usage = UsageStatsSource(appContext),
+        tally = tally,
+        defaults = tallyDefaults.rules,
+        settings = settings,
+        now = Instant::now,
+        zone = ZoneId::systemDefault,
+    )
     val projects = ProjectList(replica, newRows, sync::request)
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 
@@ -374,6 +386,7 @@ class AppGraph(context: Context) {
                     appLock.cameBack()
                     if (signedIn) {
                         if (!localOnly) changeFeed.start()
+                        scope.launch(io) { tallyTracker.track() }
                         sync.request()
                     }
                 }
@@ -395,6 +408,8 @@ class AppGraph(context: Context) {
      */
     suspend fun syncInBackground(): Boolean {
         if (auth.session.first { it != AuthSession.Loading } !is AuthSession.SignedIn) return true
+        // Tally's totals go out with this push (docs/tally.md).
+        withContext(io) { tallyTracker.track() }
         val reached = !sync.syncNow().offline
         // What came in may change what the home screen shows (docs/widgets.md).
         Widgets.refresh(appContext)

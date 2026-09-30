@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import java.time.Instant
 import java.time.LocalTime
 import java.util.UUID
 import org.junit.Assert.assertEquals
@@ -109,5 +110,22 @@ class SharedPreferencesSettingsStoreTest {
 
         assertEquals(id, UUID.fromString(id).toString())
         assertEquals(id, SharedPreferencesSettingsStore(preferences).tallyDevice())
+    }
+
+    @Test
+    fun `Tally is off until turned on, and how far it read is kept until cleared`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(false, store.tallyOn.value)
+        assertEquals(null, store.tallyReadUntil())
+
+        store.setTallyOn(true)
+        store.setTallyReadUntil(Instant.parse("2026-09-28T12:00:00Z"))
+
+        val restarted = SharedPreferencesSettingsStore(preferences)
+        assertEquals(true, restarted.tallyOn.value)
+        assertEquals(Instant.parse("2026-09-28T12:00:00Z"), restarted.tallyReadUntil())
+
+        restarted.setTallyReadUntil(null)
+        assertEquals(null, SharedPreferencesSettingsStore(preferences).tallyReadUntil())
     }
 }
