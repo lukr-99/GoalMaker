@@ -77,6 +77,9 @@ import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.nav.PlaceLook
+import com.goalmaker.app.ui.tally.TallySlice
+import com.goalmaker.app.ui.tally.TallyStackedBar
+import com.goalmaker.app.ui.tally.durationText
 import com.goalmaker.app.ui.theme.AppTheme
 import kotlinx.coroutines.delay
 
@@ -334,6 +337,15 @@ private fun Live(place: String, digest: PlacesDigest, hero: Boolean) {
         PlaceRules.WANTS ->
             if (digest.wantsReady > 0) BigNumber(digest.wantsReady, stringResource(R.string.wants_status_ready), muted)
             else Line(stringResource(R.string.places_wants_cooling, digest.wantsCooling), muted)
+        PlaceRules.TALLY ->
+            if (digest.tallyToday.isEmpty()) {
+                Line(stringResource(R.string.places_tally_none), muted)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TallyStackedBar(digest.tallyToday, height = 12.dp)
+                    Line(stringResource(R.string.places_tally, durationText(digest.tallyToday.sumOf(TallySlice::minutes))), muted)
+                }
+            }
     }
 }
 

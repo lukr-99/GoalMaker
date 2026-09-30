@@ -2,9 +2,11 @@ package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.domain.planning.NameBasedUuid
 import com.goalmaker.app.domain.planning.PlanningDay
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 /**
@@ -128,6 +130,31 @@ object TallyRules {
         NAMESPACE,
         "tally/${owner.lowercase(Locale.ROOT)}/$day/${device.lowercase(Locale.ROOT)}/$category/${project ?: "-"}",
     )
+
+    /** Whether [filter] keeps a row: its device kind and its category, where the filter names them. */
+    fun keeps(row: TallyDay, filter: TallyFilter): Boolean =
+        (filter.kind == null || row.deviceKind == filter.kind) && (filter.category == null || row.category == filter.category)
+
+    /** The rows' minutes by category, every device's together, most first and then by category. */
+    fun byCategory(rows: List<TallyDay>): List<TallyMinutes> = rows
+        .groupingBy(TallyDay::category)
+        .fold(0) { sum, row -> sum + row.minutes }
+        .map { (category, minutes) -> TallyMinutes(category, minutes) }
+        .filter { it.minutes > 0 }
+        .sortedWith(compareByDescending<TallyMinutes> { it.minutes }.thenBy { it.category })
+
+    /**
+     * The stats block: the [count] weeks ending with the one holding [today] (weeks start on Monday),
+     * oldest first, each with the minutes [filter] keeps. A week with nothing is still there, empty.
+     */
+    fun weeks(rows: List<TallyDay>, today: LocalDate, count: Int, filter: TallyFilter): List<TallyWeek> {
+        val last = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        return (count - 1 downTo 0).map { back ->
+            val start = last.minusWeeks(back.toLong())
+            val kept = rows.filter { !it.day.isBefore(start) && !it.day.isAfter(start.plusDays(6)) && keeps(it, filter) }
+            TallyWeek(start, kept.sumOf(TallyDay::minutes), byCategory(kept))
+        }
+    }
 
     private fun matches(rule: TallyRule, sample: TallySample, folder: String?): Boolean {
         if (rule.platform != ANY && rule.platform != sample.platform) return false

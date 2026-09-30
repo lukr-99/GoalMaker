@@ -44,13 +44,19 @@ import com.goalmaker.app.application.planning.WantStats
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
+import com.goalmaker.app.ui.tally.TallyBar
+import com.goalmaker.app.ui.tally.TallyColumns
+import com.goalmaker.app.ui.tally.TallyLegend
+import com.goalmaker.app.ui.tally.TallySlice
+import com.goalmaker.app.ui.tally.durationText
+import com.goalmaker.app.ui.tally.tabular
 import com.goalmaker.app.ui.theme.AppTheme
 import java.text.NumberFormat
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-/** The long view: tasks a week, goals a month, habits and past ratings (docs/stats.md). */
+/** The long view: tasks a week, goals a month, habits, past ratings, wants and Tally (docs/stats.md). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
@@ -84,10 +90,14 @@ fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Comp
                         modifier = Modifier.padding(8.dp),
                     )
                 }
-                // Wants are decided whether or not a task was ever finished.
+                // Wants are decided, and Tally counts, whether or not a task was ever finished.
                 state.wants?.let { wants ->
                     item("h-wants") { SectionHeader(stringResource(R.string.stats_wants)) }
                     item("wants") { WantHeroes(wants, state.currency) }
+                }
+                if (state.tallyWeeks.isNotEmpty()) {
+                    item("h-tally") { SectionHeader(stringResource(R.string.stats_tally)) }
+                    item("tally") { TallyWeeks(state.tallyWeeks, state.tallySlices) }
                 }
                 return@LazyColumn
             }
@@ -115,6 +125,11 @@ fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Comp
             state.wants?.let { wants ->
                 item("h-wants") { SectionHeader(stringResource(R.string.stats_wants)) }
                 item("wants") { WantHeroes(wants, state.currency) }
+            }
+
+            if (state.tallyWeeks.isNotEmpty()) {
+                item("h-tally") { SectionHeader(stringResource(R.string.stats_tally)) }
+                item("tally") { TallyWeeks(state.tallyWeeks, state.tallySlices) }
             }
         }
     }
@@ -223,6 +238,33 @@ private fun WeekBars(weeks: List<StatsDigest.Week>) {
             Box(Modifier.weight(1f))
             Text(stringResource(R.string.stats_this_week), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted)
         }
+    }
+}
+
+/** Where Tally says the time went: a stacked bar per week, oldest first, and each category's twelve weeks. */
+@Composable
+private fun TallyWeeks(weeks: List<TallyBar>, slices: List<TallySlice>) {
+    val locale = LocalConfiguration.current.locales[0]
+    val format = DateTimeFormatter.ofPattern("d MMM", locale)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppTheme.colors.surface, AppTheme.shapes.card)
+            .padding(12.dp),
+    ) {
+        Text(
+            stringResource(R.string.stats_tally_total, durationText(weeks.sumOf(TallyBar::minutes))),
+            style = tabular(MaterialTheme.typography.bodyMedium),
+            color = AppTheme.colors.textMuted,
+        )
+        TallyColumns(weeks, height = 84.dp)
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(format.format(weeks.first().day), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted)
+            Box(Modifier.weight(1f))
+            Text(stringResource(R.string.stats_this_week), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted)
+        }
+        TallyLegend(slices)
     }
 }
 
