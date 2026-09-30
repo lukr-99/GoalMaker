@@ -64,6 +64,10 @@ jobs:
           done
           GOALMAKER_CONNECTOR_TEST=1 npx deno test --allow-read --allow-env --allow-net connector/endpoint_test.ts
 
+      - name: Quick chat end to end through its endpoint, with scripted model turns
+        working-directory: supabase/functions
+        run: GOALMAKER_ASSISTANT_TEST=1 npx deno test --allow-read --allow-env --allow-net assistant/endpoint_test.ts
+
       - name: Functions log
         if: failure()
         run: cat "$RUNNER_TEMP/functions.log" || true
