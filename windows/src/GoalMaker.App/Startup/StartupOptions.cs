@@ -78,6 +78,7 @@ public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool No
         "reviews" => AppPage.Reviews,
         "stats" => AppPage.Stats,
         "wants" => AppPage.Wants,
+        "tally" => AppPage.Tally,
         "projects" => AppPage.Projects,
         "calendar" => AppPage.Calendar,
         _ => null,

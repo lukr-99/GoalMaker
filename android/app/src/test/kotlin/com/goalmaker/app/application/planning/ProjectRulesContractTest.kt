@@ -1,8 +1,11 @@
 package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.contracts.ContractFiles
+import java.time.LocalDate
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -111,6 +114,23 @@ class ProjectRulesContractTest {
                 case.getValue("items").jsonArray.map { it.jsonObject }
                     .filter { ProjectRules.shows(filter, it.text("madeBy")) }
                     .map { it.text("id")!! },
+            )
+        }
+    }
+
+    @Test
+    fun `every item on or off its board`() {
+        vectors.cases("archive").forEach { case ->
+            assertEquals(
+                case.text("name"),
+                case.getValue("onBoard").jsonPrimitive.boolean,
+                ProjectRules.onBoard(
+                    state(case.text("state")),
+                    case.text("completedOn")?.takeUnless { it == "null" }?.let(LocalDate::parse),
+                    case.getValue("archiveAfterDays").jsonPrimitive.intOrNull,
+                    case.getValue("archivedByHand").jsonPrimitive.boolean,
+                    LocalDate.parse(case.text("today")),
+                ),
             )
         }
     }

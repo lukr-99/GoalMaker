@@ -823,6 +823,50 @@ Deno.test({
         assert(stranger.isError, stranger.text);
       });
 
+      await t.step("done items leave the board by age or by hand, and come back when reopened", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const made = await client.tool("create_project", { name: "Archive test" });
+        assert(!made.isError, made.text);
+        const projectId = /\(project id ([0-9a-f-]{36})\)/.exec(made.text)![1];
+        const item = async (title: string) =>
+          /\(id ([0-9a-f-]{36})\)/.exec(
+            (await client.tool("add_project_item", { project: projectId, title })).text,
+          )![1];
+        const fresh = await item("Done today");
+        const old = await item("Done long ago");
+        const open = await item("Still to do");
+        await client.tool("move_project_item", { id: fresh, column: "done" });
+        await client.tool("move_project_item", { id: old, column: "done" });
+        await sql`update public.tasks set completed_at = now() - interval '20 days' where id = ${old}`;
+
+        let board = await client.tool("get_project_board", { project: projectId });
+        assertStringIncludes(board.text, "Done today");
+        assertStringIncludes(board.text, "Still to do");
+        assert(!board.text.includes("Done long ago"), `14 days by default: ${board.text}`);
+        assertStringIncludes(board.text, "1 done item(s) are off the board");
+
+        const never = await client.tool("update_project", { project: projectId, archive_after_days: null });
+        assert(!never.isError, never.text);
+        board = await client.tool("get_project_board", { project: projectId });
+        assertStringIncludes(board.text, "Done long ago");
+
+        const archived = await client.tool("update_project_item", { id: fresh, archived: true });
+        assert(!archived.isError, archived.text);
+        board = await client.tool("get_project_board", { project: projectId });
+        assert(!board.text.includes("Done today"), board.text);
+        assertStringIncludes(board.text, "(archived by hand)");
+        const notDone = await client.tool("update_project_item", { id: open, archived: true });
+        assert(notDone.isError, notDone.text);
+
+        await client.tool("move_project_item", { id: fresh, column: "todo" });
+        const [row] = await sql`select board_archived_at from public.tasks where id = ${fresh}`;
+        assertEquals(row.board_archived_at, null, "reopening brings it back");
+        board = await client.tool("get_project_board", { project: projectId });
+        assertStringIncludes(board.text, "Done today");
+        const tooMany = await client.tool("update_project", { project: projectId, archive_after_days: 0 });
+        assert(tooMany.isError, tooMany.text);
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120

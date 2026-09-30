@@ -3,6 +3,7 @@ package com.goalmaker.app.data.settings
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.WantReminder
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.navigation.DeviceKind
@@ -12,6 +13,7 @@ import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.Appearance
+import com.goalmaker.app.domain.settings.BoardView
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -115,6 +117,23 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         pinned.value = kept
     }
 
+    private val view = MutableStateFlow(enumOrDefault(preferences.getString(BOARD_VIEW, null), BoardView.COLUMNS))
+    override val boardView: StateFlow<BoardView> = view.asStateFlow()
+
+    override fun setBoardView(view: BoardView) {
+        preferences.edit { putString(BOARD_VIEW, view.name) }
+        this.view.value = view
+    }
+
+    private val collapsed = MutableStateFlow(readCollapsedColumns())
+    override val collapsedColumns: StateFlow<Set<String>> = collapsed.asStateFlow()
+
+    override fun setCollapsedColumns(columns: Set<String>) {
+        val kept = columns.filterTo(LinkedHashSet()) { it in ProjectRules.COLUMNS }
+        preferences.edit { putString(COLLAPSED_COLUMNS, kept.joinToString(",")) }
+        collapsed.value = kept
+    }
+
     private val lock = MutableStateFlow(preferences.getBoolean(APP_LOCK, false))
     override val appLock: StateFlow<Boolean> = lock.asStateFlow()
 
@@ -178,6 +197,13 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
     private fun readPins(): List<String> =
         PlaceRules.stored(preferences.getString(PINS, null)?.split(',')?.filter { it.isNotBlank() }, DeviceKind.PHONE)
 
+    // Nothing stored yet folds Done away; an empty string stored means every column is open.
+    private fun readCollapsedColumns(): Set<String> =
+        preferences.getString(COLLAPSED_COLUMNS, null)
+            ?.split(',')
+            ?.filterTo(LinkedHashSet()) { it in ProjectRules.COLUMNS }
+            ?: setOf(ProjectRules.DONE)
+
     private fun readQuietHours(): QuietHours {
         val start = preferences.getInt(QUIET_START, 0)
         val end = preferences.getInt(QUIET_END, 0)
@@ -219,6 +245,8 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val TALLY_READ_UNTIL = "tally_read_until"
         const val APP_LOCK = "app_lock"
         const val PINS = "pinned_places"
+        const val BOARD_VIEW = "board_view"
+        const val COLLAPSED_COLUMNS = "board_collapsed_columns"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
         const val WEEKLY_REVIEW_AT = "weekly_review_reminder"
         const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"

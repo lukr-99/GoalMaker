@@ -98,4 +98,26 @@ public sealed class TallyListTests : IDisposable
             new TallySample(TallyRules.Windows, "firefox.exe", "Puzzle - lichess.org - Mozilla Firefox"), own, ContractResources.TallyDefaults().Rules);
         Assert.Equal(new TallySort(chess, null), sort);
     }
+
+    [Fact]
+    public void CategoriesAndRulesChangeInPlaceAndGo()
+    {
+        var chess = tally.AddCategory("Chess", "teal")!;
+        var first = tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Windows, chess.Id))!;
+        tally.AddRule(new TallyRule(TallyRules.App, "chess.exe", TallyRules.Windows, chess.Id));
+
+        Assert.True(tally.UpdateCategory(chess.Id, " Board games ", "Orange", "♟"));
+        Assert.False(tally.UpdateCategory(chess.Id, "Board games", "not a color"));
+        Assert.Equal([("Board games", "orange", "♟")], tally.Categories().Select(category => (category.Name, category.Color, category.Emoji)));
+
+        Assert.True(tally.UpdateRule(first.Id!, first with { Pattern = " chess.com ", Match = TallyRules.Title }));
+        Assert.False(tally.UpdateRule(first.Id!, first with { Platform = TallyRules.Android }));
+        Assert.Equal(["chess.com", "chess.exe"], tally.Rules().Select(rule => rule.Pattern));
+
+        Assert.True(tally.DeleteRule(first.Id!));
+        Assert.False(tally.DeleteRule(first.Id!));
+        Assert.Equal(["chess.exe"], tally.Rules().Select(rule => rule.Pattern));
+        Assert.True(tally.DeleteCategory(chess.Id));
+        Assert.Empty(tally.Categories());
+    }
 }

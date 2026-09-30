@@ -27,10 +27,11 @@ planned, and the shared habit challenges idea was taken off the roadmap on 2026-
    projects through the connector, share to GoalMaker, the Windows mini windows and Add to Startup
    Profiles; checked through the endpoint against the local stack)
 10. **M6: v1.0** (planned as issues 2026-09-20; 1.0.0 published 2026-09-21, 1.2.0 on 2026-09-23 from
-    the public repository; backup and restore, the problems place and the release are built, and
-    the close-out below is what is left)
+    the public repository; the M6-06 hardening shipped in 1.5.0 on 2026-09-30, and the one close-out
+    item left is the main PC updating itself from a release)
 11. **M7: quick chat** (planned as issues 2026-09-30 in `.scratch/m7-quick-chat/`; four decisions wait for the owner)
-12. **M8: Letter, Tally, Wants** (planned as issues 2026-09-28 in `.scratch/m8-letter-tally-wants/`)
+12. **M8: Letter, Tally, Wants** (planned 2026-09-28; built and shipped in 1.3.0, 1.4.0 and 1.5.0 by
+    2026-09-30; a few checks with real data are left in the issues)
 13. The post-v1 list
 
 ## Milestones
@@ -112,10 +113,10 @@ Issues: `.scratch/m8-letter-tally-wants/`.
   notification for wants that became ready, a Wants place with Cooling, Ready and Decided filters,
   `/want` in the composer, a Wants block in stats, and connector tools so Claude can check prices
   with its own web search and record the decision ([docs/wants.md](wants.md)).
-- **Letter (M8-07 to M8-09, release 1.4.0):** a Claude routine writes a weekly letter from
+- **Letter (M8-07 to M8-09; 1.4.0 shipped it on 2026-09-30, with the wants tools of M8-06):** a Claude routine writes a weekly letter from
   GoalMaker's `get_review_digest` and the owner's other apps' own connectors, saved as the review's
   summary and read as the first step of the guided review (ADR 0012, [docs/letter.md](letter.md)).
-- **Tally (M8-10 to M8-14, release 1.5.0):** where time actually went on the phone and the PC, as
+- **Tally (M8-10 to M8-14; 1.5.0 shipped it on 2026-09-30, with the M6-06 hardening):** where time actually went on the phone and the PC, as
   daily minutes per category (and per project on the PC), with raw data kept on each device (ADR
   0013, [docs/tally.md](tally.md)); a Tally place, blocks in stats and the review, and
   `get_time_tally` in the connector.

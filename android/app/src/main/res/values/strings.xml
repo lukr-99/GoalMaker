@@ -20,7 +20,9 @@
     <string name="sign_in_error_rate">Too many attempts. Wait a minute, then try again.</string>
     <string name="sign_in_error_offline">No connection to GoalMaker\'s server. Check your internet and try again.</string>
     <string name="startup_failed_title">GoalMaker cannot start</string>
-    <string name="startup_failed">It could not open its data on this phone. Your data is still there. Starting it again is worth a try; if that does not help, reinstall and restore from an export.</string>
+    <string name="startup_failed">It could not open its data on this phone. Your data is still there. Starting it again is worth a try. If that does not help, ask for help before you reinstall, because reinstalling removes changes that have not synced yet.</string>
+    <string name="startup_failed_newer">Its data on this phone was saved by a newer version of GoalMaker. Install the newest version and everything will be there again. Your data is still on this phone.</string>
+    <string name="sign_in_session_ended">Your session ended. Sign in with the same email and your changes will sync.</string>
     <string name="sign_in_error_other">That did not work. Try again in a moment.</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 
@@ -709,6 +711,25 @@
     <string name="projects_made_by_owner">Me</string>
     <string name="projects_made_by_claude">Claude</string>
     <string name="projects_by_claude">by Claude</string>
+    <string name="projects_view_list">Show as a list</string>
+    <string name="projects_view_columns">Show one column at a time</string>
+    <string name="projects_archive">Archive</string>
+    <string name="projects_archived_message">Off the board: %1$s</string>
+    <string name="projects_archived_title">Archived</string>
+    <string name="projects_archived_hint">Done items that left the board. They stay done, in the archive and in search.</string>
+    <string name="projects_put_back">Put back</string>
+    <string name="projects_reopen">Reopen</string>
+    <string name="projects_close">Close</string>
+    <string name="projects_archive_after">Done items leave the board after</string>
+    <string name="projects_archive_never">Never</string>
+    <plurals name="projects_archived_count">
+        <item quantity="one">%1$d archived</item>
+        <item quantity="other">%1$d archived</item>
+    </plurals>
+    <plurals name="projects_archive_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 
     <!-- Stats (docs/stats.md) -->
     <string name="stats_title">Stats</string>
@@ -877,12 +898,57 @@
     <string name="wants_ready_text">The cooldown is over. Still want it?</string>
     <string name="settings_wants_ready">Wants ready</string>
     <string name="settings_wants_ready_hint">Once a day, the wants whose cooldown ended.</string>
-    <string name="settings_tally">Tally</string>
-    <string name="settings_tally_switch">Count where phone time goes</string>
-    <string name="settings_tally_hint">Adds up the minutes you spend in each kind of app, like video or chat, for each day. Only those minutes sync, never the apps.</string>
+    <string name="tally_switch">Count where phone time goes</string>
+    <string name="tally_switch_hint">Adds up the minutes you spend in each kind of app, like video or chat, for each day. Only those minutes sync, never the apps.</string>
     <string name="tally_access_title">Allow usage access</string>
     <string name="tally_access_read">What is read: which apps were in front and for how long, from Android\'s own usage history, which keeps about a week. It stays on this phone.</string>
     <string name="tally_access_syncs">What syncs: the minutes per category for each day, never the apps.</string>
     <string name="tally_access_how">Find GoalMaker in the list, allow it, then come back.</string>
     <string name="tally_access_open">Open usage access</string>
+    <string name="tally_title">Tally</string>
+    <string name="tally_empty">No time counted this week yet. Turn Tally on above for this phone; the PC\'s minutes show here once it counts too.</string>
+    <string name="tally_today">Today</string>
+    <string name="tally_this_week">This week</string>
+    <string name="tally_projects">Projects this week</string>
+    <string name="tally_projects_none">Time in a project\'s folder on the PC shows here.</string>
+    <string name="tally_projects_phone">The phone never links time to a project.</string>
+    <string name="tally_categories">Your categories</string>
+    <string name="tally_categories_none">None yet. The shipped ones, like Coding and Video, are always there.</string>
+    <string name="tally_rules">Your rules</string>
+    <string name="tally_rules_none">None yet. Your rules come before the shipped ones, from the next count on.</string>
+    <string name="tally_rule_line">%1$s counts as %2$s</string>
+    <string name="tally_category_add">Add a category</string>
+    <string name="tally_category_name">Name</string>
+    <string name="tally_category_color">Color</string>
+    <string name="tally_rule_add">Add a rule</string>
+    <string name="tally_rule_match">Matches</string>
+    <string name="tally_rule_pattern">Pattern</string>
+    <string name="tally_rule_platform">On</string>
+    <string name="tally_rule_category">Counts as</string>
+    <string name="tally_match_app">App</string>
+    <string name="tally_match_title">Window title</string>
+    <string name="tally_match_folder">Folder</string>
+    <string name="tally_platform_any">Phone and PC</string>
+    <string name="tally_platform_android">Phone</string>
+    <string name="tally_platform_windows">PC</string>
+    <string name="tally_pattern_app_hint">The whole package or program name, like com.whatsapp or code.exe.</string>
+    <string name="tally_pattern_title_hint">Words in the window title, like YouTube. Only on the PC.</string>
+    <string name="tally_pattern_folder_hint">The name of the folder open in an editor. Only on the PC.</string>
+    <string name="tally_save">Save</string>
+    <string name="tally_edit">Edit</string>
+    <string name="tally_delete">Delete</string>
+    <string name="tally_category_edit">Edit the category</string>
+    <string name="tally_rule_edit">Edit the rule</string>
+    <string name="tally_phone">Phone</string>
+    <string name="tally_pc">PC</string>
+    <string name="tally_minutes">%1$d min</string>
+    <string name="tally_hours">%1$d h</string>
+    <string name="tally_hours_minutes">%1$d h %2$d min</string>
+    <string name="tally_removed_category">A removed category</string>
+    <string name="tally_removed_project">A removed project</string>
+    <string name="stats_tally">Where the time went</string>
+    <string name="stats_tally_total">%1$s in twelve weeks</string>
+    <string name="reviews_tally">Where the time went</string>
+    <string name="places_tally">%1$s today</string>
+    <string name="places_tally_none">Nothing counted today</string>
 </resources>

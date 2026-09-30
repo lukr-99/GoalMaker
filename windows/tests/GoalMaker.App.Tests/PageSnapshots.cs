@@ -344,7 +344,7 @@ public sealed class PageSnapshots
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
         using var theme = Theme(planner);
-        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, strings, _ => { }, action => action(), planner.Time);
+        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, planner.Settings, strings, _ => { }, action => action(), planner.Time);
         projects.NewCommand.Execute(null);
         projects.ProjectName = "GoalMaker";
         projects.ProjectDescription = "The planner on the phone and the PC.";
@@ -375,10 +375,29 @@ public sealed class PageSnapshots
         planner.Projects.Add(new ProjectDraft("Relay") { Status = ProjectRules.Paused });
         planner.Projects.Add(new ProjectDraft("Treeline") { Status = ProjectRules.Finished });
         projects.Refresh();
+        // Two items that left the board: one finished a month ago, one archived by hand, with the list open.
+        foreach (var title in new[] { "Sign-in codes", "The first board" })
+        {
+            projects.NewItemTitle = title;
+            projects.AddItemCommand.Execute(null);
+            planner.Tasks.SetBoardColumn(planner.Task(title).Id, ProjectRules.Done);
+        }
+
+        var old = planner.Replica.Get("tasks", planner.Task("Sign-in codes").Id)!;
+        old["completed_at"] = "2026-08-14T10:00:00.000000Z";
+        planner.Replica.Put("tasks", old);
+        planner.Tasks.SetBoardArchived(planner.Task("The first board").Id, true);
+        projects.Refresh();
+        var done = projects.Columns.Single(column => column.Column == ProjectRules.Done);
+        done.ToggleArchivedCommand.Execute(null);
         // A card just finished, so the undo bar is on show.
         projects.Columns.Single(column => column.Column == ProjectRules.Todo).Items[0].MoveCommand.Execute(ProjectRules.Done);
 
         Save(new ProjectsPage(projects), folder, "projects", new Size(1100, 700));
+
+        // Done folded to its strip, so the other columns take the room.
+        done.FoldCommand.Execute(null);
+        Save(new ProjectsPage(projects), folder, "projects-folded", new Size(1100, 700));
     });
 
     [Fact(Explicit = true)]
@@ -459,6 +478,59 @@ public sealed class PageSnapshots
         var stats = new StatsViewModel(
             planner.Tasks, planner.Goals, planner.Habits, planner.Reviews, planner.Settings, strings, planner.Time, action => action());
         Save(new StatsPage(stats), folder, "stats", new Size(900, 1000));
+    });
+
+    [Fact(Explicit = true)]
+    public void TallyPage_() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.TallyOn = true;
+        var strings = new ResourceStrings(Application.Current);
+        var project = planner.Projects.Add(new ProjectDraft("GoalMaker"))!;
+        var thesis = planner.Projects.Add(new ProjectDraft("Thesis"))!;
+        var week = new DateOnly(2026, 9, 14);
+        foreach (var (back, coding, video, social) in new[] { (0, 190, 35, 20), (1, 240, 60, 15), (2, 95, 120, 40), (3, 150, 20, 25), (4, 130, 45, 30) })
+        {
+            var day = week.AddDays(back);
+            planner.TallyDay(day, TallyRules.Pc, "coding", coding, project.Id);
+            planner.TallyDay(day, TallyRules.Pc, "study", coding / 3, thesis.Id);
+            planner.TallyDay(day, TallyRules.Phone, "video", video);
+            planner.TallyDay(day, TallyRules.Phone, "social", social);
+            planner.TallyDay(day, TallyRules.Pc, "chat", 12);
+        }
+
+        for (var back = 1; back < 12; back++)
+        {
+            planner.TallyDay(week.AddDays(-7 * back), TallyRules.Pc, "coding", 300 + (back * 37 % 200));
+            planner.TallyDay(week.AddDays(-7 * back), TallyRules.Phone, "video", 60 + (back * 53 % 120));
+        }
+
+        var chess = planner.Tally.AddCategory("Chess", "teal", "♟")!;
+        planner.Tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Any, chess.Id));
+        planner.Tally.AddRule(new TallyRule(TallyRules.Folder, "GoalMaker", TallyRules.Windows, "coding", project.Id));
+        using var theme = Theme(planner);
+        var defaults = ContractResources.TallyDefaults();
+        var tally = new TallyViewModel(
+            planner.Tally, defaults, planner.Projects, planner.Settings, strings, planner.Time, theme.SwatchBrush,
+            [.. ContractResources.Themes().AreaColors.Select(color => color.Id)], action => action());
+        var page = new TallyPage(tally);
+        Save(page, folder, "tally-wide", new Size(1100, 1500));
+        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 1700));
+
+        tally.Choose(TallyRules.Phone);
+        tally.AddRuleCommand.Execute(null);
+        Save(new TallyPage(tally), folder, "tally-phone-and-a-new-rule", new Size(852, 1700));
+
+        TallyLabels Labels(IReadOnlyList<TallyCategory> own) => new(defaults, own, strings, theme.SwatchBrush);
+        var stats = new StatsViewModel(
+            planner.Tasks, planner.Goals, planner.Habits, planner.Reviews, planner.Settings, strings, planner.Time, action => action(),
+            planner.Wants, planner.Tally, Labels);
+        Save(new StatsPage(stats), folder, "stats-tally", new Size(900, 1000));
+
+        var review = new ReviewViewModel(
+            ReviewRules.Weekly, week, planner.Reviews, planner.Tasks, planner.Areas, planner.Goals, planner.Habits, ContractResources.Prompts(),
+            planner.Rituals, planner.Settings, strings, planner.Time, action => action(), planner.Tally, Labels);
+        Save(new ReviewPage(review), folder, "review-look-back-tally", new Size(900, 900));
     });
 
     // Controls made under one theme take the next theme's accent (in a window, where resource changes

@@ -21,6 +21,7 @@ internal sealed class TestPlanner : IDisposable
     public const string Owner = "11111111-1111-1111-1111-111111111111";
     private readonly string folder = Path.Combine(Path.GetTempPath(), "goalmaker-tests", Guid.NewGuid().ToString("N"));
     private readonly SqliteReplica replica;
+    private readonly NewRows rows;
 
     public TestPlanner()
     {
@@ -28,7 +29,7 @@ internal sealed class TestPlanner : IDisposable
         var catalog = ContractResources.SyncedTables();
         replica = new SqliteReplica(Path.Combine(folder, "replica.db"), catalog, ReplicaMigrator.BuiltIn());
         Sync = new SyncCoordinator(new SyncEngine(catalog, replica, new NoRemote(), Time), replica, Time, TimeSpan.FromSeconds(2));
-        var rows = new NewRows(catalog, () => Owner, Time);
+        rows = new NewRows(catalog, () => Owner, Time);
         Areas = new AreaList(replica, rows, ["violet", "blue"], () => { });
         Tags = new TagList(replica, rows, () => { });
         Projects = new ProjectList(replica, rows, () => { });
@@ -40,6 +41,7 @@ internal sealed class TestPlanner : IDisposable
         Habits = new HabitList(replica, rows, () => { });
         Reviews = new ReviewList(replica, rows, () => { });
         Wants = new WantList(replica, rows, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
+        Tally = new TallyList(replica, rows, () => Settings.DeviceId, () => { });
     }
 
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -70,6 +72,8 @@ internal sealed class TestPlanner : IDisposable
 
     public WantList Wants { get; }
 
+    public TallyList Tally { get; }
+
     public ProjectList Projects { get; }
 
     /// <summary>The replica itself, for tests that write a row the app can't.</summary>
@@ -78,6 +82,21 @@ internal sealed class TestPlanner : IDisposable
     public TickSound Tick { get; } = new();
 
     public TaskItem Task(string title) => Tasks.All().Single(task => task.Title == title);
+
+    /// <summary>A device's minutes on a day, as its tally_days row arrives from the server.</summary>
+    public void TallyDay(DateOnly day, string kind, string category, int minutes, string? project = null)
+    {
+        var row = rows.Create("tally_days", new Dictionary<string, JsonNode?>
+        {
+            ["day"] = day.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            ["device"] = kind == TallyRules.Phone ? "e2e57000-0000-4000-8000-00000000bbbb" : "d1e57000-0000-4000-8000-00000000aaaa",
+            ["device_kind"] = kind,
+            ["category"] = category,
+            ["project_id"] = project,
+            ["minutes"] = minutes,
+        })!;
+        replica.Put("tally_days", row);
+    }
 
     public void Dispose()
     {
@@ -133,6 +152,8 @@ internal sealed class TestPlanner : IDisposable
         public TimeOnly? WantsReadyReminder { get; set; }
 
         public IReadOnlyList<string> PinnedPlaces { get; set; } = [];
+
+        public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];
 
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } = new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);
 

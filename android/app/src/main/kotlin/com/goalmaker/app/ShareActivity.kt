@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.getValue
 import com.goalmaker.app.domain.share.SharedCapture
+import com.goalmaker.app.ui.ReplicaGate
 import com.goalmaker.app.ui.capture.ShareScreen
 import com.goalmaker.app.ui.capture.CaptureViewModel
 import com.goalmaker.app.ui.lock.LockedWindow
@@ -42,6 +43,7 @@ class ShareActivity : FragmentActivity() {
             val appearance by graph.settings.appearance.collectAsStateWithLifecycle()
             GoalMakerTheme(graph.design, appearance, graph.logo) {
                 Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+                    ReplicaGate(graph) {
                     LockedWindow(graph = graph, onGiveUp = ::finish) {
                     ShareScreen(
                         viewModel = viewModel {
@@ -67,6 +69,7 @@ class ShareActivity : FragmentActivity() {
                             finish()
                         },
                     )
+                    }
                     }
                 }
             }

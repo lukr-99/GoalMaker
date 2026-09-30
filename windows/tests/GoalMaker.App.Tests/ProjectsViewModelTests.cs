@@ -1,9 +1,13 @@
+using System.Globalization;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.Tests;
 
-/// <summary>The Windows projects page over a real replica: the board, what moving a card does, and taking it back (M5-02).</summary>
+/// <summary>
+/// The Windows projects page over a real replica: the board, what moving a card does, and taking it back
+/// (M5-02); done items leaving the board and folded columns.
+/// </summary>
 public sealed class ProjectsViewModelTests : IDisposable
 {
     private readonly TestPlanner planner = new();
@@ -203,6 +207,177 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.Equal(["Cache the release feed"], Column(page, "todo").Items.Select(item => item.Title));
     }
 
+    [Fact]
+    public void ADoneItemLeavesTheBoardFourteenPlanningDaysAfterItWasFinished()
+    {
+        var page = WithProject();
+        foreach (var title in new[] { "Old news", "Last week", "Just in" })
+        {
+            page.NewItemTitle = title;
+            page.AddItemCommand.Execute(null);
+            planner.Tasks.SetBoardColumn(planner.Task(title).Id, ProjectRules.Done);
+        }
+
+        // Today is Friday 18 September. 02:00 on the 5th still belongs to the 4th, which is 14 days ago;
+        // 05:00 on the 5th is the 5th, 13 days ago.
+        Finished("Old news", "2026-09-05T02:00:00.000000Z");
+        Finished("Last week", "2026-09-05T05:00:00.000000Z");
+        page.Refresh();
+
+        var done = Column(page, "done");
+        Assert.Equal(["Just in", "Last week"], done.Items.Select(item => item.Title).Order());
+        Assert.True(done.HasArchived);
+        Assert.Equal("Projects.ArchivedCount(1)", done.ArchivedText);
+        var archived = Assert.Single(done.Archived);
+        Assert.Equal("Old news", archived.Title);
+        Assert.Equal($"Archive.DoneOn({new DateOnly(2026, 9, 4).ToString("d MMM", CultureInfo.CurrentCulture)})", archived.DoneText);
+        Assert.False(Column(page, "todo").HasArchived);
+    }
+
+    [Fact]
+    public void AnItemTooOldForDoneIsReopenedToGoBack()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Old news";
+        page.AddItemCommand.Execute(null);
+        planner.Tasks.SetBoardColumn(planner.Task("Old news").Id, ProjectRules.Done);
+        Finished("Old news", "2026-08-01T10:00:00.000000Z");
+        page.Refresh();
+
+        var archived = Assert.Single(Column(page, "done").Archived);
+        Assert.Equal("Projects.Reopen", archived.ActionText);
+        archived.PutBackCommand.Execute(null);
+
+        Assert.Equal(["Old news"], Column(page, "todo").Items.Select(item => item.Title));
+        Assert.False(Column(page, "done").HasArchived);
+        Assert.Equal(TaskState.Open, planner.Task("Old news").State);
+    }
+
+    [Fact]
+    public void ADoneItemCanBeArchivedByHandAndPutBack()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+        Assert.False(Column(page, "todo").Items[0].CanArchive);
+        Column(page, "todo").Items[0].MoveCommand.Execute("done");
+
+        var card = Assert.Single(Column(page, "done").Items);
+        Assert.True(card.CanArchive);
+        card.ArchiveCommand.Execute(null);
+
+        Assert.True(Column(page, "done").IsEmpty);
+        Assert.Equal("Projects.ArchivedItem(Ship the board)", page.UndoText);
+        Assert.NotNull(planner.Task("Ship the board").BoardArchivedAt);
+        Assert.Equal(TaskState.Done, planner.Task("Ship the board").State);
+
+        var archived = Assert.Single(Column(page, "done").Archived);
+        Assert.Equal("Projects.PutBack", archived.ActionText);
+        archived.PutBackCommand.Execute(null);
+
+        Assert.Equal(["Ship the board"], Column(page, "done").Items.Select(item => item.Title));
+        Assert.Null(planner.Task("Ship the board").BoardArchivedAt);
+    }
+
+    [Fact]
+    public void UndoingAnArchivePutsTheItemBackInDone()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+        Column(page, "todo").Items[0].MoveCommand.Execute("done");
+
+        Column(page, "done").Items[0].ArchiveCommand.Execute(null);
+        page.UndoCommand.Execute(null);
+
+        Assert.Single(Column(page, "done").Items);
+        Assert.False(Column(page, "done").HasArchived);
+    }
+
+    [Fact]
+    public void TheProjectSaysHowLongDoneItemsStay()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Old news";
+        page.AddItemCommand.Execute(null);
+        planner.Tasks.SetBoardColumn(planner.Task("Old news").Id, ProjectRules.Done);
+        Finished("Old news", "2026-08-01T10:00:00.000000Z");
+        page.Refresh();
+
+        Assert.Equal("14", page.ProjectArchiveAfter);
+        Assert.Equal(
+            ["Projects.ArchiveDays(7)", "Projects.ArchiveDays(14)", "Projects.ArchiveDays(30)", "Projects.ArchiveDays(90)", "Projects.ArchiveNever"],
+            page.ArchiveChoices.Select(choice => choice.Label));
+
+        page.EditCommand.Execute(null);
+        page.ProjectArchiveAfter = "never";
+        page.SaveCommand.Execute(null);
+
+        Assert.Null(planner.Projects.All()[0].ArchiveAfterDays);
+        Assert.Equal(["Old news"], Column(page, "done").Items.Select(item => item.Title));
+        Assert.False(Column(page, "done").HasArchived);
+
+        page.EditCommand.Execute(null);
+        page.ProjectArchiveAfter = "90";
+        page.SaveCommand.Execute(null);
+        Assert.Equal(90, planner.Projects.All()[0].ArchiveAfterDays);
+    }
+
+    [Fact]
+    public void ANumberOfDaysSetElsewhereStaysInThePicker()
+    {
+        var page = WithProject();
+        planner.Projects.SetArchiveAfterDays(planner.Projects.All()[0].Id, 1);
+        page.Refresh();
+
+        Assert.Equal("1", page.ProjectArchiveAfter);
+        Assert.Equal("Projects.ArchiveDay(1)", page.ArchiveChoices[0].Label);
+    }
+
+    [Fact]
+    public void AFoldedColumnIsRememberedOnEveryBoard()
+    {
+        var page = WithProject();
+        Assert.Equal(840, page.BoardMinWidth);
+        var done = Column(page, "done");
+        Assert.True(done.IsUnfolded);
+
+        done.FoldCommand.Execute(null);
+
+        Assert.True(done.IsFolded);
+        Assert.False(done.IsUnfolded);
+        Assert.Equal(["done"], planner.Settings.FoldedBoardColumns);
+        Assert.Equal(678, page.BoardMinWidth);
+        Assert.Equal("Projects.Unfold(Projects.Done)", done.UnfoldText);
+
+        var again = Page();
+        Assert.True(Column(again, "done").IsFolded);
+        Assert.False(Column(again, "todo").IsFolded);
+
+        Column(again, "done").FoldCommand.Execute(null);
+        Assert.Empty(planner.Settings.FoldedBoardColumns);
+    }
+
+    [Fact]
+    public void AFoldedColumnStillCountsItsCards()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+
+        Column(page, "todo").FoldCommand.Execute(null);
+
+        Assert.Equal(1, Column(page, "todo").Count);
+    }
+
+    // As the server stamps it: when the item was finished.
+    private void Finished(string title, string at)
+    {
+        var row = planner.Replica.Get("tasks", planner.Task(title).Id)!;
+        row["completed_at"] = at;
+        planner.Replica.Put("tasks", row);
+    }
+
     private static BoardColumnViewModel Column(ProjectsViewModel page, string column) =>
         page.Columns.Single(candidate => candidate.Column == column);
 
@@ -216,5 +391,5 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     private ProjectsViewModel Page() =>
-        new(planner.Projects, planner.Tasks, planner.Strings, _ => { }, action => action(), planner.Time);
+        new(planner.Projects, planner.Tasks, planner.Settings, planner.Strings, _ => { }, action => action(), planner.Time);
 }

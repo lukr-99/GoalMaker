@@ -7,14 +7,21 @@ using Supabase.Gotrue.Interfaces;
 
 namespace GoalMaker.Infrastructure.Auth;
 
-/// <summary><see cref="IAuthGateway"/> over Supabase Auth's email one-time codes.</summary>
+/// <summary>
+/// <see cref="IAuthGateway"/> over Supabase Auth's email one-time codes. The client signs out on its
+/// own when the server refuses a refresh; any sign-out this gateway did not ask for is that, so it
+/// reads as a session that ended (docs/sign-in.md).
+/// </summary>
 public sealed class SupabaseAuthGateway : IAuthGateway
 {
     private readonly Supabase.Client client;
+    private readonly IGotrueSessionPersistence<Session> storedSession;
+    private AuthSession.SignedOut? leaving;
 
-    public SupabaseAuthGateway(Supabase.Client client)
+    public SupabaseAuthGateway(Supabase.Client client, IGotrueSessionPersistence<Session> storedSession)
     {
         this.client = client;
+        this.storedSession = storedSession;
         client.Auth.AddStateChangedListener(OnAuthStateChanged);
     }
 
@@ -50,27 +57,66 @@ public sealed class SupabaseAuthGateway : IAuthGateway
             }
         });
 
-    public async Task SignOutAsync()
+    public Task SignOutAsync() => LeaveAsync(new AuthSession.SignedOut());
+
+    public Task EndSessionAsync() => LeaveAsync(new AuthSession.SignedOut(SessionEnded: true));
+
+    public async Task<SessionRenewal> RenewAsync(CancellationToken cancellationToken)
     {
+        try
+        {
+            // This also reads the user back, so an account that is gone is refused here too.
+            await client.Auth.RefreshSession().ConfigureAwait(false);
+            return SessionRenewal.Renewed;
+        }
+        catch (GotrueException error) when (error.Reason is FailureHint.Reason.Offline or FailureHint.Reason.NetworkError
+            or FailureHint.Reason.CloudflareNetworkError or FailureHint.Reason.UserTooManyRequests
+            || error.StatusCode is 408 or >= 500)
+        {
+            return SessionRenewal.Offline;
+        }
+        catch (HttpRequestException)
+        {
+            return SessionRenewal.Offline;
+        }
+        catch (GotrueException)
+        {
+            await EndSessionAsync().ConfigureAwait(false);
+            return SessionRenewal.Refused;
+        }
+    }
+
+    private async Task LeaveAsync(AuthSession.SignedOut signedOut)
+    {
+        leaving = signedOut;
         try
         {
             await client.Auth.SignOut().ConfigureAwait(false);
         }
         catch (Exception error) when (error is GotrueException or HttpRequestException)
         {
-            // Offline: the stored session is removed anyway; the server token expires on its own.
+            // Offline, or the server no longer knows the session. The client only forgets a session
+            // the server let go of, so it is forgotten here; the server's token expires on its own.
+            storedSession.DestroySession();
+            client.Auth.LoadSession();
+        }
+        finally
+        {
+            leaving = null;
         }
 
-        Publish(new AuthSession.SignedOut());
+        Publish(signedOut);
     }
 
     private void OnAuthStateChanged(IGotrueClient<User, Session> sender, Constants.AuthState state) =>
-        Publish(state == Constants.AuthState.SignedOut ? new AuthSession.SignedOut() : FromCurrentUser());
+        Publish(state == Constants.AuthState.SignedOut ? leaving ?? new AuthSession.SignedOut(SessionEnded: true) : FromCurrentUser());
 
+    // Nobody signed in keeps the reason it already has, so a session the server refused while the
+    // stored one was being restored still says so.
     private AuthSession FromCurrentUser() =>
         client.Auth.CurrentUser is { } user
             ? new AuthSession.SignedIn(user.Id ?? string.Empty, user.Email ?? string.Empty)
-            : new AuthSession.SignedOut();
+            : Session as AuthSession.SignedOut ?? new AuthSession.SignedOut();
 
     private void Publish(AuthSession session)
     {

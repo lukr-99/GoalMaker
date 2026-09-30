@@ -13,19 +13,26 @@ import com.goalmaker.app.application.planning.ReviewItem
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewLookBack
 import com.goalmaker.app.application.planning.RitualRunList
+import com.goalmaker.app.application.planning.TallyCategory
+import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.domain.planning.PromptLibrary
 import com.goalmaker.app.domain.planning.PromptRules
 import com.goalmaker.app.domain.planning.ReviewQuestion
 import com.goalmaker.app.ui.goals.GoalBoard
+import com.goalmaker.app.ui.tally.TallyBoard
+import com.goalmaker.app.ui.tally.TallySlice
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,6 +56,8 @@ class ReviewViewModel(
     private val rituals: RitualRunList,
     private val io: CoroutineDispatcher,
     private val today: () -> LocalDate,
+    private val tally: TallyList? = null,
+    private val tallyCategories: List<TallyCategory> = emptyList(),
 ) : ViewModel() {
     // Null until the review is open, so it starts on the Letter only when there is one.
     private val step = MutableStateFlow<ReviewStep?>(null)
@@ -60,9 +69,9 @@ class ReviewViewModel(
         reviews.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
         goals.watch().flowOn(io),
-        habits.watch().flowOn(io),
+        combine(habits.watch().flowOn(io), periodTally(), ::Pair),
         combine(step, questions, answers, opened) { current, asked, written, review -> Screen(current, asked, written, review) },
-    ) { allReviews, taskList, (goalList, entries), habitData, screen ->
+    ) { allReviews, taskList, (goalList, entries), (habitData, tallySlices), screen ->
         val day = today()
         val digest = ReviewLookBack.build(kind, periodStart, taskList, areas.all(), goalList, entries, habitData, day)
         val nextStart = ReviewLookBack.periodEnd(kind, periodStart).plusDays(1)
@@ -80,6 +89,7 @@ class ReviewViewModel(
             nextGoals = next?.rows.orEmpty(),
             canCopyGoals = next?.canCopy ?: goalList.none { it.horizon == horizon && it.periodStart == nextStart },
             goals = goalList,
+            tally = tallySlices,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReviewUiState(kind = kind))
 
@@ -91,6 +101,15 @@ class ReviewViewModel(
             questions.value = ask(review)
             step.value = if (review?.summary?.isNotBlank() == true) ReviewStep.LETTER else ReviewStep.LOOK_BACK
         }
+    }
+
+    /** Where Tally says the period's time went, by category on every device (docs/tally.md). */
+    private fun periodTally(): Flow<List<TallySlice>> {
+        val list = tally ?: return flowOf(emptyList())
+        return list.watch().map {
+            val rows = list.totals(periodStart, ReviewLookBack.periodEnd(kind, periodStart))
+            TallyBoard.bar(periodStart, rows, TallyBoard.lookup(tallyCategories, list.categories())).slices
+        }.flowOn(io)
     }
 
     /** The prompts this review asks: the ones the period calls for, then the rotation (docs/reviews.md). */

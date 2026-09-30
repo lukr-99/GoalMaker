@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'moves': what moving an item to a column does to the task itself: the done column completes it, any other column reopens a done one, and a dropped item keeps its state wherever it sits. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the four columns of a project with their items in that order. 2026-09-18 is a Friday.",
+  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'moves': what moving an item to a column does to the task itself: the done column completes it, any other column reopens a done one, and a dropped item keeps its state wherever it sits. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the four columns of a project with their items in that order. 2026-09-18 is a Friday. 'archive': whether an item is on its board (supabase/migrations/0018_board_archive.sql). An item that isn't done always is. A done item archived by hand ('archivedByHand') isn't. Otherwise a done item stays until 'archiveAfterDays' days after the planning day it was finished ('completedOn'), so it is gone from 'today' = completedOn + archiveAfterDays on; null days keep it until it is archived by hand, and a done item with no completion day stays.",
   "columns": [
     "backlog",
     "todo",
@@ -361,5 +361,97 @@
         ]
       }
     ]
-  }
+  },
+  "archive": [
+    {
+      "name": "an open item always stays",
+      "state": "open",
+      "completedOn": null,
+      "archiveAfterDays": 14,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": true
+    },
+    {
+      "name": "a dropped item stays in its column",
+      "state": "dropped",
+      "completedOn": null,
+      "archiveAfterDays": 14,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": true
+    },
+    {
+      "name": "done yesterday",
+      "state": "done",
+      "completedOn": "2026-09-29",
+      "archiveAfterDays": 14,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": true
+    },
+    {
+      "name": "done thirteen days ago",
+      "state": "done",
+      "completedOn": "2026-09-17",
+      "archiveAfterDays": 14,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": true
+    },
+    {
+      "name": "done fourteen days ago leaves",
+      "state": "done",
+      "completedOn": "2026-09-16",
+      "archiveAfterDays": 14,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": false
+    },
+    {
+      "name": "a project's own number",
+      "state": "done",
+      "completedOn": "2026-09-27",
+      "archiveAfterDays": 3,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": false
+    },
+    {
+      "name": "never, however old",
+      "state": "done",
+      "completedOn": "2026-01-01",
+      "archiveAfterDays": null,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": true
+    },
+    {
+      "name": "never, archived by hand",
+      "state": "done",
+      "completedOn": "2026-09-29",
+      "archiveAfterDays": null,
+      "archivedByHand": true,
+      "today": "2026-09-30",
+      "onBoard": false
+    },
+    {
+      "name": "archived by hand the day it was done",
+      "state": "done",
+      "completedOn": "2026-09-30",
+      "archiveAfterDays": 14,
+      "archivedByHand": true,
+      "today": "2026-09-30",
+      "onBoard": false
+    },
+    {
+      "name": "a done item with no completion day stays",
+      "state": "done",
+      "completedOn": null,
+      "archiveAfterDays": 14,
+      "archivedByHand": false,
+      "today": "2026-09-30",
+      "onBoard": true
+    }
+  ]
 }

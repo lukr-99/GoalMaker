@@ -25,7 +25,6 @@ import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.domain.navigation.PlaceRules
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
-import com.goalmaker.app.ui.settings.TallyViewModel
 import com.goalmaker.app.ui.activity.ActivityKey
 import com.goalmaker.app.ui.activity.ActivityScreen
 import com.goalmaker.app.ui.activity.ActivityViewModel
@@ -64,6 +63,8 @@ import com.goalmaker.app.ui.stats.StatsViewModel
 import com.goalmaker.app.ui.review.ReviewsScreen
 import com.goalmaker.app.ui.review.ReviewsViewModel
 import com.goalmaker.app.ui.plan.PlanViewModel
+import com.goalmaker.app.ui.tally.TallyScreen
+import com.goalmaker.app.ui.tally.TallyViewModel
 import com.goalmaker.app.ui.task.TaskKey
 import com.goalmaker.app.ui.task.TaskScreen
 import com.goalmaker.app.ui.task.TaskViewModel
@@ -158,9 +159,22 @@ fun SignedInNavigation(graph: AppGraph) {
                                 clock = LocalDateTime::now,
                             )
                         }
-                        val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
+                        val projectsViewModel = viewModel {
+                            ProjectsViewModel(graph.projects, graph.tasks, graph.settings, graph.io, LocalDateTime::now)
+                        }
                         val placesViewModel = viewModel {
-                            PlacesViewModel(graph.tasks, graph.habits, graph.goals, graph.reviews, graph.wants, graph.settings, graph.io, LocalDateTime::now)
+                            PlacesViewModel(
+                                graph.tasks,
+                                graph.habits,
+                                graph.goals,
+                                graph.reviews,
+                                graph.wants,
+                                graph.tally,
+                                graph.tallyDefaults.categories,
+                                graph.settings,
+                                graph.io,
+                                LocalDateTime::now,
+                            )
                         }
                         val placesState by placesViewModel.uiState.collectAsStateWithLifecycle()
                         val calendarViewModel = viewModel {
@@ -243,6 +257,8 @@ fun SignedInNavigation(graph: AppGraph) {
                                             habits = graph.habits,
                                             reviews = graph.reviews,
                                             wants = graph.wants,
+                                            tally = graph.tally,
+                                            tallyCategories = graph.tallyDefaults.categories,
                                             settings = graph.settings,
                                             io = graph.io,
                                             clock = LocalDateTime::now,
@@ -271,6 +287,20 @@ fun SignedInNavigation(graph: AppGraph) {
                                         onAddShown = { wantTitle = null },
                                     )
                                 }
+                                PlaceRules.TALLY -> {
+                                    val tallyViewModel = viewModel(key = "tally-tab") {
+                                        TallyViewModel(
+                                            tracker = graph.tallyTracker,
+                                            tally = graph.tally,
+                                            projects = graph.projects,
+                                            defaults = graph.tallyDefaults.categories,
+                                            dayStartHour = graph.settings.dayStartHour,
+                                            io = graph.io,
+                                            clock = LocalDateTime::now,
+                                        )
+                                    }
+                                    TallyScreen(viewModel = tallyViewModel, onBack = backToHub, actions = actions)
+                                }
                                 else -> PlacesScreen(viewModel = placesViewModel, onOpen = ::select, actions = actions)
                             }
                         }
@@ -295,6 +325,8 @@ fun SignedInNavigation(graph: AppGraph) {
                                 habits = graph.habits,
                                 reviews = graph.reviews,
                                 wants = graph.wants,
+                                tally = graph.tally,
+                                tallyCategories = graph.tallyDefaults.categories,
                                 settings = graph.settings,
                                 io = graph.io,
                                 clock = LocalDateTime::now,
@@ -316,6 +348,8 @@ fun SignedInNavigation(graph: AppGraph) {
                                 rituals = graph.rituals,
                                 io = graph.io,
                                 today = graph::today,
+                                tally = graph.tally,
+                                tallyCategories = graph.tallyDefaults.categories,
                             )
                         }
                         ReviewScreen(viewModel = reviewViewModel, onClose = { backStack.removeLastOrNull() })
@@ -366,7 +400,6 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenActivity = { backStack.add(ActivityKey) },
                             problems = problems,
                             onProblemsRead = graph.problems::read,
-                            tally = viewModel { TallyViewModel(graph.tallyTracker, graph.io) },
                         )
                     }
                     entry<ConnectorKey> {

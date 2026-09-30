@@ -37,5 +37,6 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         IsLoading = session is AuthSession.Loading;
         IsSignedIn = session is AuthSession.SignedIn;
+        SignIn.Apply(session);
     }
 }

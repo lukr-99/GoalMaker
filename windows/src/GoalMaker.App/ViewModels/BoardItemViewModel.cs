@@ -16,7 +16,9 @@ public sealed class BoardItemViewModel
         bool madeByClaude,
         Action<string> move,
         Action open,
-        Action remove)
+        Action remove,
+        bool canArchive,
+        Action archive)
     {
         Id = id;
         Title = title;
@@ -28,6 +30,8 @@ public sealed class BoardItemViewModel
         MadeByClaude = madeByClaude;
         OpenCommand = new RelayCommand(open);
         RemoveCommand = new RelayCommand(remove);
+        CanArchive = canArchive;
+        ArchiveCommand = new RelayCommand(archive);
         MoveCommand = new RelayCommand<string>(column =>
         {
             if (column is not null)
@@ -64,6 +68,11 @@ public sealed class BoardItemViewModel
     public IRelayCommand OpenCommand { get; }
 
     public IRelayCommand RemoveCommand { get; }
+
+    /// <summary>A done item can leave the board by hand; the menu offers it only then.</summary>
+    public bool CanArchive { get; }
+
+    public IRelayCommand ArchiveCommand { get; }
 
     /// <summary>Moves the item to the column named by the command parameter.</summary>
     public IRelayCommand<string> MoveCommand { get; }

@@ -141,4 +141,25 @@ class SignInViewModelTest {
         assertEquals(SignInError.OFFLINE, viewModel.uiState.value.error)
         assertEquals(SignInStep.EMAIL, viewModel.uiState.value.step)
     }
+
+    @Test
+    fun `a session that ended says so, and keeps saying it on another email`() {
+        val viewModel = SignInViewModel(auth, sessionEnded = { true })
+        assertFalse(viewModel.uiState.value.sessionEnded)
+
+        viewModel.checkSession()
+        assertTrue(viewModel.uiState.value.sessionEnded)
+
+        viewModel.onEmailChange("me@example.com")
+        viewModel.sendCode()
+        viewModel.useAnotherEmail()
+        assertTrue(viewModel.uiState.value.sessionEnded)
+    }
+
+    @Test
+    fun `a first sign-in says nothing about a session`() {
+        val viewModel = SignInViewModel(auth)
+        viewModel.checkSession()
+        assertFalse(viewModel.uiState.value.sessionEnded)
+    }
 }

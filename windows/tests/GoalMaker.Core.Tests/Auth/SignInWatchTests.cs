@@ -116,6 +116,10 @@ public sealed class SignInWatchTests
             Session = new AuthSession.SignedOut();
             return Task.CompletedTask;
         }
+
+        public Task<SessionRenewal> RenewAsync(CancellationToken cancellationToken) => Task.FromResult(SessionRenewal.Renewed);
+
+        public Task EndSessionAsync() => Task.CompletedTask;
     }
 
     private sealed class FakeSettings : ISettingsStore
@@ -149,6 +153,8 @@ public sealed class SignInWatchTests
         public TimeOnly? WantsReadyReminder { get; set; }
 
         public IReadOnlyList<string> PinnedPlaces { get; set; } = [];
+
+        public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];
 
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =
             new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);

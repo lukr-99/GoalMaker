@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.outlined.Inbox
 import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.Timelapse
 import androidx.compose.material.icons.outlined.Today
 import androidx.compose.material.icons.outlined.WbTwilight
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -37,6 +38,7 @@ object PlaceLook {
         PlaceRules.GOALS -> R.string.goals_title
         PlaceRules.PROJECTS -> R.string.projects_title
         PlaceRules.WANTS -> R.string.wants_title
+        PlaceRules.TALLY -> R.string.tally_title
         PlaceRules.REVIEWS -> R.string.reviews_title
         PlaceRules.STATS -> R.string.stats_title
         PlaceRules.ARCHIVE -> R.string.archive_title
@@ -52,6 +54,7 @@ object PlaceLook {
         PlaceRules.GOALS -> Icons.Outlined.Flag
         PlaceRules.PROJECTS -> Icons.Outlined.Dashboard
         PlaceRules.WANTS -> Icons.Outlined.ShoppingBag
+        PlaceRules.TALLY -> Icons.Outlined.Timelapse
         PlaceRules.REVIEWS -> Icons.AutoMirrored.Outlined.MenuBook
         PlaceRules.STATS -> Icons.AutoMirrored.Outlined.TrendingUp
         PlaceRules.ARCHIVE -> Icons.Outlined.Archive

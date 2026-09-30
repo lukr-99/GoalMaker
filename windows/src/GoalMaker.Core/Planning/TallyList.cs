@@ -138,21 +138,12 @@ public sealed partial class TallyList
     /// <summary>Adds one of the owner's own categories at the end. Null without a name or with a color that isn't a palette name.</summary>
     public TallyCategory? AddCategory(string name, string color, string? emoji = null)
     {
-        var clean = Clip(name, MaxName);
-        var palette = color.Trim().ToLowerInvariant();
-        if (clean is null || !Palette().IsMatch(palette))
+        if (CategoryValues(name, color, emoji) is not { } values)
         {
             return null;
         }
 
-        var mark = emoji?.Trim() is { Length: > 0 and <= MaxEmoji } trimmed ? trimmed : null;
-        var values = new Dictionary<string, JsonNode?>
-        {
-            ["name"] = clean,
-            ["color"] = palette,
-            ["emoji"] = mark,
-            ["position"] = NextPosition(CategoriesTable),
-        };
+        values["position"] = NextPosition(CategoriesTable);
         if (rows.Create(CategoriesTable, values) is not { } row)
         {
             return null;
@@ -160,8 +151,24 @@ public sealed partial class TallyList
 
         replica.Queue(CategoriesTable, row);
         requestSync();
-        return new TallyCategory((string)row[SyncedTable.Id]!, clean, palette, mark);
+        return new TallyCategory((string)row[SyncedTable.Id]!, (string)values["name"]!, (string)values["color"]!, (string?)values["emoji"]);
     }
+
+    /// <summary>Renames, recolors or re-marks one of the owner's categories. False for the same reasons adding one is refused, or an unknown id.</summary>
+    public bool UpdateCategory(string id, string name, string color, string? emoji = null) =>
+        CategoryValues(name, color, emoji) is { } values && Change(CategoriesTable, id, row =>
+        {
+            foreach (var (column, value) in values)
+            {
+                row[column] = value;
+            }
+        });
+
+    /// <summary>
+    /// Deletes one of the owner's categories. Its rules and the time already sorted into it stay; the
+    /// places name such time as a category that is gone.
+    /// </summary>
+    public bool DeleteCategory(string id) => Change(CategoriesTable, id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
     /// <summary>The owner's own rules, in the order they are tried.</summary>
     public IReadOnlyList<TallyRule> Rules() =>
@@ -179,25 +186,12 @@ public sealed partial class TallyList
     /// </summary>
     public TallyRule? AddRule(TallyRule rule)
     {
-        var pattern = Clip(rule.Pattern, MaxPattern);
-        var category = Clip(rule.Category, MaxCategory);
-        if (pattern is null || category is null
-            || rule.Match is not (TallyRules.App or TallyRules.Title or TallyRules.Folder)
-            || rule.Platform is not (TallyRules.Android or TallyRules.Windows or TallyRules.Any)
-            || (rule.Match != TallyRules.App && rule.Platform == TallyRules.Android))
+        if (RuleValues(rule) is not { } values)
         {
             return null;
         }
 
-        var values = new Dictionary<string, JsonNode?>
-        {
-            ["match"] = rule.Match,
-            ["pattern"] = pattern,
-            ["platform"] = rule.Platform,
-            ["category"] = category,
-            ["project_id"] = rule.Project,
-            ["position"] = NextPosition(RulesTable),
-        };
+        values["position"] = NextPosition(RulesTable);
         if (rows.Create(RulesTable, values) is not { } row)
         {
             return null;
@@ -205,8 +199,20 @@ public sealed partial class TallyList
 
         replica.Queue(RulesTable, row);
         requestSync();
-        return rule with { Pattern = pattern, Category = category, Id = (string?)row[SyncedTable.Id] };
+        return rule with { Pattern = (string)values["pattern"]!, Category = (string)values["category"]!, Id = (string?)row[SyncedTable.Id] };
     }
+
+    /// <summary>Changes one of the owner's rules in place, keeping its turn. False for the same reasons adding one is refused, or an unknown id.</summary>
+    public bool UpdateRule(string id, TallyRule rule) =>
+        RuleValues(rule) is { } values && Change(RulesTable, id, row =>
+        {
+            foreach (var (column, value) in values)
+            {
+                row[column] = value;
+            }
+        });
+
+    public bool DeleteRule(string id) => Change(RulesTable, id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
     [GeneratedRegex("^[a-z][a-z0-9-]{0,23}$")]
     private static partial Regex Palette();
@@ -237,6 +243,60 @@ public sealed partial class TallyList
             : value.TryGetValue<double>(out var number) ? (int)number
             : null
         : null;
+
+    // A category's columns, or null for no name or a color that isn't a palette name.
+    private static Dictionary<string, JsonNode?>? CategoryValues(string name, string color, string? emoji)
+    {
+        var clean = Clip(name, MaxName);
+        var palette = color.Trim().ToLowerInvariant();
+        if (clean is null || !Palette().IsMatch(palette))
+        {
+            return null;
+        }
+
+        return new Dictionary<string, JsonNode?>
+        {
+            ["name"] = clean,
+            ["color"] = palette,
+            ["emoji"] = emoji?.Trim() is { Length: > 0 and <= MaxEmoji } trimmed ? trimmed : null,
+        };
+    }
+
+    // A rule's columns, or null for a rule the server would refuse.
+    private static Dictionary<string, JsonNode?>? RuleValues(TallyRule rule)
+    {
+        var pattern = Clip(rule.Pattern, MaxPattern);
+        var category = Clip(rule.Category, MaxCategory);
+        if (pattern is null || category is null
+            || rule.Match is not (TallyRules.App or TallyRules.Title or TallyRules.Folder)
+            || rule.Platform is not (TallyRules.Android or TallyRules.Windows or TallyRules.Any)
+            || (rule.Match != TallyRules.App && rule.Platform == TallyRules.Android))
+        {
+            return null;
+        }
+
+        return new Dictionary<string, JsonNode?>
+        {
+            ["match"] = rule.Match,
+            ["pattern"] = pattern,
+            ["platform"] = rule.Platform,
+            ["category"] = category,
+            ["project_id"] = rule.Project,
+        };
+    }
+
+    private bool Change(string table, string id, Action<JsonObject> edit)
+    {
+        if (replica.Get(table, id) is not { } row || row[SyncedTable.DeletedAt] is not null)
+        {
+            return false;
+        }
+
+        edit(row);
+        replica.Queue(table, row);
+        requestSync();
+        return true;
+    }
 
     // A table's rows that aren't deleted, by position, then by when they were made.
     private IEnumerable<JsonObject> Live(string table) =>

@@ -47,6 +47,20 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void FoldedColumnsAreKeptInBoardOrderAndOnlyTheKnownOnes()
+    {
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Empty(store.FoldedBoardColumns);
+
+        store.FoldedBoardColumns = ["done", "backlog"];
+
+        Assert.Equal(["backlog", "done"], new JsonSettingsStore(SettingsFile).FoldedBoardColumns);
+
+        File.WriteAllText(SettingsFile, """{ "Version": 1, "FoldedBoardColumns": ["done", "later", "done"] }""");
+        Assert.Equal(["done"], new JsonSettingsStore(SettingsFile).FoldedBoardColumns);
+    }
+
+    [Fact]
     public void AFileFromBeforeThemesKeepsItsLightOrDarkChoice()
     {
         Directory.CreateDirectory(folder);

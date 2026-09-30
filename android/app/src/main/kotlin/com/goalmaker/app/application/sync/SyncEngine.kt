@@ -62,7 +62,8 @@ class SyncEngine(
                 problem = if (rejected > 0) "$rejected change(s) refused by the server" else null,
             )
         } catch (error: RemoteUnavailableException) {
-            SyncReport(pushed, rejected, pulled, offline = true, problem = error.message)
+            // The outbox keeps what did not go, including after a session the server ended.
+            SyncReport(pushed, rejected, pulled, offline = true, problem = error.message, signedOut = error is NotSignedInException)
         }
     }
 

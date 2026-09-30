@@ -248,23 +248,6 @@
                 </StackPanel>
             </ui:Card>
 
-            <!-- Tally (docs/tally.md) until its own place is built: the switch, what stays here and what syncs. -->
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Tally}" />
-                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
-                    <DockPanel>
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding TallyOn}"
-                                         AutomationProperties.Name="{DynamicResource Settings.TallyOn}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.TallyOn}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.TallyKept}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.TallySynced}" />
-                </StackPanel>
-            </ui:Card>
-
             <!-- The Claude connector (docs/connector.md); its DataContext is the ConnectorViewModel, set in code. -->
             <controls:ConnectorCard x:Name="ConnectorCard" Margin="0,0,0,12" />
 

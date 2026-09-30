@@ -10,6 +10,7 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 
 /**
  * The owner's projects and their milestones, read from the replica and changed through its outbox
@@ -53,7 +54,14 @@ class ProjectList(
     fun add(draft: ProjectDraft): ProjectItem? {
         val clean = check(draft) ?: return null
         val position = (all().maxOfOrNull(ProjectItem::position) ?: -1.0) + 1.0
-        val row = rows.create(TABLE, values(clean) + ("position" to JsonPrimitive(position))) ?: return null
+        // Every column the server has must carry a value: a null here would mean "never" rather than its default.
+        val row = rows.create(
+            TABLE,
+            values(clean) + mapOf(
+                "position" to JsonPrimitive(position),
+                ARCHIVE_AFTER_DAYS to JsonPrimitive(ProjectRules.ARCHIVE_AFTER_DAYS),
+            ),
+        ) ?: return null
         replica.queue(TABLE, row)
         requestSync()
         return toItem(row)
@@ -69,6 +77,16 @@ class ProjectList(
     fun setStatus(id: String, status: String): Boolean {
         if (status !in setOf(ProjectRules.ACTIVE, ProjectRules.PAUSED, ProjectRules.PROJECT_DONE)) return false
         return change(TABLE, id) { values -> values["status"] = JsonPrimitive(status) }
+    }
+
+    /**
+     * How many days a done item stays on the project's board after the planning day it was finished,
+     * or null to keep it until it is archived by hand (docs/projects.md). False for a number outside
+     * [ProjectRules.ARCHIVE_DAYS] or a project that is gone.
+     */
+    fun setArchiveAfterDays(id: String, days: Int?): Boolean {
+        if (days != null && days !in ProjectRules.ARCHIVE_DAYS) return false
+        return change(TABLE, id) { values -> values[ARCHIVE_AFTER_DAYS] = days?.let(::JsonPrimitive) ?: JsonNull }
     }
 
     /** Deletes a project softly; its items stay as plain tasks. */
@@ -152,6 +170,12 @@ class ProjectList(
         notes = row.text("notes").orEmpty(),
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
+        // A row that doesn't carry the column at all keeps the default; a null in it means never.
+        archiveAfterDays = if (ARCHIVE_AFTER_DAYS in row) {
+            (row[ARCHIVE_AFTER_DAYS] as? JsonPrimitive)?.intOrNull
+        } else {
+            ProjectRules.ARCHIVE_AFTER_DAYS
+        },
     )
 
     private fun toMilestone(row: JsonObject) = ProjectMilestone(
@@ -165,6 +189,7 @@ class ProjectList(
     private companion object {
         const val TABLE = "projects"
         const val MILESTONES = "project_milestones"
+        const val ARCHIVE_AFTER_DAYS = "archive_after_days"
         const val MAX_NAME = 120
         const val MAX_DESCRIPTION = 2000
         const val MAX_LINK = 500

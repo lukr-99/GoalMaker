@@ -4,6 +4,7 @@ using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Sync;
+using GoalMaker.Infrastructure.Sync;
 
 namespace GoalMaker.App.Tests;
 
@@ -34,6 +35,26 @@ public sealed class ReviewViewModelTests : IDisposable
         Assert.Equal(7, page.Days.Count);
         Assert.Equal("Reviews.Done(3)", page.DoneText);
         Assert.Equal("Reviews.MoreThanBefore(2)", page.ChangeText);
+    }
+
+    [Fact]
+    public void TheLookBackShowsWhereThePeriodsTimeWentOnceThereIsAny()
+    {
+        Assert.False(Page().HasTally);
+
+        planner.TallyDay(WeekStart, TallyRules.Pc, "coding", 200);
+        planner.TallyDay(WeekStart.AddDays(6), TallyRules.Phone, "video", 45);
+        planner.TallyDay(WeekStart.AddDays(6), TallyRules.Pc, "video", 30);
+        planner.TallyDay(WeekStart.AddDays(-1), TallyRules.Pc, "games", 300);
+        planner.TallyDay(Today, TallyRules.Pc, "games", 300);
+        var page = Page();
+
+        Assert.True(page.HasTally);
+        Assert.Equal("Tally.HoursMinutes(4,35)", page.TallyTotal);
+        Assert.Equal([200d, 75d], page.TallyParts.Select(part => part.Amount));
+        Assert.Equal(
+            [("Coding", "Tally.HoursMinutes(3,20)"), ("Video", "Tally.HoursMinutes(1,15)")],
+            page.TallyLegend.Select(segment => (segment.Name, segment.Value)));
     }
 
     [Fact]
@@ -254,7 +275,9 @@ public sealed class ReviewViewModelTests : IDisposable
         planner.Settings,
         planner.Strings,
         planner.Time,
-        action => action());
+        action => action(),
+        planner.Tally,
+        own => new TallyLabels(ContractResources.TallyDefaults(), own, planner.Strings, _ => null));
 
     private TaskItem Add(string line)
     {

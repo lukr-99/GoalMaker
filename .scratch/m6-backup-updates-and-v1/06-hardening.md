@@ -1,6 +1,6 @@
 # M6-06: Hardening before the release
 
-**Status:** in progress (two paths left) · **Milestone:** M6
+**Status:** done · **Milestone:** M6
 
 ## Scope
 - The paths that only show up in real use: no network at sign-in and mid-sync, a session that
@@ -57,3 +57,30 @@ Two paths are left for v1: Android shows the "replica won't open" screen Windows
 instead of closing, and a session the server refuses while an app is open sends the owner to
 sign-in on both apps without losing the outbox. A full disk and sync under pressure move to
 "After v1" in the roadmap.
+
+## Result (2026-09-30)
+
+Both paths left at the close-out are built.
+
+- **A replica that won't open, on Android.** `AppGraph` opens the replica once at start, off the main
+  thread (`ReplicaStartup`); a failure goes to `files/crash.log` and becomes a state, and `ReplicaGate`
+  shows the startup failure screen instead of the app, quick add or the share sheet. A migration this
+  build doesn't know throws `ReplicaFromNewerAppException`, and the screen says the data was saved
+  by a newer version and to install the newest one; anything else says to ask for help before
+  reinstalling, since a reinstall would lose unsynced changes. Reminders and background sync do
+  nothing then. Checked on the emulator: a replica from a newer build shows the screen, and the line
+  is in crash.log.
+- **A session the server refuses, on both apps.** A 401 used to count as offline forever. Now a 401
+  renews the session once and tries again; a second 401, or a renewal the server refuses, ends the
+  session. The app goes to sign-in with one line saying the session ended, the replica and outbox
+  stay, and the coordinator stops retrying while nobody is signed in. Signing in again as the same
+  owner syncs what waited; signing in as someone else empties the replica first (`AccountSync` on
+  Android, `SessionSync` on Windows), and the engine only pushes the signed-in owner's rows. Windows
+  also fixed a sign-out made offline that never cleared the client's stored session, so a weekly
+  sign-out done offline could quietly sign back in.
+- **Checked:** 367 Android tests with build and lint, 489 Windows tests (251 Core, 238 App) with
+  `dotnet format`, and the accessibility scan. New tests on both apps: a refused session signs out
+  and keeps the outbox without retrying, a 401 after a renewal ends it, a renewal that can't reach the
+  server keeps the session, the same owner syncs, another owner gets nothing.
+- **Left, by hand against the local stack:** delete the signed-in user while an app is open with a
+  change waiting, and watch the line appear and the change arrive after signing in again.

@@ -1,4 +1,4 @@
-import { addDays, type Day } from "./day.ts";
+import { addDays, type Day, mondayOf } from "./day.ts";
 import { nameBasedUuid } from "./nameBasedUuid.ts";
 import { planningDay } from "./planningDay.ts";
 
@@ -214,6 +214,43 @@ export type TallyGrouping = "category" | "project" | "device";
 export interface TallyGroup {
   key: string | null;
   minutes: number;
+}
+
+/** What the Tally place and the stats show: one kind of device, one category, or everything (null). */
+export interface TallyFilter {
+  kind: "phone" | "pc" | null;
+  category: string | null;
+}
+
+/** One week of the stats block: its Monday, its minutes, and each category's, most first. */
+export interface TallyWeek {
+  start: Day;
+  minutes: number;
+  categories: { category: string; minutes: number }[];
+}
+
+/**
+ * The `count` weeks ending with the one holding `today`, oldest first, each with the minutes the
+ * filter keeps (contracts/vectors/tally.json 'weeks'). A week with nothing is still there, empty.
+ */
+export function tallyWeeks(rows: TallyRow[], today: Day, count: number, filter: TallyFilter): TallyWeek[] {
+  const last = mondayOf(today);
+  const weeks: TallyWeek[] = [];
+  for (let back = count - 1; back >= 0; back--) {
+    const start = addDays(last, -7 * back);
+    const end = addDays(start, 6);
+    const kept = rows.filter((row) =>
+      row.day >= start && row.day <= end &&
+      (filter.kind === null || row.deviceKind === filter.kind) &&
+      (filter.category === null || row.category === filter.category)
+    );
+    weeks.push({
+      start,
+      minutes: kept.reduce((sum, row) => sum + row.minutes, 0),
+      categories: groupTally(kept, "category").map((group) => ({ category: group.key!, minutes: group.minutes })),
+    });
+  }
+  return weeks;
 }
 
 /** A default category's name, from its key: coding is Coding (contracts/content/tally-rules.json). */

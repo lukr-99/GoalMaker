@@ -53,6 +53,7 @@ public sealed class AppGraph : IDisposable
     private readonly SupabaseChangeFeed changeFeed;
     private readonly IProfileSettings profile;
     private readonly SyncedTableCatalog catalog;
+    private readonly SessionSync sessionSync;
     private readonly Action<Action> runOnUi;
     private readonly IStrings strings;
     private readonly TickSound tick = new();
@@ -83,8 +84,9 @@ public sealed class AppGraph : IDisposable
         localOnly = build.IsDevBuild && !signIn;
         var backend = (build.IsDevBuild ? Settings.BackendOverride : null) ?? build.DefaultBackend;
         AppInfo = new AppInfo(build.Version, build.IsDevBuild, backend, build.DefaultBackend, localOnly);
-        supabase = SupabaseClientFactory.Create(backend, Paths.Session);
-        Auth = localOnly ? new LocalOnlyAuthGateway() : new SupabaseAuthGateway(supabase);
+        var storedSession = new ProtectedFileSessionPersistence(Paths.Session);
+        supabase = SupabaseClientFactory.Create(backend, storedSession);
+        Auth = localOnly ? new LocalOnlyAuthGateway() : new SupabaseAuthGateway(supabase, storedSession);
         // This PC keeps its session for a week and then asks for the code again (docs/sign-in.md).
         SignInWatch = new SignInWatch(Auth, Settings, () => DateTimeOffset.Now);
 
@@ -107,10 +109,19 @@ public sealed class AppGraph : IDisposable
         catalog = ContractResources.SyncedTables();
         var design = ContractResources.Themes();
         replica = new SqliteReplica(localOnly ? Paths.LocalReplica : Paths.ReplicaFor(backend.Url), catalog, ReplicaMigrator.BuiltIn());
-        var postgrest = new PostgrestHttp(http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken);
+        // A call the server refuses the session for asks for a sync (built just below), which renews
+        // the session or ends it.
+        var postgrest = new PostgrestHttp(
+            http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken, () => runOnUi(() => Sync?.Request()));
         IRemoteTables remote = localOnly ? new LocalOnlyRemoteTables(TimeProvider.System) : new PostgrestRemoteTables(postgrest);
         profile = new PostgrestProfileSettings(postgrest, () => (Auth.Session as AuthSession.SignedIn)?.UserId);
-        Sync = new SyncCoordinator(new SyncEngine(catalog, replica, remote, TimeProvider.System, pulls: !localOnly), replica, TimeProvider.System, SyncDebounce);
+        Sync = new SyncCoordinator(
+            new SyncEngine(catalog, replica, remote, TimeProvider.System, pulls: !localOnly, owner: () => (Auth.Session as AuthSession.SignedIn)?.UserId),
+            replica,
+            TimeProvider.System,
+            SyncDebounce,
+            Auth);
+        sessionSync = new SessionSync(catalog, replica, Sync);
         var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
         Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
         Tags = new TagList(replica, newRows, Sync.Request);
@@ -119,6 +130,7 @@ public sealed class AppGraph : IDisposable
             replica, newRows, Areas, Tags, Projects, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Tally = new TallyList(replica, newRows, () => Settings.DeviceId, Sync.Request);
+        var tallyDefaults = ContractResources.TallyDefaults();
 
         // Tally on this PC (docs/tally.md, ADR 0013): the window in front, sorted by the owner's rules and
         // the shipped ones. The raw log stays in the tally folder; only the day totals reach the replica.
@@ -126,7 +138,7 @@ public sealed class AppGraph : IDisposable
             new WindowsForegroundSource(),
             new DiskTallyLog(Paths.Tally),
             Tally,
-            ContractResources.TallyDefaults().Rules,
+            tallyDefaults.Rules,
             Projects.All,
             () => Settings.DayStartHour,
             TimeProvider.System);
@@ -253,6 +265,8 @@ public sealed class AppGraph : IDisposable
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits));
         Reviews = new ReviewList(replica, newRows, Sync.Request);
+        // Tally's categories by name and palette color, the shipped ones and the owner's (docs/tally.md).
+        TallyLabels NameTally(IReadOnlyList<TallyCategory> own) => new(tallyDefaults, own, strings, Theme.SwatchBrush);
         Review = new ReviewViewModel(
             ReviewRules.Weekly,
             ReviewRules.PeriodStart(ReviewRules.Weekly, PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour)),
@@ -266,13 +280,18 @@ public sealed class AppGraph : IDisposable
             Settings,
             strings,
             TimeProvider.System,
-            runOnUi);
+            runOnUi,
+            Tally,
+            NameTally);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi);
         // A want added, decided or deleted moves the next alarm and may settle the wants toast.
         Wants.Changed += (_, _) => runOnUi(SettleReminders);
-        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants);
-        ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
+        TallyPage = new TallyViewModel(
+            Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
+            [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
+        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally);
+        ProjectsPage = new ProjectsViewModel(Projects, Tasks, Settings, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
             Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
@@ -336,8 +355,7 @@ public sealed class AppGraph : IDisposable
             restartApp,
             releases?.ReleasesPage,
             OpenInBrowser,
-            runOnUi,
-            SwitchTally);
+            runOnUi);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
 
@@ -462,6 +480,9 @@ public sealed class AppGraph : IDisposable
 
     public WantsViewModel WantsPage { get; private set; } = null!;
 
+    /// <summary>The Tally page (docs/tally.md): the switch, where the time went, and the owner's rules and categories.</summary>
+    public TallyViewModel TallyPage { get; private set; } = null!;
+
     /// <summary>The Stats page (docs/stats.md).</summary>
     public StatsViewModel StatsPage { get; private set; } = null!;
 
@@ -582,17 +603,16 @@ public sealed class AppGraph : IDisposable
         periodicSync?.Cancel();
         periodicSync?.Dispose();
         periodicSync = null;
-        if (session is not AuthSession.SignedIn signedIn)
+        // A sign-out leaves the replica and its outbox; a sign-in as someone else starts clean.
+        sessionSync.Apply(session);
+        if (session is not AuthSession.SignedIn)
         {
-            Sync.CancelScheduled();
             _ = changeFeed.StopAsync();
             reminderTimer.Cancel();
             toasts.ClearAll();
             return;
         }
 
-        ForgetOtherAccounts(signedIn.UserId);
-        Sync.Request();
         runOnUi(LookAtReminders);
         periodicSync = new CancellationTokenSource();
         _ = SyncPeriodicallyAsync(periodicSync.Token);
@@ -757,7 +777,7 @@ public sealed class AppGraph : IDisposable
         toasts.Clear(activation.ReminderId);
     }
 
-    // Tally follows the switch in Settings at once; switching it off writes what it has.
+    // Tally follows the switch on its page at once; switching it off writes what it has.
     private void SwitchTally(bool on)
     {
         if (on)
@@ -836,6 +856,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.Refresh();
         ReviewsPage.Refresh();
         WantsPage.Refresh();
+        TallyPage.Refresh();
         StatsPage.Refresh();
         ProjectsPage.Refresh();
         CalendarPage.Refresh();
@@ -847,17 +868,6 @@ public sealed class AppGraph : IDisposable
         if (e.IsAvailable && Auth.Session is AuthSession.SignedIn)
         {
             runOnUi(Sync.Request);
-        }
-    }
-
-    // A replica only ever holds one account's rows; signing in as someone else starts clean.
-    private void ForgetOtherAccounts(string userId)
-    {
-        var foreign = catalog.Tables.Any(table => replica.All(table.Name)
-            .Any(row => (string?)row[SyncedTable.OwnerId] is { } owner && owner != userId));
-        if (foreign)
-        {
-            replica.ClearAll();
         }
     }
 

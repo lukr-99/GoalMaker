@@ -17,6 +17,7 @@
     "0014_habit_limits.sql": "6199e058f8f798e4698da3f629ee870b71ed324b1c85ee97029243906cb8574e",
     "0015_task_made_by.sql": "b12d122fdc658d618160dc23496797e75ee369da29426e01a56b9970c4f0cb2a",
     "0016_wants.sql": "1e5a46446433af535ad50ce8abdf3fdaa802e83e7275272597b85f3ba4761d61",
-    "0017_tally.sql": "f6ff08f70ec3e70e9a7646e81f444cb1c7b5c85eb482b98afe0132c5dabedece"
+    "0017_tally.sql": "f6ff08f70ec3e70e9a7646e81f444cb1c7b5c85eb482b98afe0132c5dabedece",
+    "0018_board_archive.sql": "096ad0092dfdac12e1285299dc3422646fd1c92350cd4c900271dd54bc33aea6"
   }
 }

@@ -37,6 +37,9 @@ import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.ProfileSettings
 import com.goalmaker.app.application.settings.SettingsStore
+import com.goalmaker.app.application.sync.AccountSync
+import com.goalmaker.app.application.sync.ReplicaOpening
+import com.goalmaker.app.application.sync.ReplicaStartup
 import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.sync.RemoteRejectedException
 import com.goalmaker.app.application.sync.RemoteTables
@@ -53,6 +56,7 @@ import com.goalmaker.app.data.auth.LocalOnlyAuthGateway
 import com.goalmaker.app.domain.problems.ProblemRules
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
 import com.goalmaker.app.data.connector.PostgrestConnectorLinks
+import com.goalmaker.app.data.diagnostics.CrashLog
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
 import com.goalmaker.app.data.planning.ReminderNotifications
 import com.goalmaker.app.data.planning.UsageStatsSource
@@ -76,7 +80,6 @@ import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.planning.PromptLibrary
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.ReviewReminder
-import com.goalmaker.app.domain.sync.SyncedTable
 import com.goalmaker.app.domain.sync.SyncedTableCatalog
 import com.goalmaker.app.domain.update.ReleaseChannelAddress
 import com.goalmaker.app.domain.update.ReleasePlatform
@@ -102,8 +105,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 
 /**
  * The one composition root: every adapter is created here and handed to the code that needs it
@@ -150,7 +151,8 @@ class AppGraph(context: Context) {
         localOnly = localOnly,
     )
 
-    val auth: AuthGateway = if (localOnly) LocalOnlyAuthGateway() else SupabaseAuthGateway(supabase, scope)
+    private val supabaseAuth = if (localOnly) null else SupabaseAuthGateway(supabase, scope)
+    val auth: AuthGateway = supabaseAuth ?: LocalOnlyAuthGateway()
 
     /** The optional lock in front of the signed-in app on this phone (docs/sign-in.md). */
     val appLock = AppLock(enabled = { settings.appLock.value }, now = Instant::now)
@@ -197,6 +199,12 @@ class AppGraph(context: Context) {
         catalog = catalog,
         migrations = { ReplicaMigrator.builtIn(appContext.assets) },
     )
+
+    // Opened once at start; a file that will not open is written down and shown, not a crash (M6-06).
+    private val replicaStartup = ReplicaStartup(replica) { CrashLog.write(appContext.filesDir, it) }
+
+    /** Whether the replica opened; the app shows nothing that reads it before it has. */
+    val replicaOpening: StateFlow<ReplicaOpening> = replicaStartup.state
     private val http = HttpClient(OkHttp) {
         install(HttpTimeout) {
             connectTimeoutMillis = 15_000
@@ -211,7 +219,14 @@ class AppGraph(context: Context) {
         (if (BuildConfig.IS_DEV_BUILD) DevSignIn.mailboxOf(backend.url) else null)
             ?.let { mailbox -> LocalMailbox(http, mailbox)::codeFor }
 
-    private val postgrest = PostgrestHttp(http, backend.url, backend.publishableKey) {
+    // A token the server turns away gets a refresh; turned away again, the session ends (docs/sign-in.md).
+    private val postgrest = PostgrestHttp(
+        http = http,
+        baseUrl = backend.url,
+        publishableKey = backend.publishableKey,
+        refreshSession = { supabaseAuth?.refresh() ?: false },
+        endSession = { supabaseAuth?.endSession() },
+    ) {
         supabase.auth.currentAccessTokenOrNull()
     }
     private val remote: RemoteTables = if (localOnly) LocalOnlyRemoteTables(Instant::now) else PostgrestRemoteTables(postgrest)
@@ -235,6 +250,8 @@ class AppGraph(context: Context) {
         now = Instant::now,
         debounce = 2.seconds,
     )
+
+    private val accountSync = AccountSync(catalog, replica, sync, io)
 
     private val newRows = NewRows(
         catalog = catalog,
@@ -337,15 +354,9 @@ class AppGraph(context: Context) {
                 }
             }
         }
-        // A sync can leave a series with two open occurrences; every device settles it the same way.
-        // A sync can also change when the next reminder is due, and settle reminders on screen here
-        // that were handled on the other device, so the alarm is redone and stale ones come down.
-        // A want added, decided or deleted here moves the next alarm and may settle the notification.
+        // Nothing reads the replica until it has opened; one that will not open stays shut (M6-06).
         scope.launch(io) {
-            wants.watch().collect {
-                reminders.rearm()
-                clearStaleWants()
-            }
+            if (replicaStartup.open() == ReplicaOpening.Open) followTheReplica()
         }
         sync.afterRun = { report ->
             if (report.pulled > 0) tasks.repairSeries()
@@ -359,15 +370,6 @@ class AppGraph(context: Context) {
                     .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
                     .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
                 clearStaleWants()
-            }
-        }
-        scope.launch {
-            auth.session.collect { session ->
-                when (session) {
-                    is AuthSession.SignedIn -> onSignedIn(session)
-                    AuthSession.SignedOut -> onSignedOut()
-                    AuthSession.Loading -> Unit
-                }
             }
         }
         scope.launch {
@@ -386,7 +388,7 @@ class AppGraph(context: Context) {
                     appLock.cameBack()
                     if (signedIn) {
                         if (!localOnly) changeFeed.start()
-                        scope.launch(io) { tallyTracker.track() }
+                        scope.launch(io) { if (replicaOpened()) tallyTracker.track() }
                         sync.request()
                     }
                 }
@@ -402,12 +404,44 @@ class AppGraph(context: Context) {
         )
     }
 
+    // What watches the replica, started once it is open.
+    private fun followTheReplica() {
+        // A sync can leave a series with two open occurrences; every device settles it the same way.
+        // A sync can also change when the next reminder is due, and settle reminders on screen here
+        // that were handled on the other device, so the alarm is redone and stale ones come down.
+        // A want added, decided or deleted here moves the next alarm and may settle the notification.
+        scope.launch(io) {
+            wants.watch().collect {
+                reminders.rearm()
+                clearStaleWants()
+            }
+        }
+        scope.launch {
+            auth.session.collect { session ->
+                when (session) {
+                    is AuthSession.SignedIn -> onSignedIn(session)
+                    AuthSession.SignedOut -> onSignedOut()
+                    AuthSession.Loading -> Unit
+                }
+            }
+        }
+    }
+
+    /** True once the replica is open; false when it would not open, and nothing should read it. */
+    suspend fun replicaOpened(): Boolean = replicaOpening.first { it != ReplicaOpening.Opening } == ReplicaOpening.Open
+
+    /** Nobody is signed in, yet the replica still holds the owner's rows: the session ended. */
+    suspend fun sessionEnded(): Boolean = accountSync.sessionEnded()
+
     /**
-     * One sync for WorkManager. True when done (or nobody is signed in), false when the server
-     * couldn't be reached and the run should be retried.
+     * One sync for WorkManager. True when done (or nobody is signed in, or the replica would not
+     * open), false when the server couldn't be reached and the run should be retried.
      */
     suspend fun syncInBackground(): Boolean {
-        if (auth.session.first { it != AuthSession.Loading } !is AuthSession.SignedIn) return true
+        if (!replicaOpened()) return true
+        val session = auth.session.first { it != AuthSession.Loading } as? AuthSession.SignedIn ?: return true
+        // The worker can come before the sign-in is handled; someone else's rows never go up.
+        accountSync.prepare(session.userId)
         // Tally's totals go out with this push (docs/tally.md).
         withContext(io) { tallyTracker.track() }
         val reached = !sync.syncNow().offline
@@ -520,9 +554,8 @@ class AppGraph(context: Context) {
     }
 
     private suspend fun onSignedIn(session: AuthSession.SignedIn) {
+        accountSync.signedIn(session.userId)
         signedIn = true
-        withContext(io) { forgetOtherAccounts(session.userId) }
-        sync.request()
         if (!localOnly) backgroundSync.keepSyncing()
         // Anything that was due while the app was away, and the alarm for what comes next.
         withContext(io) {
@@ -544,21 +577,10 @@ class AppGraph(context: Context) {
 
     private fun onSignedOut() {
         signedIn = false
-        sync.cancelScheduled()
+        accountSync.signedOut()
         backgroundSync.stop()
         changeFeed.stop()
         reminders.rearm()
-    }
-
-    // A replica only ever holds one account's rows; signing in as someone else starts clean.
-    private fun forgetOtherAccounts(userId: String) {
-        if (userId.isBlank()) return
-        val foreign = catalog.tables.any { table ->
-            replica.all(table.name).any { row ->
-                (row[SyncedTable.OWNER_ID] as? JsonPrimitive)?.contentOrNull.let { it != null && it != userId }
-            }
-        }
-        if (foreign) replica.clearAll()
     }
 
     private companion object {

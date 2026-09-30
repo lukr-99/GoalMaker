@@ -21,6 +21,11 @@
 
             <ui:Card Padding="24">
                 <StackPanel>
+                    <!-- The server ended the session while GoalMaker was open (docs/sign-in.md). -->
+                    <TextBlock Margin="0,0,0,16"
+                               Text="{DynamicResource SignIn.SessionEnded}"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding SessionEnded, Converter={StaticResource BoolToVisibility}}" />
                     <StackPanel Visibility="{Binding IsEmailStep, Converter={StaticResource BoolToVisibility}}">
                         <ui:TextBox x:Name="EmailBox"
                                     PlaceholderText="{DynamicResource SignIn.EmailLabel}"
