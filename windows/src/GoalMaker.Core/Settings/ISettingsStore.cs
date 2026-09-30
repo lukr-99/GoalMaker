@@ -40,6 +40,9 @@ public interface ISettingsStore
     /// <summary>The global quick-add shortcut as text (<c>Win+Alt+Space</c>); null for the default, empty for none.</summary>
     string? QuickAddHotkey { get; set; }
 
+    /// <summary>Whether the composer adds tasks or chats (M7); the last choice on this PC, quick-add unless changed.</summary>
+    ComposerMode ComposerMode { get; set; }
+
     /// <summary>Whether the sidebar is collapsed to icons.</summary>
     bool NavigationCollapsed { get; set; }
 

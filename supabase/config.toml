@@ -394,6 +394,11 @@ deno_version = 2
 [functions.connector]
 verify_jwt = false
 
+# The quick chat (docs/assistant.md): the apps call it with the owner's own session, so the gateway
+# checks the JWT before the function runs. Its model key is the GEMINI_API_KEY function secret.
+[functions.assistant]
+verify_jwt = true
+
 [analytics]
 # Off locally: GoalMaker does not use log analytics and it saves memory.
 enabled = false

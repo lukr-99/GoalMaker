@@ -16,16 +16,20 @@ tools the Claude connector serves. The composer switches between quick-add, as t
 2. [02-chat-on-android.md](02-chat-on-android.md): the switch and the chat on the phone.
 3. [03-chat-on-windows.md](03-chat-on-windows.md): the same on the PC.
 
-## Decisions the owner still has to make
+## Decisions (owner, 2026-09-30)
 
-- **The key.** The owner makes a Gemini API key in Google AI Studio (free tier) and it goes in as a
-  Supabase function secret. Nothing works on the cloud project until then.
-- **Who a change is by.** Tasks and wants record `made_by` as `owner` or `claude`, and the activity
-  log's actor as `owner`, `claude` or `system`. The chat is not Claude. Either it is recorded as the
-  owner (they asked for it in their own app), or as a new `assistant` value (a migration on
-  `made_by`, the actor, and both apps' "by Claude" marks). Proposed: the owner, with the activity log
-  saying "through the chat".
-- **What is kept.** Proposed: the conversation lives only on the device and is gone when the app
-  closes; nothing of it is stored on the server.
-- **Deletes.** The connector asks Claude to get a yes before deleting. Proposed: the chat never
-  deletes; the tools that delete are left out of its tool list.
+- **The key.** The owner makes a Gemini API key in Google AI Studio (free tier) and it goes in as the
+  `GEMINI_API_KEY` Supabase function secret. Nothing works on the cloud project until then.
+- **Who a change is by.** The owner: they asked for it in their own app. The activity log notes that
+  it came through the chat. No new `made_by` value.
+- **What is kept.** The conversation lives only on the device and is gone when the app closes;
+  nothing of it is stored on the server.
+- **Deletes.** The chat never deletes; the tools that delete are left out of its tool list.
+
+## The call
+
+`POST /functions/v1/assistant` with the owner's session (`Authorization: Bearer <access token>`) and
+`{"messages": [{"role": "user" | "model", "text": "..."}]}`, the whole thread so far, last one the
+owner's. The answer is `200 {"text": "..."}`. A failure is `{"error": code, "message": "..."}` with
+code `unavailable` (503, no key on the server), `rate_limited` (429, our limits), `provider_limit`
+(429, Gemini's free tier is used up), `bad_request` (400) or `failed` (502).

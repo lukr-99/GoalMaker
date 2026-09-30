@@ -76,6 +76,11 @@ import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.domain.settings.ComposerMode
+import com.goalmaker.app.ui.chat.ChatThread
+import com.goalmaker.app.ui.chat.ChatUnavailableNote
+import com.goalmaker.app.ui.chat.ChatViewModel
+import com.goalmaker.app.ui.chat.ComposerModeSwitch
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.GoalMakerLogo
@@ -101,11 +106,13 @@ import kotlinx.coroutines.launch
  * The planner's home: Today, Tomorrow and the Inbox behind the bottom navigation (docs/lists.md),
  * with the composer above it. The list on screen supplies the day for what's typed
  * (docs/composer.md). The bar itself is shared with Projects and the Calendar, so [tab] and the
- * choosing live above this screen, in [com.goalmaker.app.ui.nav.MainScreen].
+ * choosing live above this screen, in [com.goalmaker.app.ui.nav.MainScreen]. The composer's switch
+ * turns it into the quick chat ([chat]), whose short thread shows above it.
  */
 @Composable
 fun ListsScreen(
     viewModel: ListsViewModel,
+    chat: ChatViewModel,
     onOpenPlan: () -> Unit,
     onOpenTask: (String) -> Unit,
     onOpenGoals: () -> Unit,
@@ -116,6 +123,7 @@ fun ListsScreen(
     onOpenWant: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val chatState by chat.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val composer = rememberTextFieldState()
     val snackbars = remember { SnackbarHostState() }
@@ -200,14 +208,27 @@ fun ListsScreen(
             bottomBar = {
                 Column(Modifier.imePadding()) {
                     val line = composer.text.toString()
+                    // Picked chat but it can't run: say why, and the composer quick-adds meanwhile.
+                    if (chatState.chatBlocked) ChatUnavailableNote(chatState.availability)
+                    if (chatState.chosen == ComposerMode.CHAT && (chatState.lines.isNotEmpty() || chatState.thinking)) {
+                        ChatThread(chatState, onClear = chat::clear, onRetry = chat::retry)
+                    }
+                    // One bar for both modes, so switching keeps the line and the keyboard.
+                    val chatting = chatState.chatting
                     val draft = remember(line) { viewModel.preview(line) }
                     ComposerBar(
                         state = composer,
-                        chips = composerChips(line, draft, viewModel.today(), state.areas, state.tagNames, state.projects),
-                        canSend = (draft.title.isNotBlank() && draft.command == null) ||
-                            draft.command?.name == PlanRules.COMMAND || draft.command?.name == WantRules.COMMAND,
+                        chips = if (chatting) emptyList() else composerChips(line, draft, viewModel.today(), state.areas, state.tagNames, state.projects),
+                        canSend = if (chatting) {
+                            line.isNotBlank() && !chatState.thinking
+                        } else {
+                            (draft.title.isNotBlank() && draft.command == null) ||
+                                draft.command?.name == PlanRules.COMMAND || draft.command?.name == WantRules.COMMAND
+                        },
                         onSubmit = {
-                            if (draft.command?.name == PlanRules.COMMAND) {
+                            if (chatting) {
+                                if (chat.send(line)) composer.clearText()
+                            } else if (draft.command?.name == PlanRules.COMMAND) {
                                 composer.clearText()
                                 onOpenPlan()
                             } else if (draft.command?.name == WantRules.COMMAND) {
@@ -218,6 +239,9 @@ fun ListsScreen(
                             }
                         },
                         onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
+                        placeholder = stringResource(if (chatting) R.string.chat_placeholder else R.string.today_composer_placeholder),
+                        sendLabel = stringResource(if (chatting) R.string.chat_send else R.string.today_add),
+                        leading = { ComposerModeSwitch(chatState, chat::choose) },
                     )
                 }
             },

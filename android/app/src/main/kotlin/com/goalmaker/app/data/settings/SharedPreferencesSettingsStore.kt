@@ -14,6 +14,7 @@ import com.goalmaker.app.domain.planning.ReviewReminder
 import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
+import com.goalmaker.app.domain.settings.ComposerMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -134,6 +135,14 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         collapsed.value = kept
     }
 
+    private val mode = MutableStateFlow(enumOrDefault(preferences.getString(COMPOSER_MODE, null), ComposerMode.QUICK_ADD))
+    override val composerMode: StateFlow<ComposerMode> = mode.asStateFlow()
+
+    override fun setComposerMode(mode: ComposerMode) {
+        preferences.edit { putString(COMPOSER_MODE, mode.name) }
+        this.mode.value = mode
+    }
+
     private val lock = MutableStateFlow(preferences.getBoolean(APP_LOCK, false))
     override val appLock: StateFlow<Boolean> = lock.asStateFlow()
 
@@ -247,6 +256,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val PINS = "pinned_places"
         const val BOARD_VIEW = "board_view"
         const val COLLAPSED_COLUMNS = "board_collapsed_columns"
+        const val COMPOSER_MODE = "composer_mode"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
         const val WEEKLY_REVIEW_AT = "weekly_review_reminder"
         const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"

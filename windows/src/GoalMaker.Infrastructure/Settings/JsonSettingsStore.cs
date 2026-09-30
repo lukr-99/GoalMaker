@@ -97,6 +97,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { QuickAddHotkey = value });
     }
 
+    public ComposerMode ComposerMode
+    {
+        get => document.ComposerMode;
+        set => Save(document with { ComposerMode = value });
+    }
+
     public bool NavigationCollapsed
     {
         get => document.NavigationCollapsed;

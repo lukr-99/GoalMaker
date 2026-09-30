@@ -31,6 +31,10 @@ GoalMaker's stack uses ports 553xx, so it runs beside other local Supabase proje
 | Studio | http://127.0.0.1:55323 |
 | Mail viewer (sign-in codes) | http://127.0.0.1:55324 |
 
+The quick chat ([assistant.md](../assistant.md)) answers "unavailable" locally until it has a model
+key. For a check with the real model, put `GEMINI_API_KEY=<your key>` in `supabase/functions/.env`
+(ignored by git, never committed) and restart `npx supabase functions serve`. The tests never use it.
+
 `npx supabase db reset` rebuilds the database from the migrations. `npx supabase stop` stops the
 stack and keeps its data; add `--no-backup` to drop it.
 

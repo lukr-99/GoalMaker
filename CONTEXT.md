@@ -122,6 +122,11 @@ The hour (04:00 by default) at which "today" becomes the next day.
 The input bar at the bottom of the app for quick-add shortcuts and `/` commands.
 _Avoid_: Search bar, command palette
 
+**Quick chat**:
+The composer's second mode: the owner's words go to a model that answers and acts through the
+connector's tools, except the ones that delete. A change it makes is the owner's.
+_Avoid_: Assistant (in copy), AI mode, bot
+
 **Shortcut**:
 A composer token that sets a field: date words, times, `#tag`, `@Area`, `!`, `?`, `+Project`.
 

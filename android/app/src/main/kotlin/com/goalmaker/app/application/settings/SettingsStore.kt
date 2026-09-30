@@ -4,14 +4,15 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
+import com.goalmaker.app.domain.settings.ComposerMode
 import java.time.Instant
 import java.time.LocalTime
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
- * hours, the evening reminder, the pinned places, how project boards show, the app lock, Tally and,
- * in dev builds, a backend override.
+ * hours, the evening reminder, the pinned places, how project boards show, the composer's mode,
+ * the app lock, Tally and, in dev builds, a backend override.
  */
 interface SettingsStore {
     val appearance: StateFlow<Appearance>
@@ -69,6 +70,11 @@ interface SettingsStore {
     val collapsedColumns: StateFlow<Set<String>>
 
     fun setCollapsedColumns(columns: Set<String>)
+
+    /** Whether the composer quick-adds or chats (spec, "Quick chat (M7)"); quick-add unless changed. */
+    val composerMode: StateFlow<ComposerMode>
+
+    fun setComposerMode(mode: ComposerMode)
 
     /** Whether this phone asks to be unlocked before it shows the app (docs/sign-in.md); off unless set. */
     val appLock: StateFlow<Boolean>

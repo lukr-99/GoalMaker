@@ -11,7 +11,10 @@ using GoalMaker.App.Startup;
 using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 using GoalMaker.App.Views;
+using GoalMaker.Core.Account;
 using GoalMaker.Core.Activity;
+using GoalMaker.Core.Assistant;
+using GoalMaker.Core.Auth;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Connector;
 using GoalMaker.Core.Planning;
@@ -121,6 +124,41 @@ public sealed class PageSnapshots
         var content = (FrameworkElement)box.Content;
         box.Content = null;
         Save(content, folder, "quick-add", new Size(560, 150));
+    });
+
+    [Fact(Explicit = true)]
+    public void QuickChat() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.ComposerMode = ComposerMode.Chat;
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Call the bank 17:00", Today);
+        Add(planner, "Buy milk", Today);
+        using var theme = Theme(planner);
+        var assistant = new SnapshotAssistant();
+        var chat = new ChatViewModel(
+            assistant, new SnapshotAuth(), planner.Sync, planner.Settings, strings, planner.Time, action => action(), () => { });
+        ComposerViewModel Composer(Func<DateOnly, DateOnly?> day) => new(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day, action => action(), chat: chat);
+        _ = chat.SendAsync("add call the bank tomorrow at 9");
+        _ = chat.SendAsync("what's on today?");
+        assistant.Waiting = true;
+        _ = chat.SendAsync("move buy milk to Friday");
+
+        var composer = Composer(_ => null);
+        var box = new Shell.QuickAddWindow(composer, strings);
+        var content = (FrameworkElement)box.Content;
+        box.Content = null;
+        Save(content, folder, "quick-chat", new Size(560, 420));
+
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, Composer(day => day), planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action());
+        Save(new TodayPage(today), folder, "today-with-chat");
+
+        chat.ClearCommand.Execute(null);
+        planner.Sync.SyncNowAsync(CancellationToken.None).GetAwaiter().GetResult();
+        Save(new TodayPage(today), folder, "today-chat-offline");
     });
 
     [Fact(Explicit = true)]
@@ -736,6 +774,44 @@ public sealed class PageSnapshots
         }
 
         public Task RevokeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    // Answers at once, or never once Waiting is set, so the thinking row shows.
+    private sealed class SnapshotAssistant : IAssistantClient
+    {
+        public bool Waiting { get; set; }
+
+        public Task<AssistantReply> SendAsync(IReadOnlyList<AssistantMessage> messages, CancellationToken cancellationToken = default) =>
+            Waiting
+                ? new TaskCompletionSource<AssistantReply>().Task
+                : Task.FromResult<AssistantReply>(new AssistantReply.Answer(messages.Count == 1
+                    ? "Added Call the bank for tomorrow at 9:00."
+                    : "Two tasks today: Call the bank at 17:00 and Buy milk."));
+    }
+
+    private sealed class SnapshotAuth : IAuthGateway
+    {
+        public event EventHandler<AuthSession>? SessionChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public AuthSession Session { get; } = new AuthSession.SignedIn(TestPlanner.Owner, "me@example.com");
+
+        public Task InitializeAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<AuthResult> SendCodeAsync(EmailAddress email, CancellationToken cancellationToken) =>
+            Task.FromResult<AuthResult>(new AuthResult.Success());
+
+        public Task<AuthResult> VerifyCodeAsync(EmailAddress email, SignInCode code, CancellationToken cancellationToken) =>
+            Task.FromResult<AuthResult>(new AuthResult.Success());
+
+        public Task SignOutAsync() => Task.CompletedTask;
+
+        public Task<SessionRenewal> RenewAsync(CancellationToken cancellationToken) => Task.FromResult(SessionRenewal.Renewed);
+
+        public Task EndSessionAsync() => Task.CompletedTask;
     }
 
     // WPF needs one STA thread with an Application holding the app's resources; nothing is shown.

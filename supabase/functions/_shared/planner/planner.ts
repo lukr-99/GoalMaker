@@ -149,6 +149,8 @@ export interface Change {
   entityId: string;
   action: string;
   actor: string;
+  /** "chat" when the change came through the quick chat (0019), null otherwise. */
+  via: string | null;
   at: string;
   undone: boolean;
   label: string | null;
@@ -1333,7 +1335,7 @@ export class Planner {
 
   private changeColumns() {
     return this.db`
-      select id::text, entity, entity_id::text, action, actor, undone_at is not null as undone,
+      select id::text, entity, entity_id::text, action, actor, via, undone_at is not null as undone,
              coalesce(after ->> 'title', after ->> 'name', before ->> 'title', before ->> 'name') as label,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as at
       from public.activity_log`;
@@ -1454,6 +1456,7 @@ function toChange(row: any): Change {
     entityId: row.entity_id,
     action: row.action,
     actor: row.actor,
+    via: row.via ?? null,
     at: row.at,
     undone: row.undone,
     label: row.label,

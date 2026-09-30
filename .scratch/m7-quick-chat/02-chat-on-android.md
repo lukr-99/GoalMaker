@@ -11,7 +11,7 @@
   runs. Changes it made arrive through sync like any other and show in the lists at once.
 - Offline, or signed out, or with no key on the server: the switch says chat isn't available and
   why, and quick-add keeps working.
-- The thread lives only in memory (open decision) and a clear button empties it.
+- The thread lives only in memory and a clear button empties it.
 
 ## Acceptance criteria
 - View-model tests with a fake assistant client: the switch and its memory, a request and its

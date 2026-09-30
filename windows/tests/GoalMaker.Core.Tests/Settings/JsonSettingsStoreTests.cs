@@ -95,6 +95,19 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void TheComposerAddsTasksUntilChatIsChosenAndThenRemembersIt()
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(SettingsFile, """{ "Version": 1 }""");
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Equal(ComposerMode.QuickAdd, store.ComposerMode);
+
+        store.ComposerMode = ComposerMode.Chat;
+
+        Assert.Equal(ComposerMode.Chat, new JsonSettingsStore(SettingsFile).ComposerMode);
+    }
+
+    [Fact]
     public void TallyIsOffUntilTurnedOn()
     {
         Directory.CreateDirectory(folder);

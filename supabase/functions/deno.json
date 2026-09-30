@@ -1,7 +1,7 @@
 {
   "tasks": {
-    "test": "deno test --allow-read --allow-env --allow-net _shared connector",
-    "check": "deno check connector/index.ts",
+    "test": "deno test --allow-read --allow-env --allow-net _shared connector assistant",
+    "check": "deno check connector/index.ts assistant/index.ts",
     "lint": "deno lint && deno fmt --check"
   },
   "fmt": {

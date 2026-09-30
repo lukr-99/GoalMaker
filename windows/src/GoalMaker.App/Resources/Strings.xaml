@@ -13,6 +13,8 @@
 
     <sys:String x:Key="QuickAdd.Title">Add a task</sys:String>
     <sys:String x:Key="QuickAdd.Hint">Add a task. It goes to the Inbox unless you name a day. Esc closes.</sys:String>
+    <sys:String x:Key="QuickAdd.ChatHint">Ask or tell GoalMaker what to do. Ctrl+Shift+Space goes back to adding a task. Esc closes.</sys:String>
+    <sys:String x:Key="QuickAdd.SwitchHint">Ctrl+Shift+Space switches to chat.</sys:String>
 
     <sys:String x:Key="Reminder.Done">Done</sys:String>
     <sys:String x:Key="Reminder.SnoozeTenMinutes">10 min</sys:String>
@@ -268,6 +270,28 @@
     <sys:String x:Key="Composer.OpensPlan">opens Plan tomorrow</sys:String>
     <sys:String x:Key="Composer.UnknownCommand">unknown command</sys:String>
     <sys:String x:Key="Composer.Remove">Remove {0}</sys:String>
+
+    <!-- Quick chat in the composer (M7) -->
+    <sys:String x:Key="Chat.Switch">Chat</sys:String>
+    <sys:String x:Key="Chat.SwitchHelp">Switch between adding a task and chatting with GoalMaker (Ctrl+Shift+Space)</sys:String>
+    <sys:String x:Key="Chat.Placeholder">Ask or tell GoalMaker…</sys:String>
+    <sys:String x:Key="Chat.Send">Send to chat</sys:String>
+    <sys:String x:Key="Chat.Thread">Chat</sys:String>
+    <sys:String x:Key="Chat.You">You</sys:String>
+    <sys:String x:Key="Chat.Assistant">GoalMaker</sys:String>
+    <sys:String x:Key="Chat.Line">{0}: {1}</sys:String>
+    <sys:String x:Key="Chat.Thinking">Thinking…</sys:String>
+    <sys:String x:Key="Chat.Clear">Clear the chat</sys:String>
+    <sys:String x:Key="Chat.ClearShort">Clear</sys:String>
+    <sys:String x:Key="Chat.SignedOut">Chat isn't available because you're signed out. Enter adds a task as usual.</sys:String>
+    <sys:String x:Key="Chat.Offline">Chat isn't available because you're offline. Enter adds a task as usual.</sys:String>
+    <sys:String x:Key="Chat.NotSetUp">Chat isn't available because it isn't set up on the server yet. Enter adds a task as usual.</sys:String>
+    <sys:String x:Key="Chat.LocalOnly">Chat isn't available in a development build that keeps everything on this PC. Enter adds a task as usual.</sys:String>
+    <sys:String x:Key="Chat.RateLimited">That's a lot of messages in a short time. Wait a minute and send it again.</sys:String>
+    <sys:String x:Key="Chat.ProviderLimit">The free chat model is used up for now. Try again later.</sys:String>
+    <sys:String x:Key="Chat.BadRequest">The chat couldn't take that. Clear the chat or try a shorter message.</sys:String>
+    <sys:String x:Key="Chat.SessionRefused">The server didn't accept your session. Try again in a moment.</sys:String>
+    <sys:String x:Key="Chat.Failed">Something went wrong on the way. Send it again.</sys:String>
     <sys:String x:Key="Repeat.Daily">Every day</sys:String>
     <sys:String x:Key="Repeat.EveryNDays">Every {0} days</sys:String>
     <sys:String x:Key="Repeat.Weekdays">Every weekday</sys:String>

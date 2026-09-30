@@ -10,14 +10,14 @@
   text or tool calls. `GeminiProvider` implements it over the Gemini API's function calling, with the
   key from the `GEMINI_API_KEY` secret; a `FakeProvider` plays scripted turns in tests. Another
   provider (a local Ollama model on the PC) can come later without touching the loop.
-- The tool loop: the same `tools` list the connector serves, minus the ones that delete (open
-  decision), turned into function declarations from their zod shapes. At most 8 tool rounds a
+- The tool loop: the same `tools` list the connector serves, minus the ones that delete, turned into function declarations from their zod shapes. At most 8 tool rounds a
   request; the answer is plain text.
 - A system prompt with the owner's planning day, time zone and a short note on how GoalMaker words
   things, kept in `_shared/assistant/prompt.ts`.
 - Limits: 30 requests a minute and a daily cap per owner (a small table or the connector's rate
   limit pattern), and a clear message when Gemini's own free-tier limit is hit.
-- Who a change is by (open decision): proposed, the owner, with the activity log noting the chat.
+- Who a change is by: the owner, with the activity log noting the chat.
+- The request and answer shapes are in the README, "The call".
 
 ## Acceptance criteria
 - Endpoint tests on the local stack with the fake provider: a request that adds a task, one that
