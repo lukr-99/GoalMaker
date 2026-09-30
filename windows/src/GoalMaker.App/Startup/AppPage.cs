@@ -16,6 +16,7 @@ public enum AppPage
     Reviews,
     Stats,
     Wants,
+    Tally,
     Projects,
     Calendar,
 

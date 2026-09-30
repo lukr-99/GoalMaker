@@ -65,6 +65,11 @@ import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.goals.GoalDialog
 import com.goalmaker.app.ui.goals.GoalSummaryRow
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.tally.TallyLegend
+import com.goalmaker.app.ui.tally.TallySlice
+import com.goalmaker.app.ui.tally.TallyStackedBar
+import com.goalmaker.app.ui.tally.durationText
+import com.goalmaker.app.ui.tally.tabular
 import com.goalmaker.app.ui.task.MarkdownNotes
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.format.DateTimeFormatter
@@ -234,6 +239,19 @@ private fun androidx.compose.foundation.lazy.LazyListScope.lookBack(state: Revie
     if (digest.habits.isNotEmpty()) {
         item("h-habits") { SectionHeader(stringResource(R.string.reviews_habits)) }
         items(digest.habits, key = { "habit-" + it.id }) { habit -> HabitLine(habit) }
+    }
+    if (state.tally.isNotEmpty()) {
+        item("h-tally") { SectionHeader(stringResource(R.string.reviews_tally)) }
+        item("tally") {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    durationText(state.tally.sumOf(TallySlice::minutes)),
+                    style = tabular(MaterialTheme.typography.headlineSmall),
+                )
+                TallyStackedBar(state.tally)
+                TallyLegend(state.tally)
+            }
+        }
     }
 }
 

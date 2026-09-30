@@ -12,6 +12,7 @@ import {
   tallyDayId,
   type TallyRow,
   type TallyRule,
+  tallyWeeks,
 } from "./tally.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -84,3 +85,9 @@ Deno.test("Tally minutes group by category, project and device, most first and n
   ]);
   assertEquals([durationText(45), durationText(120), durationText(185)], ["45 min", "2 h", "3 h 5 min"]);
 });
+
+for (const vector of file.weeks) {
+  Deno.test(`tally.json weeks: ${vector.name}`, () => {
+    assertEquals(tallyWeeks(vector.rows, vector.today, vector.count, vector.filter), vector.expect);
+  });
+}

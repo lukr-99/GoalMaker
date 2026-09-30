@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.places
 
 import com.goalmaker.app.domain.navigation.PlaceRules
+import com.goalmaker.app.ui.tally.TallySlice
 
 /** What each tile on the Places hub shows (ADR 0014), worked out by [PlacesBoard]. */
 data class PlacesDigest(
@@ -18,6 +19,8 @@ data class PlacesDigest(
     val letterWaiting: Boolean = false,
     val wantsReady: Int = 0,
     val wantsCooling: Int = 0,
+    /** Today's Tally minutes by category, most first, on every device. */
+    val tallyToday: List<TallySlice> = emptyList(),
     val doneThisWeek: Int = 0,
     val archived: Int = 0,
 ) {

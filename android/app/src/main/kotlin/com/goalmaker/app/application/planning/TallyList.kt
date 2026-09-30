@@ -4,6 +4,8 @@ import com.goalmaker.app.application.sync.Replica
 import com.goalmaker.app.domain.sync.SyncedTable
 import java.time.LocalDate
 import java.util.Locale
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -69,6 +71,9 @@ class TallyList(
         return true
     }
 
+    /** Ticks once at first and again whenever a day, a category or a rule changes, from any device. */
+    fun watch(): Flow<Unit> = combine(replica.watch(DAYS), replica.watch(CATEGORIES), replica.watch(RULES)) { _, _, _ -> }
+
     /** Every device's totals from [from] to [to], both included, by day, device, category and project. */
     fun totals(from: LocalDate, to: LocalDate): List<TallyDay> = replica.all(DAYS)
         .filter { it.text(SyncedTable.DELETED_AT) == null }
@@ -92,21 +97,24 @@ class TallyList(
 
     /** Adds a category of the owner's own at the end. Null without a name or a palette color. */
     fun addCategory(name: String, color: String, emoji: String? = null): TallyCategory? {
-        val clean = name.trim().take(MAX_NAME)
-        if (clean.isEmpty() || !COLOR.matches(color.trim())) return null
-        val row = rows.create(
-            CATEGORIES,
-            mapOf(
-                "name" to JsonPrimitive(clean),
-                "color" to JsonPrimitive(color.trim()),
-                "emoji" to (emoji?.trim()?.takeIf(String::isNotEmpty)?.let(::JsonPrimitive) ?: JsonNull),
-                "position" to JsonPrimitive(nextPosition(CATEGORIES)),
-            ),
-        ) ?: return null
+        val values = categoryValues(name, color, emoji) ?: return null
+        val row = rows.create(CATEGORIES, values + ("position" to JsonPrimitive(nextPosition(CATEGORIES)))) ?: return null
         replica.queue(CATEGORIES, row)
         requestSync()
         return categories().firstOrNull { it.id == row.text(SyncedTable.ID) }
     }
+
+    /** Renames or recolors one of the owner's categories, keeping its id and place. False when it doesn't hold. */
+    fun updateCategory(id: String, name: String, color: String, emoji: String? = null): Boolean {
+        val values = categoryValues(name, color, emoji) ?: return false
+        return change(CATEGORIES, id) { it.putAll(values) }
+    }
+
+    /**
+     * Deletes one of the owner's categories. Its rules and the time already sorted into it stay; the
+     * places name such time as a category that is gone.
+     */
+    fun deleteCategory(id: String): Boolean = change(CATEGORIES, id) { it[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
 
     /** The owner's own rules that aren't deleted, in the order they are tried. */
     fun rules(): List<TallyRule> = replica.all(RULES)
@@ -128,26 +136,55 @@ class TallyList(
      * don't hold; a title or folder rule can't be for Android alone, since the phone has neither.
      */
     fun addRule(rule: TallyRule): TallyRule? {
+        val values = ruleValues(rule) ?: return null
+        val row = rows.create(RULES, values + ("position" to JsonPrimitive(nextPosition(RULES)))) ?: return null
+        replica.queue(RULES, row)
+        requestSync()
+        return rules().firstOrNull { it.id == row.text(SyncedTable.ID) }
+    }
+
+    /** Changes one of the owner's rules, keeping its id and its place in the order. False when it doesn't hold. */
+    fun updateRule(id: String, rule: TallyRule): Boolean {
+        val values = ruleValues(rule) ?: return false
+        return change(RULES, id) { it.putAll(values) }
+    }
+
+    fun deleteRule(id: String): Boolean = change(RULES, id) { it[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
+
+    private fun categoryValues(name: String, color: String, emoji: String?): Map<String, JsonElement>? {
+        val clean = name.trim().take(MAX_NAME)
+        if (clean.isEmpty() || !COLOR.matches(color.trim())) return null
+        return mapOf(
+            "name" to JsonPrimitive(clean),
+            "color" to JsonPrimitive(color.trim()),
+            "emoji" to (emoji?.trim()?.takeIf(String::isNotEmpty)?.let(::JsonPrimitive) ?: JsonNull),
+        )
+    }
+
+    private fun ruleValues(rule: TallyRule): Map<String, JsonElement>? {
         val pattern = rule.pattern.trim().take(MAX_PATTERN)
         if (rule.match !in TallyRules.MATCHES || rule.platform !in TallyRules.PLATFORMS || pattern.isEmpty() ||
             rule.category.isBlank() || (rule.match != TallyRules.APP && rule.platform == TallyRules.ANDROID)
         ) {
             return null
         }
-        val row = rows.create(
-            RULES,
-            mapOf(
-                "match" to JsonPrimitive(rule.match),
-                "pattern" to JsonPrimitive(pattern),
-                "platform" to JsonPrimitive(rule.platform),
-                "category" to JsonPrimitive(rule.category.trim().take(MAX_CATEGORY)),
-                "project_id" to (rule.project?.let(::JsonPrimitive) ?: JsonNull),
-                "position" to JsonPrimitive(nextPosition(RULES)),
-            ),
-        ) ?: return null
-        replica.queue(RULES, row)
+        return mapOf(
+            "match" to JsonPrimitive(rule.match),
+            "pattern" to JsonPrimitive(pattern),
+            "platform" to JsonPrimitive(rule.platform),
+            "category" to JsonPrimitive(rule.category.trim().take(MAX_CATEGORY)),
+            "project_id" to (rule.project?.let(::JsonPrimitive) ?: JsonNull),
+        )
+    }
+
+    // Edits a row that isn't deleted and queues it; false when there is no such row.
+    private fun change(table: String, id: String, edit: (MutableMap<String, JsonElement>) -> Unit): Boolean {
+        val row = replica.get(table, id)?.takeIf { it.text(SyncedTable.DELETED_AT) == null } ?: return false
+        val values = LinkedHashMap<String, JsonElement>(row)
+        edit(values)
+        replica.queue(table, JsonObject(values))
         requestSync()
-        return rules().firstOrNull { it.id == row.text(SyncedTable.ID) }
+        return true
     }
 
     private fun nextPosition(table: String): Int =

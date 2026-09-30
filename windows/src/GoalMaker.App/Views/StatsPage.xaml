@@ -47,6 +47,24 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- One week of Tally: its time on top, its categories stacked from the bottom. -->
+        <DataTemplate x:Key="TallyWeek" DataType="{x:Type vm:TallyBarViewModel}">
+            <StackPanel Margin="3,0" ToolTip="{Binding Tip}">
+                <controls:StackedBar Height="90" Parts="{Binding Parts}" Fraction="{Binding Fraction}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- One category in the Tally legend: its swatch, name and time over the twelve weeks. -->
+        <DataTemplate x:Key="TallyLegend" DataType="{x:Type vm:TallySegmentViewModel}">
+            <StackPanel Orientation="Horizontal" Margin="0,0,16,6">
+                <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Emoji}" Margin="0,0,4,0" />
+                <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Name}" Margin="0,0,6,0" />
+                <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Value}" FontFamily="{DynamicResource GM.NumberFont}"
+                           Typography.NumeralAlignment="Tabular" Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
+        </DataTemplate>
+
         <!-- One habit over the window. -->
         <DataTemplate x:Key="HabitRow" DataType="{x:Type vm:StatsHabitViewModel}">
             <Border Margin="0,0,0,6" Padding="12,8"
@@ -181,6 +199,41 @@
                         </StackPanel>
                     </Border>
                 </primitives:UniformGrid>
+            </StackPanel>
+
+            <!-- Where the time went over twelve weeks (Tally, docs/tally.md), once there is any. -->
+            <StackPanel Visibility="{Binding HasTally, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Stats.Tally}" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding TallyTotal}" FontSize="28" FontFamily="{DynamicResource GM.NumberFont}" Typography.NumeralAlignment="Tabular"
+                                       Foreground="{DynamicResource GM.AccentBrush}" VerticalAlignment="Bottom" />
+                            <TextBlock Text="{Binding TallyPerWeek}" FontSize="12" Margin="12,0,0,6" VerticalAlignment="Bottom"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding TallyWeeks}" ItemTemplate="{StaticResource TallyWeek}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <primitives:UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <DockPanel Margin="0,8,0,10">
+                            <TextBlock DockPanel.Dock="Left" Text="{Binding TallyFirstWeek}" FontSize="11"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            <TextBlock HorizontalAlignment="Right" Text="{DynamicResource Stats.ThisWeek}" FontSize="11"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding TallyLegend}" ItemTemplate="{StaticResource TallyLegend}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

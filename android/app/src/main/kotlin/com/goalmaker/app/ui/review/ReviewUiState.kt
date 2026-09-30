@@ -5,6 +5,7 @@ import com.goalmaker.app.application.planning.ReviewDigest
 import com.goalmaker.app.application.planning.ReviewItem
 import com.goalmaker.app.domain.planning.ReviewQuestion
 import com.goalmaker.app.ui.goals.GoalRow
+import com.goalmaker.app.ui.tally.TallySlice
 
 /**
  * The guided review (docs/reviews.md): where it is, what the period looked like, the prompts it asks
@@ -21,6 +22,8 @@ data class ReviewUiState(
     val nextGoals: List<GoalRow> = emptyList(),
     val canCopyGoals: Boolean = false,
     val goals: List<GoalItem> = emptyList(),
+    /** Where Tally says the period's time went, most first; empty when nothing was counted (docs/tally.md). */
+    val tally: List<TallySlice> = emptyList(),
 ) {
     /** The letter a Claude routine wrote about the period, blank when there is none (docs/letter.md). */
     val letter: String get() = review?.summary.orEmpty()

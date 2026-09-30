@@ -223,6 +223,24 @@ public sealed class TallyTrackerTests : IDisposable
         Assert.False(source.Listening);
     }
 
+    [Fact]
+    public void ARuleThatArrivesWhileItRunsSortsTheNextWindow()
+    {
+        source.Window = new ForegroundApp(Chrome, "Puzzle 1 - lichess.org - Google Chrome");
+        tracker.Start();
+        Pass(TimeSpan.FromMinutes(5));
+
+        // Added in the Tally place, here or on the phone; the replica holds it either way.
+        tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Any, "games"));
+        source.Switch(new ForegroundApp(Chrome, "Puzzle 2 - lichess.org - Google Chrome"));
+        Pass(TimeSpan.FromMinutes(5));
+        tracker.Stop();
+
+        var entries = Entries();
+        Assert.NotEqual("games", entries[0].Category);
+        Assert.Equal("games", entries[1].Category);
+    }
+
     private static DateTime At(int hour, int minute, int second = 0) => new(2026, 9, 30, hour, minute, second);
 
     // Time passes with the owner at the keyboard.

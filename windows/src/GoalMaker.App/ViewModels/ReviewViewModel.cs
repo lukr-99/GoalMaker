@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
@@ -12,7 +13,8 @@ namespace GoalMaker.App.ViewModels;
 /// The guided review of one period (docs/reviews.md, spec stories 59 to 64): read the letter when a
 /// Claude routine wrote one (docs/letter.md), look back, handle what is still open, reflect on the
 /// prompts the library and the period's facts give, rate mood and energy, and set the next period's
-/// goals. Everything is saved as it is answered; the letter is only read, never edited.
+/// goals. The look back also shows where the time went (Tally, docs/tally.md) once there is any.
+/// Everything is saved as it is answered; the letter is only read, never edited.
 /// </summary>
 public sealed partial class ReviewViewModel : ObservableObject
 {
@@ -30,6 +32,8 @@ public sealed partial class ReviewViewModel : ObservableObject
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
+    private readonly TallyList? tally;
+    private readonly Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels;
     private ReviewItem? review;
     private bool loading;
 
@@ -65,6 +69,15 @@ public sealed partial class ReviewViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasLetter), nameof(Progress), nameof(CanGoBack))]
     private string summaryText = string.Empty;
 
+    [ObservableProperty]
+    private bool hasTally;
+
+    [ObservableProperty]
+    private string tallyTotal = string.Empty;
+
+    [ObservableProperty]
+    private IReadOnlyList<(double Amount, Brush? Brush)> tallyParts = [];
+
     public ReviewViewModel(
         string kind,
         DateOnly periodStart,
@@ -78,9 +91,13 @@ public sealed partial class ReviewViewModel : ObservableObject
         ISettingsStore settings,
         IStrings strings,
         TimeProvider time,
-        Action<Action> runOnUi)
+        Action<Action> runOnUi,
+        TallyList? tally = null,
+        Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels = null)
     {
         Kind = kind;
+        this.tally = tally;
+        this.tallyLabels = tallyLabels;
         PeriodStart = periodStart;
         this.reviews = reviews;
         this.tasks = tasks;
@@ -95,6 +112,11 @@ public sealed partial class ReviewViewModel : ObservableObject
         tasks.Changed += (_, _) => runOnUi(Refresh);
         goals.Changed += (_, _) => runOnUi(Refresh);
         habits.Changed += (_, _) => runOnUi(Refresh);
+        if (tally is not null)
+        {
+            tally.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Start();
     }
 
@@ -113,6 +135,9 @@ public sealed partial class ReviewViewModel : ObservableObject
     public ObservableCollection<ReviewDigest.Goal> PeriodGoals { get; } = [];
 
     public ObservableCollection<ReviewDigest.Habit> PeriodHabits { get; } = [];
+
+    /// <summary>The period's Tally minutes by category, most first.</summary>
+    public ObservableCollection<TallySegmentViewModel> TallyLegend { get; } = [];
 
     /// <summary>1 to 5 for mood and for energy; the chosen one carries the accent.</summary>
     public IReadOnlyList<RatingViewModel> MoodRatings { get; private set; } = [];
@@ -225,6 +250,7 @@ public sealed partial class ReviewViewModel : ObservableObject
             OpenTasks.Add(new ReviewTaskViewModel(task, Decide));
         }
 
+        ShowTally();
         ShowNextGoals();
         OnPropertyChanged(nameof(HasOpenTasks));
         OnPropertyChanged(nameof(HasPeriodGoals));
@@ -261,6 +287,28 @@ public sealed partial class ReviewViewModel : ObservableObject
         }
 
         reviews.SetReflections(review.Id, QuestionRows.Select(question => new Reflection(question.PromptId, question.Answer)));
+    }
+
+    // Where the period's time went, every device together (docs/tally.md), once there is any.
+    private void ShowTally()
+    {
+        if (tally is null || tallyLabels is null)
+        {
+            return;
+        }
+
+        var labels = tallyLabels(tally.Categories());
+        var groups = TallyRules.ByCategory(tally.Days(Digest.PeriodStart, Digest.PeriodEnd));
+        var minutes = groups.Sum(group => group.Minutes);
+        TallyTotal = labels.Duration(minutes);
+        TallyParts = [.. groups.Select(group => ((double)group.Minutes, labels.Brush(group.Key!)))];
+        TallyLegend.Clear();
+        foreach (var group in groups)
+        {
+            TallyLegend.Add(new TallySegmentViewModel(labels.Name(group.Key!), labels.Emoji(group.Key!), labels.Duration(group.Minutes), labels.Brush(group.Key!)));
+        }
+
+        HasTally = minutes > 0;
     }
 
     [RelayCommand]

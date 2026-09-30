@@ -17,6 +17,9 @@ import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.RitualRunList
 import com.goalmaker.app.application.planning.TagList
+import com.goalmaker.app.application.planning.TallyDefaults
+import com.goalmaker.app.application.planning.TallyList
+import com.goalmaker.app.application.planning.TallyTotal
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.contracts.ContractFiles
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
@@ -55,6 +58,7 @@ class ReviewViewModelTest {
     private lateinit var habits: HabitList
     private lateinit var rituals: RitualRunList
     private lateinit var prompts: PromptLibrary
+    private lateinit var tally: TallyList
 
     // Monday 21 September 2026: the week under review is 14 to 20 September.
     private val today = LocalDate.parse("2026-09-21")
@@ -71,6 +75,7 @@ class ReviewViewModelTest {
         habits = HabitList(test.replica, rows, {})
         reviews = ReviewList(test.replica, rows, {})
         rituals = RitualRunList(test.replica, rows, {})
+        tally = TallyList(test.replica, rows, {}) { "phone" }
         prompts = PromptLibrary.parse(File(System.getProperty("goalmaker.contracts")!!).resolve("content/prompts.json").readText())
     }
 
@@ -88,7 +93,10 @@ class ReviewViewModelTest {
         prompts = prompts,
         rituals = rituals,
         io = Dispatchers.Unconfined,
-    ) { today }
+        today = { today },
+        tally = tally,
+        tallyCategories = TallyDefaults.load(RuntimeEnvironment.getApplication().assets.open("tally-rules.json")).categories,
+    )
 
     private fun done(title: String, day: LocalDate, area: String? = null) {
         val task = tasks.add(ComposerParser.parse(title, day.atTime(9, 0)))!!
@@ -108,6 +116,23 @@ class ReviewViewModelTest {
     private fun writeLetter(text: String) {
         val review = reviews.open(ReviewRules.WEEKLY, weekStart)!!
         reviews.setSummary(review.id, text)
+    }
+
+    @Test
+    fun `the look back says where the period's time went, only when Tally counted some`() = runTest {
+        val model = viewModel()
+        idle()
+        assertEquals(emptyList<Any>(), model.uiState.first { it.loaded }.tally)
+
+        val sunday = weekStart.plusDays(6)
+        tally.rewrite(weekStart, listOf(TallyTotal(weekStart, "video", null, 40)))
+        tally.rewrite(sunday, listOf(TallyTotal(sunday, "video", null, 20), TallyTotal(sunday, "reading", null, 45)))
+        // The day after the week belongs to the next review.
+        tally.rewrite(today, listOf(TallyTotal(today, "games", null, 90)))
+        idle()
+
+        val state = model.uiState.first { it.tally.isNotEmpty() }
+        assertEquals(listOf("Video" to 60, "Reading" to 45), state.tally.map { it.name to it.minutes })
     }
 
     @Test
