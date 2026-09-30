@@ -15,6 +15,26 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Tally (docs/tally.md, ADR 0013): which apps were in front and for how long, from Android's own
+         usage history. Unused until the owner turns Tally on and grants usage access in the system's
+         settings, which is the only way this permission is ever given. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Since Android 11 the usage history only shows apps this one can see, so without this Tally
+         would miss most of them (docs/tally.md). GoalMaker ships outside Google Play. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Tally leaves time on the home screen out, so it needs to see which apps are launchers. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+    </queries>
+
     <application
         android:name=".GoalMakerApplication"
         android:allowBackup="false"
