@@ -3,14 +3,15 @@ package com.goalmaker.app.application.settings
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
+import com.goalmaker.app.domain.settings.BoardView
 import java.time.Instant
 import java.time.LocalTime
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
- * hours, the evening reminder, the pinned places, the app lock, Tally and, in dev builds, a backend
- * override.
+ * hours, the evening reminder, the pinned places, how project boards show, the app lock, Tally and,
+ * in dev builds, a backend override.
  */
 interface SettingsStore {
     val appearance: StateFlow<Appearance>
@@ -58,6 +59,16 @@ interface SettingsStore {
     val pins: StateFlow<List<String>>
 
     fun setPins(pins: List<String>)
+
+    /** How a project's board shows on this phone (docs/projects.md); one column at a time unless changed. */
+    val boardView: StateFlow<BoardView>
+
+    fun setBoardView(view: BoardView)
+
+    /** The board columns the list view keeps folded away; Done unless changed. */
+    val collapsedColumns: StateFlow<Set<String>>
+
+    fun setCollapsedColumns(columns: Set<String>)
 
     /** Whether this phone asks to be unlocked before it shows the app (docs/sign-in.md); off unless set. */
     val appLock: StateFlow<Boolean>

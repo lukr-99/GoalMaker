@@ -1,6 +1,9 @@
 package com.goalmaker.app.ui.projects
 
 import android.app.Application
+import android.content.Context
+import android.os.Looper
+import androidx.core.content.edit
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ProjectDraft
@@ -10,8 +13,12 @@ import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.data.replica.TestReplica
+import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
+import com.goalmaker.app.domain.settings.BoardView
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -21,29 +28,46 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The Projects screen's who-made-it switch and new items over a real replica (docs/projects.md). */
+/**
+ * The Projects screen's who-made-it switch, new items, done items leaving the board and how the board
+ * shows, over a real replica (docs/projects.md). It is noon UTC on Wednesday 30 September 2026, and the
+ * day starts at 04:00.
+ */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class ProjectsViewModelTest {
     private lateinit var test: TestReplica
     private lateinit var tasks: TaskList
     private lateinit var projects: ProjectList
+    private lateinit var settings: SharedPreferencesSettingsStore
     private lateinit var viewModel: ProjectsViewModel
+    private val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("projects-view-test", Context.MODE_PRIVATE)
 
     @Before
     fun setUp() {
         test = TestReplica()
+        preferences.edit(commit = true) { clear() }
+        settings = SharedPreferencesSettingsStore(preferences)
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-22T17:00:00Z") })
         val areas = AreaList(test.replica, rows, listOf("violet", "blue"), {})
         projects = ProjectList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), projects, {}) { LocalDate.parse("2026-09-22") }
-        viewModel = ProjectsViewModel(projects, tasks, Dispatchers.Unconfined)
+        viewModel = ProjectsViewModel(
+            projects,
+            tasks,
+            settings,
+            Dispatchers.Unconfined,
+            { LocalDateTime.parse("2026-09-30T12:00") },
+        ) { ZoneOffset.UTC }
     }
 
     @After
@@ -144,5 +168,146 @@ class ProjectsViewModelTest {
         assertEquals(ProjectRules.BUG, item.itemType)
         assertEquals(ProjectRules.DOING, item.boardColumn)
         assertEquals(milestone.id, item.milestoneId)
+    }
+
+    // A done item of [projectId], finished at [completedAt] as the server stamped it.
+    private fun done(projectId: String, title: String, completedAt: String): String {
+        val item = tasks.add(title)!!
+        tasks.setProject(item.id, projectId, ProjectRules.TASK)
+        tasks.setBoardColumn(item.id, ProjectRules.DONE)
+        val row = test.replica.get("tasks", item.id)!!
+        test.replica.put("tasks", JsonObject(row + ("completed_at" to JsonPrimitive(completedAt))))
+        return item.id
+    }
+
+    // Lets the view model's collectors, which run on the main looper, catch up with a change.
+    private fun settle() = shadowOf(Looper.getMainLooper()).idle()
+
+    private fun doneTitles(state: ProjectsUiState) = state.board.single { it.column == ProjectRules.DONE }.items.map { it.title }
+
+    @Test
+    fun `done items leave the board 14 days after the day they were finished, and are counted`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        done(project.id, "Finished long ago", "2026-09-10T10:00:00.000000Z")
+        done(project.id, "Finished on the 16th", "2026-09-16T10:00:00.000000Z")
+        done(project.id, "Finished on the 17th", "2026-09-17T10:00:00.000000Z")
+        tasks.setProject(tasks.add("Still to do")!!.id, project.id, ProjectRules.TASK)
+
+        val state = viewModel.uiState.first { it.loaded && it.board.isNotEmpty() }
+
+        assertEquals(listOf("Finished on the 17th"), doneTitles(state))
+        assertEquals(listOf("Finished on the 16th", "Finished long ago"), state.archived.map { it.title })
+        assertEquals(1, state.open)
+    }
+
+    @Test
+    fun `the day an item was finished follows the owner's day start`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        // 02:00 on the 17th still belongs to the 16th while the day starts at 04:00.
+        done(project.id, "Late night", "2026-09-17T02:00:00.000000Z")
+
+        assertEquals(listOf("Late night"), viewModel.uiState.first { it.loaded && it.board.isNotEmpty() }.archived.map { it.title })
+
+        settings.setDayStartHour(0)
+        settle()
+
+        assertEquals(listOf("Late night"), doneTitles(viewModel.uiState.first { it.archived.isEmpty() && it.board.isNotEmpty() }))
+    }
+
+    @Test
+    fun `a project set to never keeps its done items, and one of its own number lets them go sooner`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        done(project.id, "Finished long ago", "2026-09-10T10:00:00.000000Z")
+        done(project.id, "Finished on the 26th", "2026-09-26T10:00:00.000000Z")
+
+        viewModel.updateProject(project.id, ProjectDraft("GoalMaker"), null)
+        settle()
+        val never = viewModel.uiState.first { it.selected?.archiveAfterDays == null && it.board.isNotEmpty() }
+        assertEquals(listOf("Finished long ago", "Finished on the 26th"), doneTitles(never).sorted())
+        assertEquals(emptyList<String>(), never.archived.map { it.title })
+
+        viewModel.updateProject(project.id, ProjectDraft("GoalMaker"), 3)
+        settle()
+        val three = viewModel.uiState.first { it.selected?.archiveAfterDays == 3 }
+        assertEquals(emptyList<String>(), doneTitles(three))
+        assertEquals(2, three.archived.size)
+    }
+
+    @Test
+    fun `a new project takes the number of days it was given`() = runTest {
+        viewModel.addProject(ProjectDraft("GoalMaker"), 30)
+        viewModel.addProject(ProjectDraft("Side project"), null)
+        viewModel.addProject(ProjectDraft("Plain"))
+
+        assertEquals(30, projects.find("GoalMaker")!!.archiveAfterDays)
+        assertNull(projects.find("Side project")!!.archiveAfterDays)
+        assertEquals(14, projects.find("Plain")!!.archiveAfterDays)
+    }
+
+    @Test
+    fun `archiving a done item takes it off the board, and undo or put back brings it back`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val id = done(project.id, "Ship the board", "2026-09-29T10:00:00.000000Z")
+        viewModel.uiState.first { it.board.isNotEmpty() && doneTitles(it).isNotEmpty() }
+        val event = async(start = CoroutineStart.UNDISPATCHED) { viewModel.undo.first() }
+
+        viewModel.archive(tasks.find(id)!!)
+        settle()
+        val archived = viewModel.uiState.first { it.archived.isNotEmpty() }
+        assertEquals(emptyList<String>(), doneTitles(archived))
+        assertEquals(listOf("Ship the board"), archived.archived.map { it.title })
+
+        event.await().undo()
+        settle()
+        assertEquals(listOf("Ship the board"), doneTitles(viewModel.uiState.first { it.archived.isEmpty() && it.board.isNotEmpty() }))
+
+        viewModel.archive(tasks.find(id)!!)
+        settle()
+        viewModel.uiState.first { it.archived.isNotEmpty() }
+        viewModel.putBack(tasks.find(id)!!)
+        settle()
+        assertEquals(listOf("Ship the board"), doneTitles(viewModel.uiState.first { it.archived.isEmpty() && it.board.isNotEmpty() }))
+    }
+
+    @Test
+    fun `the archived items follow the who-made-it switch`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val id = done(project.id, "Cache the release feed", "2026-09-01T10:00:00.000000Z")
+        val row = test.replica.get("tasks", id)!!
+        test.replica.put("tasks", JsonObject(row + ("made_by" to JsonPrimitive(ProjectRules.CLAUDE))))
+
+        assertEquals(1, viewModel.uiState.first { it.loaded && it.archived.isNotEmpty() }.archived.size)
+
+        viewModel.showMadeBy(ProjectRules.OWNER)
+        settle()
+
+        assertEquals(0, viewModel.uiState.first { it.madeBy == ProjectRules.OWNER }.archived.size)
+    }
+
+    @Test
+    fun `the board shows one column at a time, and the list folds Done away, at first`() = runTest {
+        projects.add(ProjectDraft("GoalMaker"))
+
+        val state = viewModel.uiState.first { it.loaded }
+
+        assertEquals(BoardView.COLUMNS, state.view)
+        assertEquals(setOf(ProjectRules.DONE), state.collapsed)
+    }
+
+    @Test
+    fun `the view and the folded sections are remembered on the device`() = runTest {
+        projects.add(ProjectDraft("GoalMaker"))
+
+        viewModel.showView(BoardView.LIST)
+        viewModel.toggleColumn(ProjectRules.DONE)
+        viewModel.toggleColumn(ProjectRules.BACKLOG)
+        settle()
+
+        val state = viewModel.uiState.first { it.view == BoardView.LIST && ProjectRules.BACKLOG in it.collapsed }
+        assertEquals(setOf(ProjectRules.BACKLOG), state.collapsed)
+        // What the next start of the app reads back.
+        val again = SharedPreferencesSettingsStore(preferences)
+        assertEquals(BoardView.LIST, again.boardView.value)
+        assertEquals(setOf(ProjectRules.BACKLOG), again.collapsedColumns.value)
     }
 }

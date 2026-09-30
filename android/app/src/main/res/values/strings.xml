@@ -711,6 +711,25 @@
     <string name="projects_made_by_owner">Me</string>
     <string name="projects_made_by_claude">Claude</string>
     <string name="projects_by_claude">by Claude</string>
+    <string name="projects_view_list">Show as a list</string>
+    <string name="projects_view_columns">Show one column at a time</string>
+    <string name="projects_archive">Archive</string>
+    <string name="projects_archived_message">Off the board: %1$s</string>
+    <string name="projects_archived_title">Archived</string>
+    <string name="projects_archived_hint">Done items that left the board. They stay done, in the archive and in search.</string>
+    <string name="projects_put_back">Put back</string>
+    <string name="projects_reopen">Reopen</string>
+    <string name="projects_close">Close</string>
+    <string name="projects_archive_after">Done items leave the board after</string>
+    <string name="projects_archive_never">Never</string>
+    <plurals name="projects_archived_count">
+        <item quantity="one">%1$d archived</item>
+        <item quantity="other">%1$d archived</item>
+    </plurals>
+    <plurals name="projects_archive_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 
     <!-- Stats (docs/stats.md) -->
     <string name="stats_title">Stats</string>

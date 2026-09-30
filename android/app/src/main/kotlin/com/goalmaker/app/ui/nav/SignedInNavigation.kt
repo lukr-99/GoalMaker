@@ -159,7 +159,9 @@ fun SignedInNavigation(graph: AppGraph) {
                                 clock = LocalDateTime::now,
                             )
                         }
-                        val projectsViewModel = viewModel { ProjectsViewModel(graph.projects, graph.tasks, graph.io) }
+                        val projectsViewModel = viewModel {
+                            ProjectsViewModel(graph.projects, graph.tasks, graph.settings, graph.io, LocalDateTime::now)
+                        }
                         val placesViewModel = viewModel {
                             PlacesViewModel(
                                 graph.tasks,

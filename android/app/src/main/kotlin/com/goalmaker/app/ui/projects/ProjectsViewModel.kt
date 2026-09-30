@@ -7,8 +7,14 @@ import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.composer.ComposerDraft
+import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.domain.settings.BoardView
+import com.goalmaker.app.domain.sync.SyncRules
 import com.goalmaker.app.ui.lists.UndoEvent
+import java.time.LocalDateTime
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,37 +30,50 @@ import kotlinx.coroutines.launch
 /**
  * The Projects screen (docs/projects.md, spec stories 43 to 50): the owner's projects and the board
  * of the one being looked at. An item is a task, so moving it around the board writes to [tasks]. The
- * who-made-it switch shows every item, only the owner's, or only Claude's. Finishing an item and taking
- * one out of the project can be undone, as on the lists.
+ * who-made-it switch shows every item, only the owner's, or only Claude's. A done item leaves the board
+ * the project's number of days after the planning day it was finished, by [clock] and the owner's day
+ * start, or when it is archived by hand. Finishing an item, archiving it and taking one out of the
+ * project can be undone, as on the lists. How the board shows, as columns or a list, and which list
+ * sections are folded away, stay on the device in [settings].
  */
 class ProjectsViewModel(
     private val projects: ProjectList,
     private val tasks: TaskList,
+    private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
+    private val clock: () -> LocalDateTime,
+    private val zone: () -> ZoneId = ZoneId::systemDefault,
 ) : ViewModel() {
     private val chosen = MutableStateFlow<String?>(null)
     private val madeBy = MutableStateFlow(ProjectRules.EVERYONE)
     private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
 
-    /** What the board offers to take back: an item moved to Done, or one taken out of the project. */
+    /** What the board offers to take back: an item moved to Done, archived, or taken out of the project. */
     val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
 
-    val uiState: StateFlow<ProjectsUiState> = combine(
+    private val boards = combine(
         projects.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
         chosen,
         madeBy,
-    ) { data, taskList, selectedId, filter ->
+        settings.dayStartHour,
+    ) { data, taskList, selectedId, filter, startHour ->
         val selected = data.find(selectedId) ?: data.projects.firstOrNull()
+        val today = PlanningDay.of(clock(), startHour)
+        val (onBoard, offBoard) = if (selected == null) {
+            emptyList<TaskItem>() to emptyList()
+        } else {
+            taskList.filter { !it.deleted && it.projectId == selected.id && ProjectRules.shows(filter, it.madeBy) }
+                .partition { ProjectRules.onBoard(it, selected, today, zone(), startHour) }
+        }
         ProjectsUiState(
             loaded = true,
             projects = data.projects,
             selected = selected,
-            board = if (selected == null) {
-                emptyList()
-            } else {
-                ProjectRules.board(taskList.filter { it.projectId == selected.id && ProjectRules.shows(filter, it.madeBy) })
-            },
+            board = if (selected == null) emptyList() else ProjectRules.board(onBoard),
+            archived = offBoard.sortedWith(
+                compareByDescending<TaskItem> { task -> task.completedAt?.let(SyncRules::instantOf) }.thenBy(TaskItem::id),
+            ),
             madeBy = filter,
             milestones = selected?.let { data.milestonesOf(it.id) }.orEmpty(),
             openCounts = taskList.filterNot { it.deleted }
@@ -62,6 +81,10 @@ class ProjectsViewModel(
                 .groupingBy { it.projectId!! }
                 .eachCount(),
         )
+    }
+
+    val uiState: StateFlow<ProjectsUiState> = combine(boards, settings.boardView, settings.collapsedColumns) { state, view, collapsed ->
+        state.copy(view = view, collapsed = collapsed)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProjectsUiState())
 
     /** Which project the board shows. */
@@ -74,9 +97,28 @@ class ProjectsViewModel(
         madeBy.value = filter
     }
 
-    fun addProject(draft: ProjectDraft) = write { projects.add(draft)?.let { chosen.value = it.id } }
+    /** Shows the board as columns behind tabs or as a list; this phone remembers it. */
+    fun showView(view: BoardView) = settings.setBoardView(view)
 
-    fun updateProject(id: String, draft: ProjectDraft) = write { projects.update(id, draft) }
+    /** Folds a list section away, or opens it again; this phone remembers which are folded. */
+    fun toggleColumn(column: String) {
+        val collapsed = settings.collapsedColumns.value
+        settings.setCollapsedColumns(if (column in collapsed) collapsed - column else collapsed + column)
+    }
+
+    /** Adds a project; [archiveAfterDays] is how long its done items stay on the board, null for until archived by hand. */
+    fun addProject(draft: ProjectDraft, archiveAfterDays: Int? = ProjectRules.ARCHIVE_AFTER_DAYS) = write {
+        projects.add(draft)?.let { project ->
+            if (archiveAfterDays != project.archiveAfterDays) projects.setArchiveAfterDays(project.id, archiveAfterDays)
+            chosen.value = project.id
+        }
+    }
+
+    /** Changes a project to what [draft] says, and how long its done items stay on the board. */
+    fun updateProject(id: String, draft: ProjectDraft, archiveAfterDays: Int?) = write {
+        projects.update(id, draft)
+        if (archiveAfterDays != projects.get(id)?.archiveAfterDays) projects.setArchiveAfterDays(id, archiveAfterDays)
+    }
 
     fun setStatus(id: String, status: String) = write { projects.setStatus(id, status) }
 
@@ -130,6 +172,15 @@ class ProjectsViewModel(
             },
         )
     }
+
+    /** Takes a done item off the board by hand; Undo puts it back. */
+    fun archive(item: TaskItem) {
+        write { tasks.setBoardArchived(item.id, true) }
+        undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.ARCHIVED, item.title) { write { tasks.setBoardArchived(item.id, false) } })
+    }
+
+    /** Puts an item archived by hand back in Done. One that left with time comes back only by being reopened. */
+    fun putBack(item: TaskItem) = write { tasks.setBoardArchived(item.id, false) }
 
     private fun write(work: () -> Unit) {
         viewModelScope.launch(io) { work() }

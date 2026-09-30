@@ -2,7 +2,8 @@ package com.goalmaker.app.application.planning
 
 /**
  * A project as the screens and rules see it (docs/projects.md): where its code lives, which area it
- * belongs to, and whether it is active, paused or done.
+ * belongs to, whether it is active, paused or done, and [archiveAfterDays], the days a done item stays
+ * on its board (null: until it is archived by hand).
  */
 data class ProjectItem(
     val id: String,
@@ -15,4 +16,5 @@ data class ProjectItem(
     val notes: String = "",
     val position: Double = 0.0,
     val deleted: Boolean = false,
+    val archiveAfterDays: Int? = ProjectRules.ARCHIVE_AFTER_DAYS,
 )

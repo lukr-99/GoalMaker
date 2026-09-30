@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.core.content.edit
 import com.goalmaker.app.domain.settings.Appearance
+import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import java.time.Instant
@@ -54,6 +55,22 @@ class SharedPreferencesSettingsStoreTest {
 
         preferences.edit(commit = true) { putString("pinned_places", "focus,stats,stats") }
         assertEquals(listOf("stats"), SharedPreferencesSettingsStore(preferences).pins.value)
+    }
+
+    @Test
+    fun `a board shows as columns with Done folded in the list, until changed, and every section can open`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(BoardView.COLUMNS, store.boardView.value)
+        assertEquals(setOf("done"), store.collapsedColumns.value)
+
+        store.setBoardView(BoardView.LIST)
+        store.setCollapsedColumns(emptySet())
+
+        assertEquals(BoardView.LIST, SharedPreferencesSettingsStore(preferences).boardView.value)
+        assertEquals(emptySet<String>(), SharedPreferencesSettingsStore(preferences).collapsedColumns.value)
+
+        preferences.edit(commit = true) { putString("board_collapsed_columns", "todo,someday") }
+        assertEquals(setOf("todo"), SharedPreferencesSettingsStore(preferences).collapsedColumns.value)
     }
 
     @Test
