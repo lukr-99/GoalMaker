@@ -140,6 +140,8 @@ internal sealed class TestPlanner : IDisposable
 
         public DateTimeOffset? WeeklyBackupWritten { get; set; }
 
+        public bool TallyOn { get; set; }
+
         public string DeviceId { get; } = Guid.NewGuid().ToString();
     }
 

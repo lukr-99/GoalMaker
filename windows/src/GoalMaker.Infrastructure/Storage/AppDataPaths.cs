@@ -26,6 +26,9 @@ public sealed class AppDataPaths
 
     public string Updates => Path.Combine(Root, "updates");
 
+    /// <summary>Tally's raw log, one file a day, kept 30 days; it never syncs and never goes in a backup (ADR 0013).</summary>
+    public string Tally => Path.Combine(Root, "tally");
+
     /// <summary>
     /// The device replica (ADR 0007), one file per backend, so a dev build switched to another
     /// Supabase project never mixes its rows with the first one's.

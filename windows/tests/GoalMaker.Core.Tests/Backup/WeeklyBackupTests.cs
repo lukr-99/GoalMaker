@@ -190,6 +190,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public DateTimeOffset? WeeklyBackupWritten { get; set; }
 
+        public bool TallyOn { get; set; }
+
         public string DeviceId { get; } = Guid.NewGuid().ToString();
     }
 }

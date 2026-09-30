@@ -149,6 +149,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { WeeklyBackupWritten = value });
     }
 
+    public bool TallyOn
+    {
+        get => document.TallyOn;
+        set => Save(document with { TallyOn = value });
+    }
+
     public string DeviceId
     {
         get

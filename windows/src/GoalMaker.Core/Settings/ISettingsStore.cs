@@ -64,6 +64,9 @@ public interface ISettingsStore
     /// <summary>When the last weekly export was written; the next is due a week after it.</summary>
     DateTimeOffset? WeeklyBackupWritten { get; set; }
 
+    /// <summary>Whether Tally follows the window in front on this PC (docs/tally.md); off until the owner turns it on.</summary>
+    bool TallyOn { get; set; }
+
     /// <summary>This install's own random id, made the first time it is asked for; Tally's rows name it (docs/tally.md).</summary>
     string DeviceId { get; }
 }
