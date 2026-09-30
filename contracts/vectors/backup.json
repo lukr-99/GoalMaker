@@ -22,7 +22,10 @@
     "ritual_runs",
     "reviews",
     "want_cooldowns",
-    "wants"
+    "wants",
+    "tally_categories",
+    "tally_rules",
+    "tally_days"
   ],
   "checks": [
     {
