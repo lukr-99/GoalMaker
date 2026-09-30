@@ -8,6 +8,7 @@ using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 using System.Globalization;
 using GoalMaker.Core.About;
+using GoalMaker.Core.Assistant;
 using GoalMaker.Core.Backup;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Planning;
@@ -17,6 +18,7 @@ using GoalMaker.Core.Startup;
 using GoalMaker.Core.Sync;
 using GoalMaker.Core.Updates;
 using GoalMaker.Infrastructure.Activity;
+using GoalMaker.Infrastructure.Assistant;
 using GoalMaker.Infrastructure.Backup;
 using GoalMaker.Infrastructure.Auth;
 using GoalMaker.Infrastructure.Connector;
@@ -49,6 +51,9 @@ public sealed class AppGraph : IDisposable
 
     // An installer is a few megabytes over whatever line the PC has, so it gets far longer than an API call.
     private readonly HttpClient updatesHttp = new() { Timeout = TimeSpan.FromMinutes(15) };
+
+    // A chat message can take the model several tool rounds on the server, so it waits longer than a sync call.
+    private readonly HttpClient assistantHttp = new() { Timeout = TimeSpan.FromSeconds(90) };
     private readonly SqliteReplica replica;
     private readonly SupabaseChangeFeed changeFeed;
     private readonly IProfileSettings profile;
@@ -217,6 +222,13 @@ public sealed class AppGraph : IDisposable
         Shell = new ShellViewModel(Auth, SignIn, Problems, runOnUi);
         Places = new PlacesViewModel(Settings, strings);
 
+        // The quick chat every composer shares (M7): the assistant function as the signed-in owner. An
+        // answer asks for a sync at once, so what the chat changed shows in the lists.
+        IAssistantClient assistant = new SupabaseAssistantClient(
+            assistantHttp, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken, () => runOnUi(() => Sync?.Request()));
+        Chat = new ChatViewModel(
+            assistant, Auth, Sync, Settings, strings, TimeProvider.System, runOnUi, () => _ = Sync.SyncNowAsync(CancellationToken.None), localOnly);
+
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
         void OpenWant(string title)
@@ -225,7 +237,7 @@ public sealed class AppGraph : IDisposable
             PageRequested?.Invoke(this, AppPage.Wants);
         }
         ComposerViewModel Composer(Func<DateOnly, DateOnly?> defaultDay) =>
-            new(Tasks, Areas, Tags, Projects, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan, OpenWant);
+            new(Tasks, Areas, Tags, Projects, Settings, strings, TimeProvider.System, Theme.AreaBrush, defaultDay, runOnUi, OpenPlan, OpenWant, Chat);
         ListViewModel List(ListKind kind, Func<DateOnly, DateOnly?> defaultDay) => new(
             kind,
             Tasks,
@@ -500,6 +512,9 @@ public sealed class AppGraph : IDisposable
     /// <summary>The reminder rows themselves; the calendar reads them, the service arms them.</summary>
     public ReminderList ReminderRows { get; }
 
+    /// <summary>The quick chat's switch and thread, shared by every composer (M7).</summary>
+    public ChatViewModel Chat { get; }
+
     /// <summary>The composer behind the global quick-add box; its lines land in the Inbox unless they name a day.</summary>
     public ComposerViewModel QuickAdd { get; private set; } = null!;
 
@@ -578,6 +593,7 @@ public sealed class AppGraph : IDisposable
         supabase.Auth.Shutdown();
         http.Dispose();
         updatesHttp.Dispose();
+        assistantHttp.Dispose();
     }
 
     // The weekly export runs unattended, so a folder that has gone or a file that would not write is

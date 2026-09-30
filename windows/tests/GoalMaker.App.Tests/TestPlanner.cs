@@ -143,6 +143,8 @@ internal sealed class TestPlanner : IDisposable
 
         public string? QuickAddHotkey { get; set; }
 
+        public ComposerMode ComposerMode { get; set; }
+
         public bool NavigationCollapsed { get; set; }
 
         public BackendEnvironment? BackendOverride { get; set; }

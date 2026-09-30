@@ -42,6 +42,9 @@ public sealed record SettingsDocument
 
     public string? QuickAddHotkey { get; init; }
 
+    /// <summary>Quick-add or chat (M7); missing from older files reads as quick-add.</summary>
+    public ComposerMode ComposerMode { get; init; } = ComposerMode.QuickAdd;
+
     public bool NavigationCollapsed { get; init; }
 
     public string? BackendUrl { get; init; }

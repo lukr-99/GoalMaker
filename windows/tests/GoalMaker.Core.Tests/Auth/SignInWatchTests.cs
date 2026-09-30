@@ -144,6 +144,8 @@ public sealed class SignInWatchTests
 
         public string? QuickAddHotkey { get; set; }
 
+        public ComposerMode ComposerMode { get; set; }
+
         public bool NavigationCollapsed { get; set; }
 
         public BackendEnvironment? BackendOverride { get; set; }

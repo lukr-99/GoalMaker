@@ -1,77 +1,186 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                    xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
+                    xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+                    xmlns:controls="clr-namespace:GoalMaker.App.Controls">
 
-    <!-- The composer (docs/composer.md): a pill that grows a preview of what the line will save. -->
+    <!--
+        The composer (docs/composer.md): a pill that grows a preview of what the line will save. With the
+        quick chat (M7) switched on, the short thread shows above it and Enter sends the line to the chat.
+        Ctrl+Shift+Space flips the switch while the keyboard is in the composer.
+    -->
     <DataTemplate x:Key="ComposerTemplate" DataType="{x:Type vm:ComposerViewModel}">
-        <Border Padding="12,4,6,4"
-                CornerRadius="{StaticResource GM.ComposerCorner}"
-                Background="{DynamicResource GM.SurfaceVariantBrush}">
-            <DockPanel>
-                <ItemsControl DockPanel.Dock="Top"
-                              Margin="0,6,0,2"
-                              Focusable="False"
-                              ItemsSource="{Binding Chips}"
-                              Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
-                            <Border Margin="0,0,6,6"
-                                    Padding="10,2,2,2"
-                                    CornerRadius="12"
-                                    BorderThickness="1"
-                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                    Opacity="{Binding Opacity}">
-                                <StackPanel Orientation="Horizontal">
-                                    <Ellipse Width="10"
-                                             Height="10"
-                                             Margin="0,0,6,0"
-                                             VerticalAlignment="Center"
-                                             Fill="{Binding AreaBrush}"
-                                             Stroke="{DynamicResource GM.OutlineBrush}"
-                                             Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
-                                    <ui:SymbolIcon Margin="0,0,6,0"
+        <StackPanel>
+            <StackPanel.InputBindings>
+                <KeyBinding Key="Space" Modifiers="Control+Shift" Command="{Binding Chat.SwitchCommand}" />
+            </StackPanel.InputBindings>
+
+            <!-- Why chat is off although chosen, or what went wrong with the last message. -->
+            <TextBlock Margin="12,0,12,6"
+                       FontSize="13"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                       Text="{Binding Chat.Notice}"
+                       Visibility="{Binding Chat.HasNotice, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"
+                       AutomationProperties.LiveSetting="Polite" />
+
+            <!-- The short thread: the owner's lines on the right, the answers on the left. -->
+            <Border Margin="0,0,0,8"
+                    Padding="12,6,6,8"
+                    CornerRadius="14"
+                    Background="{DynamicResource GM.SurfaceVariantBrush}"
+                    Visibility="{Binding Chat.ShowsThread, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top">
+                        <ui:Button DockPanel.Dock="Right"
+                                   Padding="8,4"
+                                   Appearance="Transparent"
+                                   Command="{Binding Chat.ClearCommand}"
+                                   ToolTip="{DynamicResource Chat.Clear}"
+                                   AutomationProperties.Name="{DynamicResource Chat.Clear}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="Dismiss16" />
+                                <TextBlock FontSize="13" Text="{DynamicResource Chat.ClearShort}" />
+                            </StackPanel>
+                        </ui:Button>
+                        <TextBlock VerticalAlignment="Center"
+                                   FontSize="12"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Text="{DynamicResource Chat.Thread}" />
+                    </DockPanel>
+                    <StackPanel DockPanel.Dock="Bottom"
+                                Margin="0,6,0,0"
+                                Orientation="Horizontal"
+                                Visibility="{Binding Chat.IsBusy, Converter={StaticResource BoolToVisibility}}"
+                                AutomationProperties.LiveSetting="Polite"
+                                AutomationProperties.Name="{DynamicResource Chat.Thinking}">
+                        <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" />
+                        <TextBlock Margin="8,0,0,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Text="{DynamicResource Chat.Thinking}" />
+                    </StackPanel>
+                    <ScrollViewer MaxHeight="260"
+                                  Margin="0,4,0,0"
+                                  Focusable="False"
+                                  VerticalScrollBarVisibility="Auto"
+                                  controls:StickToEnd.IsEnabled="True">
+                        <ItemsControl Focusable="False"
+                                      ItemsSource="{Binding Chat.Lines}"
+                                      AutomationProperties.Name="{DynamicResource Chat.Thread}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ChatLineViewModel}">
+                                    <Border x:Name="Bubble"
+                                            Margin="0,4,6,0"
+                                            Padding="10,6"
+                                            MaxWidth="440"
+                                            HorizontalAlignment="Left"
+                                            CornerRadius="12"
+                                            Background="{DynamicResource GM.SurfaceBrush}"
+                                            AutomationProperties.Name="{Binding AutomationName}">
+                                        <TextBlock x:Name="Words"
                                                    FontSize="14"
-                                                   Symbol="{Binding Symbol}"
-                                                   Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
-                                    <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
-                                    <ui:Button Margin="2,0,0,0"
-                                               Padding="4"
-                                               Appearance="Transparent"
-                                               Command="{Binding RemoveCommand}"
-                                               ToolTip="{Binding RemoveName}"
-                                               AutomationProperties.Name="{Binding RemoveName}">
-                                        <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
-                                    </ui:Button>
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <ui:Button DockPanel.Dock="Right"
-                           Appearance="Primary"
-                           CornerRadius="{StaticResource GM.ComposerCorner}"
-                           Command="{Binding AddTaskCommand}"
-                           ToolTip="{DynamicResource Composer.Add}"
-                           AutomationProperties.Name="{DynamicResource Composer.Add}">
-                    <ui:SymbolIcon Symbol="Send24" />
-                </ui:Button>
-                <ui:TextBox Margin="0,0,8,0"
-                            BorderThickness="0"
-                            Background="Transparent"
-                            PlaceholderText="{DynamicResource Composer.Placeholder}"
-                            Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
-                            AutomationProperties.Name="{DynamicResource Composer.Placeholder}">
-                    <ui:TextBox.InputBindings>
-                        <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
-                    </ui:TextBox.InputBindings>
-                </ui:TextBox>
-            </DockPanel>
-        </Border>
+                                                   TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource GM.TextBrush}"
+                                                   Text="{Binding Text}" />
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsOwner}" Value="True">
+                                            <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
+                                            <Setter TargetName="Bubble" Property="Background" Value="{DynamicResource GM.PrimaryBrush}" />
+                                            <Setter TargetName="Words" Property="Foreground" Value="{DynamicResource GM.OnPrimaryBrush}" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <Border Padding="12,4,6,4"
+                    CornerRadius="{StaticResource GM.ComposerCorner}"
+                    Background="{DynamicResource GM.SurfaceVariantBrush}">
+                <DockPanel>
+                    <ItemsControl DockPanel.Dock="Top"
+                                  Margin="0,6,0,2"
+                                  Focusable="False"
+                                  ItemsSource="{Binding Chips}"
+                                  Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
+                                <Border Margin="0,0,6,6"
+                                        Padding="10,2,2,2"
+                                        CornerRadius="12"
+                                        BorderThickness="1"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        Opacity="{Binding Opacity}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="10"
+                                                 Height="10"
+                                                 Margin="0,0,6,0"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding AreaBrush}"
+                                                 Stroke="{DynamicResource GM.OutlineBrush}"
+                                                 Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
+                                        <ui:SymbolIcon Margin="0,0,6,0"
+                                                       FontSize="14"
+                                                       Symbol="{Binding Symbol}"
+                                                       Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
+                                        <ui:Button Margin="2,0,0,0"
+                                                   Padding="4"
+                                                   Appearance="Transparent"
+                                                   Command="{Binding RemoveCommand}"
+                                                   ToolTip="{Binding RemoveName}"
+                                                   AutomationProperties.Name="{Binding RemoveName}">
+                                            <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
+                                        </ui:Button>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <ui:Button DockPanel.Dock="Right"
+                               Appearance="Primary"
+                               CornerRadius="{StaticResource GM.ComposerCorner}"
+                               Command="{Binding AddTaskCommand}"
+                               ToolTip="{Binding SendName}"
+                               AutomationProperties.Name="{Binding SendName}">
+                        <ui:SymbolIcon Symbol="Send24" />
+                    </ui:Button>
+                    <!-- The switch between quick-add and chat; it says why when chat can't be used. -->
+                    <ToggleButton DockPanel.Dock="Left"
+                                  Margin="-6,0,6,0"
+                                  Padding="8,6"
+                                  VerticalAlignment="Center"
+                                  IsChecked="{Binding Chat.IsChatChosen, Mode=TwoWay}"
+                                  IsEnabled="{Binding Chat.CanSwitch, FallbackValue=False}"
+                                  ToolTip="{Binding Chat.SwitchHelp}"
+                                  ToolTipService.ShowOnDisabled="True"
+                                  AutomationProperties.Name="{DynamicResource Chat.Switch}"
+                                  AutomationProperties.HelpText="{Binding Chat.SwitchHelp}"
+                                  Visibility="{Binding HasChat, Converter={StaticResource BoolToVisibility}}">
+                        <ui:SymbolIcon FontSize="18" Symbol="Chat24" />
+                    </ToggleButton>
+                    <ui:TextBox Margin="0,0,8,0"
+                                BorderThickness="0"
+                                Background="Transparent"
+                                PlaceholderText="{Binding Placeholder}"
+                                Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                                AutomationProperties.Name="{Binding Placeholder}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                </DockPanel>
+            </Border>
+        </StackPanel>
     </DataTemplate>
 </ResourceDictionary>

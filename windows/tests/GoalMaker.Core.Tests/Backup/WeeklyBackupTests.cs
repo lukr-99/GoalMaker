@@ -173,6 +173,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public string? QuickAddHotkey { get; set; }
 
+        public ComposerMode ComposerMode { get; set; }
+
         public bool NavigationCollapsed { get; set; }
 
         public Core.Backend.BackendEnvironment? BackendOverride { get; set; }

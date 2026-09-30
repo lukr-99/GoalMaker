@@ -11,7 +11,8 @@ namespace GoalMaker.App.Shell;
 /// <summary>
 /// The quick-add box the global shortcut opens (spec, story 11): the composer on its own, above
 /// whatever app is in front, without bringing GoalMaker's window up. Enter saves the line and closes
-/// the box; Escape or a click elsewhere closes it. Either way the keyboard goes back where it was.
+/// the box; Escape or a click elsewhere closes it. Either way the keyboard goes back where it was. With
+/// the quick chat switched on (M7), Enter sends the line instead and the box stays open for the answer.
 /// </summary>
 public sealed class QuickAddWindow : Window
 {
@@ -34,8 +35,20 @@ public sealed class QuickAddWindow : Window
         SetResourceReference(FontFamilyProperty, "GM.BodyFont");
         SetResourceReference(ForegroundProperty, "GM.TextBrush");
 
-        var hint = new TextBlock { Text = strings.Get("QuickAdd.Hint"), FontSize = 12, Margin = new Thickness(4, 0, 0, 8) };
+        // The hint says what Enter does now, and how to flip the quick chat's switch (M7).
+        var hint = new TextBlock { FontSize = 12, Margin = new Thickness(4, 0, 0, 8), TextWrapping = TextWrapping.Wrap };
         hint.SetResourceReference(TextBlock.ForegroundProperty, "GM.TextMutedBrush");
+        void ShowHint() => hint.Text = composer.IsChat
+            ? strings.Get("QuickAdd.ChatHint")
+            : composer.HasChat ? strings.Get("QuickAdd.Hint") + " " + strings.Get("QuickAdd.SwitchHint") : strings.Get("QuickAdd.Hint");
+        ShowHint();
+        composer.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ComposerViewModel.IsChat))
+            {
+                ShowHint();
+            }
+        };
         var composerHost = new ContentControl { Content = composer, Focusable = false };
         composerHost.SetResourceReference(ContentControl.ContentTemplateProperty, "ComposerTemplate");
         var frame = new Border
