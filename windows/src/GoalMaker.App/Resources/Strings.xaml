@@ -161,6 +161,8 @@
     <sys:String x:Key="Activity.Bought">{0} bought {1}</sys:String>
     <sys:String x:Key="Activity.Want">the want “{0}”</sys:String>
     <sys:String x:Key="Activity.WantCooldowns">the want cooldowns</sys:String>
+    <sys:String x:Key="Activity.TallyCategory">the Tally category “{0}”</sys:String>
+    <sys:String x:Key="Activity.TallyRule">a Tally rule</sys:String>
     <sys:String x:Key="Activity.Reopened">{0} reopened {1}</sys:String>
     <sys:String x:Key="Activity.Moved">{0} moved {1} to {2}</sys:String>
     <sys:String x:Key="Activity.MovedOff">{0} took the day off {1}</sys:String>

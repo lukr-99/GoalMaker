@@ -27,6 +27,8 @@
                       LogicalName="GoalMaker.Contracts.logo.json" />
     <EmbeddedResource Include="$(RepositoryRoot)\contracts\content\prompts.json"
                       LogicalName="GoalMaker.Contracts.prompts.json" />
+    <EmbeddedResource Include="$(RepositoryRoot)\contracts\content\tally-rules.json"
+                      LogicalName="GoalMaker.Contracts.tally-rules.json" />
   </ItemGroup>
 
   <ItemGroup>

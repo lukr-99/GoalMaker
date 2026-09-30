@@ -156,5 +156,7 @@ public sealed class SignInWatchTests
         public string? WeeklyBackupFolder { get; set; }
 
         public DateTimeOffset? WeeklyBackupWritten { get; set; }
+
+        public string DeviceId { get; } = Guid.NewGuid().ToString();
     }
 }

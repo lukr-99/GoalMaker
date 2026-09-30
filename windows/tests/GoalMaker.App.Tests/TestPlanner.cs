@@ -139,6 +139,8 @@ internal sealed class TestPlanner : IDisposable
         public string? WeeklyBackupFolder { get; set; }
 
         public DateTimeOffset? WeeklyBackupWritten { get; set; }
+
+        public string DeviceId { get; } = Guid.NewGuid().ToString();
     }
 
     private sealed class NoRemote : IRemoteTables

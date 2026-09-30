@@ -118,6 +118,7 @@ public sealed class AppGraph : IDisposable
         Tasks = new TaskList(
             replica, newRows, Areas, Tags, Projects, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
         Wants = new WantList(replica, newRows, Sync.Request, () => PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour));
+        Tally = new TallyList(replica, newRows, () => Settings.DeviceId, Sync.Request);
 
         // Reminders (docs/reminders.md, ADR 0009): the replica decides, one timer in the tray app
         // carries the next one, and toasts show them with the same buttons as the phone.
@@ -430,6 +431,9 @@ public sealed class AppGraph : IDisposable
     public ReviewList Reviews { get; private set; } = null!;
 
     public WantList Wants { get; private set; } = null!;
+
+    /// <summary>This PC's Tally totals and the owner's own categories and rules (docs/tally.md).</summary>
+    public TallyList Tally { get; private set; } = null!;
 
     /// <summary>The owner's projects and their milestones (docs/projects.md).</summary>
     public ProjectList Projects { get; private set; } = null!;

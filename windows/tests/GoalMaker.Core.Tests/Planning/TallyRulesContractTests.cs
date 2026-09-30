@@ -1,0 +1,137 @@
+using System.Globalization;
+using System.Text.Json;
+using GoalMaker.Core.Planning;
+using GoalMaker.Infrastructure.Sync;
+
+namespace GoalMaker.Core.Tests.Planning;
+
+/// <summary>contracts/vectors/tally.json, the same file the Android tests and the connector read.</summary>
+public sealed class TallyRulesContractTests
+{
+    private readonly JsonElement vectors = ContractFiles.Load("vectors/tally.json").RootElement;
+    private readonly TallyDefaults shipped = TallyDefaults.Parse(ContractFiles.Load("content/tally-rules.json").RootElement.GetRawText());
+
+    [Fact]
+    public void TheAppShipsTheRulesFile()
+    {
+        var built = ContractResources.TallyDefaults();
+        Assert.Equal(shipped.Categories, built.Categories);
+        Assert.Equal(shipped.Rules, built.Rules);
+        Assert.Contains(shipped.Categories, category => category.Id == TallyRules.Other);
+        Assert.Contains(shipped.Categories, category => category.Id == TallyRules.Video);
+    }
+
+    [Fact]
+    public void EveryMatch()
+    {
+        foreach (var testCase in vectors.GetProperty("match").EnumerateArray())
+        {
+            var sample = testCase.GetProperty("sample");
+            var defaults = testCase.GetProperty("defaults");
+            var sort = TallyRules.SortSample(
+                new TallySample(sample.GetProperty("platform").GetString()!, sample.GetProperty("app").GetString()!, Text(sample, "title")),
+                testCase.TryGetProperty("own", out var own) ? Rules(own) : [],
+                defaults.ValueKind == JsonValueKind.String ? shipped.Rules : Rules(defaults),
+                testCase.TryGetProperty("projects", out var projects) ? Projects(projects) : []);
+            var expect = testCase.GetProperty("expect");
+            Assert.True(new TallySort(expect.GetProperty("category").GetString()!, Text(expect, "project")) == sort, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryEditorFolder()
+    {
+        foreach (var testCase in vectors.GetProperty("folder").EnumerateArray())
+        {
+            var actual = TallyRules.EditorFolder(testCase.GetProperty("app").GetString()!, Text(testCase, "title"));
+            Assert.True(Text(testCase, "expect") == actual, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryProject()
+    {
+        foreach (var testCase in vectors.GetProperty("project").EnumerateArray())
+        {
+            var actual = TallyRules.ProjectFor(Text(testCase, "folder"), Projects(testCase.GetProperty("projects")));
+            Assert.True(Text(testCase, "expect") == actual, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryIdleMoment()
+    {
+        foreach (var testCase in vectors.GetProperty("idle").EnumerateArray())
+        {
+            var actual = TallyRules.Counts(
+                testCase.GetProperty("secondsSinceInput").GetInt32(),
+                testCase.GetProperty("category").GetString()!,
+                testCase.GetProperty("locked").GetBoolean(),
+                testCase.GetProperty("asleep").GetBoolean());
+            Assert.True(testCase.GetProperty("expect").GetBoolean() == actual, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryDay()
+    {
+        foreach (var testCase in vectors.GetProperty("days").EnumerateArray())
+        {
+            var intervals = testCase.GetProperty("intervals").EnumerateArray().Select(interval => new TallyInterval(
+                Moment(interval, "start"),
+                Moment(interval, "end"),
+                interval.GetProperty("category").GetString()!,
+                Text(interval, "project")));
+            var actual = TallyRules.DayTotals(intervals, testCase.GetProperty("startHour").GetInt32());
+            var expected = testCase.GetProperty("expect").EnumerateArray().Select(total => new TallyTotal(
+                Day(total, "day"),
+                total.GetProperty("category").GetString()!,
+                Text(total, "project"),
+                total.GetProperty("minutes").GetInt32()));
+            Assert.True(expected.SequenceEqual(actual), Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryDayId()
+    {
+        Assert.Equal("b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91", vectors.GetProperty("namespace").GetString());
+        foreach (var testCase in vectors.GetProperty("ids").EnumerateArray())
+        {
+            var actual = TallyRules.DayId(
+                testCase.GetProperty("owner").GetString()!,
+                Day(testCase, "day"),
+                testCase.GetProperty("device").GetString()!,
+                testCase.GetProperty("category").GetString()!,
+                Text(testCase, "project"));
+            Assert.Equal(testCase.GetProperty("expect").GetString(), actual);
+        }
+    }
+
+    private static List<TallyRule> Rules(JsonElement value) =>
+    [
+        .. value.EnumerateArray().Select(rule => new TallyRule(
+            rule.GetProperty("match").GetString()!,
+            rule.GetProperty("pattern").GetString()!,
+            rule.GetProperty("platform").GetString()!,
+            rule.GetProperty("category").GetString()!,
+            Text(rule, "project"))),
+    ];
+
+    private static List<ProjectItem> Projects(JsonElement value) =>
+    [
+        .. value.EnumerateArray().Select(project =>
+            new ProjectItem(project.GetProperty("id").GetString()!, "Project") { LocalFolder = Text(project, "localFolder") }),
+    ];
+
+    private static DateTime Moment(JsonElement value, string name) =>
+        DateTime.Parse(value.GetProperty(name).GetString()!, CultureInfo.InvariantCulture);
+
+    private static DateOnly Day(JsonElement value, string name) =>
+        DateOnly.ParseExact(value.GetProperty(name).GetString()!, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static string? Text(JsonElement value, string name) =>
+        value.TryGetProperty(name, out var text) && text.ValueKind == JsonValueKind.String ? text.GetString() : null;
+
+    private static string Name(JsonElement testCase) => testCase.GetProperty("name").GetString()!;
+}
