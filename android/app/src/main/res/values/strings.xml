@@ -20,7 +20,9 @@
     <string name="sign_in_error_rate">Too many attempts. Wait a minute, then try again.</string>
     <string name="sign_in_error_offline">No connection to GoalMaker\'s server. Check your internet and try again.</string>
     <string name="startup_failed_title">GoalMaker cannot start</string>
-    <string name="startup_failed">It could not open its data on this phone. Your data is still there. Starting it again is worth a try; if that does not help, reinstall and restore from an export.</string>
+    <string name="startup_failed">It could not open its data on this phone. Your data is still there. Starting it again is worth a try. If that does not help, ask for help before you reinstall, because reinstalling removes changes that have not synced yet.</string>
+    <string name="startup_failed_newer">Its data on this phone was saved by a newer version of GoalMaker. Install the newest version and everything will be there again. Your data is still on this phone.</string>
+    <string name="sign_in_session_ended">Your session ended. Sign in with the same email and your changes will sync.</string>
     <string name="sign_in_error_other">That did not work. Try again in a moment.</string>
     <string name="sign_in_local_backend">Development build · %1$s</string>
 

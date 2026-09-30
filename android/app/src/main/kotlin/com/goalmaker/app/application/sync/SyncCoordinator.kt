@@ -133,7 +133,8 @@ class SyncCoordinator(
 
     private fun retryIfOffline(report: SyncReport) {
         val wait = synchronized(lock) {
-            if (!report.offline) {
+            // Signed out, only a sign-in helps, and it asks for its own run.
+            if (!report.offline || report.signedOut) {
                 nextRetry = FIRST_RETRY
                 return
             }

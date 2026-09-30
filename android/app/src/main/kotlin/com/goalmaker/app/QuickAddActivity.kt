@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.fragment.app.FragmentActivity
+import com.goalmaker.app.ui.ReplicaGate
 import com.goalmaker.app.ui.capture.CaptureViewModel
 import com.goalmaker.app.ui.capture.QuickAddSheet
 import com.goalmaker.app.ui.lock.LockedWindow
@@ -33,6 +34,7 @@ class QuickAddActivity : FragmentActivity() {
         setContent {
             val appearance by graph.settings.appearance.collectAsStateWithLifecycle()
             GoalMakerTheme(graph.design, appearance, graph.logo) {
+                ReplicaGate(graph) {
                 LockedWindow(graph = graph, onGiveUp = ::finish) {
                 QuickAddSheet(
                     viewModel = viewModel {
@@ -54,6 +56,7 @@ class QuickAddActivity : FragmentActivity() {
                     },
                     onCancel = { finish() },
                 )
+                }
                 }
             }
         }

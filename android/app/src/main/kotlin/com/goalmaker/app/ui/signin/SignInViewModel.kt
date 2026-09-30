@@ -21,15 +21,27 @@ import kotlinx.coroutines.launch
  *
  * [onSignedIn] runs when a code is accepted, which is the owner proving who they are, so the app
  * lock has nothing left to ask. It is not called when a stored session comes back.
+ *
+ * [sessionEnded] says whether the session ended without the owner signing out, so the screen can
+ * say so and that their changes are still waiting (docs/sign-in.md).
  */
 class SignInViewModel(
     private val auth: AuthGateway,
     private val devCode: (suspend (String) -> String?)? = null,
     private val onSignedIn: () -> Unit = {},
+    private val sessionEnded: suspend () -> Boolean = { false },
 ) : ViewModel() {
 
     private val state = MutableStateFlow(SignInUiState(hasDevSignIn = devCode != null))
     val uiState: StateFlow<SignInUiState> = state.asStateFlow()
+
+    /** Looks again each time the screen appears, since the model outlives one signed-out stretch. */
+    fun checkSession() {
+        viewModelScope.launch {
+            val ended = sessionEnded()
+            state.update { it.copy(sessionEnded = ended) }
+        }
+    }
 
     fun onEmailChange(value: String) = state.update { it.copy(email = value, error = null) }
 
@@ -76,7 +88,9 @@ class SignInViewModel(
         run(onSuccess = { it }, then = onSignedIn) { auth.verifyCode(email, code) }
     }
 
-    fun useAnotherEmail() = state.update { SignInUiState(email = it.email, hasDevSignIn = devCode != null) }
+    fun useAnotherEmail() = state.update {
+        SignInUiState(email = it.email, hasDevSignIn = devCode != null, sessionEnded = it.sessionEnded)
+    }
 
     /**
      * The dev account in one press: its code goes to the stack's mailbox like any other, and is read

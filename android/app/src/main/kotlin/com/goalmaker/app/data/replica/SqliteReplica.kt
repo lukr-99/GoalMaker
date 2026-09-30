@@ -45,6 +45,8 @@ class SqliteReplica(
     private var opened: SQLiteConnection? = null
     private var depth = 0
 
+    override fun open() = lock.withLock { connection() }.let { }
+
     override fun watch(table: String): Flow<Long> {
         val name = catalog[table].name
         return versions.map { it[name] ?: 0L }.distinctUntilChanged()

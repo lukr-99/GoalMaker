@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ import com.goalmaker.app.application.auth.DevSignIn
 @Composable
 fun SignInScreen(viewModel: SignInViewModel, backendLabel: String?) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    LaunchedEffect(viewModel) { viewModel.checkSession() }
     Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -72,6 +74,14 @@ fun SignInScreen(viewModel: SignInViewModel, backendLabel: String?) {
                     style = MaterialTheme.typography.displaySmall,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
+                // One line, not an error: nothing went wrong on the owner's side (docs/sign-in.md).
+                if (state.sessionEnded) {
+                    Text(
+                        text = stringResource(R.string.sign_in_session_ended),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     AnimatedContent(targetState = state.step, label = "sign-in step") { step ->
                         Column(

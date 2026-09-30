@@ -8,6 +8,7 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.MaterialTheme
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
@@ -29,7 +30,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         val app = application as GoalMakerApplication
         if (app.startupFailure != null) {
-            setContent { StartupFailureScreen() }
+            // Plain Material colors: what loads the app's theme is what failed.
+            setContent { MaterialTheme { StartupFailureScreen() } }
             return
         }
 
