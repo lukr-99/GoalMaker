@@ -10,6 +10,12 @@ import kotlinx.serialization.json.JsonObject
  * block on disk, so callers run them off the main thread.
  */
 interface Replica {
+    /**
+     * Opens the file and brings its schema up to date now rather than on first use, so a file that
+     * will not open is found at start instead of inside whichever list reads first (M6-06).
+     */
+    fun open()
+
     /** The table's change counter: the current value first, then a new one after each commit that changed it. */
     fun watch(table: String): Flow<Long>
 

@@ -19,6 +19,13 @@ class FakeServer : RemoteTables {
     private var clock = Instant.parse("2026-09-18T10:00:00Z")
 
     var offline = false
+
+    /**
+     * The server no longer takes the session, the way PostgrestHttp ends one after a refused refresh:
+     * [onSessionEnded] runs, and the call fails with NotSignedInException.
+     */
+    var sessionEnded = false
+    var onSessionEnded: () -> Unit = {}
     val refusedIds = mutableSetOf<String>()
     var upserts = 0
         private set
@@ -38,6 +45,7 @@ class FakeServer : RemoteTables {
 
     override suspend fun upsert(table: String, row: JsonObject): JsonObject {
         calls++
+        refuseAnEndedSession()
         if (offline) throw RemoteUnavailableException("offline")
         if (row.text("id") in refusedIds) throw RemoteRejectedException("HTTP 403: row security")
         assertFalse("the server owns updated_at; clients must not send it", row.containsKey("updated_at"))
@@ -47,6 +55,7 @@ class FakeServer : RemoteTables {
 
     override suspend fun pull(table: String, from: String?, after: RowCursor?, limit: Int): List<JsonObject> {
         calls++
+        refuseAnEndedSession()
         if (offline) throw RemoteUnavailableException("offline")
         return rows(table)
             .filter { from == null || it.text("updated_at")!! >= from }
@@ -57,6 +66,12 @@ class FakeServer : RemoteTables {
             }
             .sortedWith(compareBy<JsonObject>({ it.text("updated_at") }, { it.text("id") }))
             .take(limit)
+    }
+
+    private fun refuseAnEndedSession() {
+        if (!sessionEnded) return
+        onSessionEnded()
+        throw NotSignedInException("The server ended the session.")
     }
 
     private fun store(table: String, row: JsonObject): JsonObject {

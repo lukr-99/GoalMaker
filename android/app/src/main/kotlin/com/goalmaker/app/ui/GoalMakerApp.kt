@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Root composable: the theme, then sign-in or the signed-in app depending on the session, with
- * the optional lock over the top of it (docs/sign-in.md).
+ * the optional lock over the top of it (docs/sign-in.md). Neither shows before the replica is open.
  */
 @Composable
 fun GoalMakerApp(graph: AppGraph) {
@@ -41,28 +41,32 @@ fun GoalMakerApp(graph: AppGraph) {
     GoalMakerTheme(graph.design, appearance, graph.logo) {
         LaunchIntro {
             Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
-                Crossfade(targetState = session, label = "session") { current ->
-                    when (current) {
-                        AuthSession.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            LoadingIndicator(Modifier.size(64.dp))
-                        }
-                        AuthSession.SignedOut -> SignInScreen(
-                            viewModel = viewModel { SignInViewModel(graph.auth, graph.devCode, graph.appLock::unlocked) },
-                            backendLabel = graph.appInfo.backend.url.takeIf { graph.appInfo.isDevBuild },
-                        )
-                        // The lock sits over the app rather than in place of it, so a glance
-                        // at another app does not cost the owner where they were (docs/sign-in.md).
-                        is AuthSession.SignedIn -> Box(Modifier.fillMaxSize()) {
-                            SignedInNavigation(graph = graph)
-                            if (locked) {
-                                val activity = LocalActivity.current
-                                LockScreen(
-                                    unlock = graph.deviceUnlock,
-                                    onUnlocked = graph.appLock::unlocked,
-                                    onGiveUp = { scope.launch { graph.auth.signOut() } },
-                                    giveUpLabel = stringResource(R.string.lock_use_code),
-                                    onBack = { activity?.moveTaskToBack(true) },
-                                )
+                ReplicaGate(graph) {
+                    Crossfade(targetState = session, label = "session") { current ->
+                        when (current) {
+                            AuthSession.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                LoadingIndicator(Modifier.size(64.dp))
+                            }
+                            AuthSession.SignedOut -> SignInScreen(
+                                viewModel = viewModel {
+                                    SignInViewModel(graph.auth, graph.devCode, graph.appLock::unlocked, graph::sessionEnded)
+                                },
+                                backendLabel = graph.appInfo.backend.url.takeIf { graph.appInfo.isDevBuild },
+                            )
+                            // The lock sits over the app rather than in place of it, so a glance
+                            // at another app does not cost the owner where they were (docs/sign-in.md).
+                            is AuthSession.SignedIn -> Box(Modifier.fillMaxSize()) {
+                                SignedInNavigation(graph = graph)
+                                if (locked) {
+                                    val activity = LocalActivity.current
+                                    LockScreen(
+                                        unlock = graph.deviceUnlock,
+                                        onUnlocked = graph.appLock::unlocked,
+                                        onGiveUp = { scope.launch { graph.auth.signOut() } },
+                                        giveUpLabel = stringResource(R.string.lock_use_code),
+                                        onBack = { activity?.moveTaskToBack(true) },
+                                    )
+                                }
                             }
                         }
                     }

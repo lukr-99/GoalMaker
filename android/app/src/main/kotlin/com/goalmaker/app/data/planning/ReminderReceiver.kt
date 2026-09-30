@@ -30,6 +30,8 @@ class ReminderReceiver : BroadcastReceiver() {
         val finish = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
+                // A replica that would not open has nothing to remind of; the app says why (M6-06).
+                if (!graph.replicaOpened()) return@launch
                 when (intent.action) {
                     ReminderAlarm.ACTION_DONE -> reminderId?.let {
                         reminders.done(it)

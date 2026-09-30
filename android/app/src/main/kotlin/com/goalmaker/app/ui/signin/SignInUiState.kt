@@ -10,4 +10,6 @@ data class SignInUiState(
     val errorDetail: String = "",
     /** A dev build on the local stack has the dev account and can fetch a code, so it offers both. */
     val hasDevSignIn: Boolean = false,
+    /** The session ended without the owner signing out, and what they had is still on the phone. */
+    val sessionEnded: Boolean = false,
 )

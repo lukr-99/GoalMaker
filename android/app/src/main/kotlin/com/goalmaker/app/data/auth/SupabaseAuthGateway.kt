@@ -53,6 +53,31 @@ class SupabaseAuthGateway(
         }
     }
 
+    /**
+     * The server turned the access token away (docs/sign-in.md). True when a refresh brought a new
+     * one, so the call is worth one more try. A refresh the server refuses ends the session here,
+     * the way the background refresh does; offline or a busy server changes nothing.
+     */
+    suspend fun refresh(): Boolean = try {
+        client.auth.refreshCurrentSession()
+        true
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: RestException) {
+        if (error.statusCode in REFUSED && error.statusCode != TOO_MANY_REQUESTS) endSession()
+        false
+    } catch (_: Exception) {
+        false
+    }
+
+    /**
+     * The server will not take this session any more: it goes from the device, and the sign-in
+     * screen comes back. The replica and its outbox stay for the owner's next sign-in.
+     */
+    suspend fun endSession() {
+        client.auth.clearSession()
+    }
+
     private fun toSession(status: SessionStatus): AuthSession = when (status) {
         is SessionStatus.Initializing -> AuthSession.Loading
         is SessionStatus.Authenticated -> signedIn(status.session.user)
@@ -83,5 +108,8 @@ class SupabaseAuthGateway(
 
     private companion object {
         const val TOO_MANY_REQUESTS = 429
+
+        // A client error on a refresh is the server saying no, not a network that failed.
+        val REFUSED = 400..499
     }
 }

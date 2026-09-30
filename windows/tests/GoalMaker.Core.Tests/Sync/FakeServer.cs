@@ -15,6 +15,9 @@ internal sealed class FakeServer : IRemoteTables
 
     public bool Offline { get; set; }
 
+    /// <summary>Answers every call with a 401, as for a session the server no longer takes.</summary>
+    public bool RefusesSession { get; set; }
+
     public HashSet<string> RefusedIds { get; } = [];
 
     public int Upserts { get; private set; }
@@ -34,6 +37,11 @@ internal sealed class FakeServer : IRemoteTables
             throw new RemoteUnavailableException("offline");
         }
 
+        if (RefusesSession)
+        {
+            throw new RemoteUnauthorizedException("HTTP 401: JWT expired");
+        }
+
         if (RefusedIds.Contains((string)row["id"]!))
         {
             throw new RemoteRejectedException("HTTP 403: row security");
@@ -49,6 +57,11 @@ internal sealed class FakeServer : IRemoteTables
         if (Offline)
         {
             throw new RemoteUnavailableException("offline");
+        }
+
+        if (RefusesSession)
+        {
+            throw new RemoteUnauthorizedException("HTTP 401: JWT expired");
         }
 
         IReadOnlyList<JsonObject> page = [.. Rows(table)

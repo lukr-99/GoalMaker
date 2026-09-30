@@ -3,11 +3,12 @@ package com.goalmaker.app.data.replica
 import android.content.res.AssetManager
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.execSQL
+import com.goalmaker.app.application.sync.ReplicaFromNewerAppException
 
 /**
  * Applies replica/migrations the way tools/migrations.py does (ADR 0007): a schema_migrations record
  * with each file's SHA-256, every file in its own transaction, and a refusal when an applied file
- * changed or is missing.
+ * changed or is missing. A file this app does not have at all means a newer app wrote the replica.
  */
 object ReplicaMigrator {
     /** Where the build puts the repository's replica/migrations (app/build.gradle.kts). */
@@ -47,7 +48,9 @@ object ReplicaMigrator {
         val known = migrations.associateBy(ReplicaMigration::number)
         for ((number, record) in applied) {
             val migration = known[number]
-                ?: error("The replica has migration %04d (%s), which this app doesn't know.".format(number, record.first))
+                ?: throw ReplicaFromNewerAppException(
+                    "The replica has migration %04d (%s), which this app doesn't know.".format(number, record.first),
+                )
             check(record.first == migration.name && record.second == migration.checksum) {
                 "Applied migration ${migration.name} differs from the built-in file."
             }

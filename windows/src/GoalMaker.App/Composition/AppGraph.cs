@@ -53,6 +53,7 @@ public sealed class AppGraph : IDisposable
     private readonly SupabaseChangeFeed changeFeed;
     private readonly IProfileSettings profile;
     private readonly SyncedTableCatalog catalog;
+    private readonly SessionSync sessionSync;
     private readonly Action<Action> runOnUi;
     private readonly IStrings strings;
     private readonly TickSound tick = new();
@@ -83,8 +84,9 @@ public sealed class AppGraph : IDisposable
         localOnly = build.IsDevBuild && !signIn;
         var backend = (build.IsDevBuild ? Settings.BackendOverride : null) ?? build.DefaultBackend;
         AppInfo = new AppInfo(build.Version, build.IsDevBuild, backend, build.DefaultBackend, localOnly);
-        supabase = SupabaseClientFactory.Create(backend, Paths.Session);
-        Auth = localOnly ? new LocalOnlyAuthGateway() : new SupabaseAuthGateway(supabase);
+        var storedSession = new ProtectedFileSessionPersistence(Paths.Session);
+        supabase = SupabaseClientFactory.Create(backend, storedSession);
+        Auth = localOnly ? new LocalOnlyAuthGateway() : new SupabaseAuthGateway(supabase, storedSession);
         // This PC keeps its session for a week and then asks for the code again (docs/sign-in.md).
         SignInWatch = new SignInWatch(Auth, Settings, () => DateTimeOffset.Now);
 
@@ -107,10 +109,19 @@ public sealed class AppGraph : IDisposable
         catalog = ContractResources.SyncedTables();
         var design = ContractResources.Themes();
         replica = new SqliteReplica(localOnly ? Paths.LocalReplica : Paths.ReplicaFor(backend.Url), catalog, ReplicaMigrator.BuiltIn());
-        var postgrest = new PostgrestHttp(http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken);
+        // A call the server refuses the session for asks for a sync (built just below), which renews
+        // the session or ends it.
+        var postgrest = new PostgrestHttp(
+            http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken, () => runOnUi(() => Sync?.Request()));
         IRemoteTables remote = localOnly ? new LocalOnlyRemoteTables(TimeProvider.System) : new PostgrestRemoteTables(postgrest);
         profile = new PostgrestProfileSettings(postgrest, () => (Auth.Session as AuthSession.SignedIn)?.UserId);
-        Sync = new SyncCoordinator(new SyncEngine(catalog, replica, remote, TimeProvider.System, pulls: !localOnly), replica, TimeProvider.System, SyncDebounce);
+        Sync = new SyncCoordinator(
+            new SyncEngine(catalog, replica, remote, TimeProvider.System, pulls: !localOnly, owner: () => (Auth.Session as AuthSession.SignedIn)?.UserId),
+            replica,
+            TimeProvider.System,
+            SyncDebounce,
+            Auth);
+        sessionSync = new SessionSync(catalog, replica, Sync);
         var newRows = new NewRows(catalog, () => (Auth.Session as AuthSession.SignedIn)?.UserId, TimeProvider.System);
         Areas = new AreaList(replica, newRows, [.. design.AreaColors.Select(color => color.Id)], Sync.Request);
         Tags = new TagList(replica, newRows, Sync.Request);
@@ -592,17 +603,16 @@ public sealed class AppGraph : IDisposable
         periodicSync?.Cancel();
         periodicSync?.Dispose();
         periodicSync = null;
-        if (session is not AuthSession.SignedIn signedIn)
+        // A sign-out leaves the replica and its outbox; a sign-in as someone else starts clean.
+        sessionSync.Apply(session);
+        if (session is not AuthSession.SignedIn)
         {
-            Sync.CancelScheduled();
             _ = changeFeed.StopAsync();
             reminderTimer.Cancel();
             toasts.ClearAll();
             return;
         }
 
-        ForgetOtherAccounts(signedIn.UserId);
-        Sync.Request();
         runOnUi(LookAtReminders);
         periodicSync = new CancellationTokenSource();
         _ = SyncPeriodicallyAsync(periodicSync.Token);
@@ -858,17 +868,6 @@ public sealed class AppGraph : IDisposable
         if (e.IsAvailable && Auth.Session is AuthSession.SignedIn)
         {
             runOnUi(Sync.Request);
-        }
-    }
-
-    // A replica only ever holds one account's rows; signing in as someone else starts clean.
-    private void ForgetOtherAccounts(string userId)
-    {
-        var foreign = catalog.Tables.Any(table => replica.All(table.Name)
-            .Any(row => (string?)row[SyncedTable.OwnerId] is { } owner && owner != userId));
-        if (foreign)
-        {
-            replica.ClearAll();
         }
     }
 

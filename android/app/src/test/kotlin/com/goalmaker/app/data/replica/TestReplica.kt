@@ -22,7 +22,10 @@ class TestReplica : AutoCloseable {
         assets.open("synced-tables.json").use { it.readBytes().toString(Charsets.UTF_8) },
     )
 
-    val replica = SqliteReplica(AndroidSQLiteDriver(), File(folder, "replica.db").path, catalog) {
+    /** The replica's file, for a test that opens it again another way. */
+    val file = File(folder, "replica.db")
+
+    val replica = SqliteReplica(AndroidSQLiteDriver(), file.path, catalog) {
         ReplicaMigrator.builtIn(assets)
     }
 

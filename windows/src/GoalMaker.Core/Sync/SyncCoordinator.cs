@@ -1,3 +1,5 @@
+using GoalMaker.Core.Auth;
+
 namespace GoalMaker.Core.Sync;
 
 /// <summary>
@@ -6,6 +8,11 @@ namespace GoalMaker.Core.Sync;
 /// more run after it. While the server can't be reached it retries on its own, backing off from
 /// <see cref="FirstRetry"/> to <see cref="LongestRetry"/>. Publishes the status the app's sync
 /// indicator shows.
+/// <para>
+/// With <c>auth</c>, a run the server refuses the session for renews the session and runs once more.
+/// A server that refuses the renewal, or the renewed session too, has ended it: the owner is sent to
+/// sign in and the outbox stays in the replica for when they are back (docs/sign-in.md).
+/// </para>
 /// </summary>
 public sealed class SyncCoordinator : IDisposable
 {
@@ -16,18 +23,20 @@ public sealed class SyncCoordinator : IDisposable
     private readonly IReplica replica;
     private readonly TimeProvider time;
     private readonly TimeSpan debounce;
+    private readonly IAuthGateway? auth;
     private readonly SemaphoreSlim running = new(1, 1);
     private readonly Lock gate = new();
     private CancellationTokenSource? pendingRequest;
     private bool rerun;
     private TimeSpan nextRetry = FirstRetry;
 
-    public SyncCoordinator(SyncEngine engine, IReplica replica, TimeProvider time, TimeSpan debounce)
+    public SyncCoordinator(SyncEngine engine, IReplica replica, TimeProvider time, TimeSpan debounce, IAuthGateway? auth = null)
     {
         this.engine = engine;
         this.replica = replica;
         this.time = time;
         this.debounce = debounce;
+        this.auth = auth;
         Status = SyncStatus.Initial with { PendingChanges = replica.PendingCount() };
     }
 
@@ -69,6 +78,7 @@ public sealed class SyncCoordinator : IDisposable
         try
         {
             SyncReport report;
+            var ended = false;
             do
             {
                 lock (gate)
@@ -79,8 +89,11 @@ public sealed class SyncCoordinator : IDisposable
                 Publish(Status with { State = SyncState.Syncing });
                 try
                 {
-                    report = await engine.RunAsync(cancellationToken).ConfigureAwait(false);
-                    RunCompleted?.Invoke(this, report);
+                    report = await RunOnceAsync(cancellationToken).ConfigureAwait(false);
+                    if (report.Unauthorized && auth is not null)
+                    {
+                        (report, ended) = await RenewAndRunAsync(auth, report, cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception error) when (error is not OperationCanceledException)
                 {
@@ -96,9 +109,14 @@ public sealed class SyncCoordinator : IDisposable
                     _ => new SyncStatus(SyncState.Idle, time.GetUtcNow(), pending, null),
                 });
             }
-            while (ShouldRerun());
+            while (!ended && ShouldRerun());
 
-            RetryIfOffline(report);
+            // A session that ended waits for the owner to sign in again, not for a retry.
+            if (!ended)
+            {
+                RetryIfOffline(report);
+            }
+
             return report;
         }
         finally
@@ -129,6 +147,34 @@ public sealed class SyncCoordinator : IDisposable
     {
         CancelScheduled();
         running.Dispose();
+    }
+
+    private async Task<SyncReport> RunOnceAsync(CancellationToken cancellationToken)
+    {
+        var report = await engine.RunAsync(cancellationToken).ConfigureAwait(false);
+        RunCompleted?.Invoke(this, report);
+        return report;
+    }
+
+    // A 401 is an expired token as often as an ended session, so the session is renewed and the run
+    // goes once more. Offline, the usual retry picks it up. Returns whether the session ended.
+    private async Task<(SyncReport Report, bool Ended)> RenewAndRunAsync(
+        IAuthGateway gateway, SyncReport refused, CancellationToken cancellationToken)
+    {
+        var renewal = await gateway.RenewAsync(cancellationToken).ConfigureAwait(false);
+        if (renewal != SessionRenewal.Renewed)
+        {
+            return (refused, renewal == SessionRenewal.Refused);
+        }
+
+        var again = await RunOnceAsync(cancellationToken).ConfigureAwait(false);
+        if (!again.Unauthorized)
+        {
+            return (again, false);
+        }
+
+        await gateway.EndSessionAsync().ConfigureAwait(false);
+        return (again, true);
     }
 
     // Replaces whatever run was scheduled: a newer request or retry always wins.

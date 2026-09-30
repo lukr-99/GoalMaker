@@ -150,5 +150,9 @@ public sealed class SignInViewModelTests
         }
 
         public Task SignOutAsync() => Task.CompletedTask;
+
+        public Task<SessionRenewal> RenewAsync(CancellationToken cancellationToken) => Task.FromResult(SessionRenewal.Renewed);
+
+        public Task EndSessionAsync() => Task.CompletedTask;
     }
 }

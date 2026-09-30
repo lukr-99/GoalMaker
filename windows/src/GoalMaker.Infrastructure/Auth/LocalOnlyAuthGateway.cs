@@ -31,4 +31,9 @@ public sealed class LocalOnlyAuthGateway : IAuthGateway
         Task.FromResult<AuthResult>(new AuthResult.Success());
 
     public Task SignOutAsync() => Task.CompletedTask;
+
+    // Nothing here talks to a server, so there is no session for one to refuse.
+    public Task<SessionRenewal> RenewAsync(CancellationToken cancellationToken) => Task.FromResult(SessionRenewal.Renewed);
+
+    public Task EndSessionAsync() => Task.CompletedTask;
 }
