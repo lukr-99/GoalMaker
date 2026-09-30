@@ -54,6 +54,8 @@ public sealed record SettingsDocument
 
     public List<string>? PinnedPlaces { get; init; }
 
+    public List<string>? FoldedBoardColumns { get; init; }
+
     public string? WeeklyBackupFolder { get; init; }
 
     public DateTimeOffset? WeeklyBackupWritten { get; init; }

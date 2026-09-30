@@ -17,6 +17,7 @@ public sealed class TaskList
     private const string SeriesId = "series_id";
     private const string GoalId = "goal_id";
     private const string Goals = "goals";
+    private const string BoardArchivedAt = "board_archived_at";
     private const int MaxTitle = 500;
     private const int MaxNotes = 20_000;
     private readonly IReplica replica;
@@ -285,6 +286,7 @@ public sealed class TaskList
         {
             row["board_column"] = null;
             row["milestone_id"] = null;
+            KeepOnBoard(row);
             return;
         }
 
@@ -311,6 +313,21 @@ public sealed class TaskList
         }
 
         Change(id, row => row["board_column"] = column);
+    }
+
+    /// <summary>
+    /// Takes a done project item off its board by hand, or puts it back (docs/projects.md). It stays done,
+    /// in the archive and in search. False for an item that isn't done or has no project.
+    /// </summary>
+    public bool SetBoardArchived(string id, bool archived)
+    {
+        if (Find(id) is not { ProjectId: not null, State: TaskState.Done })
+        {
+            return false;
+        }
+
+        Change(id, row => row[BoardArchivedAt] = archived ? rows.Timestamp() : null);
+        return true;
     }
 
     /// <summary>What kind of item this is: a task, an idea or a bug.</summary>
@@ -359,6 +376,7 @@ public sealed class TaskList
                 row["board_column"] = ProjectRules.FinishedIn(StateOf(status), column);
             }
 
+            KeepOnBoard(row);
             replica.Queue(Table, row);
             if (wasOpen)
             {
@@ -393,6 +411,7 @@ public sealed class TaskList
             }
 
             edit(row);
+            KeepOnBoard(row);
             replica.Queue(Table, row);
             if (wasFinished && replica.Get(Table, Occurrences.SuccessorId(id)) is { } next
                 && next[SyncedTable.DeletedAt] is null && (string?)next["status"] == "open")
@@ -481,6 +500,16 @@ public sealed class TaskList
         return day >= start && day <= GoalRules.PeriodEnd(horizon, start) ? goalId : null;
     }
 
+    // Only a done project item stays archived by hand: reopened, dropped or out of its project, it is
+    // back, as the server's trigger does it (supabase/migrations/0018_board_archive.sql).
+    private static void KeepOnBoard(JsonObject row)
+    {
+        if (row[BoardArchivedAt] is not null && ((string?)row["status"] != "done" || row["project_id"] is null))
+        {
+            row[BoardArchivedAt] = null;
+        }
+    }
+
     private void Change(string id, Action<JsonObject> edit)
     {
         var row = replica.Get(Table, id);
@@ -521,5 +550,6 @@ public sealed class TaskList
         Priority: (string?)row["priority"] ?? ProjectRules.Normal,
         MilestoneId: (string?)row["milestone_id"],
         Position: row["position"] is System.Text.Json.Nodes.JsonValue place && place.TryGetValue<double>(out var at) ? at : 0,
-        MadeBy: (string?)row["made_by"] ?? ProjectRules.Owner);
+        MadeBy: (string?)row["made_by"] ?? ProjectRules.Owner,
+        BoardArchivedAt: (string?)row[BoardArchivedAt]);
 }

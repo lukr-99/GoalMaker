@@ -291,7 +291,7 @@ public sealed class AppGraph : IDisposable
             Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
             [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
         StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally);
-        ProjectsPage = new ProjectsViewModel(Projects, Tasks, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
+        ProjectsPage = new ProjectsViewModel(Projects, Tasks, Settings, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
             Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
