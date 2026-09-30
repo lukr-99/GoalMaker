@@ -63,16 +63,25 @@ class ReminderNotifications(private val context: Context) {
 
     /**
      * Shows the reminder to write the weekly or monthly review of the period [periodStart] begins.
-     * Tapping it or "Review" opens the review; "Not now" keeps it quiet for the rest of the day on
-     * every device (docs/reviews.md).
+     * Tapping it or "Review" opens the review, on the letter when a Claude routine wrote one first, and
+     * then the reminder says so ([letter]); "Not now" keeps it quiet for the rest of the day on every
+     * device (docs/reviews.md, docs/letter.md).
      */
-    fun showReview(ritual: String, day: LocalDate, kind: String, periodStart: LocalDate) {
+    fun showReview(ritual: String, day: LocalDate, kind: String, periodStart: LocalDate, letter: Boolean = false) {
         if (!manager.areNotificationsEnabled()) return
         val monthly = kind == "monthly"
         val notification = NotificationCompat.Builder(context, CHANNEL_REVIEW)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(if (monthly) R.string.review_reminder_title_monthly else R.string.review_reminder_title_weekly))
-            .setContentText(context.getString(R.string.review_reminder_text))
+            .setContentText(
+                context.getString(
+                    when {
+                        !letter -> R.string.review_reminder_text
+                        monthly -> R.string.review_reminder_letter_monthly
+                        else -> R.string.review_reminder_letter_weekly
+                    },
+                ),
+            )
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)

@@ -1,24 +1,34 @@
 package com.goalmaker.app.domain.notes
 
 /**
- * The light Markdown task notes use (docs/archive.md, contracts/vectors/markdown.json): lines, list
- * lines starting with "- " or "* ", **bold**, *italic*, and bare http(s) links. Anything unmatched
- * stays as it was typed.
+ * The light Markdown task notes and letters use (docs/archive.md, contracts/vectors/markdown.json):
+ * lines, headings starting with "# " to "### ", list lines starting with "- " or "* ", **bold**,
+ * *italic*, and bare http(s) links. Anything unmatched stays as it was typed.
  */
 object LightMarkdown {
     private const val TRAILING = ".,;:!?)"
+    private const val MAX_HEADING = 3
     private val schemes = listOf("https://", "http://")
 
     fun parse(text: String): List<MarkdownBlock> {
         if (text.isEmpty()) return emptyList()
         return text.replace("\r", "").split('\n').map { line ->
             val start = line.trimStart()
-            if (start.startsWith("- ") || start.startsWith("* ")) {
+            val level = headingLevel(start)
+            if (level > 0) {
+                MarkdownBlock(bullet = false, spans = inline(start.substring(level + 1).trim()), heading = level)
+            } else if (start.startsWith("- ") || start.startsWith("* ")) {
                 MarkdownBlock(bullet = true, spans = inline(start.substring(2)))
             } else {
                 MarkdownBlock(bullet = false, spans = inline(line))
             }
         }
+    }
+
+    // "# " to "### ": the level, or 0 when the line isn't a heading.
+    private fun headingLevel(line: String): Int {
+        val hashes = line.takeWhile { it == '#' }.length
+        return if (hashes in 1..MAX_HEADING && line.length > hashes && line[hashes] == ' ') hashes else 0
     }
 
     private fun inline(line: String): List<MarkdownSpan> {

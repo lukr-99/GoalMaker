@@ -629,6 +629,8 @@
     <sys:String x:Key="Reviews.ReminderTitleWeekly">Weekly review</sys:String>
     <sys:String x:Key="Reviews.ReminderTitleMonthly">Monthly review</sys:String>
     <sys:String x:Key="Reviews.ReminderText">A quarter of an hour to look back and set what comes next.</sys:String>
+    <sys:String x:Key="Reviews.ReminderLetterWeekly">Your letter for the week is here.</sys:String>
+    <sys:String x:Key="Reviews.ReminderLetterMonthly">Your letter for the month is here.</sys:String>
     <sys:String x:Key="Reviews.ReminderStart">Review</sys:String>
     <sys:String x:Key="Reviews.ReminderSkip">Not now</sys:String>
     <sys:String x:Key="Settings.WeeklyReview">Weekly review reminder</sys:String>
@@ -705,6 +707,10 @@
     <sys:String x:Key="Wants.StatusBought">bought</sys:String>
     <sys:String x:Key="Wants.StatusDropped">dropped</sys:String>
     <sys:String x:Key="Wants.ByClaude">by Claude</sys:String>
+    <sys:String x:Key="Reviews.LetterByClaude">by Claude</sys:String>
+    <sys:String x:Key="Reviews.Continue">Continue</sys:String>
+    <sys:String x:Key="Reviews.Letter">Letter</sys:String>
+
     <sys:String x:Key="Wants.Why">WHY</sys:String>
     <sys:String x:Key="Wants.Checked">LAST PRICE FOUND</sys:String>
     <sys:String x:Key="Wants.Note">NOTE</sys:String>

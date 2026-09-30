@@ -91,7 +91,8 @@ public sealed partial class ReviewsViewModel : ObservableObject
                 string.Join(" · ", parts),
                 strings.Get("Reviews.Read"),
                 () => open(review.Kind, review.PeriodStart),
-                () => reviews.Delete(review.Id)));
+                () => reviews.Delete(review.Id),
+                ReviewRules.LetterPreview(review.Summary)));
         }
 
         IsEmpty = Past.Count == 0;

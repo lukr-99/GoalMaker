@@ -185,6 +185,22 @@ public sealed class ReminderRulesContractTests
     }
 
     [Fact]
+    public void EveryLetterWaiting()
+    {
+        foreach (var testCase in vectors.GetProperty("letterWaiting").EnumerateArray())
+        {
+            var reviews = testCase.GetProperty("reviews").EnumerateArray().Select((review, index) =>
+                new ReviewItem($"r{index}", review.GetProperty("kind").GetString()!, Date(review.GetProperty("periodStart"))!.Value)
+                {
+                    Summary = review.GetProperty("summary").GetString()!,
+                    Deleted = review.TryGetProperty("deleted", out var deleted) && deleted.GetBoolean(),
+                }).ToList();
+            var waiting = ReviewRules.LetterWaiting(testCase.GetProperty("kind").GetString()!, Date(testCase.GetProperty("day"))!.Value, reviews);
+            Assert.True(testCase.GetProperty("letter").GetBoolean() == waiting, $"{Name(testCase)}: got {waiting}");
+        }
+    }
+
+    [Fact]
     public void EveryRitualRunId()
     {
         foreach (var testCase in vectors.GetProperty("ritualIds").EnumerateArray())

@@ -35,6 +35,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -63,18 +65,23 @@ import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.goals.GoalDialog
 import com.goalmaker.app.ui.goals.GoalSummaryRow
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.task.MarkdownNotes
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
 
 /**
- * The guided review (docs/reviews.md, spec stories 59 to 64): look back over the period, handle what
- * is still open, answer the prompts, rate mood and energy, and set the next period's goals.
+ * The guided review (docs/reviews.md, spec stories 59 to 64): read the letter when there is one
+ * (docs/letter.md), look back over the period, handle what is still open, answer the prompts, rate
+ * mood and energy, and set the next period's goals.
  */
 @Composable
 fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var editing by remember { mutableStateOf<GoalItem?>(null) }
+    // The top bar folds away while a long letter is read, and comes back on the way up.
+    val collapsing = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    val reading = state.step == ReviewStep.LETTER
 
     // Whatever was typed is kept when the screen goes away.
     DisposableEffect(viewModel) {
@@ -85,6 +92,7 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
     }
 
     Scaffold(
+        modifier = if (reading) Modifier.nestedScroll(collapsing.nestedScrollConnection) else Modifier,
         topBar = {
             TopAppBar(
                 title = { ScreenTitle(stringResource(if (state.kind == ReviewRules.MONTHLY) R.string.reviews_monthly else R.string.reviews_weekly)) },
@@ -93,6 +101,7 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
                     }
                 },
+                scrollBehavior = if (reading) collapsing else null,
             )
         },
         bottomBar = {
@@ -113,7 +122,15 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
                     Button(onClick = onClose) { Text(stringResource(R.string.reviews_close)) }
                 } else {
                     Button(onClick = viewModel::next) {
-                        Text(stringResource(if (state.step == ReviewStep.GOALS) R.string.reviews_finish else R.string.reviews_next))
+                        Text(
+                            stringResource(
+                                when (state.step) {
+                                    ReviewStep.LETTER -> R.string.reviews_continue
+                                    ReviewStep.GOALS -> R.string.reviews_finish
+                                    else -> R.string.reviews_next
+                                },
+                            ),
+                        )
                     }
                 }
             }
@@ -121,7 +138,7 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             LinearProgressIndicator(
-                progress = { (state.step.ordinal + 1f) / ReviewStep.entries.size },
+                progress = { (state.steps.indexOf(state.step) + 1f) / state.steps.size },
                 modifier = Modifier.fillMaxWidth(),
             )
             if (!state.loaded) return@Column
@@ -131,6 +148,7 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
             ) {
                 when (state.step) {
+                    ReviewStep.LETTER -> letter(state)
                     ReviewStep.LOOK_BACK -> lookBack(state)
                     ReviewStep.TASKS -> openTasks(state, viewModel)
                     ReviewStep.REFLECT -> reflect(state, viewModel)
@@ -151,6 +169,29 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
             onDelete = null,
             onDismiss = { editing = null },
         )
+    }
+}
+
+/**
+ * The letter a Claude routine wrote about the period (docs/letter.md): the dates as the headline in
+ * the accent, who wrote it, and the letter itself in light Markdown. It is read here, never edited.
+ */
+private fun androidx.compose.foundation.lazy.LazyListScope.letter(state: ReviewUiState) {
+    item("letter") {
+        Column(Modifier.padding(top = 8.dp, bottom = 24.dp)) {
+            Text(
+                periodText(state.digest),
+                style = MaterialTheme.typography.headlineMedium,
+                color = AppTheme.colors.accent,
+            )
+            Text(
+                stringResource(R.string.reviews_letter_by_claude),
+                style = MaterialTheme.typography.labelLarge,
+                color = AppTheme.colors.textMuted,
+                modifier = Modifier.padding(top = 4.dp, bottom = 16.dp),
+            )
+            MarkdownNotes(state.letter)
+        }
     }
 }
 

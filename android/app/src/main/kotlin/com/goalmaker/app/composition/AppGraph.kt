@@ -23,6 +23,7 @@ import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderLook
 import com.goalmaker.app.application.planning.ReviewList
+import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -446,10 +447,22 @@ class AppGraph(context: Context) {
         look.reminders.forEach(reminderNotifications::show)
         look.planTomorrow?.let(reminderNotifications::showPlanTomorrow)
         look.weeklyReview?.let { day ->
-            reminderNotifications.showReview(RitualRunList.WEEKLY_REVIEW, day, "weekly", ReviewReminder.periodStart("weekly", day))
+            reminderNotifications.showReview(
+                RitualRunList.WEEKLY_REVIEW,
+                day,
+                "weekly",
+                ReviewReminder.periodStart("weekly", day),
+                letter = ReviewRules.letterWaiting("weekly", day, reviews.all()),
+            )
         }
         look.monthlyReview?.let { day ->
-            reminderNotifications.showReview(RitualRunList.MONTHLY_REVIEW, day, "monthly", ReviewReminder.periodStart("monthly", day))
+            reminderNotifications.showReview(
+                RitualRunList.MONTHLY_REVIEW,
+                day,
+                "monthly",
+                ReviewReminder.periodStart("monthly", day),
+                letter = ReviewRules.letterWaiting("monthly", day, reviews.all()),
+            )
         }
         look.wants?.let { due ->
             val byId = wants.all().associateBy { it.id }

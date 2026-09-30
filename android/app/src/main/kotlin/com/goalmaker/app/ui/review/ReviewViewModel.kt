@@ -32,9 +32,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The guided review of one period (docs/reviews.md, spec stories 59 to 64): look back, handle what is
- * still open, reflect on the prompts the library and the period's facts give, rate mood and energy,
- * and set the next period's goals. Everything is saved as it is answered.
+ * The guided review of one period (docs/reviews.md, spec stories 59 to 64): read the letter when a
+ * Claude routine wrote one (docs/letter.md), look back, handle what is still open, reflect on the
+ * prompts the library and the period's facts give, rate mood and energy, and set the next period's
+ * goals. Everything is saved as it is answered; the letter is only read, never edited.
  */
 class ReviewViewModel(
     private val kind: String,
@@ -49,7 +50,8 @@ class ReviewViewModel(
     private val io: CoroutineDispatcher,
     private val today: () -> LocalDate,
 ) : ViewModel() {
-    private val step = MutableStateFlow(ReviewStep.LOOK_BACK)
+    // Null until the review is open, so it starts on the Letter only when there is one.
+    private val step = MutableStateFlow<ReviewStep?>(null)
     private val questions = MutableStateFlow<List<ReviewQuestion>>(emptyList())
     private val answers = MutableStateFlow<Map<String, String>>(emptyMap())
     private val opened = MutableStateFlow<ReviewItem?>(null)
@@ -68,8 +70,8 @@ class ReviewViewModel(
         val board = GoalBoard.build(goalList, entries, taskList, day, habits = habitData)
         val next = board.sections.firstOrNull { it.horizon == horizon && it.start == nextStart }
         ReviewUiState(
-            loaded = true,
-            step = screen.step,
+            loaded = screen.step != null,
+            step = screen.step ?: ReviewStep.LOOK_BACK,
             kind = kind,
             digest = digest,
             review = allReviews.firstOrNull { it.kind == kind && it.periodStart == periodStart } ?: screen.review,
@@ -87,6 +89,7 @@ class ReviewViewModel(
             opened.value = review
             answers.value = review?.reflections.orEmpty().associate { it.promptId to it.answer }
             questions.value = ask(review)
+            step.value = if (review?.summary?.isNotBlank() == true) ReviewStep.LETTER else ReviewStep.LOOK_BACK
         }
     }
 
@@ -149,7 +152,8 @@ class ReviewViewModel(
 
     fun next() {
         saveAnswers()
-        step.value = when (step.value) {
+        step.value = when (step.value ?: return) {
+            ReviewStep.LETTER -> ReviewStep.LOOK_BACK
             ReviewStep.LOOK_BACK -> ReviewStep.TASKS
             ReviewStep.TASKS -> ReviewStep.REFLECT
             ReviewStep.REFLECT -> ReviewStep.RATE
@@ -163,10 +167,12 @@ class ReviewViewModel(
 
     /** Back a step; false where back should leave the review. */
     fun back(): Boolean {
-        val before = step.value
-        if (before == ReviewStep.LOOK_BACK) return false
+        val before = step.value ?: return false
+        if (before == ReviewStep.LETTER) return false
+        if (before == ReviewStep.LOOK_BACK && !uiState.value.hasLetter) return false
         saveAnswers()
         step.value = when (before) {
+            ReviewStep.LOOK_BACK -> ReviewStep.LETTER
             ReviewStep.TASKS -> ReviewStep.LOOK_BACK
             ReviewStep.REFLECT -> ReviewStep.TASKS
             ReviewStep.RATE -> ReviewStep.REFLECT
@@ -195,7 +201,7 @@ class ReviewViewModel(
     }
 
     private data class Screen(
-        val step: ReviewStep,
+        val step: ReviewStep?,
         val questions: List<ReviewQuestion>,
         val answers: Map<String, String>,
         val review: ReviewItem?,

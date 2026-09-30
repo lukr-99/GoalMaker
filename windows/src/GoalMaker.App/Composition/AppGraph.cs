@@ -601,12 +601,20 @@ public sealed class AppGraph : IDisposable
 
         if (look.WeeklyReview is { } weekly)
         {
-            toasts.ShowReview(RitualRunList.WeeklyReview, weekly, monthly: false);
+            toasts.ShowReview(
+                RitualRunList.WeeklyReview,
+                weekly,
+                monthly: false,
+                letter: ReviewRules.LetterWaiting(ReviewRules.Weekly, weekly, Reviews.All()));
         }
 
         if (look.MonthlyReview is { } monthlyDay)
         {
-            toasts.ShowReview(RitualRunList.MonthlyReview, monthlyDay, monthly: true);
+            toasts.ShowReview(
+                RitualRunList.MonthlyReview,
+                monthlyDay,
+                monthly: true,
+                letter: ReviewRules.LetterWaiting(ReviewRules.Monthly, monthlyDay, Reviews.All()));
         }
 
         if (look.PlanTomorrow is { } day)

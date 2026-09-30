@@ -22,6 +22,14 @@ data class ReviewUiState(
     val canCopyGoals: Boolean = false,
     val goals: List<GoalItem> = emptyList(),
 ) {
+    /** The letter a Claude routine wrote about the period, blank when there is none (docs/letter.md). */
+    val letter: String get() = review?.summary.orEmpty()
+
+    val hasLetter: Boolean get() = letter.isNotBlank()
+
+    /** The steps this review walks through: the Letter only when there is one. */
+    val steps: List<ReviewStep> get() = if (hasLetter) ReviewStep.entries else ReviewStep.entries - ReviewStep.LETTER
+
     val mood: Int? get() = review?.mood
 
     val energy: Int? get() = review?.energy
