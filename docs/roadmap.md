@@ -29,7 +29,7 @@ planned, and the shared habit challenges idea was taken off the roadmap on 2026-
 10. **M6: v1.0** (planned as issues 2026-09-20; 1.0.0 published 2026-09-21, 1.2.0 on 2026-09-23 from
     the public repository; the M6-06 hardening shipped in 1.5.0 on 2026-09-30, and the one close-out
     item left is the main PC updating itself from a release)
-11. **M7: quick chat** (next; issues still to write in `.scratch/m7-quick-chat/`)
+11. **M7: quick chat** (planned as issues 2026-09-30 in `.scratch/m7-quick-chat/`; four decisions wait for the owner)
 12. **M8: Letter, Tally, Wants** (planned 2026-09-28; built and shipped in 1.3.0, 1.4.0 and 1.5.0 by
     2026-09-30; a few checks with real data are left in the issues)
 13. The post-v1 list
