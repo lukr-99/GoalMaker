@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.core.content.edit
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
+import com.goalmaker.app.domain.settings.ComposerMode
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import java.time.Instant
@@ -55,6 +56,20 @@ class SharedPreferencesSettingsStoreTest {
 
         preferences.edit(commit = true) { putString("pinned_places", "focus,stats,stats") }
         assertEquals(listOf("stats"), SharedPreferencesSettingsStore(preferences).pins.value)
+    }
+
+    @Test
+    fun `the composer quick-adds until chat is picked, and remembers the pick across a restart`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(ComposerMode.QUICK_ADD, store.composerMode.value)
+
+        store.setComposerMode(ComposerMode.CHAT)
+
+        assertEquals(ComposerMode.CHAT, store.composerMode.value)
+        assertEquals(ComposerMode.CHAT, SharedPreferencesSettingsStore(preferences).composerMode.value)
+
+        preferences.edit(commit = true) { putString("composer_mode", "VOICE") }
+        assertEquals(ComposerMode.QUICK_ADD, SharedPreferencesSettingsStore(preferences).composerMode.value)
     }
 
     @Test

@@ -54,6 +54,7 @@ import com.goalmaker.app.ui.review.ReviewScreen
 import com.goalmaker.app.ui.review.ReviewViewModel
 import com.goalmaker.app.ui.review.ReviewsKey
 import com.goalmaker.app.ui.calendar.CalendarScreen
+import com.goalmaker.app.ui.chat.ChatViewModel
 import com.goalmaker.app.ui.calendar.CalendarViewModel
 import com.goalmaker.app.ui.projects.ProjectsScreen
 import com.goalmaker.app.ui.projects.ProjectsViewModel
@@ -159,6 +160,16 @@ fun SignedInNavigation(graph: AppGraph) {
                                 clock = LocalDateTime::now,
                             )
                         }
+                        // The composer's chat; its thread lives as long as this entry, in memory only.
+                        val chatViewModel = viewModel {
+                            ChatViewModel(
+                                assistant = graph.assistant,
+                                settings = graph.settings,
+                                session = graph.chatSession,
+                                syncStatus = graph.sync.status,
+                                syncNow = { graph.sync.syncNow() },
+                            )
+                        }
                         val projectsViewModel = viewModel {
                             ProjectsViewModel(graph.projects, graph.tasks, graph.settings, graph.io, LocalDateTime::now)
                         }
@@ -202,6 +213,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             when (screen) {
                                 PlaceLook.LISTS -> ListsScreen(
                                     viewModel = listsViewModel,
+                                    chat = chatViewModel,
                                     onOpenPlan = { backStack.add(PlanKey) },
                                     onOpenTask = { id -> backStack.add(TaskKey(id)) },
                                     onOpenGoals = { backStack.add(GoalsKey) },

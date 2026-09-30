@@ -146,6 +146,32 @@
     <string name="composer_opens_plan">opens Plan tomorrow</string>
     <string name="composer_unknown_command">unknown command</string>
     <string name="composer_remove">Remove %1$s</string>
+
+    <!-- Quick chat in the composer (spec, "Quick chat (M7)") -->
+    <string name="chat_mode">Chat</string>
+    <string name="chat_mode_on">Chat is on</string>
+    <string name="chat_mode_off">Quick add is on</string>
+    <string name="chat_switch_to_chat">Switch to chat</string>
+    <string name="chat_switch_to_quick_add">Switch to quick add</string>
+    <string name="chat_placeholder">Ask or tell GoalMaker…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_title">Chat</string>
+    <string name="chat_clear">Clear chat</string>
+    <string name="chat_thinking">Thinking…</string>
+    <string name="chat_retry">Try again</string>
+    <string name="chat_line_owner">You: %1$s</string>
+    <string name="chat_line_answer">GoalMaker: %1$s</string>
+    <string name="chat_forgotten">This chat is kept only until you close the app.</string>
+    <string name="chat_unavailable_offline">Chat needs a connection, so the composer adds tasks for now.</string>
+    <string name="chat_unavailable_signed_out">Chat needs you signed in, so the composer adds tasks for now.</string>
+    <string name="chat_unavailable_not_set_up">Chat isn\'t set up on the server yet, so the composer adds tasks for now.</string>
+    <string name="chat_problem_offline">Couldn\'t reach the server. Try again when you\'re online.</string>
+    <string name="chat_problem_signed_out">You\'re signed out. Sign in to use chat.</string>
+    <string name="chat_problem_not_set_up">Chat isn\'t set up on the server yet.</string>
+    <string name="chat_problem_rate_limited">That\'s a lot of requests. Wait a minute and try again.</string>
+    <string name="chat_problem_provider_limit">The model\'s free limit is used up for now. Try again later.</string>
+    <string name="chat_problem_bad_request">The server couldn\'t read that request.</string>
+    <string name="chat_problem_failed">Something went wrong. Try again.</string>
     <string name="repeat_daily">Every day</string>
     <plurals name="repeat_every_n_days">
         <item quantity="one">Every %1$d day</item>

@@ -8,6 +8,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.goalmaker.app.BuildConfig
 import com.goalmaker.app.application.about.AppInfo
+import com.goalmaker.app.application.assistant.AssistantClient
 import com.goalmaker.app.application.auth.AppLock
 import com.goalmaker.app.application.auth.AuthGateway
 import com.goalmaker.app.application.backup.BackupService
@@ -50,6 +51,7 @@ import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.activity.PostgrestActivityLog
+import com.goalmaker.app.data.assistant.SupabaseAssistantClient
 import com.goalmaker.app.data.auth.DeviceUnlock
 import com.goalmaker.app.data.auth.LocalMailbox
 import com.goalmaker.app.data.auth.LocalOnlyAuthGateway
@@ -236,6 +238,19 @@ class AppGraph(context: Context) {
 
     /** The server's activity log with undo (docs/activity.md), read online. */
     val activity: ActivityLog = PostgrestActivityLog(postgrest)
+
+    /** The quick chat's server side (spec, "Quick chat (M7)"), called as the signed-in owner. */
+    val assistant: AssistantClient = SupabaseAssistantClient(
+        http = http,
+        baseUrl = backend.url,
+        publishableKey = backend.publishableKey,
+        refreshSession = { supabaseAuth?.refresh() ?: false },
+    ) {
+        if (localOnly) null else supabase.auth.currentAccessTokenOrNull()
+    }
+
+    /** Who the chat runs as: nobody in a dev build that keeps everything on the phone, which has no server. */
+    val chatSession: StateFlow<AuthSession> = if (localOnly) MutableStateFlow(AuthSession.SignedOut) else auth.session
 
     // The profile keeps the device's time zone and day start, so the connector's "today" agrees.
     private val profile: ProfileSettings = PostgrestProfileSettings(postgrest) {

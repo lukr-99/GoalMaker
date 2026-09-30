@@ -52,7 +52,8 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * The chat-style composer (docs/design/spec.md): a floating pill that grows a preview of what the
  * line will save as you type. Enter or Send saves; tapping a chip removes its part of the line.
- * The caller places it above the keyboard or the navigation bar.
+ * The caller places it above the keyboard or the navigation bar. [leading] sits before the text, where
+ * Today's composer keeps its switch to chat; [placeholder] and [sendLabel] follow what a line does.
  */
 @Composable
 fun ComposerBar(
@@ -62,6 +63,9 @@ fun ComposerBar(
     onSubmit: () -> Unit,
     onRemove: (ComposerChip) -> Unit,
     modifier: Modifier = Modifier,
+    placeholder: String = stringResource(R.string.today_composer_placeholder),
+    sendLabel: String = stringResource(R.string.today_add),
+    leading: (@Composable () -> Unit)? = null,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -81,10 +85,14 @@ fun ComposerBar(
                     chips.forEach { chip -> PreviewChip(chip, onRemove) }
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = if (leading != null) 6.dp else 0.dp, end = 8.dp),
+            ) {
+                leading?.invoke()
                 TextField(
                     state = state,
-                    placeholder = { Text(stringResource(R.string.today_composer_placeholder)) },
+                    placeholder = { Text(placeholder) },
                     lineLimits = TextFieldLineLimits.SingleLine,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
                     onKeyboardAction = { onSubmit() },
@@ -97,7 +105,7 @@ fun ComposerBar(
                     modifier = Modifier.weight(1f),
                 )
                 FilledIconButton(onClick = onSubmit, enabled = canSend) {
-                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.today_add))
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = sendLabel)
                 }
             }
         }
