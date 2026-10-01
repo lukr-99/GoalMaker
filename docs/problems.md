@@ -29,6 +29,9 @@ run by both apps.
 | `backup` | the weekly copy could not be written, or its folder has gone |
 | `update` | an update could not be found, verified or installed |
 
+The quiet daily check for updates never raises one: when it can't reach or trust the channel it
+says nothing and tries again at its next look ([signing-and-releases.md](setup/signing-and-releases.md), step 4).
+
 What does **not** belong there is anything the owner just did and is watching: an export they asked
 for, a restore's report, a line the composer would not take. Those answer where they were asked.
 

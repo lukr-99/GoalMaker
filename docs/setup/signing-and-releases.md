@@ -46,9 +46,17 @@ The script refuses to replace an existing key. From the next build on, both apps
 3. The **Release** workflow checks the tag and the secrets, builds and tests the signed APK and the
    installer, and publishes them with the signed manifest and `SHA256SUMS` as the GitHub Release
    (ADR 0010).
-4. The apps see the update at once: Settings → Check for updates. Once a check has found it, the
-   Settings item in the Windows sidebar and the gear in the phone's top bar wear an accent mark with
-   a download arrow ("Update available") until it is installed or a later check finds none.
+4. The apps find the update on their own within a day, or at once with Settings → Check for updates.
+   The quiet check runs a little after the app starts (half a minute on the PC, a few seconds after the
+   phone app comes to the front) and then about once a day: the tray app looks every hour and checks
+   when the last check that got through is a day old. It only reads and verifies the signed manifest;
+   nothing is downloaded or installed until the owner presses Install. A failed check says nothing and
+   is tried again at the next look. Dev builds and builds without a channel never check. Settings →
+   Updates says when a check last got through.
+   Once a check has found the update, the Settings item in the Windows sidebar and the gear in the
+   phone's top bar wear an accent mark with a download arrow ("Update available") until it is
+   installed or a later check finds none. After a restart, a found update is checked again at once, so
+   the mark comes back without waiting a day.
 
 A failed workflow publishes no release unless it reached the last job. If a bad release went out,
 see [SECURITY.md](../../SECURITY.md) → Recovery.
