@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -38,11 +39,12 @@ fun MainScreen(
         },
     ) { padding ->
         // The three lists are one screen that switches its own tabs, so here they count as one screen.
+        // While the keyboard is up the bar is gone, and every place ends above the keyboard instead.
         AnimatedContent(
             targetState = if (PlaceLook.tab(current) != null) PlaceLook.LISTS else current,
             transitionSpec = { transitions.switch() },
             label = "main place",
-            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding).imePadding(),
         ) { screen -> content(screen) }
     }
 }
