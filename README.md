@@ -61,7 +61,7 @@ to join: running it means standing up your own project, sender and signing keys,
 | Folder | What | Stack |
 | --- | --- | --- |
 | `android/` | The phone app | Kotlin, Jetpack Compose, Material 3 Expressive, supabase-kt |
-| `windows/` | The PC app with tray | .NET 10 WPF, WPF UI, H.NotifyIcon, Supabase C# client |
+| `windows/` | The PC app with tray | .NET 10 WPF, DotNetLib.Tray (WPF UI, H.NotifyIcon), Supabase C# client |
 | `supabase/` | Database migrations, tests, config | Postgres, Supabase CLI (local Docker stack) |
 | `contracts/` | Rules both apps must implement the same way | JSON schemas and golden vectors |
 | `tools/` | Repository, migration, release and signing tools | Python, PowerShell |
