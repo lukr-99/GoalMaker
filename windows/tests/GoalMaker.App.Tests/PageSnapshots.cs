@@ -453,6 +453,99 @@ public sealed class PageSnapshots
         Save(page, folder, "habits-editor", new Size(852, 1000));
     });
 
+    // The habits redesign: Today with its habits panel beside the tasks (and under them where it is
+    // narrow), and the Habits page with its summary and groups, dark and light. A new page per look
+    // (docs/pitfalls.md).
+    [Fact(Explicit = true)]
+    public void HabitsRedesign() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Finish the Tally rule editor !", Today);
+        Add(planner, "Thesis group standup 9:30", Today);
+        Add(planner, "Dentist 14:00", Today);
+        Add(planner, "Reply to Jana about the flat", Today);
+        Add(planner, "Pick up the parcel", Today);
+        planner.Tasks.SetDone(planner.Task("Thesis group standup").Id, true);
+
+        // Checked in on each of the days before today, for a streak of that many.
+        void Streak(HabitItem habit, int days, double value = 1)
+        {
+            for (var back = days; back >= 1; back--)
+            {
+                planner.Habits.CheckIn(habit.Id, Today.AddDays(-back), value);
+            }
+        }
+
+        var water = planner.Habits.Add(new HabitDraft("Water", Today.AddDays(-60)) { Emoji = "💧", Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
+        Streak(water, 23, 8);
+        planner.Habits.CheckIn(water.Id, Today, 5);
+        var read = planner.Habits.Add(new HabitDraft("Read", Today.AddDays(-60)) { Emoji = "📖", Measure = HabitRules.Amount, Target = 30, Unit = "min" })!;
+        Streak(read, 12, 30);
+        planner.Habits.CheckIn(read.Id, Today, 20);
+        var meditate = planner.Habits.Add(new HabitDraft("Meditate", Today.AddDays(-60)) { Emoji = "🧘" })!;
+        Streak(meditate, 41);
+        planner.Habits.CheckIn(meditate.Id, Today);
+        var stretch = planner.Habits.Add(new HabitDraft("Stretch", Today.AddDays(-60)) { Emoji = "🤸" })!;
+        Streak(stretch, 29);
+        planner.Habits.Skip(stretch.Id, Today.AddDays(-4));
+        var guitar = planner.Habits.Add(new HabitDraft("Guitar", Today.AddDays(-60)) { Emoji = "🎸" })!;
+        Streak(guitar, 9);
+        planner.Habits.Skip(guitar.Id, Today);
+        var run = planner.Habits.Add(new HabitDraft("Run", Today.AddDays(-60)) { Emoji = "🏃", Cadence = HabitRules.PerWeek, Times = 3 })!;
+        foreach (var back in new[] { 1, 3, 7, 8, 10, 14, 15, 17, 21, 22, 24, 28, 29, 31 })
+        {
+            planner.Habits.CheckIn(run.Id, Today.AddDays(-back));
+        }
+
+        var snacks = planner.Habits.Add(new HabitDraft("Snacks", Today.AddDays(-60))
+        {
+            Emoji = "🍪",
+            Measure = HabitRules.Count,
+            Target = 2,
+            Unit = "snacks",
+            Direction = HabitRules.AtMost,
+        })!;
+        planner.Habits.CheckIn(snacks.Id, Today.AddDays(-5), 3);
+        planner.Habits.CheckIn(snacks.Id, Today, 1);
+        var floss = planner.Habits.Add(new HabitDraft("Floss", Today.AddDays(-20)) { ShowOnToday = false })!;
+        Streak(floss, 6);
+        var cold = planner.Habits.Add(new HabitDraft("Cold shower", Today.AddDays(-90)) { Emoji = "🧊" })!;
+        planner.Habits.SetArchived(cold.Id, true);
+
+        using var theme = Theme(planner);
+        var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action());
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action(), habitsPage: habits, habitList: planner.Habits);
+        habits.IsArchivedExpanded = true;
+
+        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Dark, GoalMaker.Core.Settings.ThemeMode.Light })
+        {
+            var look = mode.ToString().ToLowerInvariant();
+            theme.Apply(planner.Settings.Appearance with { Mode = mode });
+            Save(new TodayPage(today), folder, $"today-habits-panel-{look}", new Size(1100, 860));
+            Save(new HabitsPage(habits), folder, $"habits-page-{look}", new Size(1100, 1900));
+        }
+
+        // Narrow: the panel goes under the tasks. Hide done on, then every habit done for the all done card.
+        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark });
+        Save(new TodayPage(today), folder, "today-habits-narrow-dark", new Size(620, 1500));
+        habits.HideDone = true;
+        Save(new HabitsPage(habits), folder, "habits-page-hide-done-dark", new Size(1100, 1500));
+        today.HideDoneHabits = true;
+        planner.Habits.CheckIn(water.Id, Today, 3);
+        planner.Habits.CheckIn(read.Id, Today, 10);
+        planner.Habits.CheckIn(stretch.Id, Today);
+        planner.Habits.CheckIn(run.Id, Today);
+        Save(new TodayPage(today), folder, "today-habits-all-done-dark", new Size(1100, 760));
+        theme.Apply(planner.Settings.Appearance with { ThemeId = "electric", Mode = GoalMaker.Core.Settings.ThemeMode.Light });
+        Save(new TodayPage(today), folder, "today-habits-all-done-electric-light", new Size(1100, 760));
+        Save(Mini(MiniWindowContent.For(MiniPage.Today, today, habits), strings), folder, "mini-today-habits-electric-light", MiniWindow.DefaultSize);
+    });
+
     [Fact(Explicit = true)]
     public void CalendarPage_() => OnUiThread(folder =>
     {
@@ -1092,7 +1185,7 @@ public sealed class PageSnapshots
                 var resources = app.Resources.MergedDictionaries;
                 resources.Add(new ThemesDictionary { Theme = ApplicationTheme.Dark });
                 resources.Add(new ControlsDictionary());
-                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "ListTemplate", "MiniTemplates", "NavigationMarks" })
+                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "HabitTemplates", "ListTemplate", "MiniTemplates", "NavigationMarks" })
                 {
                     resources.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/GoalMaker;component/Resources/{name}.xaml") });
                 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
+import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ProjectList
@@ -22,6 +23,7 @@ import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.Snooze
 import com.goalmaker.app.ui.goals.GoalBoard
 import com.goalmaker.app.ui.habits.HabitBoard
+import com.goalmaker.app.ui.habits.HabitRow
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -43,8 +45,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * Today, Tomorrow and the Inbox (docs/lists.md), the composer with its live preview
- * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), today's habits
- * (docs/habits.md), this week's goals (docs/goals.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
+ * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), Today's switch
+ * between its tasks and its habits with Hide done and the all done card (docs/habits.md), this week's goals (docs/goals.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
  * composer read.
  */
 class ListsViewModel(
@@ -110,12 +112,19 @@ class ListsViewModel(
         GoalBoard.thisWeek(all, entries, taskList, day, habitData) to HabitBoard.today(habitData, day)
     }
 
+    // Which half of Today shows and whether its done habits hide: kept while the app runs, so Today
+    // comes back the way it was left, and starts on the tasks after a cold start.
+    private val segment = MutableStateFlow(TodaySegment.TASKS)
+    private val hideDoneHabits = MutableStateFlow(false)
+    private val habitView = combine(segment, hideDoneHabits, ::Pair)
+
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
         rows,
         refreshing,
         goalsAndHabits,
-    ) { (planning, narrowed), context, pulled, (goalRows, habitRows) ->
+        habitView,
+    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (shownSegment, hiding) ->
         ListsUiState(
             lists = planning,
             refreshing = pulled,
@@ -128,6 +137,11 @@ class ListsViewModel(
             weekGoals = goalRows,
             habits = habitRows,
             habitMilestones = HabitBoard.milestones(habitRows),
+            segment = shownSegment,
+            hideDoneHabits = hiding,
+            shownHabits = HabitBoard.shown(habitRows, hiding),
+            habitsLeft = habitRows.count(HabitRow::left),
+            habitsAllDone = HabitRules.allDone(habitRows.map(HabitRow::standing)),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -176,6 +190,31 @@ class ListsViewModel(
     /** Adds [amount] to today's value of a habit. */
     fun checkIn(id: String, amount: Double) {
         viewModelScope.launch(io) { habits.checkIn(id, today(), amount) }
+    }
+
+    /** Skips a habit's period holding today (sick, travelling) or takes the skip back; the streak stays. */
+    fun skipHabit(id: String, skipped: Boolean) {
+        viewModelScope.launch(io) { habits.skip(id, today(), skipped) }
+    }
+
+    /** Clears today's value of a habit, for a check-in made by mistake. */
+    fun clearHabit(id: String) {
+        viewModelScope.launch(io) { habits.setValue(id, today(), 0.0) }
+    }
+
+    /** Pauses a habit from today; it leaves Today until it resumes on the Habits screen. */
+    fun pauseHabit(id: String) {
+        viewModelScope.launch(io) { habits.pause(id, today()) }
+    }
+
+    /** Shows Today's tasks or its habits. */
+    fun showSegment(shown: TodaySegment) {
+        segment.value = shown
+    }
+
+    /** Hides the habits done today from Today's habits, or shows them again. */
+    fun setHideDoneHabits(hide: Boolean) {
+        hideDoneHabits.value = hide
     }
 
     /** Narrows every list to an area, or stops narrowing by area when [areaId] is null. */

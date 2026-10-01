@@ -3,9 +3,11 @@ package com.goalmaker.app.ui.habits
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitData
+import com.goalmaker.app.application.planning.HabitGroup
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.HabitPeriodState
 import com.goalmaker.app.application.planning.HabitRules
+import com.goalmaker.app.application.planning.HabitStanding
 import java.time.LocalDate
 
 /** What the Habits screen and Today's ring row show (docs/habits.md, design spec, Today). */
@@ -18,7 +20,10 @@ object HabitBoard {
     private const val HEAT_WEEKS = 26
     private const val MIN_WEEKS = 8
 
-    fun build(data: HabitData, goals: List<GoalItem>, today: LocalDate): HabitsUiState {
+    /** Days in the week's dots on a card: today and the six before it. */
+    const val WEEK_DAYS = 7
+
+    fun build(data: HabitData, goals: List<GoalItem>, today: LocalDate, hideDone: Boolean = false): HabitsUiState {
         val goalTitles = goals.associate { it.id to it.title }
         val rows = data.habits.map { row(it, data, today, goalTitles, heat = true) }
         val active = rows.filterNot { it.habit.archived }
@@ -27,6 +32,9 @@ object HabitBoard {
             loaded = true,
             today = today,
             active = active,
+            sections = sections(active, hideDone),
+            summary = summary(active),
+            hideDone = hideDone,
             archived = rows.filter { it.habit.archived },
             // Goals a habit can serve: not dropped and not over yet, or already served.
             goals = goals.filter { goal ->
@@ -45,6 +53,29 @@ object HabitBoard {
     fun due(data: HabitData, today: LocalDate): List<HabitRow> = data.habits
         .filter { HabitRules.dueToday(it, today, data.pausesOf(it.id)) }
         .map { row(it, data, today, emptyMap(), heat = false) }
+
+    /**
+     * The Habits screen's groups in order, Every day, Weekly and Limits (contracts/vectors/habits.json,
+     * groups), each without its done habits when [hideDone] is on; a group with no habits is left out.
+     */
+    fun sections(rows: List<HabitRow>, hideDone: Boolean): List<HabitSection> = HabitGroup.entries.mapNotNull { group ->
+        val all = rows.filter { it.group == group }
+        if (all.isEmpty()) null else HabitSection(group, all.filterNot { hideDone && it.done }, all.size)
+    }
+
+    /** What is shown of [rows] while Hide done is [hideDone]: the done ones go, the rest stay in place. */
+    fun shown(rows: List<HabitRow>, hideDone: Boolean): List<HabitRow> = if (hideDone) rows.filterNot(HabitRow::done) else rows
+
+    /** Today's count, how far the day has got and the longest streak, for the summary card. */
+    fun summary(rows: List<HabitRow>): HabitSummary {
+        val asking = rows.filter { it.standing == HabitStanding.DONE || it.standing == HabitStanding.LEFT }
+        return HabitSummary(
+            done = asking.count(HabitRow::done),
+            total = asking.size,
+            share = if (asking.isEmpty()) 0.0 else asking.sumOf { if (it.done) 1.0 else it.ring ?: 0.0 } / asking.size,
+            best = rows.filter { it.streak > 0 }.maxByOrNull(HabitRow::streak),
+        )
+    }
 
     /** "habit id:streak" of each habit whose streak, with today's period met, is a milestone. */
     fun milestones(rows: List<HabitRow>): Set<String> = rows
@@ -77,6 +108,8 @@ object HabitBoard {
             paused = pauses.any { !it.from.isAfter(today) && (it.until == null || !it.until.isBefore(today)) },
             goalTitle = habit.goalId?.let(goalTitles::get),
             heatStart = heatStart,
+            standing = HabitRules.standing(habit, today, checkins, pauses),
+            dots = (WEEK_DAYS - 1 downTo 0).map { back -> HabitRules.dot(habit, today.minusDays(back.toLong()), today, checkins, pauses) },
             heat = if (heat) {
                 generateSequence(heatStart) { it.plusDays(1) }.takeWhile { !it.isAfter(today) }
                     .map { HabitRules.heat(habit, it, checkins, pauses) }

@@ -631,11 +631,55 @@
         <item quantity="one">Heatmap: %1$d of %2$d day met</item>
         <item quantity="other">Heatmap: %1$d of %2$d days met</item>
     </plurals>
-    <plurals name="habits_today_left">
-        <item quantity="one">Habits · %1$d left</item>
-        <item quantity="other">Habits · %1$d left</item>
+    <!-- The habits redesign: Today's switch, the cards, Hide done, the groups and the summary card. -->
+    <string name="today_segment_tasks">Tasks</string>
+    <string name="today_segment_habits">Habits</string>
+    <plurals name="today_segment_tasks_description">
+        <item quantity="one">Tasks, %1$d open</item>
+        <item quantity="other">Tasks, %1$d open</item>
     </plurals>
-    <string name="habits_today_done">Habits · all done</string>
+    <plurals name="today_segment_habits_description">
+        <item quantity="one">Habits, %1$d left</item>
+        <item quantity="other">Habits, %1$d left</item>
+    </plurals>
+    <string name="today_segment_habits_done">Habits, all done</string>
+    <plurals name="habits_nudge">
+        <item quantity="one">%1$d habit left today: %2$s</item>
+        <item quantity="other">%1$d habits left today: %2$s</item>
+    </plurals>
+    <plurals name="habits_left_today">
+        <item quantity="one">%1$d left today</item>
+        <item quantity="other">%1$d left today</item>
+    </plurals>
+    <string name="habits_all_done_label">All done</string>
+    <string name="habits_all_done_card">Every habit for today is done.</string>
+    <string name="habits_today_none">No habits on Today. Add one, or show one here, on the Habits page.</string>
+    <string name="habits_open">Open Habits</string>
+    <string name="habits_hide_done">Hide done</string>
+    <string name="habits_show_done">Show done</string>
+    <string name="habits_page_hint">Tap the button to check in. Hold a card or open its menu to skip.</string>
+    <string name="habits_group_days">Every day</string>
+    <string name="habits_group_weekly">Weekly</string>
+    <string name="habits_group_limits">Limits</string>
+    <string name="habits_group_header">%1$s · %2$d</string>
+    <string name="habits_group_all_done">All done.</string>
+    <string name="habits_summary_count">/ %1$d done</string>
+    <plurals name="habits_summary_description">
+        <item quantity="one">%1$d of %2$d habit done today</item>
+        <item quantity="other">%1$d of %2$d habits done today</item>
+    </plurals>
+    <string name="habits_summary_percent">%1$d%%</string>
+    <string name="habits_summary_best">Longest streak: %1$s, %2$s</string>
+    <string name="habits_summary_no_streak">No streak yet. Today can start one.</string>
+    <string name="habits_add_one">Add one to %1$s</string>
+    <string name="habits_log_on">Log an amount on %1$s</string>
+    <string name="habits_take_back">Take back %1$s</string>
+    <string name="habits_unskip_on">Undo the skip on %1$s</string>
+    <string name="habits_menu_check_in">Check in</string>
+    <string name="habits_menu_take_back">Take back today\'s check-in</string>
+    <string name="habits_menu_add_one">Add one</string>
+    <string name="habits_archived_line">Archived</string>
+    <string name="habits_dots">Last seven days: %1$d met, %2$d missed, %3$d skipped</string>
 
     <!-- Reviews (docs/reviews.md) -->
     <string name="reviews_title">Reviews</string>

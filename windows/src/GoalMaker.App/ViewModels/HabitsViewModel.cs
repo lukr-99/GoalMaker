@@ -8,9 +8,11 @@ using GoalMaker.Core.Settings;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The Habits page (docs/habits.md, spec stories 36 to 42): every habit with today's ring, its streak
-/// and its heatmap. Habits are added and edited in <see cref="Editor"/> and amounts logged in the log
-/// panel. A streak reaching a milestone raises <see cref="Celebrate"/>, unless motion is reduced.
+/// The Habits page (docs/habits.md, spec stories 36 to 42; the habits prototype, option B): a summary
+/// card, then every habit in its group (Every day, Weekly, Limits) with today's check-in, its streak,
+/// its week and its heatmap, Hide done, and the archived ones folded. Habits are added and edited in
+/// <see cref="Editor"/> and amounts logged in the log panel. A streak reaching a milestone raises
+/// <see cref="Celebrate"/>, unless motion is reduced.
 /// </summary>
 public sealed partial class HabitsViewModel : ObservableObject
 {
@@ -21,6 +23,9 @@ public sealed partial class HabitsViewModel : ObservableObject
     // MinWeeks, so a young habit still has a map to fill.
     private const int HeatWeeks = 26;
     private const int MinWeeks = 8;
+
+    // Days in the week's dots on a card: today and the six before it.
+    private const int WeekDays = 7;
 
     private readonly HabitList habits;
     private readonly GoalList goals;
@@ -59,6 +64,32 @@ public sealed partial class HabitsViewModel : ObservableObject
     [ObservableProperty]
     private bool isArchivedExpanded;
 
+    /// <summary>Hides the habits done today from their groups; the page's own, kept while the app runs.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HideDoneText))]
+    private bool hideDone;
+
+    [ObservableProperty]
+    private string summaryDate = string.Empty;
+
+    [ObservableProperty]
+    private string summaryDone = string.Empty;
+
+    [ObservableProperty]
+    private string summaryOf = string.Empty;
+
+    [ObservableProperty]
+    private double summaryShare;
+
+    [ObservableProperty]
+    private string summaryPercent = string.Empty;
+
+    [ObservableProperty]
+    private string summaryBest = string.Empty;
+
+    [ObservableProperty]
+    private string summaryName = string.Empty;
+
     public HabitsViewModel(
         HabitList habits, GoalList goals, ISettingsStore settings, IStrings strings, TimeProvider time, Func<bool> motionReduced, Action<Action> runOnUi, Action? openMini = null)
     {
@@ -95,18 +126,26 @@ public sealed partial class HabitsViewModel : ObservableObject
     /// <summary>An amount habit was tapped and the log panel opened: the shell shows the Habits page.</summary>
     public event EventHandler? LogRequested;
 
+    /// <summary>A card on Today asked for the Habits page, or for its editor there: the shell shows the page.</summary>
+    public event EventHandler? PageWanted;
+
     public HabitEditorViewModel Editor { get; }
 
     public ObservableCollection<HabitRowViewModel> Rows { get; } = [];
 
     public ObservableCollection<HabitRowViewModel> Archived { get; } = [];
 
+    /// <summary>The page's groups in order, Every day, Weekly and Limits, without the done ones while Hide done is on.</summary>
+    public ObservableCollection<HabitGroupViewModel> Groups { get; } = [];
+
+    public string HideDoneText => strings.Get(HideDone ? "Habits.ShowDone" : "Habits.HideDone");
+
     /// <summary>The habits show unless the editor or the log panel took the page.</summary>
     public bool ShowList => !Editor.IsOpen && !IsLogging;
 
     public bool HasLogUnit => LogUnit.Length > 0;
 
-    /// <summary>Today's habits for the ring row on Today: due today and not kept off Today (contracts/vectors/habits.json, onToday).</summary>
+    /// <summary>Today's habits for the panel on Today: due today and not kept off Today (contracts/vectors/habits.json, onToday).</summary>
     public IReadOnlyList<HabitRowViewModel> TodayRows() => RowsWhere(HabitRules.OnToday);
 
     /// <summary>Every habit due today, the ones kept off Today too: what the Places page counts.</summary>
@@ -119,7 +158,7 @@ public sealed partial class HabitsViewModel : ObservableObject
         var pauses = habits.Pauses();
         return [.. habits.All()
             .Where(habit => rule(habit, today, [.. pauses.Where(pause => pause.HabitId == habit.Id)]))
-            .Select(habit => Row(habit, checkins, pauses, today, null, strings, heat: false, owner: this))];
+            .Select(habit => Row(habit, checkins, pauses, today, null, strings, full: false, owner: this))];
     }
 
     public void Refresh()
@@ -133,9 +172,12 @@ public sealed partial class HabitsViewModel : ObservableObject
         foreach (var habit in habits.All())
         {
             var title = habit.GoalId is { } goalId && goalTitles.TryGetValue(goalId, out var found) ? found : null;
-            var row = Row(habit, checkins, pauses, today, title, strings, heat: true, owner: this);
+            var row = Row(habit, checkins, pauses, today, title, strings, full: true, owner: this);
             (habit.Archived ? Archived : Rows).Add(row);
         }
+
+        ShowGroups();
+        ShowSummary(today);
 
         IsEmpty = Rows.Count == 0;
         HasArchived = Archived.Count > 0;
@@ -154,6 +196,52 @@ public sealed partial class HabitsViewModel : ObservableObject
         }
     }
 
+    partial void OnHideDoneChanged(bool value) => ShowGroups();
+
+    // Every day, Weekly and Limits (contracts/vectors/habits.json, groups), so a limit never reads as not done.
+    private void ShowGroups()
+    {
+        Groups.Clear();
+        foreach (var group in Enum.GetValues<HabitGroup>())
+        {
+            var all = Rows.Where(row => row.Group == group).ToList();
+            if (all.Count == 0)
+            {
+                continue;
+            }
+
+            var name = strings.Get(group switch
+            {
+                HabitGroup.Days => "Habits.GroupDays",
+                HabitGroup.Weekly => "Habits.GroupWeekly",
+                _ => "Habits.GroupLimits",
+            });
+            var header = strings.Get("Habits.GroupHeader", name, all.Count).ToUpper(System.Globalization.CultureInfo.CurrentUICulture);
+            Groups.Add(new HabitGroupViewModel(group, header, [.. all.Where(row => !(HideDone && row.IsDone))], all.Count));
+        }
+    }
+
+    // The summary card: of the habits that ask something of today (limits, skips and pauses ask nothing),
+    // how many are done, how far the day has got (one still to do counts its ring), and the longest streak.
+    private void ShowSummary(DateOnly today)
+    {
+        var asking = Rows.Where(row => row.Standing is HabitStanding.Done or HabitStanding.Left).ToList();
+        var done = asking.Count(row => row.IsDone);
+        SummaryShare = asking.Count == 0 ? 0 : asking.Sum(row => row.IsDone ? 1 : row.Fraction) / asking.Count;
+        SummaryDate = today.ToString("dddd d MMMM", System.Globalization.CultureInfo.CurrentCulture).ToUpper(System.Globalization.CultureInfo.CurrentUICulture);
+        SummaryDone = done.ToString(System.Globalization.CultureInfo.CurrentCulture);
+        SummaryOf = strings.Get("Habits.SummaryOf", asking.Count);
+        SummaryPercent = SummaryShare.ToString("P0", System.Globalization.CultureInfo.CurrentCulture);
+        var best = Rows.Where(row => row.Streak > 0).MaxBy(row => row.Streak);
+        SummaryBest = best is null
+            ? strings.Get("Habits.SummaryNoStreak")
+            : strings.Get("Habits.SummaryBest", best.Habit.Emoji is { } emoji ? $"{emoji} {best.Name}" : best.Name, best.StreakText);
+        SummaryName = strings.Get("Habits.SummaryName", done, asking.Count) + ". " + SummaryBest;
+    }
+
+    /// <summary>The Habits page itself, asked for from a card on Today.</summary>
+    internal void OpenPage() => PageWanted?.Invoke(this, EventArgs.Empty);
+
     /// <summary>A tap on a habit's ring: a check toggles, a count adds one, an amount asks for its value.</summary>
     internal void Tap(HabitItem habit)
     {
@@ -163,7 +251,11 @@ public sealed partial class HabitsViewModel : ObservableObject
         }
     }
 
-    internal void Edit(HabitItem habit) => Editor.OpenEdit(habit);
+    internal void Edit(HabitItem habit)
+    {
+        Editor.OpenEdit(habit);
+        PageWanted?.Invoke(this, EventArgs.Empty);
+    }
 
     internal void ClearToday(string id) => habits.SetValue(id, Today(), 0);
 
@@ -212,7 +304,7 @@ public sealed partial class HabitsViewModel : ObservableObject
         DateOnly today,
         string? goalTitle,
         IStrings strings,
-        bool heat,
+        bool full,
         HabitsViewModel? owner)
     {
         var checkins = allCheckins.Where(checkin => checkin.HabitId == habit.Id).ToList();
@@ -235,11 +327,18 @@ public sealed partial class HabitsViewModel : ObservableObject
             inPeriod.Any(checkin => checkin.Skipped),
             pauses.Any(pause => pause.From <= today && (pause.Until is null || pause.Until >= today)),
             goalTitle,
-            heat
+            full
                 ? [.. Days(heatStart, today).Select(day => HabitRules.Heat(habit, day, checkins, pauses))]
                 : [],
             strings,
-            owner);
+            owner,
+            HabitRules.Standing(habit, today, checkins, pauses),
+            [.. Days(today.AddDays(1 - WeekDays), today).Select(day => new HabitDotViewModel(
+                HabitRules.Dot(habit, day, today, checkins, pauses),
+                System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortestDayNames[(int)day.DayOfWeek][..1]
+                    .ToUpper(System.Globalization.CultureInfo.CurrentCulture),
+                day == today))],
+            full);
     }
 
     private static DateOnly Monday(DateOnly day) => day.AddDays(-(((int)day.DayOfWeek + 6) % 7));

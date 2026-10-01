@@ -94,7 +94,7 @@ import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
 import com.goalmaker.app.ui.goals.GoalSummaryRow
 import com.goalmaker.app.ui.habits.AmountDialog
-import com.goalmaker.app.ui.habits.HabitRingsRow
+import com.goalmaker.app.ui.habits.HabitSheet
 import com.goalmaker.app.ui.habits.HabitRow
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
@@ -133,13 +133,18 @@ fun ListsScreen(
     var remindFor by remember { mutableStateOf<TaskItem?>(null) }
     var taskReminders by remember { mutableStateOf(emptyList<ReminderItem>()) }
     var logging by remember { mutableStateOf<HabitItem?>(null) }
+    var habitMenu by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
-    // A tap on a habit's ring checks in; an amount asks for its value first.
-    fun tapHabit(row: HabitRow) {
+    // A habit card's button: undo a skip, or check in; an amount asks for its value first.
+    fun checkInHabit(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
-        scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
+        if (row.skipped) {
+            viewModel.skipHabit(row.habit.id, false)
+        } else {
+            scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
+        }
     }
 
     // A list tab arrives the way Projects and the Calendar do, since the bar treats all five alike.
@@ -158,6 +163,21 @@ fun ListsScreen(
     }
     logging?.let { habit ->
         AmountDialog(habit, onLog = { amount -> viewModel.checkIn(habit.id, amount) }, onDismiss = { logging = null })
+    }
+    // A habit's menu, from its card's menu button or a long press: skipping lives here.
+    habitMenu?.let { id ->
+        state.habits.firstOrNull { it.habit.id == id }?.let { row ->
+            HabitSheet(
+                row = row,
+                onDismiss = { habitMenu = null },
+                onCheckIn = { checkInHabit(row) },
+                onLog = { logging = row.habit },
+                onSkip = { skipped -> viewModel.skipHabit(id, skipped) },
+                onClear = { viewModel.clearHabit(id) },
+                onPause = { viewModel.pauseHabit(id) },
+                onOpenHabits = onOpenHabits,
+            )
+        }
     }
 
     // The sheet reads the task's reminders when it opens, and again after every change to them.
@@ -275,7 +295,19 @@ fun ListsScreen(
                             transitionSpec = { transitions.switch() },
                             label = "list tab",
                         ) { shown ->
-                            ListContent(shown, lists, state, viewModel, tick, onOpenTask, onOpenGoals, onOpenHabits, ::tapHabit) { remindFor = it }
+                            ListContent(
+                                tab = shown,
+                                lists = lists,
+                                state = state,
+                                viewModel = viewModel,
+                                tick = tick,
+                                onOpenTask = onOpenTask,
+                                onOpenGoals = onOpenGoals,
+                                onOpenHabits = onOpenHabits,
+                                onCheckInHabit = ::checkInHabit,
+                                onHabitMenu = { habitMenu = it.habit.id },
+                                onRemind = { remindFor = it },
+                            )
                         }
                     }
                 }
@@ -297,7 +329,8 @@ private fun ListContent(
     onOpenTask: (String) -> Unit,
     onOpenGoals: () -> Unit,
     onOpenHabits: () -> Unit,
-    onTapHabit: (HabitRow) -> Unit,
+    onCheckInHabit: (HabitRow) -> Unit,
+    onHabitMenu: (HabitRow) -> Unit,
     onRemind: (TaskItem) -> Unit,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
@@ -327,8 +360,24 @@ private fun ListContent(
         when (tab) {
             ListTab.TODAY -> {
                 val sections = lists.todaySections
+                // Tasks and habits each have a half of Today, behind the switch (the habits prototype, option C).
+                // Without a habit on Today there is nothing to switch to.
+                if (state.habits.isNotEmpty() || state.segment == TodaySegment.HABITS) item(key = "switch") {
+                    TodaySwitch(
+                        shown = state.segment,
+                        openTasks = sections.priorities.size + sections.scheduled.size + sections.more.size,
+                        habitsLeft = state.habitsLeft,
+                        habitsDone = state.habitsAllDone,
+                        onShow = viewModel::showSegment,
+                        modifier = Modifier.padding(top = 4.dp, bottom = 4.dp),
+                    )
+                }
+                if (state.segment == TodaySegment.HABITS) {
+                    habits(state, lists.today, viewModel, onOpenHabits, onCheckInHabit, onHabitMenu)
+                    return@LazyColumn
+                }
                 val labelled = listOf(sections.priorities, sections.scheduled, sections.more).count { it.isNotEmpty() } > 1 ||
-                    sections.priorities.isNotEmpty() || sections.scheduled.isNotEmpty() || state.habits.isNotEmpty()
+                    sections.priorities.isNotEmpty() || sections.scheduled.isNotEmpty()
                 if (sections.priorities.isNotEmpty()) {
                     item(key = "h-priorities") { SectionHeader(stringResource(R.string.lists_priorities)) }
                     rows(sections.priorities)
@@ -337,23 +386,22 @@ private fun ListContent(
                     item(key = "h-scheduled") { SectionHeader(stringResource(R.string.lists_scheduled)) }
                     rows(sections.scheduled)
                 }
-                // Today's habits as a row of rings, between the timed tasks and the rest (design spec, Today).
-                if (state.habits.isNotEmpty()) {
-                    item(key = "h-habits") {
-                        val left = state.habits.count { !it.done }
-                        SectionHeader(
-                            text = if (left == 0) stringResource(R.string.habits_today_done) else pluralStringResource(R.plurals.habits_today_left, left, left),
-                            onToggle = onOpenHabits,
-                        )
-                    }
-                    item(key = "habits") { HabitRingsRow(state.habits, onTap = onTapHabit, onOpen = onOpenHabits, modifier = Modifier.animateItem()) }
-                }
                 if (sections.more.isNotEmpty()) {
                     if (labelled) item(key = "h-more") { SectionHeader(stringResource(R.string.lists_more)) }
                     rows(sections.more)
                 }
                 if (sections.priorities.isEmpty() && sections.scheduled.isEmpty() && sections.more.isEmpty()) {
                     item(key = "empty") { Empty(stringResource(R.string.lists_today_empty)) }
+                }
+                // What is left of the habits, one tap from their half of Today.
+                if (state.habitsLeft > 0) {
+                    item(key = "nudge") {
+                        HabitsNudge(
+                            left = state.habits.filter(HabitRow::left),
+                            onClick = { viewModel.showSegment(TodaySegment.HABITS) },
+                            modifier = Modifier.padding(top = 12.dp).animateItem(),
+                        )
+                    }
                 }
                 if (sections.overdue.isNotEmpty()) {
                     item(key = "h-overdue") {

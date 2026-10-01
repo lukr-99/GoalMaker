@@ -34,6 +34,46 @@ public sealed class HabitRulesContractTests
     }
 
     [Fact]
+    public void EveryGroupOfTheHabitsPage()
+    {
+        foreach (var testCase in vectors.GetProperty("groups").EnumerateArray())
+        {
+            Assert.True(Id(HabitRules.Group(Habit(testCase))) == testCase.GetProperty("expect").GetString(), Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryStandingToday()
+    {
+        foreach (var testCase in vectors.GetProperty("standings").EnumerateArray())
+        {
+            var standing = HabitRules.Standing(Habit(testCase), Day(testCase, "today"), Checkins(testCase), Pauses(testCase));
+            Assert.True(Id(standing) == testCase.GetProperty("expect").GetString(), $"{Name(testCase)}: {standing}");
+        }
+    }
+
+    [Fact]
+    public void EveryDayOfTheWeeksDots()
+    {
+        foreach (var testCase in vectors.GetProperty("dots").EnumerateArray())
+        {
+            var dot = HabitRules.Dot(Habit(testCase), Day(testCase, "day"), Day(testCase, "today"), Checkins(testCase), Pauses(testCase));
+            Assert.True(Id(dot) == testCase.GetProperty("expect").GetString(), $"{Name(testCase)}: {dot}");
+        }
+    }
+
+    [Fact]
+    public void EveryAllDoneCard()
+    {
+        foreach (var testCase in vectors.GetProperty("allDone").EnumerateArray())
+        {
+            var standings = testCase.GetProperty("standings").EnumerateArray()
+                .Select(id => Enum.GetValues<HabitStanding>().Single(standing => Id(standing) == id.GetString()));
+            Assert.True(testCase.GetProperty("expect").GetBoolean() == HabitRules.AllDone(standings), Name(testCase));
+        }
+    }
+
+    [Fact]
     public void EveryPeriod()
     {
         foreach (var testCase in vectors.GetProperty("periods").EnumerateArray())
@@ -187,6 +227,10 @@ public sealed class HabitRulesContractTests
             pause.GetProperty("until").ValueKind == JsonValueKind.Null ? null : Day(pause, "until"))).ToList();
 
     private static string? Name(JsonElement testCase) => testCase.GetProperty("name").GetString();
+
+    // The vectors' id for an enum value: Days is "days", Left is "left".
+    private static string Id<T>(T value)
+        where T : struct, Enum => value.ToString().ToLowerInvariant();
 
     private static DateOnly Day(JsonElement element, string name) =>
         DateOnly.ParseExact(element.GetProperty(name).GetString()!, "yyyy-MM-dd", CultureInfo.InvariantCulture);

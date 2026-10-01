@@ -1,26 +1,16 @@
 package com.goalmaker.app.ui.habits
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.LocalFireDepartment
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,21 +32,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.HabitGroup
 import com.goalmaker.app.application.planning.HabitItem
-import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
@@ -65,9 +50,12 @@ import com.goalmaker.app.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
 /**
- * The Habits screen (docs/habits.md, spec stories 36 to 42): every habit with today's ring, its streak
- * and its heatmap. A tap on the ring checks in (an amount asks for its value); a tap on the card edits.
- * A streak reaching a milestone gets confetti unless motion is reduced.
+ * The Habits screen (docs/habits.md, spec stories 36 to 42; the habits prototype, option B): a summary
+ * card, then the habits in their groups, Every day, Weekly and Limits, as full cards with how often,
+ * pips or a bar, the week's dots and the streak; Hide done; the archived ones folded at the end. The
+ * card's button checks in (an amount asks for its value), a tap on the card edits it, and a long press
+ * or its menu opens the sheet where skipping lives. A streak reaching a milestone gets confetti unless
+ * motion is reduced.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +67,7 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
     // null: no dialog; a habit with an empty id: a new one.
     var editing by remember { mutableStateOf<HabitItem?>(null) }
     var logging by remember { mutableStateOf<HabitItem?>(null) }
+    var menuFor by remember { mutableStateOf<String?>(null) }
     var archivedOpen by rememberSaveable { mutableStateOf(false) }
 
     val reduceMotion = AppTheme.reduceMotion
@@ -91,9 +80,13 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
         if (before != null && !reduceMotion && !before.containsAll(state.milestones)) bursts++
     }
 
-    fun tap(row: HabitRow) {
+    // The card's button: undo a skip, ask an amount for its value, or check in or add one.
+    fun checkIn(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
-        scope.launch { if (!viewModel.tap(row.habit.id)) logging = row.habit }
+        when {
+            row.skipped -> viewModel.skip(row.habit.id, false)
+            else -> scope.launch { if (!viewModel.tap(row.habit.id)) logging = row.habit }
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -116,16 +109,18 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
             if (state.loaded) {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp + 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
                     modifier = Modifier.fillMaxSize().padding(padding),
                 ) {
                     @Composable
                     fun Card(row: HabitRow, modifier: Modifier) = HabitCard(
                         row = row,
-                        onTap = { tap(row) },
-                        onEdit = { editing = row.habit },
-                        onLog = { logging = row.habit },
-                        viewModel = viewModel,
+                        today = state.today,
+                        full = true,
+                        onCheckIn = { checkIn(row) },
+                        onMenu = { menuFor = row.habit.id },
+                        onSkip = { viewModel.skip(row.habit.id, true) },
+                        onClick = { editing = row.habit },
                         modifier = modifier,
                     )
                     if (state.active.isEmpty()) {
@@ -137,8 +132,36 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
                                 modifier = Modifier.padding(8.dp),
                             )
                         }
+                    } else {
+                        item(key = "summary") { HabitSummaryCard(state.summary, state.today) }
+                        item(key = "bar") {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                                Text(
+                                    stringResource(R.string.habits_page_hint),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AppTheme.colors.textMuted,
+                                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                                )
+                                HideDoneChip(state.hideDone, viewModel::setHideDone)
+                            }
+                        }
                     }
-                    items(state.active, key = { it.habit.id }) { row -> Card(row, Modifier.animateItem()) }
+                    state.sections.forEach { section ->
+                        item(key = "h-" + section.group.id) {
+                            SectionHeader(stringResource(R.string.habits_group_header, stringResource(groupName(section.group)), section.total))
+                        }
+                        if (section.rows.isEmpty()) {
+                            item(key = "done-" + section.group.id) {
+                                Text(
+                                    stringResource(R.string.habits_group_all_done),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = AppTheme.colors.textMuted,
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp).animateItem(),
+                                )
+                            }
+                        }
+                        items(section.rows, key = { it.habit.id }) { row -> Card(row, Modifier.animateItem()) }
+                    }
                     item(key = "add") {
                         TextButton(onClick = { editing = HabitItem("", "", state.today) }) {
                             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -163,6 +186,24 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
         }
     }
 
+    menuFor?.let { id ->
+        // A habit deleted elsewhere while its sheet was open takes the sheet with it.
+        (state.active + state.archived).firstOrNull { it.habit.id == id }?.let { row ->
+            HabitSheet(
+                row = row,
+                onDismiss = { menuFor = null },
+                onCheckIn = { checkIn(row) },
+                onLog = { logging = row.habit },
+                onSkip = { skipped -> viewModel.skip(id, skipped) },
+                onClear = { viewModel.clearToday(id) },
+                onPause = { viewModel.pause(id) },
+                onResume = { viewModel.resume(id) },
+                onEdit = { editing = row.habit },
+                onArchive = { archived -> viewModel.setArchived(id, archived) },
+                onDelete = { viewModel.delete(id) },
+            )
+        }
+    }
     editing?.let { habit ->
         HabitDialog(
             habit = habit,
@@ -177,113 +218,9 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
     }
 }
 
-/** A habit: its ring (a tap checks in), name, streak and where today stands, then its heatmap. */
-@Composable
-private fun HabitCard(
-    row: HabitRow,
-    onTap: () -> Unit,
-    onEdit: () -> Unit,
-    onLog: () -> Unit,
-    viewModel: HabitsViewModel,
-    modifier: Modifier = Modifier,
-) {
-    val habit = row.habit
-    val checkIn = stringResource(R.string.habits_check_in, habit.name)
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(AppTheme.colors.surface, AppTheme.shapes.card)
-            .clickable(onClick = onEdit)
-            .padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val active = !habit.archived && !row.paused && row.ring != null
-            HabitRing(
-                fraction = (row.ring ?: 0.0).toFloat(),
-                color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.accent,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable(enabled = active, role = Role.Button, onClick = onTap)
-                    .semantics { contentDescription = checkIn },
-            ) {
-                when {
-                    habit.emoji != null -> Text(habit.emoji, style = MaterialTheme.typography.titleMedium)
-                    row.done -> Icon(Icons.Outlined.Check, contentDescription = null, tint = AppTheme.colors.accent, modifier = Modifier.size(22.dp))
-                }
-            }
-            // The name, how often it runs, where today stands and the streak read as one thing (M6-05).
-            Column(
-                Modifier
-                    .weight(1f)
-                    .padding(start = 12.dp)
-                    .semantics(mergeDescendants = true) {},
-            ) {
-                Text(habit.name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(
-                    stringResource(R.string.habits_line, cadenceText(habit), statusText(row)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.textMuted,
-                )
-                streakText(row)?.let { streak ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.LocalFireDepartment, contentDescription = null, tint = AppTheme.colors.accent, modifier = Modifier.size(14.dp))
-                        Text(streak, style = MaterialTheme.typography.labelMedium, color = AppTheme.colors.accent, modifier = Modifier.padding(start = 2.dp))
-                    }
-                }
-                row.goalTitle?.let {
-                    Text(stringResource(R.string.habits_serves, it), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
-                }
-                if (!habit.showOnToday && !habit.archived) {
-                    Text(stringResource(R.string.habits_not_on_today), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
-                }
-            }
-            HabitMenu(row, onEdit, onLog, viewModel)
-        }
-        HabitHeatmap(row, Modifier.padding(top = 10.dp, end = 8.dp))
-    }
-}
-
-@Composable
-private fun HabitMenu(row: HabitRow, onEdit: () -> Unit, onLog: () -> Unit, viewModel: HabitsViewModel) {
-    val habit = row.habit
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.habits_more, habit.name))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            @Composable
-            fun Choice(label: String, danger: Boolean = false, action: () -> Unit) = DropdownMenuItem(
-                text = { Text(label, color = if (danger) AppTheme.colors.danger else MaterialTheme.colorScheme.onSurface) },
-                onClick = {
-                    open = false
-                    action()
-                },
-            )
-            Choice(stringResource(R.string.habits_edit_menu), action = onEdit)
-            if (!habit.archived) {
-                if (habit.measure != HabitRules.CHECK && !row.paused) Choice(stringResource(R.string.habits_log), action = onLog)
-                if (row.value > 0.0) Choice(stringResource(R.string.habits_clear)) { viewModel.clearToday(habit.id) }
-                if (row.skipped) {
-                    Choice(stringResource(R.string.habits_unskip)) { viewModel.skip(habit.id, false) }
-                } else if (!row.paused) {
-                    val skip = when (habit.cadence) {
-                        HabitRules.PER_WEEK -> R.string.habits_skip_week
-                        HabitRules.PER_MONTH -> R.string.habits_skip_month
-                        else -> R.string.habits_skip_day
-                    }
-                    Choice(stringResource(skip)) { viewModel.skip(habit.id, true) }
-                }
-                if (row.paused) {
-                    Choice(stringResource(R.string.habits_resume)) { viewModel.resume(habit.id) }
-                } else {
-                    Choice(stringResource(R.string.habits_pause)) { viewModel.pause(habit.id) }
-                }
-                Choice(stringResource(R.string.habits_archive)) { viewModel.setArchived(habit.id, true) }
-            } else {
-                Choice(stringResource(R.string.habits_unarchive)) { viewModel.setArchived(habit.id, false) }
-            }
-            Choice(stringResource(R.string.habits_delete), danger = true) { viewModel.delete(habit.id) }
-        }
-    }
+/** The name of a group of the Habits screen. */
+internal fun groupName(group: HabitGroup): Int = when (group) {
+    HabitGroup.DAYS -> R.string.habits_group_days
+    HabitGroup.WEEKLY -> R.string.habits_group_weekly
+    HabitGroup.LIMITS -> R.string.habits_group_limits
 }

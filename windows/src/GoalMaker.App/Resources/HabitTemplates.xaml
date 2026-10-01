@@ -1,0 +1,394 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+                    xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
+    <!--
+        The habit cards of the habits redesign (docs/habits.md; the habits prototype, option B), shared by
+        the Habits page and Today's panel: the emoji, the name with its streak, where today stands, pips or
+        a bar, the week's dots, the check-in button that fills and turns round once today's part is done,
+        and a menu (its button, a right click or the menu key) where skipping lives.
+    -->
+
+    <!-- Everything a habit can do besides its button. One copy per card (x:Shared). -->
+    <ContextMenu x:Key="HabitMenu" x:Shared="False">
+        <MenuItem Header="{Binding CheckInMenuText}" Command="{Binding CheckInCommand}" Visibility="{Binding CanCheckInFromMenu, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Log}" Command="{Binding LogCommand}" Visibility="{Binding CanLogFromMenu, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{Binding SkipText}" Command="{Binding SkipCommand}" Visibility="{Binding CanSkip, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Unskip}" Command="{Binding UnskipCommand}" Visibility="{Binding CanUnskip, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Clear}" Command="{Binding ClearCommand}" Visibility="{Binding CanClear, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Pause}" Command="{Binding PauseCommand}" Visibility="{Binding CanPause, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Resume}" Command="{Binding ResumeCommand}" Visibility="{Binding IsPaused, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Open}" Command="{Binding OpenHabitsCommand}" Visibility="{Binding ShowsOpenHabits, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Edit}" Command="{Binding EditCommand}" />
+        <MenuItem Header="{DynamicResource Habits.Archive}" Command="{Binding ArchiveCommand}" Visibility="{Binding CanPause, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Unarchive}" Command="{Binding UnarchiveCommand}" Visibility="{Binding IsArchived, Converter={StaticResource BoolToVisibility}}" />
+        <MenuItem Header="{DynamicResource Habits.Delete}" Command="{Binding DeleteCommand}" />
+    </ContextMenu>
+
+    <!-- The check-in button: a soft square that fills with the accent and turns round when done, a dashed outline while skipped. -->
+    <Style x:Key="HabitCheckInButton" TargetType="Button">
+        <Setter Property="Width" Value="52" />
+        <Setter Property="Height" Value="44" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Chrome" CornerRadius="14" Background="{DynamicResource GM.SurfaceVariantBrush}" />
+                        <Rectangle x:Name="Dashes" RadiusX="14" RadiusY="14" Stroke="{DynamicResource GM.OutlineBrush}" StrokeThickness="2"
+                                   StrokeDashArray="2 1.5" Visibility="Collapsed" />
+                        <Border x:Name="Focus" CornerRadius="16" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource GM.AccentBrush}" Visibility="Collapsed" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsOn}" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                            <Setter TargetName="Chrome" Property="CornerRadius" Value="22" />
+                            <Setter TargetName="Focus" Property="CornerRadius" Value="25" />
+                            <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSkipped}" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="Transparent" />
+                            <Setter TargetName="Dashes" Property="Visibility" Value="Visible" />
+                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                        </DataTrigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Opacity" Value="0.85" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- One day of the week's dots, with its weekday's letter. -->
+    <DataTemplate x:Key="HabitDot" DataType="{x:Type vm:HabitDotViewModel}">
+        <StackPanel Width="13">
+            <Grid Width="10" Height="10" HorizontalAlignment="Center">
+                <Ellipse>
+                    <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                            <Setter Property="Width" Value="3" />
+                            <Setter Property="Height" Value="3" />
+                            <Setter Property="Fill" Value="{DynamicResource GM.OutlineBrush}" />
+                            <Setter Property="Opacity" Value="0.35" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMet}" Value="True">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="Fill" Value="{DynamicResource GM.AccentBrush}" />
+                                    <Setter Property="Opacity" Value="1" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsMissed}" Value="True">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="Height" Value="10" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsOver}" Value="True">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="Fill" Value="{DynamicResource GM.DangerBrush}" />
+                                    <Setter Property="Opacity" Value="1" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsOpen}" Value="True">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="Fill" Value="Transparent" />
+                                    <Setter Property="Stroke" Value="{DynamicResource GM.AccentBrush}" />
+                                    <Setter Property="StrokeThickness" Value="2" />
+                                    <Setter Property="Opacity" Value="1" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsSkipped}" Value="True">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="Fill" Value="Transparent" />
+                                    <Setter Property="Stroke" Value="{DynamicResource GM.TextMutedBrush}" />
+                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                    <Setter Property="StrokeDashArray" Value="1.5 1.2" />
+                                    <Setter Property="Opacity" Value="1" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                                    <Setter Property="Width" Value="10" />
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="Fill" Value="Transparent" />
+                                    <Setter Property="Stroke" Value="{DynamicResource GM.OutlineBrush}" />
+                                    <Setter Property="StrokeThickness" Value="1.5" />
+                                    <Setter Property="Opacity" Value="0.6" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Ellipse.Style>
+                </Ellipse>
+            </Grid>
+            <TextBlock HorizontalAlignment="Center" Margin="0,2,0,0" Text="{Binding Letter}" FontSize="9">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- One pip under the name: on in the accent, past a limit's line in the danger colour. -->
+    <DataTemplate x:Key="HabitPip" DataType="{x:Type vm:HabitPipViewModel}">
+        <Border Height="6" Margin="0,0,3,0" CornerRadius="3">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Background" Value="{DynamicResource GM.OutlineBrush}" />
+                    <Setter Property="Opacity" Value="0.3" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsOn}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                            <Setter Property="Opacity" Value="1" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsOver}" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource GM.DangerBrush}" />
+                            <Setter Property="Opacity" Value="1" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+        </Border>
+    </DataTemplate>
+
+    <!-- A habit card. On the Habits page (IsFull) it also says how often, the goal, Not on Today and shows the heatmap. -->
+    <DataTemplate x:Key="HabitCard" DataType="{x:Type vm:HabitRowViewModel}">
+        <Border Margin="0,0,0,8"
+                Padding="10,8,2,8"
+                CornerRadius="{DynamicResource GM.CardCorner}"
+                Background="{DynamicResource GM.SurfaceBrush}"
+                ContextMenu="{StaticResource HabitMenu}">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsSkipped}" Value="True">
+                            <Setter Property="Opacity" Value="0.72" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsArchived}" Value="True">
+                            <Setter Property="Opacity" Value="0.72" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Grid.Column="0" Width="36" Height="36" VerticalAlignment="Top" Margin="0,2,0,0" CornerRadius="10"
+                            Background="{DynamicResource GM.SurfaceVariantBrush}">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding TileText}" FontSize="17">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                                    <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasEmoji}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                                            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyFont}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Margin="8,0,0,0" Orientation="Horizontal" VerticalAlignment="Center"
+                                        ToolTip="{Binding StreakText}" AutomationProperties.Name="{Binding StreakText}">
+                                <ui:SymbolIcon Symbol="Fire20" FontSize="14" Filled="{Binding IsStreakLit}">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreakLit}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                                <TextBlock Margin="2,0,0,0" VerticalAlignment="Center" Text="{Binding StreakNumber}" FontSize="12" FontFamily="{DynamicResource GM.NumberFont}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsStreakLit}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Name}" FontSize="14" FontFamily="{DynamicResource GM.BodyStrongFont}" TextTrimming="CharacterEllipsis">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DockPanel>
+                        <TextBlock Text="{Binding CardLine}" FontSize="12" TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOver}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsSkipped}" Value="True">
+                                            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyItalicFont}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding Serves}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" TextTrimming="CharacterEllipsis"
+                                   Visibility="{Binding ShowsServes, Converter={StaticResource BoolToVisibility}}" />
+                        <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding Pips}" ItemTemplate="{StaticResource HabitPip}" Focusable="False"
+                                      Visibility="{Binding ShowsPips, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Grid Margin="0,6,0,0" Height="6" Visibility="{Binding ShowsBar, Converter={StaticResource BoolToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="{Binding BarFilled}" />
+                                <ColumnDefinition Width="{Binding BarRest}" />
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.ColumnSpan="2" CornerRadius="3" Background="{DynamicResource GM.OutlineBrush}" Opacity="0.3" />
+                            <Border Grid.Column="0" CornerRadius="3">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsOver}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource GM.DangerBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                        </Grid>
+                        <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
+                            <ItemsControl ItemsSource="{Binding Dots}" ItemTemplate="{StaticResource HabitDot}" Focusable="False"
+                                          ToolTip="{Binding DotsText}" AutomationProperties.Name="{Binding DotsText}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                            <Border Margin="10,0,0,0" Padding="7,1" VerticalAlignment="Top" CornerRadius="9" BorderThickness="1"
+                                    BorderBrush="{DynamicResource GM.OutlineBrush}"
+                                    Visibility="{Binding ShowsOffToday, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{DynamicResource Habits.NotOnToday}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                    <Button Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Style="{StaticResource HabitCheckInButton}"
+                            Command="{Binding ButtonCommand}"
+                            IsEnabled="{Binding CanCheckIn}"
+                            ToolTip="{Binding ButtonText}"
+                            AutomationProperties.Name="{Binding ButtonText}"
+                            AutomationProperties.HelpText="{Binding StatusText}"
+                            Visibility="{Binding ShowsButton, Converter={StaticResource BoolToVisibility}}">
+                        <Grid>
+                            <TextBlock Text="+1" FontSize="15" FontFamily="{DynamicResource GM.NumberFont}" FontWeight="Bold"
+                                       Visibility="{Binding ShowsPlusOne, Converter={StaticResource BoolToVisibility}}" />
+                            <ui:SymbolIcon Symbol="Checkmark24" FontSize="20" Visibility="{Binding ShowsCheckGlyph, Converter={StaticResource BoolToVisibility}}" />
+                            <ui:SymbolIcon Symbol="Add24" FontSize="20" Visibility="{Binding ShowsAddGlyph, Converter={StaticResource BoolToVisibility}}" />
+                            <ui:SymbolIcon Symbol="ArrowUndo24" FontSize="18" Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
+                    </Button>
+                    <ui:Button Grid.Column="3"
+                               Margin="2,0,0,0"
+                               VerticalAlignment="Center"
+                               Padding="6"
+                               Appearance="Transparent"
+                               controls:MenuButton.OpensMenu="True"
+                               ContextMenu="{StaticResource HabitMenu}"
+                               ToolTip="{Binding MoreText}"
+                               AutomationProperties.Name="{Binding MoreText}">
+                        <ui:SymbolIcon Symbol="MoreVertical24" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    </ui:Button>
+                </Grid>
+                <controls:HabitHeatmap Margin="46,10,8,0" HorizontalAlignment="Left" Heat="{Binding Heat}"
+                                       Visibility="{Binding IsFull, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- The short card once every habit on Today is done. -->
+    <DataTemplate x:Key="HabitsAllDone">
+        <Border Margin="0,0,0,8" Padding="14,12" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}">
+            <StackPanel Orientation="Horizontal">
+                <ui:SymbolIcon Symbol="CheckmarkCircle24" Filled="True" FontSize="24" Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{DynamicResource Habits.AllDoneCard}" FontSize="14"
+                           FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.OnHeroBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- Hide done, a chip that stays pressed while the done habits are hidden. -->
+    <Style x:Key="HideDoneChip" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+        <Setter Property="Padding" Value="10,3" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Today's habits beside the tasks (the prototype's PC view), or under them where the window is narrow. -->
+    <DataTemplate x:Key="HabitPanel" DataType="{x:Type vm:ListViewModel}">
+        <Grid>
+            <Border CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.SurfaceBrush}" Opacity="0.45" />
+            <Border CornerRadius="{DynamicResource GM.CardCorner}" BorderThickness="1" BorderBrush="{DynamicResource GM.OutlineBrush}" Opacity="0.35" />
+            <StackPanel Margin="12">
+                <DockPanel Margin="2,0,0,10">
+                    <ui:Button DockPanel.Dock="Right"
+                               Margin="4,0,0,0"
+                               Padding="6"
+                               Appearance="Transparent"
+                               Command="{Binding OpenHabitsCommand}"
+                               ToolTip="{DynamicResource Habits.Open}"
+                               AutomationProperties.Name="{DynamicResource Habits.Open}">
+                        <ui:SymbolIcon Symbol="Open24" />
+                    </ui:Button>
+                    <ToggleButton DockPanel.Dock="Right" Style="{StaticResource HideDoneChip}" Content="{Binding HideDoneText}" IsChecked="{Binding HideDoneHabits}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding HabitsHeader}" FontSize="11"
+                               FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.AccentBrush}" />
+                </DockPanel>
+                <ContentControl Focusable="False" ContentTemplate="{StaticResource HabitsAllDone}" Content="{Binding}"
+                                Visibility="{Binding HabitsAllDone, Converter={StaticResource BoolToVisibility}}" />
+                <ItemsControl ItemsSource="{Binding ShownHabits}" ItemTemplate="{StaticResource HabitCard}" Focusable="False" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>
