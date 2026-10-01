@@ -15,6 +15,7 @@ import com.goalmaker.app.domain.planning.RitualReminder
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.settings.ComposerMode
+import com.goalmaker.app.domain.update.UpdatePostponement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -193,6 +194,30 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         this.checkedAt.value = checkedAt
     }
 
+    override fun updateNotified(): String? = preferences.getString(UPDATE_NOTIFIED, null)
+
+    override fun setUpdateNotified(version: String?) {
+        preferences.edit { if (version == null) remove(UPDATE_NOTIFIED) else putString(UPDATE_NOTIFIED, version) }
+    }
+
+    override fun updatePostponed(): UpdatePostponement? {
+        val version = preferences.getString(UPDATE_POSTPONED, null) ?: return null
+        val until = preferences.getLong(UPDATE_POSTPONED_UNTIL, -1L).takeIf { it >= 0 } ?: return null
+        return UpdatePostponement(version, Instant.ofEpochMilli(until))
+    }
+
+    override fun setUpdatePostponed(postponement: UpdatePostponement?) {
+        preferences.edit {
+            if (postponement == null) {
+                remove(UPDATE_POSTPONED)
+                remove(UPDATE_POSTPONED_UNTIL)
+            } else {
+                putString(UPDATE_POSTPONED, postponement.version)
+                putLong(UPDATE_POSTPONED_UNTIL, postponement.until.toEpochMilli())
+            }
+        }
+    }
+
     override fun backendOverride(): BackendEnvironment? {
         val url = preferences.getString(BACKEND_URL, null) ?: return null
         val key = preferences.getString(BACKEND_KEY, null) ?: return null
@@ -284,6 +309,9 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val DEV_SIGN_IN = "dev_sign_in"
         const val UPDATES_CHECKED_AT = "updates_checked_at"
         const val UPDATE_FOUND = "update_found"
+        const val UPDATE_NOTIFIED = "update_notified"
+        const val UPDATE_POSTPONED = "update_postponed"
+        const val UPDATE_POSTPONED_UNTIL = "update_postponed_until"
 
         inline fun <reified T : Enum<T>> enumOrDefault(stored: String?, default: T): T =
             enumValues<T>().firstOrNull { it.name == stored } ?: default

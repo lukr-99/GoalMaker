@@ -230,4 +230,19 @@ class AutoUpdateCheckTest {
         assertTrue(auto.checkNow() is UpdateCheckResult.Available)
         assertEquals(now, settings.updatesCheckedAt.value)
     }
+
+    @Test
+    fun `every check that runs is passed on, quiet or asked for`() = runTest {
+        val heard = mutableListOf<UpdateCheckResult>()
+        val auto = AutoUpdateCheck(service(), settings, { now }, afterCheck = { heard += it })
+
+        auto.checkIfDue()
+        channel.reachable = false
+        auto.checkNow()
+        assertNull(auto.checkIfDue())
+
+        assertEquals(2, heard.size)
+        assertTrue(heard[0] is UpdateCheckResult.Available)
+        assertTrue(heard[1] is UpdateCheckResult.Failed)
+    }
 }
