@@ -67,6 +67,21 @@ widget again rather than waiting for the old one to redraw.
 
 ## Windows
 
+The tray kit, `DotNetLib.Tray`, comes from the private `dotnetlib` repository's GitHub Packages
+feed, the `dotnetlib` source in `windows/nuget.config`. Restore needs a token with the
+`read:packages` scope, so nobody can build the Windows app without one. Store it once in your user
+NuGet config, never in this repository:
+
+```powershell
+gh auth refresh -s read:packages
+dotnet nuget add source https://nuget.pkg.github.com/lukr-99/index.json --name dotnetlib --username lukr-99 --password (gh auth token)
+```
+
+CI and the release workflow read the `DOTNETLIB_PACKAGES_TOKEN` repository secret, a classic PAT
+with `read:packages` only, through NuGet's `NuGetPackageSourceCredentials_dotnetlib` variable. To try
+an unreleased `dotnetlib` change, pack it with its `scripts/pack-local.ps1` and add a local source
+that is not committed.
+
 ```powershell
 dotnet build windows\GoalMaker.slnx
 windows\src\GoalMaker.App\bin\Debug\net10.0-windows10.0.19041.0\GoalMaker.exe --no-activate

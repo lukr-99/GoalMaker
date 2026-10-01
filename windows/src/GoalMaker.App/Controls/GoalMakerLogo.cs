@@ -1,4 +1,3 @@
-using System.IO;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Media;
@@ -108,47 +107,17 @@ public sealed class GoalMakerLogo : FrameworkElement
     }
 
     /// <summary>
-    /// The mark in <paramref name="colors"/> as an .ico file's bytes, with PNG images from 16 to 64 pixels
-    /// (the tray reads icons from files only).
+    /// The mark in <paramref name="colors"/> as an .ico file's bytes, one frame per tray size from 16 to
+    /// 64 pixels, made by the tray kit's <see cref="DotNetLib.Tray.IconFile"/>.
     /// </summary>
-    public static byte[] IconFile(LogoMark mark, LogoColors colors)
-    {
-        int[] sizes = [16, 20, 24, 32, 40, 48, 64];
-        var images = sizes.Select(size =>
+    public static byte[] IconFile(LogoMark mark, LogoColors colors) =>
+        DotNetLib.Tray.IconFile.Create(DotNetLib.Tray.IconFile.TraySizes, size =>
         {
-            var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(Render(mark, colors, size)));
-            using var stream = new MemoryStream();
-            encoder.Save(stream);
-            return stream.ToArray();
-        }).ToList();
-        using var file = new MemoryStream();
-        using var writer = new BinaryWriter(file);
-        writer.Write((ushort)0);
-        writer.Write((ushort)1);
-        writer.Write((ushort)images.Count);
-        var offset = 6 + (16 * images.Count);
-        for (var index = 0; index < images.Count; index++)
-        {
-            writer.Write((byte)sizes[index]);
-            writer.Write((byte)sizes[index]);
-            writer.Write((byte)0);
-            writer.Write((byte)0);
-            writer.Write((ushort)1);
-            writer.Write((ushort)32);
-            writer.Write(images[index].Length);
-            writer.Write(offset);
-            offset += images[index].Length;
-        }
-
-        foreach (var image in images)
-        {
-            writer.Write(image);
-        }
-
-        writer.Flush();
-        return file.ToArray();
-    }
+            var bitmap = Render(mark, colors, size);
+            var pixels = new byte[size * size * 4];
+            bitmap.CopyPixels(pixels, size * 4, 0);
+            return pixels;
+        });
 
     protected override void OnRender(DrawingContext drawingContext)
     {

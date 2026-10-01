@@ -89,9 +89,19 @@ composition root creates everything
   sidebar's area and tag filters, the Today and Habits mini windows),
   `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm; the
   Places page is `PlacesPage` over `PlacesHubViewModel`, whose tiles reuse the places' own rules),
-  `Startup/` (launch switches, single instance), `Theming/` (brand accent over WPF UI themes), `Localization/`
+  `Startup/` (launch switches, single instance), `Theming/` (the themes over WPF UI and the tray kit), `Localization/`
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`.
-- `dotnetlib` was evaluated and is not referenced yet (ADR 0006).
+- The tray kit is the shared `DotNetLib.Tray` package from `dotnetlib` (ADR 0017; the feed is in
+  [docs/setup/local-development.md](docs/setup/local-development.md#windows)). It brings WPF UI and
+  H.NotifyIcon. `App.xaml.cs` takes the single-instance lock, then `Theming/AppResources` merges
+  the kit's dictionaries (WPF UI's themes and controls, the kit's Window style) and then GoalMaker's
+  own. `Theming/ThemeApplier` lets the kit's `TrayThemeApplier` switch WPF UI's theme, follow
+  Windows in System mode and set the `Tray.*` brushes from the theme's palettes
+  (`Theming/TrayPalettes`), then sets everything of GoalMaker's own. `Shell/TrayMenu` builds the
+  menu with `TrayMenuBuilder`, the tray icon is the logo made into an `.ico` by the kit's
+  `IconFile`, and `Shell/StartupFailure` uses the kit's `TrayMessageWindow`. `Shell/TrayIcon` (the
+  Today flyout and the double click) and `Startup/SingleInstance` (a second launch hands over its
+  switches) stay GoalMaker's own until the kit can do the same.
 
 ### Shared behavior (`contracts/`)
 

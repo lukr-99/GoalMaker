@@ -21,6 +21,19 @@ update was right, which made it look random. To see it, run `dexdump` on
 (`AppWidgetManager.getAppWidgetIds(ComponentName)`), never by `updateAll`. The same goes for any
 library that looks a class up by its name at run time.
 
+## WPF UI's dictionaries must load before GoalMaker's
+
+2026-10-02, moving onto `DotNetLib.Tray`. The first try kept GoalMaker's dictionaries in App.xaml
+and put the kit's (WPF UI's themes and controls) in front of them from `OnStartup`. Most pages
+rendered, but the mini window snapshot failed with "Cannot find resource named
+'Wpf.Ui.Controls.Button'": a style inside a template in `ListTemplate.xaml` is based on
+`{StaticResource {x:Type ui:Button}}`, and WPF looks that up while the dictionary loads, not when the
+template is used. Inserting WPF UI's dictionaries in front later does not help. `Theming/AppResources`
+now merges the kit's dictionaries first and then GoalMaker's, in code, and App.xaml holds none.
+Closed off by: `PageSnapshots` loads the same merge, and `MiniWindowsInEveryTheme` fails with the
+message above when the order is wrong (checked). Explicit snapshots run one at a time, because they
+share one `Application`.
+
 ## WPF UI fills its accent keys from Windows, or from shades of its own
 
 2026-10-01. The owner saw a violet Plan tomorrow button and Send button next to a red title and red

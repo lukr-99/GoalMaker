@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.goalmaker.app.GoalMakerApplication
-import com.goalmaker.app.domain.planning.Snooze
 import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,8 +21,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val reminders = graph.reminders
         val notifications = graph.reminderNotifications
         val reminderId = intent.getStringExtra(ReminderAlarm.EXTRA_REMINDER_ID)
-        val snooze = intent.getStringExtra(ReminderAlarm.EXTRA_SNOOZE)
-            ?.let { name -> Snooze.entries.firstOrNull { it.name == name } }
+        val snooze = ReminderButtons.snoozeOf(intent.getStringExtra(ReminderAlarm.EXTRA_SNOOZE))
         val planDay = intent.getStringExtra(ReminderAlarm.EXTRA_PLAN_DAY)
             ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
@@ -44,8 +42,16 @@ class ReminderReceiver : BroadcastReceiver() {
                     }
 
                     ReminderAlarm.ACTION_SNOOZE -> reminderId?.let {
-                        reminders.snooze(it, snooze ?: Snooze.TEN_MINUTES)
+                        reminders.snooze(it, snooze)
                         notifications.clear(it)
+                    }
+
+                    ReminderAlarm.ACTION_LATER -> reminderId?.let {
+                        notifications.showSnoozes(
+                            it,
+                            intent.getStringExtra(ReminderAlarm.EXTRA_TASK_TITLE).orEmpty(),
+                            intent.getBooleanExtra(ReminderAlarm.EXTRA_IMPORTANT, false),
+                        )
                     }
 
                     ReminderAlarm.ACTION_SKIP_REVIEW -> {
