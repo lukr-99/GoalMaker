@@ -269,6 +269,8 @@ public sealed class AutoUpdateCheckTests : IDisposable
 
         public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];
 
+        public GoalsView GoalsView { get; set; }
+
         public Core.Backend.BackendEnvironment? BackendOverride { get; set; }
 
         public WindowPlacement? MainWindowPlacement { get; set; }

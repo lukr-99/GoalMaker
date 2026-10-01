@@ -248,7 +248,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 }
                                 PlaceRules.GOALS -> {
                                     val goalsViewModel = viewModel(key = "goals-tab") {
-                                        GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
+                                        GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings, graph.io, LocalDateTime::now)
                                     }
                                     GoalsScreen(viewModel = goalsViewModel, onBack = backToHub, actions = actions)
                                 }
@@ -320,7 +320,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         }
                     }
                     entry<GoalsKey> {
-                        val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
+                        val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings, graph.io, LocalDateTime::now) }
                         GoalsScreen(viewModel = goalsViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ReviewsKey> {
