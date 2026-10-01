@@ -58,8 +58,11 @@ Developer (the PC's LAN address, for example `http://192.168.1.20:55321`).
 
 `android/tools/phone.ps1` has serial-safe screenshots, logcat, taps and key presses.
 
-The home screen widgets ([widgets](../widgets.md)) turn up in the launcher's widget picker under
-GoalMaker. A widget keeps its own state per id, so after changing one, reinstall the app and add the
+A debug build is its own app, `com.goalmaker.app.debug`, so it installs next to the release app and
+keeps its own rows. Its launcher name is "GoalMaker Dev" and its widgets say "(Dev)", so the widget
+picker shows two groups when both are installed. The home screen widgets ([widgets](../widgets.md))
+turn up there under GoalMaker, or GoalMaker Dev. A debug build is not shrunk by R8, so a widget bug
+that only R8 causes shows up only in a release build. A widget keeps its own state per id, so after changing one, reinstall the app and add the
 widget again rather than waiting for the old one to redraw.
 
 ## Windows

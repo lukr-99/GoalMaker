@@ -41,7 +41,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="@string/app_label"
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.GoalMaker">
@@ -98,7 +98,8 @@
         <!-- The home screen widgets (spec, stories 85 and 86; M5-04). -->
         <receiver
             android:name=".ui.widget.TodayWidgetReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/widget_today_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -108,7 +109,8 @@
         </receiver>
         <receiver
             android:name=".ui.widget.HabitsWidgetReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/widget_habits_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -120,7 +122,8 @@
         <!-- The Goals and Motivation widgets (docs/widgets.md). -->
         <receiver
             android:name=".ui.widget.GoalsWidgetReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/widget_goals_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -130,7 +133,8 @@
         </receiver>
         <receiver
             android:name=".ui.widget.MotivationWidgetReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/widget_motivation_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -164,7 +168,8 @@
 
         <receiver
             android:name=".ui.widget.QuickAddWidgetReceiver"
-            android:exported="false">
+            android:exported="false"
+            android:label="@string/widget_quick_add_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
