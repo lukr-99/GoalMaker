@@ -3,6 +3,17 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## A Scaffold's bottomBar slot adds no insets
+
+2026-10-01. The review's Next button sat under the phone's three-button navigation bar. The app
+draws edge to edge, and Scaffold gives its `bottomBar` slot the whole bottom of the window. Material's
+`NavigationBar` and `BottomAppBar` pad themselves for the navigation bar, so screens that use them
+look right, but a plain `Row` or `Column` in that slot does not. `imePadding()` alone only helps while
+the keyboard is up. Give a hand-made bar `navigationBarsPadding().imePadding()`;
+`tools/check_accessibility.py` now fails on a `bottomBar` without it. Also, `padding(padding)` from a
+Scaffold does not consume insets: follow it with `consumeWindowInsets(padding)` before `imePadding()`,
+or the navigation bar is counted twice.
+
 ## An italic word swallows the space after it on Windows
 
 2026-10-01. "The bank call moved *four* times" read "fourtimes" in notes and letters. The parser and
