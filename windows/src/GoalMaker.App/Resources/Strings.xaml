@@ -277,6 +277,7 @@
     <sys:String x:Key="Chat.Placeholder">Ask or tell GoalMaker…</sys:String>
     <sys:String x:Key="Chat.Send">Send to chat</sys:String>
     <sys:String x:Key="Chat.Thread">Chat</sys:String>
+    <sys:String x:Key="Chat.Title">Quick chat</sys:String>
     <sys:String x:Key="Chat.You">You</sys:String>
     <sys:String x:Key="Chat.Assistant">GoalMaker</sys:String>
     <sys:String x:Key="Chat.Line">{0}: {1}</sys:String>
