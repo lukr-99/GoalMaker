@@ -17,6 +17,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -165,25 +166,23 @@ class AutoUpdateCheckTest {
     }
 
     @Test
-    fun `a failure clears the mark like a manual check and the next check brings it back`() = runTest {
+    fun `a quiet failure keeps the mark`() = runTest {
         val updates = service()
         val auto = check(updates)
         auto.checkIfDue()
         val found = auto.lastChecked.value
-        assertNotNull(updates.waiting.value)
+        val waiting = updates.waiting.value
+        assertNotNull(waiting)
 
         channel.reachable = false
         now = now.plus(Duration.ofDays(1))
-        auto.checkIfDue()
+        assertTrue(auto.checkIfDue() is UpdateCheckResult.Failed)
 
-        // The same rule as Check for updates: a check that finds none clears the mark.
-        assertNull(updates.waiting.value)
+        // Only a check that gets an answer replaces the waiting update.
+        assertSame(waiting, updates.waiting.value)
         assertEquals(found, auto.lastChecked.value)
         assertEquals("0.3.0", settings.updateFound())
-
-        channel.reachable = true
-        auto.checkIfDue()
-        assertNotNull(updates.waiting.value)
+        assertTrue(installer.launched.isEmpty())
     }
 
     @Test
