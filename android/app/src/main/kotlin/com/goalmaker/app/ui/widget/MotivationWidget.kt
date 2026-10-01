@@ -14,7 +14,6 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -44,15 +43,22 @@ class MotivationWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val skin = WidgetSkin.of(context)
-        val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-        val choice = MotivationStore.of(context).read(widgetId)
-        val goals = choice.mode == MotivationMode.GOALS
-        val lines = if (goals) {
-            WidgetData.goalLines(context, choice.horizon)
-        } else {
-            choice.text.lines().map(String::trim).filter(String::isNotEmpty)
+        val shown = WidgetFallback.load(context) {
+            val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+            val choice = MotivationStore.of(context).read(widgetId)
+            val lines = if (choice.mode == MotivationMode.GOALS) {
+                WidgetData.goalLines(context, choice.horizon)
+            } else {
+                choice.text.lines().map(String::trim).filter(String::isNotEmpty)
+            }
+            Shown(WidgetSkin.of(context), widgetId, choice, lines)
         }
+        if (shown == null) {
+            provideContent { WidgetFallback.Content(context) }
+            return
+        }
+        val (skin, widgetId, choice, lines) = shown
+        val goals = choice.mode == MotivationMode.GOALS
         val header = if (goals) context.getString(headerOf(choice.horizon)) else null
         val empty = when {
             lines.isNotEmpty() -> null
@@ -120,9 +126,20 @@ class MotivationWidget : GlanceAppWidget() {
 
         /** Draws one Motivation widget again, after its configure screen saved. */
         suspend fun update(context: Context, widgetId: Int) {
-            runCatching { GlanceAppWidgetManager(context).getGlanceIdBy(widgetId) }
-                .onSuccess { MotivationWidget().update(context, it) }
-                .onFailure { MotivationWidget().updateAll(context) }
+            if (widgetId in Widgets.ids(context, WidgetKind.MOTIVATION)) {
+                Widgets.redraw(context, WidgetKind.MOTIVATION, widgetId)
+            } else {
+                Widgets.redraw(context, WidgetKind.MOTIVATION)
+            }
         }
     }
+
+    // A failure while drawing goes to the crash log too, before Android's own error box.
+    override fun onCompositionError(context: Context, glanceId: GlanceId, appWidgetId: Int, throwable: Throwable) {
+        WidgetFallback.log(context, throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
+    }
+
+    /** What one widget shows, read before it is drawn. */
+    private data class Shown(val skin: WidgetSkin, val widgetId: Int, val choice: MotivationChoice, val lines: List<String>)
 }

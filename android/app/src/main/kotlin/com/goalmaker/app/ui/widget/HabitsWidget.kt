@@ -33,8 +33,12 @@ import com.goalmaker.app.R
  */
 class HabitsWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val skin = WidgetSkin.of(context)
-        val habits = WidgetData.habits(context)
+        val shown = WidgetFallback.load(context) { WidgetSkin.of(context) to WidgetData.habits(context) }
+        if (shown == null) {
+            provideContent { WidgetFallback.Content(context) }
+            return
+        }
+        val (skin, habits) = shown
         val left = WidgetContent.habitsLeft(habits)
         provideContent {
             Column(
@@ -63,6 +67,12 @@ class HabitsWidget : GlanceAppWidget() {
                 habits.forEach { habit -> HabitRow(habit, skin, context) }
             }
         }
+    }
+
+    // A failure while drawing goes to the crash log too, before Android's own error box.
+    override fun onCompositionError(context: Context, glanceId: GlanceId, appWidgetId: Int, throwable: Throwable) {
+        WidgetFallback.log(context, throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
     }
 
     @Composable

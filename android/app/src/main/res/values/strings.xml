@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">GoalMaker</string>
+    <!-- The name under the launcher icon and over the widgets in the picker; a dev build says Dev. -->
+    <string name="app_label">GoalMaker</string>
 
     <!-- Sign-in -->
     <string name="sign_in_title">Plan tomorrow.\nKeep your goals alive.</string>
@@ -783,7 +785,13 @@
         <item quantity="one">%1$d task behind you, and %2$d answers written down.</item>
         <item quantity="other">%1$d tasks behind you, and %2$d answers written down.</item>
     </plurals>
-    <!-- Widgets (docs/widgets.md) -->
+    <!-- Widgets (docs/widgets.md). The labels name each widget in the picker; a dev build overrides them. -->
+    <string name="widget_today_label">Today</string>
+    <string name="widget_habits_label">Habits</string>
+    <string name="widget_goals_label">Goals</string>
+    <string name="widget_motivation_label">Motivation</string>
+    <string name="widget_quick_add_label">Quick add</string>
+    <string name="widget_unavailable">Open GoalMaker to see this.</string>
     <string name="widget_today_header">Today · %1$d of %2$d done</string>
     <string name="widget_today_empty">Nothing planned for today.</string>
     <string name="widget_today_description">The tasks for today, with a tick on each.</string>
