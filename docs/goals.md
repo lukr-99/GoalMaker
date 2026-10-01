@@ -119,6 +119,14 @@ was picked. Each device remembers its own choice in its settings store, not sync
 - **Windows:** a small Ladder and List segment in the page header. The rows sit in one column up to
   820 pixels wide, with the pace and the quick log lined up on the right.
 
+### Adding
+
+The bottom bar adds goals in both views ([composer](composer.md#the-bottom-bar-on-every-list)): type
+`Read 3 books this month` and send, with the period and the target previewed as chips; with nothing
+typed its plus opens the goal editor for this week, and Ctrl+N on the PC opens it filled in with the
+line. "Add a goal" under each period and the List view's per-group button stay, for adding straight to
+one period.
+
 The tree view that used to show the cascade is gone: the feeds line on each card and the lit chain
 show how goals connect (story 34).
 

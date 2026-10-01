@@ -107,10 +107,17 @@ movement into short fades and skips bursts and confetti.
 
 ### The composer
 
-A floating pill at the bottom (phone) or of the main pane (Windows). As you type, it **grows a
+A floating pill at the bottom (phone) or of the main pane (Windows), on Today, Tomorrow, the Inbox,
+Wants, Habits and Goals (ADR 0016). Its round button at the end is a **plus** in the primary color
+while the line is empty, which opens the page's full form (a bottom sheet or the existing dialog on
+the phone, the page's panel or editor on the PC), and the **send arrow** once something is typed: the
+plus spins out and the arrow lifts in over the quick and standard durations, a cross-fade under
+reduce motion. In the quick chat it is always the arrow. As you type, it **grows a
 preview** above the text: chips for the parsed date and time, area, tags, project, top priority and
 idea type, exactly as the item will be saved (the grammar is in the spec's "Composer and
-shortcuts"). Enter or Send saves; Esc clears; tapping a chip edits or removes it. A line starting
+shortcuts"); on Wants, Habits and Goals the price, wait and reason, how often and how much, or the
+period and target, with a danger chip for a want's missing reason. Enter or Send saves; Esc clears;
+Ctrl+N opens the full form on the PC; tapping a task chip edits or removes it. A line starting
 with `/` becomes a command instead.
 
 On Windows the switch to the quick chat sits at the pill's start: a round button with a sparkle,

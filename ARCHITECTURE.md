@@ -50,7 +50,8 @@ composition root creates everything
   `HabitList`, `ReviewList`, `ProjectList`, `ReminderList`, `RitualRunList`) and the rules beside
   them (`ListRules`, `PlanRules`, `ArchiveRules`, `GoalRules`, `HabitRules`, `ReviewRules`,
   `ReviewLookBack`, `StatsRules`, `ProjectRules`, `CalendarRules`, `ReminderRules`),
-  `assistant/` (the `AssistantClient` port for the quick chat and its replies).
+  `assistant/` (the `AssistantClient` port for the quick chat and its replies), `composer/`
+  (`QuickAddLines`: what the bottom bar reads from a want, habit or goal line).
 - `data/`: `SupabaseAuthGateway`, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`,
   `ApkInstallerLauncher` (FileProvider), `SharedPreferencesSettingsStore`, `replica/`
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
@@ -72,7 +73,8 @@ composition root creates everything
 
 - `GoalMaker.Core` (net10.0): the same domain and application code as Android's, in C#
   (`Versioning`, `Updates`, `Account`, `Auth`, `Settings`, `Backend`, `About`, `Sync`, `Planning`,
-  `Notes`, `Startup` (starting with Windows and the Startup Profiles contract), `Assistant` (the
+  `Notes`, `Composer` (the task grammar and `QuickAddLines` for the bottom bar's want, habit and
+  goal lines), `Startup` (starting with Windows and the Startup Profiles contract), `Assistant` (the
   quick chat's client port and replies)).
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
@@ -95,7 +97,8 @@ composition root creates everything
 Rules that must match across Kotlin and C# live as vector files, one per rule, listed in
 [contracts/README.md](contracts/README.md): versions and the update offer policy, release manifest
 verification, the sync rules, the composer grammar, the lists and their filter, Plan tomorrow,
-repeating tasks, reminder times, the archive, the light Markdown in notes, goals, habits, reviews and
+repeating tasks, reminder times, the archive, the light Markdown in notes, the bottom bar's want,
+habit and goal lines, goals, habits, reviews and
 their prompts, the activity log, the stats numbers, project boards and the calendar. The connector's
 TypeScript rules run the planning ones too, so Claude and the apps agree.
 `contracts/content/prompts.json` is shipped content rather than a vector file: the review prompt
