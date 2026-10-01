@@ -9,10 +9,12 @@ import com.goalmaker.app.domain.settings.ComposerMode
 import com.goalmaker.app.domain.settings.GoalsView
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
+import com.goalmaker.app.domain.update.UpdatePostponement
 import java.time.Instant
 import java.time.LocalTime
 import java.util.UUID
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -174,5 +176,24 @@ class SharedPreferencesSettingsStoreTest {
 
         restarted.setTallyReadUntil(null)
         assertEquals(null, SharedPreferencesSettingsStore(preferences).tallyReadUntil())
+    }
+
+    @Test
+    fun `the notified update and Later are kept across a restart until cleared`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertNull(store.updateNotified())
+        assertNull(store.updatePostponed())
+        val later = UpdatePostponement("1.4.0", Instant.parse("2026-10-04T09:00:00Z"))
+
+        store.setUpdateNotified("1.4.0")
+        store.setUpdatePostponed(later)
+
+        val again = SharedPreferencesSettingsStore(preferences)
+        assertEquals("1.4.0", again.updateNotified())
+        assertEquals(later, again.updatePostponed())
+        again.setUpdateNotified(null)
+        again.setUpdatePostponed(null)
+        assertNull(SharedPreferencesSettingsStore(preferences).updateNotified())
+        assertNull(SharedPreferencesSettingsStore(preferences).updatePostponed())
     }
 }

@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.settings
 
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.update.UpdateMemory
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
@@ -13,9 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
  * hours, the evening reminder, the pinned places, how project boards and goals show, the composer's
- * mode, the app lock, Tally and, in dev builds, a backend override.
+ * mode, the app lock, Tally, what the phone knows about a found update and, in dev builds, a backend
+ * override.
  */
-interface SettingsStore {
+interface SettingsStore : UpdateMemory {
     val appearance: StateFlow<Appearance>
 
     fun updateAppearance(change: (Appearance) -> Appearance)
@@ -109,7 +111,7 @@ interface SettingsStore {
     val updatesCheckedAt: StateFlow<Instant?>
 
     /** The version that check found waiting, or null when it found none; a new start checks again to show it. */
-    fun updateFound(): String?
+    override fun updateFound(): String?
 
     fun setUpdateCheck(checkedAt: Instant, found: String?)
 

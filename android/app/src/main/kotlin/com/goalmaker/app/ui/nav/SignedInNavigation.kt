@@ -102,8 +102,13 @@ fun SignedInNavigation(graph: AppGraph) {
     var wantTitle by rememberSaveable { mutableStateOf<String?>(null) }
     // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
     val problems by graph.problems.problems.collectAsStateWithLifecycle()
-    // An update the last check found: the accent mark on the gear, and the row in Settings.
-    val updateWaiting by graph.updates.waiting.collectAsStateWithLifecycle()
+    // An update the last check found, unless Later put it off: the accent mark on the gear.
+    val updateWaiting by graph.updateAlerts.mark.collectAsStateWithLifecycle()
+    // The update notification opens Settings at the update, on top of whatever was open.
+    val updateRequested by graph.updateRequested.collectAsState()
+    LaunchedEffect(updateRequested) {
+        if (updateRequested != null && backStack.lastOrNull() != SettingsKey) backStack.add(SettingsKey)
+    }
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
     val planRequested by graph.planRequested.collectAsState()
     LaunchedEffect(planRequested) {
@@ -403,6 +408,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 design = graph.design,
                                 updates = graph.updates,
                                 updateChecks = graph.updateChecks,
+                                updateAlerts = graph.updateAlerts,
                                 releasesPage = graph.releaseChannel?.releasesPage,
                                 appInfo = graph.appInfo,
                                 backup = graph.backup,
@@ -420,6 +426,8 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenActivity = { backStack.add(ActivityKey) },
                             problems = problems,
                             onProblemsRead = graph.problems::read,
+                            updateRequest = updateRequested,
+                            onUpdateRequestHandled = graph::updateRequestHandled,
                         )
                     }
                     entry<ConnectorKey> {

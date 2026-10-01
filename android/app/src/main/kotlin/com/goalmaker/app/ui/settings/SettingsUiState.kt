@@ -39,6 +39,10 @@ data class SettingsUiState(
     val waitingUpdate: UpdateCheckResult.Available? = null,
     /** When a check last reached the update channel, the owner's or the quiet daily one; null before the first. */
     val updatesCheckedAt: Instant? = null,
+    /** Until when Later keeps the waiting update quiet, or null when it doesn't. */
+    val updatePostponedUntil: Instant? = null,
+    /** Whether the waiting update's APK was fetched ahead and still matches, so Install is quick. */
+    val updateDownloaded: Boolean = false,
     val appInfo: AppInfo,
     val backendUrlDraft: String,
     val backendKeyDraft: String,

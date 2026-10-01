@@ -12,6 +12,8 @@ import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.update.AutoUpdateCheck
+import com.goalmaker.app.application.update.InstallResult
+import com.goalmaker.app.application.update.UpdateAlerts
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.domain.backup.BackupProblem
@@ -42,6 +44,8 @@ class SettingsViewModel(
     private val updates: UpdateService,
     /** Check for updates goes through the quiet check too, so the last time a check got through is kept. */
     private val updateChecks: AutoUpdateCheck,
+    /** Later, and whether the waiting update is put off. */
+    private val updateAlerts: UpdateAlerts,
     /** Where a release can be downloaded by hand (spec, story 94); null when there is no channel. */
     val releasesPage: String? = null,
     private val appInfo: AppInfo,
@@ -80,7 +84,15 @@ class SettingsViewModel(
     init {
         // Kept by the update service, so the row is still there when Settings opens again.
         viewModelScope.launch {
-            updates.waiting.collect { waiting -> state.update { it.copy(waitingUpdate = waiting) } }
+            updates.waiting.collect { waiting ->
+                state.update { it.copy(waitingUpdate = waiting) }
+                // Measuring the file reads it, so off the main thread.
+                val downloaded = waiting != null && withContext(io) { updates.ready(waiting) != null }
+                state.update { it.copy(updateDownloaded = downloaded) }
+            }
+        }
+        viewModelScope.launch {
+            updateAlerts.postponedUntil.collect { until -> state.update { it.copy(updatePostponedUntil = until) } }
         }
         viewModelScope.launch {
             updateChecks.lastChecked.collect { at -> state.update { it.copy(updatesCheckedAt = at) } }
@@ -212,15 +224,40 @@ class SettingsViewModel(
         }
     }
 
+    /**
+     * Opens the installer for [available]: at once when its APK was fetched ahead and still matches,
+     * otherwise after a verified download. Android asks the owner to confirm either way.
+     */
     fun installUpdate(available: UpdateCheckResult.Available) {
         state.update { it.copy(update = UpdateUiState.Downloading(0f)) }
         viewModelScope.launch {
             val result = updates.install(available) { progress ->
                 state.update { it.copy(update = UpdateUiState.Downloading(progress)) }
             }
+            if (result == InstallResult.InstallerOpened) updateAlerts.installing()
             state.update { it.copy(update = UpdateUiState.Installing(result)) }
         }
     }
+
+    /**
+     * Install, from the notification: the waiting update, or, in a process that has not checked yet,
+     * whatever a check finds now.
+     */
+    fun installRequested() {
+        val waiting = updates.waiting.value
+        if (waiting != null) {
+            installUpdate(waiting)
+            return
+        }
+        state.update { it.copy(update = UpdateUiState.Checking) }
+        viewModelScope.launch {
+            val result = updateChecks.checkNow()
+            if (result is UpdateCheckResult.Available) installUpdate(result) else state.update { it.copy(update = UpdateUiState.Checked(result)) }
+        }
+    }
+
+    /** Later: the mark and the notification for [available] stay away for three days, or until a newer version. */
+    fun postponeUpdate(available: UpdateCheckResult.Available) = updateAlerts.later(available.manifest.version.toString())
 
     /** The export's text, for the file the owner picked, or null when there is nothing to write. */
     suspend fun exportText(): String? = withContext(io) { backup.export() }
