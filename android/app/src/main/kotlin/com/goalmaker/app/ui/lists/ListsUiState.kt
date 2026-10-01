@@ -13,7 +13,10 @@ import com.goalmaker.app.ui.habits.HabitRow
  * true only while a sync the user pulled for runs. [areas] and [tagNames] feed the rows and the
  * composer's preview; [reminded] marks the tasks with a reminder waiting; [filter] is what the
  * lists are narrowed to, from [tags] and [areas]. [weekGoals] are this week's goals for Today's
- * folded section, [habits] today's habits for its ring row, with the streak [habitMilestones] reached.
+ * folded section, [habits] the habits on Today, with the streak [habitMilestones] reached. Today on the
+ * phone shows its tasks or its habits by [segment]; [shownHabits] are the habits without the done ones
+ * while [hideDoneHabits] is on, [habitsLeft] counts the ones still to do, and [habitsAllDone] shows the
+ * all done card (contracts/vectors/habits.json, standings and allDone).
  */
 data class ListsUiState(
     val lists: PlanningLists?,
@@ -27,4 +30,9 @@ data class ListsUiState(
     val weekGoals: List<GoalRow> = emptyList(),
     val habits: List<HabitRow> = emptyList(),
     val habitMilestones: Set<String> = emptySet(),
+    val segment: TodaySegment = TodaySegment.TASKS,
+    val hideDoneHabits: Boolean = false,
+    val shownHabits: List<HabitRow> = emptyList(),
+    val habitsLeft: Int = 0,
+    val habitsAllDone: Boolean = false,
 )
