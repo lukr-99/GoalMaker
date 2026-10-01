@@ -336,7 +336,9 @@
     <string name="reminder_channel_important_description">Reminders that pass quiet hours and keep ringing until you act.</string>
     <string name="reminder_done">Done</string>
     <string name="reminder_snooze_ten_minutes">10 min</string>
-    <string name="reminder_snooze_tomorrow">Tomorrow</string>
+    <string name="reminder_snooze_one_hour">1 hour</string>
+    <string name="reminder_snooze_tomorrow">Tomorrow morning</string>
+    <string name="reminder_later">Later</string>
     <string name="reminder_add">Remind me</string>
     <string name="reminder_when_due">When it starts</string>
     <string name="reminder_before_quarter">15 minutes before</string>

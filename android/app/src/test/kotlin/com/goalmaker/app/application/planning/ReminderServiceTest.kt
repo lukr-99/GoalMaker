@@ -4,6 +4,7 @@ import android.app.Application
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.QuietHours
+import com.goalmaker.app.domain.planning.Snooze
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -31,6 +32,8 @@ class ReminderServiceTest {
     private var now = LocalDateTime.parse("2026-09-18T12:00")
     private var remindedUntil: LocalDateTime? = null
     private var planAt: LocalTime? = LocalTime.of(20, 0)
+    private var quiet = QuietHours.OFF
+    private lateinit var reminders: ReminderList
 
     @Before
     fun setUp() {
@@ -40,8 +43,9 @@ class ReminderServiceTest {
         val tags = TagList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
         rituals = RitualRunList(test.replica, rows, {})
+        reminders = ReminderList(test.replica, rows, {})
         service = ReminderService(
-            reminders = ReminderList(test.replica, rows, {}),
+            reminders = reminders,
             tasks = tasks,
             scheduler = object : ReminderScheduler {
                 override fun armAt(at: LocalDateTime) {
@@ -52,7 +56,7 @@ class ReminderServiceTest {
                     armed += null
                 }
             },
-            quietHours = { QuietHours.OFF },
+            quietHours = { quiet },
             dayStartHour = { 4 },
             now = { now },
             remindedUntil = { remindedUntil },
@@ -119,5 +123,33 @@ class ReminderServiceTest {
 
         assertNull(armed.last())
         assertNull(service.catchUp().planTomorrow)
+    }
+
+    @Test
+    fun `an hour's snooze is stored as snoozed until then and arms the alarm for it`() {
+        now = LocalDateTime.parse("2026-09-18T15:10")
+        val task = tasks.add(ComposerParser.parse("Call the bank", now))!!
+        val reminder = service.addAt(task.id, LocalDateTime.parse("2026-09-18T15:00"))!!
+
+        service.snooze(reminder.id, Snooze.ONE_HOUR)
+
+        val stored = reminders.all().single { it.id == reminder.id }
+        assertEquals(ReminderState.SNOOZED, stored.state)
+        assertEquals(LocalDateTime.parse("2026-09-18T16:10"), stored.snoozedUntil)
+        assertEquals(LocalDateTime.parse("2026-09-18T16:10"), armed.last())
+    }
+
+    @Test
+    fun `an hour's snooze into quiet hours waits for them to end`() {
+        quiet = QuietHours(LocalTime.of(22, 0), LocalTime.of(7, 0))
+        planAt = null
+        now = LocalDateTime.parse("2026-09-18T21:30")
+        val task = tasks.add(ComposerParser.parse("Call the bank", now))!!
+        val reminder = service.addAt(task.id, LocalDateTime.parse("2026-09-18T21:30"))!!
+
+        service.snooze(reminder.id, Snooze.ONE_HOUR)
+
+        assertEquals(LocalDateTime.parse("2026-09-18T22:30"), reminders.all().single { it.id == reminder.id }.snoozedUntil)
+        assertEquals(LocalDateTime.parse("2026-09-19T07:00"), armed.last())
     }
 }
