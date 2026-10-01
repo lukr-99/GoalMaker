@@ -25,6 +25,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private readonly SyncCoordinator sync;
     private readonly ISettingsStore settings;
     private readonly UpdateService updates;
+    private readonly AutoUpdateCheck updateChecks;
     private readonly AppInfo appInfo;
     private readonly IStrings strings;
     private readonly DesignTokens design;
@@ -101,6 +102,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         SyncCoordinator sync,
         ISettingsStore settings,
         UpdateService updates,
+        AutoUpdateCheck updateChecks,
         AppInfo appInfo,
         IStrings strings,
         DesignTokens design,
@@ -143,6 +145,7 @@ public sealed partial class SettingsViewModel : ObservableObject
         this.sync = sync;
         this.settings = settings;
         this.updates = updates;
+        this.updateChecks = updateChecks;
         this.appInfo = appInfo;
         this.strings = strings;
         this.design = design;
@@ -158,6 +161,20 @@ public sealed partial class SettingsViewModel : ObservableObject
         backendUrlDraft = appInfo.Backend.Url;
         backendKeyDraft = appInfo.Backend.PublishableKey;
         auth.SessionChanged += (_, session) => runOnUi(() => ShowSession(session));
+        // The quiet daily check finds updates too, so the card follows what the service keeps.
+        availableUpdate = updates.Waiting;
+        updates.WaitingChanged += (_, _) => runOnUi(() =>
+        {
+            if (!IsUpdating)
+            {
+                AvailableUpdate = updates.Waiting;
+            }
+        });
+        updateChecks.Checked += (_, _) => runOnUi(() =>
+        {
+            OnPropertyChanged(nameof(LastCheckedText));
+            OnPropertyChanged(nameof(HasLastChecked));
+        });
         ShowSession(auth.Session);
     }
 
@@ -682,6 +699,13 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string InstallText =>
         AvailableUpdate is null ? string.Empty : strings.Get("Settings.InstallUpdate", AvailableUpdate.Manifest.Version);
 
+    /// <summary>When a check last reached the update channel, the owner's or the quiet daily one.</summary>
+    public string LastCheckedText => updateChecks.LastChecked is { } last
+        ? strings.Get("Settings.Update.LastChecked", last.ToLocalTime().ToString("g", CultureInfo.CurrentCulture))
+        : string.Empty;
+
+    public bool HasLastChecked => HasReleasesPage && updateChecks.LastChecked is not null;
+
     public string VersionText => strings.Get("Settings.Version", appInfo.Version);
 
     public string BackendText => strings.Get("Settings.Backend", appInfo.Backend.Url);
@@ -729,8 +753,9 @@ public sealed partial class SettingsViewModel : ObservableObject
         UpdateStatus = strings.Get("Settings.Update.Checking");
         try
         {
-            var result = await updates.CheckAsync(CancellationToken.None);
-            AvailableUpdate = result as UpdateCheckResult.Available;
+            var result = await updateChecks.CheckNowAsync(CancellationToken.None);
+            // A failed check says why below and leaves an update an earlier check found.
+            AvailableUpdate = updates.Waiting;
             UpdateStatus = result switch
             {
                 UpdateCheckResult.NotConfigured => strings.Get("Settings.Update.NotConfigured"),

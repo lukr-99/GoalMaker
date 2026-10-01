@@ -99,6 +99,14 @@ interface SettingsStore {
 
     fun setTallyReadUntil(instant: Instant?)
 
+    /** When a check for updates last reached the channel (docs/setup/signing-and-releases.md); null before the first. */
+    val updatesCheckedAt: StateFlow<Instant?>
+
+    /** The version that check found waiting, or null when it found none; a new start checks again to show it. */
+    fun updateFound(): String?
+
+    fun setUpdateCheck(checkedAt: Instant, found: String?)
+
     /** Dev builds only: another Supabase project to use from the next app start. */
     fun backendOverride(): BackendEnvironment?
 

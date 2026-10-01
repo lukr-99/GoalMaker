@@ -280,7 +280,7 @@ fun SettingsScreen(
                 }
             }
             Section(stringResource(R.string.settings_updates)) {
-                UpdatesContent(state.update, state.waitingUpdate, viewModel)
+                UpdatesContent(state.update, state.waitingUpdate, state.updatesCheckedAt, viewModel)
             }
             Section(stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.settings_version, state.appInfo.versionName))
@@ -431,7 +431,12 @@ private fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T, onS
 }
 
 @Composable
-private fun UpdatesContent(update: UpdateUiState, waiting: UpdateCheckResult.Available?, viewModel: SettingsViewModel) {
+private fun UpdatesContent(
+    update: UpdateUiState,
+    waiting: UpdateCheckResult.Available?,
+    checkedAt: Instant?,
+    viewModel: SettingsViewModel,
+) {
     if (waiting != null && update !is UpdateUiState.Checking && update !is UpdateUiState.Downloading) {
         UpdateWaitingRow(waiting, onInstall = { viewModel.installUpdate(waiting) })
     }
@@ -457,6 +462,15 @@ private fun UpdatesContent(update: UpdateUiState, waiting: UpdateCheckResult.Ava
     val busy = update is UpdateUiState.Checking || update is UpdateUiState.Downloading
     OutlinedButton(onClick = viewModel::checkForUpdates, enabled = !busy) {
         Text(stringResource(R.string.settings_check_updates))
+    }
+    // GoalMaker also looks on its own once a day; this says when a check last got through.
+    if (viewModel.releasesPage != null && checkedAt != null) {
+        val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
+        Text(
+            stringResource(R.string.settings_update_last_checked, formatter.format(checkedAt)),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
     viewModel.releasesPage?.let { page ->
         val links = LocalUriHandler.current

@@ -165,6 +165,10 @@ public sealed class SignInWatchTests
 
         public DateTimeOffset? WeeklyBackupWritten { get; set; }
 
+        public DateTimeOffset? UpdatesCheckedAt { get; set; }
+
+        public string? UpdateFound { get; set; }
+
         public bool TallyOn { get; set; }
 
         public string DeviceId { get; } = Guid.NewGuid().ToString();

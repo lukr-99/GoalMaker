@@ -147,7 +147,8 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 - **Updates:** release source (manifest and signature from `releases/latest/`) → signature check
   with the key built into the app → manifest validation → version policy (dev builds never update,
   pre-releases are never offered) → download → size and SHA-256 check → platform installer. The
-  updater never touches user data.
+  updater never touches user data. The first three steps also run on their own about once a day;
+  the download and the installer wait for the owner's Install.
 - **Sync (docs/sync.md):** a local write stores the row and queues it in the outbox in one
   transaction, then asks for a sync (debounced 2 s). A run pushes the outbox in order (the server
   stamps `updated_at`), then pulls each table from its watermark minus 60 s in (updated_at, id)
@@ -161,8 +162,8 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   arrived since its last look and arms the next. Buttons write the reminder's state through the
   outbox; after every sync each device takes down notifications that went stale.
 - **Sign-out:** push once more, then empty the replica; if changes can't be pushed, ask first.
-- **Settings:** theme, quiet hours, the last reminder look, dev backend override and (Windows)
-  window placement stay on the device.
+- **Settings:** theme, quiet hours, the last reminder look, the last update check, dev backend
+  override and (Windows) window placement stay on the device.
 
 ## Capability modules
 
@@ -172,7 +173,18 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   keeps the update the last check found (`waiting` / `Waiting` with `WaitingChanged`); while one
   waits, the way to Settings wears an accent mark with a download arrow (the Settings item in the
   Windows sidebar, the gear in the phone's top bar) and Settings shows it as an accent row with the
-  install button. A check that finds none clears it, and a new version starts without it.
+  install button. A check that gets an answer and finds none clears it, a check that fails (offline,
+  GitHub down) leaves it, and a new version starts without it.
+  `AutoUpdateCheck` (application layer, a clock and a one-day interval injected) is the quiet
+  check: the composition root starts it a little after launch (Windows: a `TimeProvider` timer, 30 s
+  and then hourly; Android: a few seconds after each `ProcessLifecycleOwner` start) and it checks
+  only when the last check that reached the channel is a day old, or when that check found an update
+  this run has not shown yet. It never downloads or installs, logs failures without a problem entry,
+  and never runs in a dev build or one without a channel. The last check (time and the version it
+  found) sits in the settings store; Settings → Updates shows "Last checked". Check for updates goes
+  through it too, so both are recorded. Android has no WorkManager job for it: the waiting update
+  lives in memory, so a background check in a process that is gone by the next start shows nothing
+  the start check does not.
 - **syncing:** `Replica` / `IReplica` and `RemoteTables` / `IRemoteTables`, run by `SyncEngine` and
   scheduled by `SyncCoordinator`. Health shows under Today's title (synced at, syncing, offline
   with the number of waiting changes, or changes the server refused).

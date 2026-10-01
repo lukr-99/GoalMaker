@@ -6,6 +6,7 @@ import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.design.ThemeDefinition
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
+import java.time.Instant
 import java.time.LocalTime
 
 /**
@@ -36,6 +37,8 @@ data class SettingsUiState(
     val update: UpdateUiState,
     /** The update the last check found and nothing has installed yet: the accent row in Updates. */
     val waitingUpdate: UpdateCheckResult.Available? = null,
+    /** When a check last reached the update channel, the owner's or the quiet daily one; null before the first. */
+    val updatesCheckedAt: Instant? = null,
     val appInfo: AppInfo,
     val backendUrlDraft: String,
     val backendKeyDraft: String,

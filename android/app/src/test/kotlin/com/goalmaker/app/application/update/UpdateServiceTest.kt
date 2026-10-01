@@ -114,7 +114,7 @@ class UpdateServiceTest {
     }
 
     @Test
-    fun `a found update waits until a check finds none`() = runTest {
+    fun `a found update waits through a failed check until a check answers without one`() = runTest {
         val channel = FakeChannel(ChannelSnapshot(manifestJson, "good"))
         val subject = service(channel = channel)
         assertNull(subject.waiting.value)
@@ -123,6 +123,10 @@ class UpdateServiceTest {
         assertSame(available, subject.waiting.value)
 
         channel.snapshot = null
+        assertTrue(subject.check() is UpdateCheckResult.Failed)
+        assertSame(available, subject.waiting.value)
+
+        channel.snapshot = ChannelSnapshot(manifestJson, "forged")
         subject.check()
         assertNull(subject.waiting.value)
     }

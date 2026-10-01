@@ -70,6 +70,12 @@ public interface ISettingsStore
     /// <summary>When the last weekly export was written; the next is due a week after it.</summary>
     DateTimeOffset? WeeklyBackupWritten { get; set; }
 
+    /// <summary>When a check for updates last reached the channel (docs/setup/signing-and-releases.md); null before the first.</summary>
+    DateTimeOffset? UpdatesCheckedAt { get; set; }
+
+    /// <summary>The version that check found waiting, or null when it found none; a new start checks again to show it.</summary>
+    string? UpdateFound { get; set; }
+
     /// <summary>Whether Tally follows the window in front on this PC (docs/tally.md); off until the owner turns it on.</summary>
     bool TallyOn { get; set; }
 

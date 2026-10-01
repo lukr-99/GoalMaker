@@ -15,17 +15,31 @@ public sealed class UpdateService(
     IUpdateInstaller installer)
 {
     /// <summary>
-    /// The update the last check found, or null: the mark on the way to Settings. Every check
-    /// replaces it, so it goes when a check finds none; a new version starts without it.
+    /// The update the last check found, or null: the mark on the way to Settings. Every check that
+    /// gets an answer replaces it, so it goes when one finds none; a check that fails leaves it, and a
+    /// new version starts without it.
     /// </summary>
     public UpdateCheckResult.Available? Waiting { get; private set; }
 
     /// <summary><see cref="Waiting"/> changed. May be raised off the UI thread.</summary>
     public event EventHandler? WaitingChanged;
 
+    /// <summary>
+    /// Whether a check can reach anything at all: the build has a channel and is a release. A dev
+    /// build or one without the key answers every check without the network.
+    /// </summary>
+    public bool CanCheck =>
+        channelConfigured && SemanticVersion.Parse(installedVersion) is { IsDevelopmentBuild: false };
+
     public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken)
     {
         var result = await FindAsync(cancellationToken).ConfigureAwait(false);
+        // A check that could not reach the channel (offline, GitHub down) leaves the waiting update as it was.
+        if (result is UpdateCheckResult.Failed)
+        {
+            return result;
+        }
+
         var waiting = result as UpdateCheckResult.Available;
         if (waiting != Waiting)
         {

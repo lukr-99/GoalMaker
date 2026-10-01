@@ -24,12 +24,23 @@ class UpdateService(
     private val found = MutableStateFlow<UpdateCheckResult.Available?>(null)
 
     /**
-     * The update the last check found, or null: the mark on the way to Settings. Every check
-     * replaces it, so it goes when a check finds none; a new version starts without it.
+     * The update the last check found, or null: the mark on the way to Settings. Every check that
+     * gets an answer replaces it, so it goes when one finds none; a check that fails leaves it, and a
+     * new version starts without it.
      */
     val waiting: StateFlow<UpdateCheckResult.Available?> = found.asStateFlow()
 
-    suspend fun check(): UpdateCheckResult = find().also { found.value = it as? UpdateCheckResult.Available }
+    /**
+     * Whether a check can reach anything at all: the build has a channel and is a release. A dev
+     * build or one without the key answers every check without the network.
+     */
+    val canCheck: Boolean
+        get() = channelConfigured && SemanticVersion.parse(installedVersion)?.isDevelopmentBuild == false
+
+    /** A check that could not reach the channel (offline, GitHub down) leaves [waiting] as it was. */
+    suspend fun check(): UpdateCheckResult = find().also { result ->
+        if (result !is UpdateCheckResult.Failed) found.value = result as? UpdateCheckResult.Available
+    }
 
     private suspend fun find(): UpdateCheckResult {
         if (!channelConfigured) return UpdateCheckResult.NotConfigured
