@@ -45,7 +45,7 @@ The script refuses to replace an existing key. From the next build on, both apps
 2. Tag and push: `git tag vX.Y.Z` then `git push origin main vX.Y.Z`.
 3. The **Release** workflow checks the tag and the secrets, builds and tests the signed APK and the
    installer, and publishes them with the signed manifest and `SHA256SUMS` as the GitHub Release
-   (ADR 0010). It also uploads them to the old `releases` bucket, for copies older than 1.2.0.
+   (ADR 0010).
 4. The apps see the update at once: Settings → Check for updates.
 
 A failed workflow publishes no release unless it reached the last job. If a bad release went out,

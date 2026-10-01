@@ -110,6 +110,6 @@ returns 0 for no toasts, while the bare `.Count` is empty, not 0.
    `GOALMAKER_UPDATE_URL=http://127.0.0.1:55380`, changing `version.properties` between the builds
    (restore it afterwards).
 3. Lay the newer one out the way GitHub Releases does and serve it:
-   `python tools/publish_release.py --version X.Y.Z --windows-installer <setup.exe> --signing-key test.pem --dry-run --channel-folder release-channel`,
+   `python tools/publish_release.py --version X.Y.Z --windows-installer <setup.exe> --signing-key test.pem --channel-folder release-channel`,
    then `python -m http.server 55380 -d release-channel`.
 4. Install the older one, Settings → Check for updates → Install.

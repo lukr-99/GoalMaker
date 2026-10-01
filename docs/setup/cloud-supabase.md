@@ -58,12 +58,10 @@ In **Project Settings → API Keys**:
 | --- | --- | --- |
 | Project URL | both apps' release builds, the workflow | secret `GOALMAKER_SUPABASE_URL` |
 | Publishable key (`sb_publishable_...`) | both apps' release builds | secret `GOALMAKER_SUPABASE_KEY` |
-| Secret key (`sb_secret_...`) | the release workflow only (uploads) | secret `GOALMAKER_SUPABASE_SECRET_KEY` |
 
 ```powershell
 gh secret set GOALMAKER_SUPABASE_URL
 gh secret set GOALMAKER_SUPABASE_KEY
-gh secret set GOALMAKER_SUPABASE_SECRET_KEY
 ```
 
 (`gh secret set` asks for the value, so it never lands in your shell history.)
