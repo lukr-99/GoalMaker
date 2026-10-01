@@ -31,8 +31,8 @@ says otherwise:
   ([docs/stats.md](docs/stats.md)).
 - **Projects, calendar, widgets and the desktop (M5):** projects with a Backlog, To do, Doing and
   Done board ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
-  ([docs/calendar.md](docs/calendar.md)), Today, Habits and quick-add widgets on Android
-  ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
+  ([docs/calendar.md](docs/calendar.md)), Today, Habits, Goals, Motivation and quick-add widgets
+  on Android ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
   project by the repository or folder it is working in ([docs/connector.md](docs/connector.md)),
   sharing text or a link from any Android app into a task ([docs/composer.md](docs/composer.md)),
   the pinnable Today and Habits mini windows on Windows
