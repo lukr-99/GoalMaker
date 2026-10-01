@@ -11,9 +11,12 @@ import {
   periodStart as goalPeriodStart,
 } from "./goals.ts";
 import {
+  allDone,
   checkinId,
+  dot,
   dueToday,
   goalAmounts,
+  habitGroup,
   type HabitItem,
   habitPeriodEnd,
   habitPeriodStart,
@@ -22,6 +25,7 @@ import {
   isDue,
   onToday,
   ring,
+  standing,
   streak,
   wentOver,
 } from "./habits.ts";
@@ -352,6 +356,20 @@ Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids, go
     const item = habit(vector.habit);
     assertEquals(dueToday(item, vector.today, pauses(vector)), vector.expect.due, `${vector.name}: due`);
     assertEquals(onToday(item, vector.today, pauses(vector)), vector.expect.onToday, `${vector.name}: on Today`);
+  }
+  for (const vector of file.groups) {
+    assertEquals(habitGroup(habit(vector.habit)), vector.expect, vector.name);
+  }
+  for (const vector of file.standings) {
+    const value = standing(habit(vector.habit), vector.today, checkins(vector), pauses(vector));
+    assertEquals(value, vector.expect, vector.name);
+  }
+  for (const vector of file.dots) {
+    const value = dot(habit(vector.habit), vector.day, vector.today, checkins(vector), pauses(vector));
+    assertEquals(value, vector.expect, vector.name);
+  }
+  for (const vector of file.allDone) {
+    assertEquals(allDone(vector.standings), vector.expect, vector.name);
   }
   for (const vector of file.goalAmounts) {
     const goal = { ...vector.goal, periodStart: vector.goal.start };

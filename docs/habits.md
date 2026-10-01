@@ -77,6 +77,29 @@ times a week" streak counts weeks, and a holiday pause or a sick day costs nothi
 **Pauses** are ranges of days (`from`, and `until` or open-ended while the pause lasts); they stay
 after the habit resumes, so old streaks still read right.
 
+## Where a habit stands today
+
+The cards on Today and the Habits page read one **standing** per habit, the first that applies
+(`standings` in the vectors):
+
+1. **none**: archived, not started yet, or not due today (a weekday outside its mask);
+2. **paused**: a pause covers today;
+3. **skipped**: a check-in in the period holding today says skipped;
+4. **limit**: a limit is never done and never left, so Snacks never reads as "not done";
+5. **done**: today's ring is full, or a weekly or monthly habit was checked in today (one run of
+   "3 times a week" is today's part, even while the week still needs more);
+6. **left**: otherwise.
+
+Today's "left" count counts the left ones, **Hide done** hides the done ones, and Today shows its
+short **all done** card when none is left and at least one is done (`allDone`). A skipped habit stays
+in place with a dashed button that undoes the skip.
+
+The Habits page groups habits into **Every day** (daily and chosen weekdays), **Weekly** (N times a
+week or a month) and **Limits** (`groups`). Each card shows **the week's dots**, the last seven days
+up to today (`dots`): met, missed, skipped, paused, over a limit, today still open, or nothing on a
+day the habit isn't due. A weekly habit's day without a check-in misses nothing, so it shows
+nothing; a limit's clean day is met.
+
 ## On screen
 
 - **Today's ring** fills with the day's value against the target for a daily or weekday habit, and
