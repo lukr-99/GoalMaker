@@ -49,7 +49,8 @@ first day, and today's goals expect nothing until the day is over).
   gone and then **needs you** (no amount).
 
 Each period lists the goals that are behind first, then on track, then hit, keeping their own order
-within each. The goals that are behind are the ones that "need you".
+within each. The goals that are behind are the ones that "need you". The connector's `get_goals`
+reads the same pace and order, and says what each goal feeds ([connector](connector.md)).
 
 ## The chain
 

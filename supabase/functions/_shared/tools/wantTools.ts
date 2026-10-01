@@ -1,6 +1,7 @@
 import { z } from "../deps.ts";
 import { type Planner, PlannerError } from "../planner/planner.ts";
 import type { Want, WantFields } from "../planner/wantList.ts";
+import { readWantLine } from "../rules/quickAdd.ts";
 import { MAX_DAYS, type WantState, wantState } from "../rules/wants.ts";
 import * as format from "./format.ts";
 import type { Tool } from "./tools.ts";
@@ -70,10 +71,18 @@ export const wantTools: Tool[] = [
       "Writes down something the owner would like to buy, with why they want it. It waits out a cooldown before " +
       "it is decided: the owner's thresholds give it days from its price (by default 7 under 1,000, 30 under " +
       "10,000, 90 from there, and 30 with no price), unless the owner picked a number of days. The cooldown is " +
-      "fixed once it is added.",
+      'fixed once it is added. A short line like "Kindle 3290 Kč wait 2 weeks because I read on the train" can ' +
+      "go in line instead of title, price, currency, cooldown_days and reason.",
     input: {
-      title: z.string().describe("What it is."),
-      reason: z.string().describe("Why the owner wants it, in their words. Required: it is the point of a want."),
+      line: z.string().optional().describe(
+        'The want as the owner said it, like "Kindle 3290 Kč wait 2 weeks because I read on the train": the ' +
+          "price with its currency, the wait and the reason after because are read from it. Fields given apart win.",
+      ),
+      title: z.string().optional().describe("What it is. Needed without a line."),
+      reason: z.string().optional().describe(
+        "Why the owner wants it, in their words. Required, here or after because in the line: it is the point of " +
+          "a want. Ask the owner when it is missing.",
+      ),
       price: z.number().optional().describe("What it costs, if known."),
       currency: currency.optional(),
       link: z.string().optional().describe("Where it is sold or described."),
@@ -85,14 +94,16 @@ export const wantTools: Tool[] = [
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
+      const read = typeof args.line === "string" && args.line.trim() !== "" ? readWantLine(args.line) : null;
+      const priced = args.price === undefined && read?.price != null;
       const want = await planner.wants().add({
-        title: args.title,
-        reason: args.reason,
-        price: args.price,
-        currency: args.currency,
+        title: args.title ?? read?.title,
+        reason: args.reason ?? read?.reason ?? undefined,
+        price: priced ? read!.price! : args.price,
+        currency: args.currency ?? (priced ? read!.currency! : undefined),
         link: args.link,
         areaId: await areaOf(planner, args.area),
-        days: args.cooldown_days,
+        days: args.cooldown_days ?? read?.waitDays ?? undefined,
       });
       return [`Added, cooling for ${want.cooldownDays} days:`, await wantText(planner, want)].join("\n");
     },

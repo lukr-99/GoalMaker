@@ -21,7 +21,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 
 | Tool | What it does |
 |---|---|
-| `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules; Today also lists its habits and counts the ones kept off it |
+| `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules; Today also lists its habits with where each stands, says how many are left, and counts the ones kept off it |
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat; a new task also says who made it |
@@ -35,10 +35,10 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `save_review_summary`, `get_review_summaries` | A review's summary, mood, energy and the reflections written in it; the summary is also the [Letter](letter.md) |
 | `get_review_digest` | One week or month in one JSON answer, for the Letter routine: done, left and overdue, goals, habits, the board, triggers, the review and last letter, the next period, wants and Tally's time. The week or month holding yesterday by default |
 | `get_time_tally` | Where time went on the phone and the PC ([Tally](tally.md)), by category, project or device, this week by default; never by app, since apps never leave the device |
-| `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
+| `get_goals`, `add_goal`, `update_goal` | The goals of a period with their pace and the goal each feeds, the ones that need the owner first; new or changed ones, a new one also from a short `line` |
 | `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
-| `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak, and "not on Today" for one kept off Today; check one in, or skip a period |
-| `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction, the goal it feeds and whether it shows on Today (`show_on_today`) |
+| `get_habits`, `check_in_habit`, `skip_habit` | Habits in the Habits page's groups with where each stands, its streak and the goal it serves, and "not on Today" for one kept off Today; check one in, or skip a period |
+| `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction, the goal it feeds and whether it shows on Today (`show_on_today`); a new one also from a short `line` |
 | `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
 | `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order, all of them or only the owner's or Claude's items |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
@@ -51,7 +51,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_settings`, `update_settings` | The time zone and day start every planning day is worked out from |
 | `get_calendar` | A stretch of days with what is planned, what is due, and where a repeat would come round |
 | `get_wants` | The wants that are ready, cooling or decided, each with its reason, price, last price check and note |
-| `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after |
+| `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after; a new one also from a short `line` |
 | `decide_want` | Bought or dropped with a note, or reopened; only what the owner decided in the conversation |
 | `record_price_check` | The price Claude found with its own web search, where, and the alternatives; GoalMaker never fetches from a shop |
 
@@ -84,6 +84,33 @@ Wants are decided with the owner, not for them ([wants](wants.md)). For example:
 Claude reads the ready wants, looks each price up with its own web search, records what it found
 with `record_price_check`, and asks whether the owner still wants it before `decide_want` marks it
 bought or dropped. A want Claude adds says "by Claude" in both apps.
+
+Habits and goals read the way their cards do, from the same rules (`standings`, `groups` and
+`allDone` in `contracts/vectors/habits.json`, the pace and its order in `goals.json`):
+
+```text
+Today is Thursday 1 October 2026: 0 of 1 done, 1 habit left.
+...
+Habits, 1 habit left:
+- 💧 Water · every day · left · 3 of 8 glasses today (habit id ...)
+- Floss · every day · done · 1-day streak (habit id ...)
+- Read · every day · skipped (habit id ...)
+- Swim · 2 times a week · done · 1 of 2 this week (habit id ...)
+- Snacks · every day · limit · 1 of at most 2 today (habit id ...)
+1 more habit is due today but kept off Today; get_habits lists every habit.
+```
+
+A habit is done, left, skipped, paused, a limit (never done and never left, so it never counts as
+left), or not due today. "Left" counts only the left habits on Today, the same number the apps show.
+`get_habits` puts them under **Every day**, **Weekly** and **Limits** (and **Archived** when asked
+for), with the goal each serves. `get_goals` gives each open goal its pace, **On track**, **Behind
+by 6 km**, **Needs you** or **Hit**, says what it feeds, and lists each period's goals that need the
+owner first; each horizon's line counts the goals hit and the ones that need the owner.
+
+`add_want`, `add_habit` and `add_goal` also take a `line`, read with the bottom bar's rules
+([composer](composer.md#adding-on-wants-habits-and-goals)): `Swim 2 times a week 40 min`,
+`Read 3 books this month`, `Kindle 3290 Kč wait 2 weeks because I read on the train`. Fields given
+apart win over what the line says, and every input from before still works.
 
 A goal or a habit Claude touches is the owner's own row, so it turns up on both apps after a sync and
 in the activity log as made by Claude. A check-in is named after its habit and day, exactly as the
