@@ -104,6 +104,33 @@ public sealed class PageSnapshots
         Save(new TodayPage(today), folder, "today-with-a-reminder");
     });
 
+    // Plan tomorrow and Send are primary buttons, the title and checks are the accent: each in its own
+    // theme color, never Windows' accent, in every theme and mode. A new page per look (docs/pitfalls.md).
+    [Fact(Explicit = true)]
+    public void TodayAccentInEveryTheme() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Call the bank 17:00", Today);
+        Add(planner, "Stretch !", Today);
+        Add(planner, "Buy milk", Today);
+        using var theme = Theme(planner);
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+        composer.NewTaskTitle = "Water the plants";
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action());
+        foreach (var option in ContractResources.Themes().Themes)
+        {
+            foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Light, GoalMaker.Core.Settings.ThemeMode.Dark })
+            {
+                theme.Apply(planner.Settings.Appearance with { ThemeId = option.Id, Mode = mode });
+                Save(new TodayPage(today), folder, $"accent-today-{option.Id}-{mode}".ToLowerInvariant(), new Size(852, 420));
+            }
+        }
+    });
+
     [Fact(Explicit = true)]
     public void TrayAndQuickAdd() => OnUiThread(folder =>
     {

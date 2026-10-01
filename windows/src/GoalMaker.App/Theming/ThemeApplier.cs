@@ -70,9 +70,7 @@ public sealed class ThemeApplier : IDisposable
         var wpfTheme = IsDark ? ApplicationTheme.Dark : ApplicationTheme.Light;
 
         ApplicationThemeManager.Apply(wpfTheme, WindowBackdropType.None, false);
-        ApplicationAccentColorManager.Apply(ToColor(palette.Primary), wpfTheme, false, false);
-        SetAccentBrushes(IsDark);
-
+        SetAccent(palette);
         SetColors(palette);
         SetFonts(theme.Typography);
         SetShapes(theme.Shapes);
@@ -159,51 +157,105 @@ public sealed class ThemeApplier : IDisposable
         }
     }
 
-    // WPF UI's theme dictionaries build some control brushes from the accent once, so controls made
-    // under one theme kept its accent after a switch (Electric's toggles stayed Track's lime). Fresh
-    // brushes under the same keys reach them, because the templates look these keys up dynamically.
-    private void SetAccentBrushes(bool dark)
-    {
-        foreach (var (key, darkVariant, lightVariant) in AccentBrushes)
-        {
-            if (resources["SystemAccentColor" + (dark ? darkVariant : lightVariant)] is Color color)
-            {
-                resources[key] = Frozen(color);
-            }
-        }
-    }
-
-    // The brushes WPF UI 4.3's Dark.xaml and Light.xaml make from SystemAccentColor{Primary,Secondary,Tertiary}.
-    private static readonly (string Key, string Dark, string Light)[] AccentBrushes =
+    /// <summary>
+    /// The accent color keys WPF UI 4.3 reads. Each one is the theme's primary after Apply.
+    /// </summary>
+    public static readonly IReadOnlyList<string> AccentColorKeys =
     [
-        ("BadgeBackground", "Primary", "Primary"),
-        ("CalendarViewSelectedBackground", "Primary", "Primary"),
-        ("CalendarViewSelectedBorderBrush", "Primary", "Primary"),
-        ("CalendarViewTodayBackground", "Primary", "Primary"),
-        ("CheckBoxCheckBackgroundFillChecked", "Primary", "Primary"),
-        ("ComboBoxBorderBrushFocused", "Secondary", "Secondary"),
-        ("ComboBoxItemPillFillBrush", "Primary", "Primary"),
-        ("HyperlinkButtonForeground", "Tertiary", "Secondary"),
-        ("HyperlinkButtonForegroundPointerOver", "Tertiary", "Tertiary"),
-        ("HyperlinkButtonForegroundPressed", "Secondary", "Primary"),
-        ("InfoBarInformationalSeverityIconBackground", "Primary", "Primary"),
-        ("ListBoxItemSelectedBackgroundThemeBrush", "Primary", "Primary"),
-        ("ListViewItemPillFillBrush", "Primary", "Primary"),
-        ("NavigationViewSelectionIndicatorForeground", "Primary", "Primary"),
-        ("ProgressBarForeground", "Primary", "Primary"),
-        ("ProgressRingForegroundThemeBrush", "Primary", "Primary"),
-        ("RadioButtonOuterEllipseCheckedStroke", "Primary", "Primary"),
-        ("RatingControlSelectedForeground", "Primary", "Primary"),
-        ("SliderThumbBackground", "Primary", "Primary"),
-        ("TextControlFocusedBorderBrush", "Primary", "Primary"),
-        ("ThumbRateForeground", "Primary", "Primary"),
-        ("ToggleButtonBackgroundChecked", "Primary", "Primary"),
-        ("ToggleButtonForegroundCheckedPointerOver", "Secondary", "Secondary"),
-        ("ToggleButtonBackgroundCheckedPressed", "Tertiary", "Tertiary"),
-        ("ToggleSwitchStrokeOn", "Primary", "Primary"),
-        ("ToggleSwitchFillOn", "Primary", "Primary"),
-        ("TreeViewItemSelectionIndicatorForeground", "Primary", "Primary"),
+        "SystemAccentColor",
+        "SystemAccentColorPrimary",
+        "SystemAccentColorSecondary",
+        "SystemAccentColorTertiary",
+        "AccentFillColorDefault",
     ];
+
+    /// <summary>
+    /// The accent brushes WPF UI 4.3 reads: the ones its accent manager writes, and the ones its
+    /// Dark.xaml and Light.xaml build once from SystemAccentColor{Primary,Secondary,Tertiary}. Each one
+    /// is the theme's primary after Apply.
+    /// </summary>
+    public static readonly IReadOnlyList<string> AccentBrushKeys =
+    [
+        "SystemAccentBrush",
+        "SystemFillColorAttentionBrush",
+        "AccentFillColorDefaultBrush",
+        "AccentFillColorSelectedTextBackgroundBrush",
+        "AccentTextFillColorPrimaryBrush",
+        "AccentTextFillColorSecondaryBrush",
+        "AccentTextFillColorTertiaryBrush",
+        "BadgeBackground",
+        "CalendarViewSelectedBackground",
+        "CalendarViewSelectedBorderBrush",
+        "CalendarViewTodayBackground",
+        "CheckBoxCheckBackgroundFillChecked",
+        "ComboBoxBorderBrushFocused",
+        "ComboBoxItemPillFillBrush",
+        "HyperlinkButtonForeground",
+        "HyperlinkButtonForegroundPointerOver",
+        "HyperlinkButtonForegroundPressed",
+        "InfoBarInformationalSeverityIconBackground",
+        "ListBoxItemSelectedBackgroundThemeBrush",
+        "ListViewItemPillFillBrush",
+        "NavigationViewSelectionIndicatorForeground",
+        "ProgressBarForeground",
+        "ProgressRingForegroundThemeBrush",
+        "RadioButtonOuterEllipseCheckedStroke",
+        "RatingControlSelectedForeground",
+        "SliderThumbBackground",
+        "TextControlFocusedBorderBrush",
+        "ThumbRateForeground",
+        "ToggleButtonBackgroundChecked",
+        "ToggleButtonForegroundCheckedPointerOver",
+        "ToggleButtonBackgroundCheckedPressed",
+        "ToggleSwitchStrokeOn",
+        "ToggleSwitchFillOn",
+        "TreeViewItemSelectionIndicatorForeground",
+    ];
+
+    /// <summary>The text-on-accent keys WPF UI 4.3 reads. Each one is the theme's onPrimary after Apply.</summary>
+    public static readonly IReadOnlyList<string> TextOnAccentKeys =
+    [
+        "TextOnAccentFillColorPrimary",
+        "TextOnAccentFillColorSelectedText",
+        "TextOnAccentFillColorPrimaryBrush",
+        "TextOnAccentFillColorSelectedTextBrush",
+    ];
+
+    // WPF UI colors its controls from these keys, and left to itself fills them from Windows' accent
+    // (on its first look at the resources) or from shades it derives from the color it is given:
+    // darker in light mode, lighter and greyer in dark mode, and text on them black or white by a
+    // brightness guess. None of that is a GoalMaker color. Every key is the theme's primary instead,
+    // with onPrimary on it. Fresh brushes under the same keys also reach controls made under the
+    // last theme, because the templates look these keys up dynamically (Electric's toggles once
+    // stayed Track's lime).
+    private void SetAccent(Palette p)
+    {
+        var primary = ToColor(p.Primary);
+        var onPrimary = ToColor(p.OnPrimary);
+        foreach (var key in AccentColorKeys)
+        {
+            resources[key] = primary;
+        }
+
+        foreach (var key in AccentBrushKeys)
+        {
+            resources[key] = Frozen(primary);
+        }
+
+        // Hover and pressed fills: the primary a little see-through, as WPF UI makes them.
+        resources["AccentFillColorSecondary"] = WithAlpha(primary, 229);
+        resources["AccentFillColorTertiary"] = WithAlpha(primary, 204);
+        resources["AccentFillColorSecondaryBrush"] = Frozen(WithAlpha(primary, 229));
+        resources["AccentFillColorTertiaryBrush"] = Frozen(WithAlpha(primary, 204));
+
+        foreach (var key in TextOnAccentKeys)
+        {
+            resources[key] = key.EndsWith("Brush", StringComparison.Ordinal) ? Frozen(onPrimary) : onPrimary;
+        }
+
+        resources["TextOnAccentFillColorSecondary"] = WithAlpha(onPrimary, 179);
+        resources["TextOnAccentFillColorSecondaryBrush"] = Frozen(WithAlpha(onPrimary, 179));
+    }
 
     private void SetColors(Palette p)
     {
@@ -233,7 +285,7 @@ public sealed class ThemeApplier : IDisposable
         var divider = Blend(ToColor(p.SurfaceVariant), ToColor(p.Outline), 0.5);
         var hover = Blend(ToColor(p.Background), ToColor(p.Text), 0.06);
 
-        // WPF UI keys that its controls read directly (the accent, backgrounds, cards and inputs). Controls
+        // WPF UI keys that its controls read directly (backgrounds, cards and inputs; the accent is SetAccent). Controls
         // with their own brush keys (CheckBoxForeground, NavigationViewItemForeground, ...) keep WPF UI's
         // neutrals, which read well on every theme; GoalMaker's views use the GM.* keys.
         resources["ApplicationBackgroundColor"] = ToColor(p.Background);
@@ -254,7 +306,6 @@ public sealed class ThemeApplier : IDisposable
         resources["TextControlBackground"] = ToBrush(p.SurfaceVariant);
         resources["TextControlBackgroundFocused"] = ToBrush(p.Surface);
         resources["SubtleFillColorSecondaryBrush"] = Frozen(hover);
-        resources["AccentFillColorDefaultBrush"] = ToBrush(p.Primary);
 
         // Primary buttons (Plan tomorrow, Save, Send code): the theme's primary with its onPrimary text,
         // and hover and press as a light onPrimary state layer over it, the same in every theme (WPF UI's
@@ -268,8 +319,6 @@ public sealed class ThemeApplier : IDisposable
         resources["AccentButtonForegroundPointerOver"] = ToBrush(p.OnPrimary);
         resources["AccentButtonForegroundPressed"] = ToBrush(p.OnPrimary);
         resources["AccentControlElevationBorderBrush"] = Frozen(Blend(primary, onPrimary, 0.08));
-        resources["TextOnAccentFillColorPrimaryBrush"] = ToBrush(p.OnPrimary);
-        resources["AccentTextFillColorPrimaryBrush"] = ToBrush(p.Primary);
         resources["SystemFillColorCriticalBrush"] = ToBrush(p.Danger);
     }
 
@@ -339,6 +388,8 @@ public sealed class ThemeApplier : IDisposable
         brush.Freeze();
         return brush;
     }
+
+    private static Color WithAlpha(Color color, byte alpha) => Color.FromArgb(alpha, color.R, color.G, color.B);
 
     private static Color Blend(Color from, Color to, double amount) => Color.FromRgb(
         (byte)Math.Round(from.R + ((to.R - from.R) * amount)),

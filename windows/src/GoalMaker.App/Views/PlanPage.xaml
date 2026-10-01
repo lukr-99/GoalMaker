@@ -290,7 +290,7 @@
                                     <DockPanel VerticalAlignment="Center">
                                         <ui:Button DockPanel.Dock="Right"
                                                    Appearance="Transparent"
-                                                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                                                   Foreground="{DynamicResource GM.PrimaryBrush}"
                                                    Content="{DynamicResource Plan.Tomorrow}"
                                                    Command="{Binding PlanTomorrowCommand}"
                                                    AutomationProperties.Name="{Binding PlanTomorrowName}" />
