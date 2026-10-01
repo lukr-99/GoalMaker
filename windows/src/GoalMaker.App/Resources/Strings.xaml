@@ -497,7 +497,7 @@
     <sys:String x:Key="Mini.Close">Close</sys:String>
     <sys:String x:Key="Tray.MiniToday">Today mini window</sys:String>
     <sys:String x:Key="Tray.MiniHabits">Habits mini window</sys:String>
-    <sys:String x:Key="Habits.Hint">The things you keep doing: a click on a ring checks in, and the map shows the months behind you.</sys:String>
+    <sys:String x:Key="Habits.Hint">Click the button to check in. Right click a card or open its menu to skip. The map shows the months behind you.</sys:String>
     <sys:String x:Key="Habits.Empty">No habits yet. Start with something small, like a glass of water or ten minutes of reading.</sys:String>
     <sys:String x:Key="Habits.Add">New habit</sys:String>
     <sys:String x:Key="Habits.Archived">Archived · {0}</sys:String>
@@ -576,6 +576,31 @@
     <sys:String x:Key="Habits.All">All habits</sys:String>
     <sys:String x:Key="Habits.Left">{0} habits left</sys:String>
     <sys:String x:Key="Habits.Summary">{0}, {1}</sys:String>
+    <!-- The habits redesign: the cards, Hide done, the groups, the summary card and Today's panel. -->
+    <sys:String x:Key="Habits.HideDone">Hide done</sys:String>
+    <sys:String x:Key="Habits.ShowDone">Show done</sys:String>
+    <sys:String x:Key="Habits.AllDoneCard">Every habit for today is done.</sys:String>
+    <sys:String x:Key="Habits.Open">Open Habits</sys:String>
+    <sys:String x:Key="Habits.GroupDays">Every day</sys:String>
+    <sys:String x:Key="Habits.GroupWeekly">Weekly</sys:String>
+    <sys:String x:Key="Habits.GroupLimits">Limits</sys:String>
+    <sys:String x:Key="Habits.GroupHeader">{0} · {1}</sys:String>
+    <sys:String x:Key="Habits.GroupAllDone">All done.</sys:String>
+    <sys:String x:Key="Habits.SummaryOf">/ {0} done</sys:String>
+    <sys:String x:Key="Habits.SummaryName">{0} of {1} habits done today</sys:String>
+    <sys:String x:Key="Habits.SummaryBest">Longest streak: {0}, {1}</sys:String>
+    <sys:String x:Key="Habits.SummaryNoStreak">No streak yet. Today can start one.</sys:String>
+    <sys:String x:Key="Habits.Line">{0} · {1}</sys:String>
+    <sys:String x:Key="Habits.ArchivedLine">Archived</sys:String>
+    <sys:String x:Key="Habits.More">More for {0}</sys:String>
+    <sys:String x:Key="Habits.AddOne">Add one to {0}</sys:String>
+    <sys:String x:Key="Habits.LogOn">Log an amount on {0}</sys:String>
+    <sys:String x:Key="Habits.TakeBack">Take back {0}</sys:String>
+    <sys:String x:Key="Habits.UnskipOn">Undo the skip on {0}</sys:String>
+    <sys:String x:Key="Habits.MenuCheckIn">Check in</sys:String>
+    <sys:String x:Key="Habits.MenuTakeBack">Take back today's check-in</sys:String>
+    <sys:String x:Key="Habits.MenuAddOne">Add one</sys:String>
+    <sys:String x:Key="Habits.Dots">Last seven days: {0} met, {1} missed, {2} skipped</sys:String>
 
     <!-- Calendar (docs/calendar.md) -->
     <sys:String x:Key="Nav.Calendar">Calendar</sys:String>

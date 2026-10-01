@@ -135,7 +135,10 @@ public sealed class HabitsViewModelTests : IDisposable
         var page = Page();
 
         page.Rows.Single().SkipCommand.Execute(null);
-        Assert.Equal(("Habits.Skipped", 1, true), (page.Rows.Single().StatusText, page.Rows.Single().Streak, page.Rows.Single().IsDone));
+        // A skip is neither done nor left (contracts/vectors/habits.json, standings): Hide done keeps it in place.
+        Assert.Equal(("Habits.Skipped", 1, HabitStanding.Skipped), (page.Rows.Single().StatusText, page.Rows.Single().Streak, page.Rows.Single().Standing));
+        Assert.False(page.Rows.Single().IsDone);
+        Assert.False(page.Rows.Single().IsLeft);
 
         page.Rows.Single().UnskipCommand.Execute(null);
         page.Rows.Single().PauseCommand.Execute(null);
@@ -354,6 +357,113 @@ public sealed class HabitsViewModelTests : IDisposable
         planner.Habits.Add(new HabitDraft("Read", Today));
 
         Assert.False(Page().Rows.Single().CanLog);
+    }
+
+    [Fact]
+    public void HabitsSitInEveryDayWeeklyAndLimitsSoALimitNeverReadsAsNotDone()
+    {
+        planner.Habits.Add(new HabitDraft("Read", Today));
+        planner.Habits.Add(new HabitDraft("Gym", Today) { Cadence = HabitRules.OnWeekdays, Weekdays = 21 });
+        planner.Habits.Add(new HabitDraft("Run", Today) { Cadence = HabitRules.PerWeek, Times = 3 });
+        planner.Habits.Add(new HabitDraft("Snacks", Today) { Measure = HabitRules.Count, Target = 2, Direction = HabitRules.AtMost });
+
+        var page = Page();
+
+        Assert.Equal(
+            [
+                ("HABITS.GROUPHEADER(HABITS.GROUPDAYS,2)", "Read, Gym"),
+                ("HABITS.GROUPHEADER(HABITS.GROUPWEEKLY,1)", "Run"),
+                ("HABITS.GROUPHEADER(HABITS.GROUPLIMITS,1)", "Snacks"),
+            ],
+            page.Groups.Select(group => (group.Header, string.Join(", ", group.Rows.Select(row => row.Name)))));
+        Assert.Equal(HabitStanding.Limit, page.Groups.Last().Rows.Single().Standing);
+        Assert.True(page.Rows.All(row => row.IsFull));
+    }
+
+    [Fact]
+    public void HideDoneTakesTheDoneHabitsOutOfTheirGroupsAndKeepsTheCounts()
+    {
+        var read = planner.Habits.Add(new HabitDraft("Read", Today))!;
+        planner.Habits.Add(new HabitDraft("Stretch", Today));
+        var run = planner.Habits.Add(new HabitDraft("Run", Today) { Cadence = HabitRules.PerWeek, Times = 3 })!;
+        planner.Habits.CheckIn(read.Id, Today);
+        // One run today is today's part of a weekly habit, though the week needs two more.
+        planner.Habits.CheckIn(run.Id, Today);
+        var page = Page();
+
+        page.HideDone = true;
+
+        Assert.Equal(["Stretch"], page.Groups[0].Rows.Select(row => row.Name));
+        Assert.Equal(2, page.Groups[0].Total);
+        Assert.True(page.Groups[1].IsAllDone);
+        Assert.Equal("Habits.ShowDone", page.HideDoneText);
+
+        page.HideDone = false;
+        Assert.Equal(["Read", "Stretch"], page.Groups[0].Rows.Select(row => row.Name));
+    }
+
+    [Fact]
+    public void TheSummaryCountsWhatTodayAsksForAndNamesTheLongestStreak()
+    {
+        var read = planner.Habits.Add(new HabitDraft("Read", Today.AddDays(-5)) { Emoji = "📖" })!;
+        var water = planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 8 })!;
+        var stretch = planner.Habits.Add(new HabitDraft("Stretch", Today))!;
+        planner.Habits.Add(new HabitDraft("Snacks", Today) { Measure = HabitRules.Count, Target = 2, Direction = HabitRules.AtMost });
+        foreach (var back in Enumerable.Range(0, 5))
+        {
+            planner.Habits.CheckIn(read.Id, Today.AddDays(-back));
+        }
+
+        planner.Habits.CheckIn(water.Id, Today, 4);
+        planner.Habits.Skip(stretch.Id, Today);
+
+        var page = Page();
+
+        // Read and Water ask something of today; the limit and the skipped one don't.
+        Assert.Equal(("1", "Habits.SummaryOf(2)", 0.75), (page.SummaryDone, page.SummaryOf, page.SummaryShare));
+        Assert.Equal("Habits.SummaryBest(📖 Read,Habits.StreakDays(5))", page.SummaryBest);
+        Assert.StartsWith("Habits.SummaryName(1,2)", page.SummaryName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ACardShowsPipsForASmallCountABarForAnAmountAndTheWeeksDots()
+    {
+        var water = planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 8 })!;
+        var snacks = planner.Habits.Add(new HabitDraft("Snacks", Today) { Measure = HabitRules.Count, Target = 2, Direction = HabitRules.AtMost })!;
+        planner.Habits.Add(new HabitDraft("Run", Today) { Measure = HabitRules.Amount, Target = 5, Unit = "km" });
+        var read = planner.Habits.Add(new HabitDraft("Read", Today.AddDays(-10)))!;
+        planner.Habits.CheckIn(water.Id, Today, 5);
+        planner.Habits.CheckIn(snacks.Id, Today, 3);
+        planner.Habits.CheckIn(read.Id, Today.AddDays(-1));
+
+        var page = Page();
+        HabitRowViewModel Row(string name) => page.Rows.Single(row => row.Name == name);
+
+        Assert.Equal((8, 5), (Row("Water").Pips.Count, Row("Water").Pips.Count(pip => pip.IsOn)));
+        Assert.Equal([false, false, true], Row("Snacks").Pips.Select(pip => pip.IsOver));
+        Assert.True(Row("Run").ShowsBar && !Row("Run").HasPips);
+        Assert.False(Row("Read").HasPips || Row("Read").HasBar);
+        Assert.Equal(7, Row("Read").Dots.Count);
+        Assert.Equal([HabitDot.Missed, HabitDot.Met, HabitDot.Open], Row("Read").Dots.TakeLast(3).Select(dot => dot.Kind));
+        Assert.True(Row("Read").Dots[^1].IsToday);
+        Assert.Equal("Habits.Dots(1,5,0)", Row("Read").DotsText);
+        Assert.True(Row("Water").ShowsPlusOne);
+        Assert.Equal("Habits.AddOne(Water)", Row("Water").ButtonText);
+    }
+
+    [Fact]
+    public void AnArchivedHabitLeavesTheGroupsAndHasNoButton()
+    {
+        planner.Habits.Add(new HabitDraft("Read", Today));
+        var old = planner.Habits.Add(new HabitDraft("Cold shower", Today.AddDays(-30)))!;
+        planner.Habits.SetArchived(old.Id, true);
+
+        var page = Page();
+
+        Assert.Equal(["Read"], page.Groups.SelectMany(group => group.Rows).Select(row => row.Name));
+        var archived = page.Archived.Single();
+        Assert.False(archived.ShowsButton);
+        Assert.Equal("Habits.Line(Habits.CadenceDaily,Habits.ArchivedLine)", archived.CardLine);
     }
 
     private HabitsViewModel Page() =>
