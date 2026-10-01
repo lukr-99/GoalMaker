@@ -132,11 +132,15 @@ from Places shows a back arrow to it. The Places tab shows a count for what wait
 are not pinned. The top bar keeps sync, Plan tomorrow and Settings.
 
 **Windows.** The sidebar starts with **Go to…** (Ctrl+K), then a **Pinned** group (Today,
-Tomorrow, Inbox and Projects by default, no limit), then **All places**, which collapses, then
-Settings at the bottom, with Activity and Areas and tags beside it. A place pins or unpins itself
-from the Pin toggle in the title bar, or from a right click on its sidebar item. Ctrl+K opens
-a box that filters places as you type; arrows move, Enter opens, Esc closes. The sidebar still
-collapses to icons and remembers that.
+Tomorrow, Inbox and Projects by default, no limit), then **All places**, then Settings at the
+bottom, with Activity and Areas and tags beside it. A click on All places (or Enter) opens the
+**Places page**, the phone's hub on the PC: the same live tiles, two to four to a row as the window
+allows, the pinned ones marked, and **Edit**, where a click on a tile pins or unpins it (no limit,
+the last pin stays). Only the arrow at the side of All places, or Right and Left, folds and unfolds
+the places that are not pinned under it. A place pins or unpins itself from the Pin toggle in the
+title bar, or from a right click on its sidebar item. Ctrl+K opens a box that filters places as you
+type (All places is one of them); arrows move, Enter opens, Esc closes. The sidebar still collapses
+to icons and remembers that.
 
 Pins are a device setting, so the phone and the PC keep their own. New places (Wants, Tally) arrive
 unpinned, on the Places page and under All places.

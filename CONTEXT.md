@@ -163,7 +163,8 @@ A place the owner put in the phone's bottom bar (four at most) or the Windows si
 each device keeps its own.
 
 **Places hub**:
-The phone's fifth tab: a page of live tiles, one per place, where pins are edited.
+A page of live tiles, one per place, where pins are edited: the phone's fifth tab, and on the PC the
+page All places opens.
 _Avoid_: More, menu
 
 **Connector**:
