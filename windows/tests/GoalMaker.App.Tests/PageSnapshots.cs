@@ -341,6 +341,51 @@ public sealed class PageSnapshots
     {
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
+        var (month, week) = SeedGoals(planner);
+
+        using var theme = Theme(planner);
+        GoalsPage Look(string themeId, GoalMaker.Core.Settings.ThemeMode mode, Action<GoalsViewModel>? focus = null)
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = themeId, Mode = mode });
+            var goals = new GoalsViewModel(planner.Goals, planner.Tasks, planner.Settings, strings, planner.Time, () => true, action => action());
+            focus?.Invoke(goals);
+            return new GoalsPage(goals);
+        }
+
+        var size = new Size(1100, 1040);
+        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Dark), folder, "goals-track-dark", size);
+        Save(Look("electric", GoalMaker.Core.Settings.ThemeMode.Light), folder, "goals-electric-light", size);
+        Save(Look("night", GoalMaker.Core.Settings.ThemeMode.Dark, goals => goals.Pick(month.Id)), folder, "goals-night-dark-chain", size);
+        Save(Look("sunrise", GoalMaker.Core.Settings.ThemeMode.Light, goals => goals.ToggleFilter(GoalHorizon.Week)), folder, "goals-sunrise-light-week", size);
+        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Light, goals => goals.Pick(week.Id)), folder, "goals-track-light-chain", size);
+    });
+
+    // The list view: the same goals grouped by period on compact rows, in a dark and a light theme. A new
+    // page per look (docs/pitfalls.md).
+    [Fact(Explicit = true)]
+    public void GoalsListView() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        SeedGoals(planner);
+        planner.Settings.GoalsView = GoalsView.List;
+
+        using var theme = Theme(planner);
+        GoalsPage Look(string themeId, GoalMaker.Core.Settings.ThemeMode mode)
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = themeId, Mode = mode });
+            return new GoalsPage(new GoalsViewModel(planner.Goals, planner.Tasks, planner.Settings, strings, planner.Time, () => true, action => action()));
+        }
+
+        var size = new Size(1100, 1040);
+        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Dark), folder, "goals-list-track-dark", size);
+        Save(Look("electric", GoalMaker.Core.Settings.ThemeMode.Light), folder, "goals-list-electric-light", size);
+    });
+
+    // A year of goals down to today, with tasks, logged amounts and a chain; returns this month's running
+    // goal and this week's, which feeds it.
+    private static (GoalItem Month, GoalItem Week) SeedGoals(TestPlanner planner)
+    {
         var monday = new DateOnly(2026, 9, 14);
         var run = planner.Goals.Add(new GoalDraft("Run 1 000 km in 2026", GoalHorizon.Year, Today, GoalRules.ModeNumber, Emoji: "\U0001F3C3", Target: 1000, Unit: "km"))!;
         planner.Goals.LogAmount(run.Id, new DateOnly(2026, 8, 30), 628);
@@ -380,22 +425,8 @@ public sealed class PageSnapshots
             }
         }
 
-        using var theme = Theme(planner);
-        GoalsPage Look(string themeId, GoalMaker.Core.Settings.ThemeMode mode, Action<GoalsViewModel>? focus = null)
-        {
-            theme.Apply(planner.Settings.Appearance with { ThemeId = themeId, Mode = mode });
-            var goals = new GoalsViewModel(planner.Goals, planner.Tasks, planner.Settings, strings, planner.Time, () => true, action => action());
-            focus?.Invoke(goals);
-            return new GoalsPage(goals);
-        }
-
-        var size = new Size(1100, 1040);
-        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Dark), folder, "goals-track-dark", size);
-        Save(Look("electric", GoalMaker.Core.Settings.ThemeMode.Light), folder, "goals-electric-light", size);
-        Save(Look("night", GoalMaker.Core.Settings.ThemeMode.Dark, goals => goals.Pick(month.Id)), folder, "goals-night-dark-chain", size);
-        Save(Look("sunrise", GoalMaker.Core.Settings.ThemeMode.Light, goals => goals.ToggleFilter(GoalHorizon.Week)), folder, "goals-sunrise-light-week", size);
-        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Light, goals => goals.Pick(week.Id)), folder, "goals-track-light-chain", size);
-    });
+        return (month, week);
+    }
 
     [Fact(Explicit = true)]
     public void HabitsPageAndEditor() => OnUiThread(folder =>

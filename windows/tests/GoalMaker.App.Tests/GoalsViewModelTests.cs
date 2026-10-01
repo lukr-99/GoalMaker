@@ -2,10 +2,11 @@ using System.Globalization;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Settings;
 
 namespace GoalMaker.App.Tests;
 
-/// <summary>The Windows Goals page over a real replica: periods, progress, the rings, filtering, the lit chain, the quick log, copying, the editor and logging.</summary>
+/// <summary>The Windows Goals page over a real replica: periods, progress, the rings, filtering, the lit chain, the quick log, copying, the editor, logging and the list view.</summary>
 public sealed class GoalsViewModelTests : IDisposable
 {
     private readonly TestPlanner planner = new();
@@ -301,6 +302,78 @@ public sealed class GoalsViewModelTests : IDisposable
         // Next week still overlaps September, so it keeps feeding the month.
         Assert.Equal(month.Id, copied.Goal.ParentId);
         Assert.False(page.NextWeek!.CanCopy);
+    }
+
+    [Fact]
+    public void TheGoalsShowAsTheLadderAtFirst()
+    {
+        var page = Page();
+
+        Assert.Equal(GoalsView.Ladder, page.View);
+        Assert.True(page.IsLadderView);
+        Assert.False(page.IsListView);
+    }
+
+    [Fact]
+    public void TheListViewIsRememberedOnThisPcAndPutsALitChainOut()
+    {
+        var goal = planner.Goals.Add(new GoalDraft("3 runs", GoalHorizon.Week, new DateOnly(2026, 9, 14)))!;
+        var page = Page();
+        page.Pick(goal.Id);
+
+        page.IsListView = true;
+
+        Assert.Equal((GoalsView.List, false, true), (page.View, page.IsLadderView, page.IsListView));
+        Assert.Null(page.Picked);
+        Assert.Equal(GoalsView.List, planner.Settings.GoalsView);
+        Assert.Equal(GoalsView.List, Page().View);
+
+        page.IsLadderView = true;
+
+        Assert.Equal(GoalsView.Ladder, planner.Settings.GoalsView);
+    }
+
+    [Fact]
+    public void TheListGroupsEveryPeriodInOrderWithTheGoalsThatNeedYouFirstWhateverTheRingsShow()
+    {
+        var week = new DateOnly(2026, 9, 14);
+        planner.Goals.Add(new GoalDraft("Half marathon", GoalHorizon.Year, new DateOnly(2026, 1, 1)));
+        planner.Goals.Add(new GoalDraft("Read a book", GoalHorizon.Month, new DateOnly(2026, 9, 1)));
+        var book = planner.Goals.Add(new GoalDraft("Book the race", GoalHorizon.Week, week))!;
+        planner.Goals.SetStatus(book.Id, GoalRules.Done);
+        planner.Goals.Add(new GoalDraft("Call grandma", GoalHorizon.Week, week));
+        var km = planner.Goals.Add(new GoalDraft("Run 20 km", GoalHorizon.Week, week, GoalRules.ModeNumber, Target: 20, Unit: "km"))!;
+        planner.Goals.LogAmount(km.Id, new DateOnly(2026, 9, 15), 5);
+        planner.Goals.Add(new GoalDraft("Inbox zero", GoalHorizon.Day, new DateOnly(2026, 9, 18)));
+        planner.Goals.Add(new GoalDraft("Plan the trip", GoalHorizon.Week, new DateOnly(2026, 9, 21)));
+        var page = Page();
+        page.ToggleFilter(GoalHorizon.Day);
+
+        page.IsListView = true;
+
+        Assert.Equal(
+            [GoalHorizon.Year, GoalHorizon.Month, GoalHorizon.Week, GoalHorizon.Day, GoalHorizon.Week],
+            page.Sections.Select(section => section.Horizon));
+        Assert.Equal(
+            [["Half marathon"], ["Read a book"], ["Run 20 km", "Call grandma", "Book the race"], ["Inbox zero"], ["Plan the trip"]],
+            page.Sections.Select(section => section.Rows.Select(row => row.Title).ToArray()).ToArray());
+        Assert.Equal(GoalPace.Behind, page.Sections[2].Rows[0].Pace);
+        Assert.Equal("Goals.RingHit(1,3)", page.Sections[2].HitText);
+        Assert.StartsWith("Goals.AddTo(Goals.Section(Goals.NextWeek,", page.Sections[4].AddName, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ARowInTheListOpensTheGoalsEditor()
+    {
+        planner.Goals.Add(new GoalDraft("Run 20 km", GoalHorizon.Week, new DateOnly(2026, 9, 14), GoalRules.ModeNumber, Target: 20, Unit: "km"));
+        var page = Page();
+        page.IsListView = true;
+
+        page.Sections[2].Rows.Single().EditCommand.Execute(null);
+
+        Assert.True(page.Editor.IsOpen);
+        Assert.False(page.ShowList);
+        Assert.Equal("Run 20 km", page.Editor.Title);
     }
 
     private GoalsViewModel Page() => new(planner.Goals, planner.Tasks, planner.Settings, planner.Strings, planner.Time, () => motionReduced, action => action());
