@@ -25,7 +25,26 @@ export interface GoalItem {
 export interface GoalEntryItem {
   amount: number;
   deleted: boolean;
+  /** When it was logged, so the quick log can repeat the latest. */
+  createdAt?: string;
 }
+
+/** Where a goal stands against the share of its period gone by, in the order a rung sorts by. */
+export type GoalPace = "behind" | "on_track" | "hit" | "dropped";
+
+export interface GoalStanding {
+  pace: GoalPace;
+  /** What a goal counted by tasks or a number that is behind is missing, rounded up. */
+  behind: number | null;
+}
+
+const PACE_ORDER: Record<GoalPace, number> = { behind: 0, on_track: 1, hit: 2, dropped: 3 };
+
+/** How far under the share of its period gone by a goal can be and still be on track. */
+export const PACE_SLACK = 0.05;
+
+/** The share of its period gone by after which an open done-or-not goal needs you. */
+export const DUE_SOON = 0.7;
 
 export interface GoalProgress {
   value: number;
@@ -127,4 +146,76 @@ export function goalCopies(
       parentId: kept ? parent!.id : null,
     };
   });
+}
+
+/** The share of the `horizon` period starting on `start` gone by before `today`: 0 before it starts, 1 after it ends. */
+export function elapsed(horizon: GoalHorizon, start: Day, today: Day): number {
+  const length = toEpochDay(periodEnd(horizon, start)) - toEpochDay(start) + 1;
+  const gone = Math.min(length, Math.max(0, toEpochDay(today) - toEpochDay(start)));
+  return gone / length;
+}
+
+/**
+ * Where `goal` stands on `today` with its `progress`: dropped, hit, behind or on track. A goal counted
+ * by tasks or a number is on track while its fraction is within PACE_SLACK of the share of its period
+ * gone by, and otherwise behind by what is missing to it, rounded up. A done-or-not goal, or one with
+ * nothing to count, is behind once DUE_SOON of its period is gone.
+ */
+export function goalStanding(
+  goal: Pick<GoalItem, "horizon" | "periodStart" | "mode" | "status">,
+  progress: GoalProgress,
+  today: Day,
+): GoalStanding {
+  if (goal.status === "dropped") return { pace: "dropped", behind: null };
+  if (progress.hit) return { pace: "hit", behind: null };
+  const gone = elapsed(goal.horizon, goal.periodStart, today);
+  if (goal.mode === "done" || progress.target <= 0) {
+    return { pace: gone >= DUE_SOON ? "behind" : "on_track", behind: null };
+  }
+  if (progress.fraction + PACE_SLACK >= gone) return { pace: "on_track", behind: null };
+  return { pace: "behind", behind: Math.ceil(gone * progress.target - progress.value - 1e-9) };
+}
+
+/** `items` for a rung: the ones behind first, then on track, hit and dropped, each in its own order. */
+export function byPace<T>(items: T[], pace: (item: T) => GoalPace): T[] {
+  return [...items].sort((a, b) => PACE_ORDER[pace(a)] - PACE_ORDER[pace(b)]);
+}
+
+/**
+ * What lights up when the goal `id` is picked: it, every goal it feeds up the cascade and every goal
+ * that feeds it, however deep. Empty when `goals` has no such goal.
+ */
+export function goalChain(goals: Pick<GoalItem, "id" | "parentId">[], id: string): Set<string> {
+  const byId = new Map(goals.map((goal) => [goal.id, goal]));
+  const lit = new Set<string>();
+  if (!byId.has(id)) return lit;
+  lit.add(id);
+  let up = byId.get(id)!.parentId;
+  while (up !== null && byId.has(up) && !lit.has(up)) {
+    lit.add(up);
+    up = byId.get(up)!.parentId;
+  }
+  const seen = new Set([id]);
+  const down = [id];
+  while (down.length > 0) {
+    const parent = down.shift()!;
+    for (const child of goals) {
+      if (child.parentId === parent && !seen.has(child.id)) {
+        seen.add(child.id);
+        lit.add(child.id);
+        down.push(child.id);
+      }
+    }
+  }
+  return lit;
+}
+
+/** What the quick log adds on a numeric goal: the latest positive amount logged by hand, or null. */
+export function quickAmount(entries: GoalEntryItem[]): number | null {
+  let latest: GoalEntryItem | null = null;
+  for (const entry of entries) {
+    if (entry.deleted || entry.amount <= 0) continue;
+    if (latest === null || (entry.createdAt ?? "") > (latest.createdAt ?? "")) latest = entry;
+  }
+  return latest?.amount ?? null;
 }

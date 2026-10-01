@@ -329,12 +329,72 @@ public sealed class PageSnapshots
         var page = new GoalsPage(goals);
         Save(page, folder, "goals-by-period", new Size(852, 1100));
 
-        goals.ToggleTreeCommand.Execute(null);
-        Save(page, folder, "goals-tree", new Size(852, 672));
-
-        goals.ToggleTreeCommand.Execute(null);
         goals.Edit(planner.Goals.Find(month.Id)!);
         Save(page, folder, "goals-editor", new Size(852, 760));
+    });
+
+    // The redesign: the horizon rings, the four columns of compact cards, and next week, in a dark and a
+    // light theme; then with a chain lit and with one ring's column shown. A new page per look
+    // (docs/pitfalls.md).
+    [Fact(Explicit = true)]
+    public void GoalsRingsAndLadder() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        var monday = new DateOnly(2026, 9, 14);
+        var run = planner.Goals.Add(new GoalDraft("Run 1 000 km in 2026", GoalHorizon.Year, Today, GoalRules.ModeNumber, Emoji: "\U0001F3C3", Target: 1000, Unit: "km"))!;
+        planner.Goals.LogAmount(run.Id, new DateOnly(2026, 8, 30), 628);
+        planner.Time.Advance(TimeSpan.FromSeconds(1));
+        planner.Goals.LogAmount(run.Id, new DateOnly(2026, 9, 16), 12);
+        var ship = planner.Goals.Add(new GoalDraft("Ship GoalMaker 2.0", GoalHorizon.Year, Today, GoalRules.ModeTasks, Emoji: "\U0001F680"))!;
+        var read = planner.Goals.Add(new GoalDraft("Read 24 books", GoalHorizon.Year, Today, GoalRules.ModeNumber, Emoji: "\U0001F4DA", Target: 24, Unit: "books"))!;
+        planner.Goals.LogAmount(read.Id, new DateOnly(2026, 9, 1), 16);
+        planner.Time.Advance(TimeSpan.FromSeconds(1));
+        planner.Goals.LogAmount(read.Id, new DateOnly(2026, 9, 12), 1);
+        var month = planner.Goals.Add(new GoalDraft("Run 100 km in September", GoalHorizon.Month, Today, GoalRules.ModeNumber, ParentId: run.Id, Target: 100, Unit: "km"))!;
+        planner.Goals.LogAmount(month.Id, new DateOnly(2026, 9, 10), 41);
+        var milestone = planner.Goals.Add(new GoalDraft("Finish M8: Wants and Tally", GoalHorizon.Month, Today, GoalRules.ModeTasks, ParentId: ship.Id))!;
+        planner.Goals.Add(new GoalDraft("Pass the Algorithms midterm", GoalHorizon.Month, Today, Emoji: "\U0001F393"));
+        var week = planner.Goals.Add(new GoalDraft("Run 25 km", GoalHorizon.Week, monday, GoalRules.ModeNumber, ParentId: month.Id, Target: 25, Unit: "km"))!;
+        planner.Goals.LogAmount(week.Id, monday.AddDays(1), 6);
+        planner.Time.Advance(TimeSpan.FromSeconds(1));
+        planner.Goals.LogAmount(week.Id, monday.AddDays(3), 5);
+        var close = planner.Goals.Add(new GoalDraft("Close the Tally milestone", GoalHorizon.Week, monday, GoalRules.ModeTasks, ParentId: milestone.Id))!;
+        var call = planner.Goals.Add(new GoalDraft("Call grandma", GoalHorizon.Week, monday, Emoji: "☎️"))!;
+        planner.Goals.SetStatus(call.Id, GoalRules.Done);
+        planner.Goals.Add(new GoalDraft("Write the rule editor", GoalHorizon.Day, Today, GoalRules.ModeTasks, ParentId: close.Id));
+        planner.Goals.Add(new GoalDraft("Run 6 km", GoalHorizon.Day, Today, GoalRules.ModeNumber, ParentId: week.Id, Emoji: "\U0001F45F", Target: 6, Unit: "km"));
+        foreach (var (title, goal, done) in new[]
+        {
+            ("Rule editor layout", close, true), ("Rule matching", close, true), ("Rule tests", close, false), ("Tally docs", close, false),
+            ("Wants list", milestone, true), ("Wants cooldown", milestone, true), ("Tally stats", milestone, false),
+            ("Release notes", ship, true), ("Sync fix", ship, true), ("Widgets", ship, false),
+        })
+        {
+            Add(planner, title, Today);
+            var task = planner.Task(title);
+            planner.Tasks.SetGoal(task.Id, goal.Id);
+            if (done)
+            {
+                planner.Tasks.SetDone(task.Id, true);
+            }
+        }
+
+        using var theme = Theme(planner);
+        GoalsPage Look(string themeId, GoalMaker.Core.Settings.ThemeMode mode, Action<GoalsViewModel>? focus = null)
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = themeId, Mode = mode });
+            var goals = new GoalsViewModel(planner.Goals, planner.Tasks, planner.Settings, strings, planner.Time, () => true, action => action());
+            focus?.Invoke(goals);
+            return new GoalsPage(goals);
+        }
+
+        var size = new Size(1100, 1040);
+        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Dark), folder, "goals-track-dark", size);
+        Save(Look("electric", GoalMaker.Core.Settings.ThemeMode.Light), folder, "goals-electric-light", size);
+        Save(Look("night", GoalMaker.Core.Settings.ThemeMode.Dark, goals => goals.Pick(month.Id)), folder, "goals-night-dark-chain", size);
+        Save(Look("sunrise", GoalMaker.Core.Settings.ThemeMode.Light, goals => goals.ToggleFilter(GoalHorizon.Week)), folder, "goals-sunrise-light-week", size);
+        Save(Look("track", GoalMaker.Core.Settings.ThemeMode.Light, goals => goals.Pick(week.Id)), folder, "goals-track-light-chain", size);
     });
 
     [Fact(Explicit = true)]

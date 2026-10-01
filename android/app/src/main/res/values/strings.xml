@@ -428,9 +428,6 @@
     <string name="goals_tomorrow">Tomorrow</string>
     <string name="goals_section">%1$s · %2$s</string>
     <string name="goals_range">%1$s to %2$s</string>
-    <string name="goals_show_tree">Show the goals as a tree</string>
-    <string name="goals_show_periods">Show the goals by period</string>
-    <string name="goals_tree_empty">No goals yet. Add one under a period.</string>
     <string name="goals_add">Add a goal</string>
     <string name="goals_copy_week">Copy last week\'s goals</string>
     <string name="goals_copy_month">Copy last month\'s goals</string>
@@ -450,7 +447,7 @@
     <string name="goals_mode_number">A number</string>
     <string name="goals_target">Target</string>
     <string name="goals_unit">Unit (optional)</string>
-    <string name="goals_parent">Serves</string>
+    <string name="goals_parent">Feeds</string>
     <string name="goals_no_parent">No bigger goal</string>
     <string name="goals_invalid">Give it a name, and a number goal a target above zero.</string>
     <string name="goals_save">Save</string>
@@ -476,7 +473,56 @@
     </plurals>
     <string name="goals_amount">%1$s of %2$s</string>
     <string name="goals_amount_unit">%1$s of %2$s %3$s</string>
-    <string name="goals_serves">Serves %1$s</string>
+    <string name="goals_feeds">Feeds %1$s</string>
+    <string name="goals_edit_short">Edit</string>
+    <string name="goals_ring_year">Year</string>
+    <string name="goals_ring_month">Month</string>
+    <string name="goals_ring_week">Week</string>
+    <string name="goals_ring_day">Today</string>
+    <string name="goals_ring_hit">%1$d of %2$d hit</string>
+    <string name="goals_ring_description">%1$s, %2$s done, %3$s</string>
+    <string name="goals_ring_shown">Showing only this one</string>
+    <string name="goals_ring_all">Showing every horizon</string>
+    <string name="goals_badge_year">Y</string>
+    <string name="goals_badge_month">M</string>
+    <string name="goals_badge_week">W</string>
+    <string name="goals_badge_day">D</string>
+    <string name="goals_day_of">Day %1$d of %2$d</string>
+    <string name="goals_year_gone">%1$s of the year gone</string>
+    <string name="goals_rung_line">%1$s · %2$s</string>
+    <string name="goals_hint">Tap a goal to light up what it feeds and what feeds it.</string>
+    <plurals name="goals_need_you">
+        <item quantity="one">%1$d needs you.</item>
+        <item quantity="other">%1$d need you.</item>
+    </plurals>
+    <string name="goals_chain_of">The chain of %1$s</string>
+    <string name="goals_chain_clear">Clear</string>
+    <string name="goals_pick_action">Light up its chain</string>
+    <string name="goals_unpick_action">Put its chain out</string>
+    <string name="goals_in_chain">In the lit chain</string>
+    <string name="goals_pace_on_track">On track</string>
+    <string name="goals_pace_hit">Hit</string>
+    <string name="goals_pace_needs_you">Needs you</string>
+    <string name="goals_pace_dropped">Dropped</string>
+    <string name="goals_pace_behind">Behind by %1$s</string>
+    <string name="goals_pace_behind_unit">Behind by %1$s %2$s</string>
+    <plurals name="goals_pace_behind_tasks">
+        <item quantity="one">Behind by %1$d task</item>
+        <item quantity="other">Behind by %1$d tasks</item>
+    </plurals>
+    <string name="goals_of">of %1$s</string>
+    <string name="goals_of_unit">of %1$s %2$s</string>
+    <plurals name="goals_of_tasks">
+        <item quantity="one">of %1$d task</item>
+        <item quantity="other">of %1$d tasks</item>
+    </plurals>
+    <string name="goals_quick">+%1$s</string>
+    <string name="goals_quick_unit">+%1$s %2$s</string>
+    <string name="goals_quick_description">Log %1$s on %2$s</string>
+    <string name="goals_log_short">Log</string>
+    <string name="goals_log_on">Log an amount on %1$s</string>
+    <string name="goals_next_empty">Nothing planned for next week yet.</string>
+    <string name="goals_copy_this_week">Copy this week\'s goals</string>
     <plurals name="goals_week_count">
         <item quantity="one">This week\'s goal, %1$d of %2$d hit</item>
         <item quantity="other">This week\'s goals, %1$d of %2$d hit</item>

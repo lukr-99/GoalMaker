@@ -14,8 +14,18 @@ The period length a goal belongs to: year, month, week or day.
 _Avoid_: Level, scope, timeframe
 
 **Goal cascade**:
-Goals linked child to parent across horizons, each parent in a longer horizon than its child.
-_Avoid_: Hierarchy, tree (in UI copy)
+Goals linked child to parent across horizons, each parent in a longer horizon than its child. In UI
+copy a child goal **feeds** its parent.
+_Avoid_: Hierarchy, tree, serves (in UI copy)
+
+**Pace**:
+Where a goal stands against how much of its period is gone: behind (it "needs you"), on track, hit
+or dropped.
+_Avoid_: Status (that is open, done or dropped)
+
+**Chain**:
+A picked goal, every goal it feeds up the cascade and every goal that feeds it, lit together on the
+Goals page.
 
 **Progress mode**:
 How a goal measures progress: done/not done, linked tasks, or a number with a target.

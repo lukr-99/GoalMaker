@@ -22,7 +22,7 @@ review digest and Tally.
 | `vectors/reminders.json` | Reminder times, quiet hours and snooze ([reminders](../docs/reminders.md)) | `ReminderRulesContractTest` | `ReminderRulesContractTests` |
 | `vectors/reviews.json` | Review periods and ids, the prompt rotation and the reactive prompts ([reviews](../docs/reviews.md)) | `ReviewRulesContractTest`, `PromptRulesContractTest` | `ReviewRulesContractTests`, `PromptRulesContractTests` |
 | `vectors/activity.json` | What an activity log entry did ([activity](../docs/activity.md)) | `ActivityRulesContractTest` | `ActivityRulesContractTests` |
-| `vectors/goals.json` | Goal periods, the cascade, progress and copying ([goals](../docs/goals.md)) | `GoalRulesContractTest` | `GoalRulesContractTests` |
+| `vectors/goals.json` | Goal periods, the cascade, progress, copying, pace and its order, the chain a picked goal lights, and the quick log amount ([goals](../docs/goals.md)) | `GoalRulesContractTest` | `GoalRulesContractTests` |
 | `vectors/habits.json` | Habit cadences, periods, streaks, the heatmap, rings, check-in ids, check-ins toward goals, which habits are due today and on Today, the Habits page's groups, where a habit stands today, the week's dots and Today's all done card ([habits](../docs/habits.md)) | `HabitRulesContractTest` | `HabitRulesContractTests` |
 | `vectors/stats.json` | The stats numbers and the review look back ([stats](../docs/stats.md)) | `StatsRulesContractTest` | `StatsRulesContractTests` |
 | `vectors/projects.json` | Project boards: new items, moves, order ([projects](../docs/projects.md)) | `ProjectRulesContractTest` | `ProjectRulesContractTests` |

@@ -99,6 +99,91 @@ public sealed class GoalRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryPace()
+    {
+        foreach (var testCase in vectors.GetProperty("pace").EnumerateArray())
+        {
+            var goal = testCase.GetProperty("goal");
+            var progress = testCase.GetProperty("progress");
+            var item = new GoalItem("g", "Goal", Horizon(goal), Day(goal, "start"))
+            {
+                Mode = goal.GetProperty("mode").GetString()!,
+                Status = goal.GetProperty("status").GetString()!,
+            };
+            var standing = GoalRules.Standing(
+                item,
+                new GoalProgress(
+                    progress.GetProperty("value").GetDouble(),
+                    progress.GetProperty("target").GetDouble(),
+                    progress.GetProperty("fraction").GetDouble(),
+                    progress.GetProperty("hit").GetBoolean()),
+                Day(testCase, "today"));
+            var expect = testCase.GetProperty("expect");
+            var name = testCase.GetProperty("name").GetString();
+            Assert.True(expect.GetProperty("pace").GetString() == GoalRules.PaceId(standing.Pace), $"{name}: {standing.Pace}");
+            var behind = expect.GetProperty("behind");
+            Assert.True(
+                (behind.ValueKind == JsonValueKind.Null ? (double?)null : behind.GetDouble()) == standing.Behind,
+                $"{name}: behind {standing.Behind}");
+        }
+    }
+
+    [Fact]
+    public void EveryOrder()
+    {
+        foreach (var testCase in vectors.GetProperty("order").EnumerateArray())
+        {
+            var goals = testCase.GetProperty("goals").EnumerateArray()
+                .Select(goal => (Id: goal.GetProperty("id").GetString()!, Pace: Pace(goal.GetProperty("pace").GetString())))
+                .ToList();
+            var expected = testCase.GetProperty("expect").EnumerateArray().Select(id => id.GetString()!);
+            Assert.Equal(expected, GoalRules.ByPace(goals, goal => goal.Pace).Select(goal => goal.Id));
+        }
+    }
+
+    [Fact]
+    public void EveryChain()
+    {
+        foreach (var testCase in vectors.GetProperty("chain").EnumerateArray())
+        {
+            var goals = testCase.GetProperty("goals").EnumerateArray().Select(goal =>
+                new GoalItem(goal.GetProperty("id").GetString()!, "Goal", GoalHorizon.Week, new DateOnly(2026, 9, 28))
+                {
+                    ParentId = goal.GetProperty("parent").GetString(),
+                });
+            var expected = testCase.GetProperty("expect").EnumerateArray().Select(id => id.GetString()!);
+            Assert.Equal(expected, GoalRules.Chain(goals, testCase.GetProperty("picked").GetString()!).Order(StringComparer.Ordinal));
+        }
+    }
+
+    [Fact]
+    public void EveryQuickAmount()
+    {
+        foreach (var testCase in vectors.GetProperty("quick").EnumerateArray())
+        {
+            var entries = testCase.GetProperty("entries").EnumerateArray().Select((entry, index) => new GoalEntryItem(
+                $"e{index}",
+                "g",
+                new DateOnly(2026, 9, 30),
+                entry.GetProperty("amount").GetDouble(),
+                entry.TryGetProperty("deleted", out var deleted) && deleted.GetBoolean(),
+                entry.GetProperty("created").GetString()!));
+            var expect = testCase.GetProperty("expect");
+            Assert.True(
+                (expect.ValueKind == JsonValueKind.Null ? (double?)null : expect.GetDouble()) == GoalRules.QuickAmount(entries),
+                testCase.GetProperty("name").GetString());
+        }
+    }
+
+    private static GoalPace Pace(string? id) => id switch
+    {
+        "behind" => GoalPace.Behind,
+        "on_track" => GoalPace.OnTrack,
+        "hit" => GoalPace.Hit,
+        _ => GoalPace.Dropped,
+    };
+
     private static GoalHorizon Horizon(JsonElement element) => GoalRules.HorizonOf(element.GetProperty("horizon").GetString())!.Value;
 
     private static DateOnly Day(JsonElement element, string name) =>

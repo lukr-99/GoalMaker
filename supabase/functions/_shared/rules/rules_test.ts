@@ -3,12 +3,17 @@
 import { assert, assertEquals } from "jsr:@std/assert@1.0.13";
 import { searchArchive } from "./archiveRules.ts";
 import {
+  byPace,
   canServe,
+  goalChain,
   goalCopies,
   type GoalItem,
+  type GoalPace,
   goalProgress,
+  goalStanding,
   periodEnd,
   periodStart as goalPeriodStart,
+  quickAmount,
 } from "./goals.ts";
 import {
   allDone,
@@ -295,6 +300,42 @@ Deno.test("goals.json: periods, parents, progress and copies", async () => {
       vector.expect,
       vector.name,
     );
+  }
+});
+
+Deno.test("goals.json: pace, order, chain and the quick log", async () => {
+  const file = await vectors("goals.json");
+  for (const vector of file.pace) {
+    const standing = goalStanding(
+      {
+        horizon: vector.goal.horizon,
+        periodStart: vector.goal.start,
+        mode: vector.goal.mode,
+        status: vector.goal.status,
+      },
+      vector.progress,
+      vector.today,
+    );
+    assertEquals(standing, vector.expect, vector.name);
+  }
+  for (const vector of file.order) {
+    assertEquals(
+      byPace(vector.goals, (goal: { pace: GoalPace }) => goal.pace).map((goal: Json) => goal.id),
+      vector.expect,
+      vector.name,
+    );
+  }
+  for (const vector of file.chain) {
+    const goals = vector.goals.map((goal: Json) => ({ id: goal.id, parentId: goal.parent }));
+    assertEquals([...goalChain(goals, vector.picked)].sort(), vector.expect, vector.name);
+  }
+  for (const vector of file.quick) {
+    const entries = vector.entries.map((entry: Json) => ({
+      amount: entry.amount,
+      deleted: entry.deleted ?? false,
+      createdAt: entry.created,
+    }));
+    assertEquals(quickAmount(entries), vector.expect, vector.name);
   }
 });
 

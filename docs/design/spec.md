@@ -126,6 +126,27 @@ the phone behind a Tasks / Habits switch under the date, on Windows in a panel b
 them where the window is narrow). A limit is never counted as left, and once every habit is done a
 short card on the hero colors says so.
 
+### Goals
+
+The owner's pick from the habits, goals and add prototypes (2026-10-01): the horizon rings on top,
+then the ladder from the year down to today, each goal as a card ([goals](../goals.md#on-screen)).
+
+- **Rings:** four rings (year, month, week, today) in the accent with the percentage inside in the
+  number style, the horizon's name and "1 of 3 hit" under it. The ring that filters the page sits on
+  a surface tile with an accent edge.
+- **Rungs:** a small accent badge with the horizon's letter, the period's dates in the strong body
+  style and a muted line ("1 of 3 hit · Day 5 of 7"). The phone draws a rail down the left with a
+  tick to each card; the PC sets the four rungs side by side as columns.
+- **Card:** a surface card with the theme's card corners: a small ring (or the box for a done-or-not
+  goal), the title in the strong body style, a muted "Feeds ..." line, the big number in the number
+  style and the accent with "of 25 km" beside it, a bar in the accent over a faint track, and a pace
+  pill: neutral when on track, a faint danger when behind, the full accent with onAccent text on a
+  hit. The quick log is a tonal pill ("+5 km"). The PC's cards are compact (a 20 px number, a 6 px
+  bar).
+- **Chain:** while a chain is lit, the other cards fade to about a third and the chain's cards get a
+  2 px accent edge (3 px on the picked one). A ring's filter hides the other rungs on the phone and
+  fades the other columns to about a third on the PC.
+
 ### Navigation (ADR 0014, from M8)
 
 **Phone.** The bottom bar has five tabs: four places the owner pins (Today, Tomorrow, Inbox and

@@ -9,10 +9,11 @@ using GoalMaker.Core.Settings;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The Goals page (docs/goals.md, spec stories 27 to 35): this year's, month's, week's and today's
-/// goals with their rings, next week's for planning ahead, or all of them as the cascade. Goals are
-/// added and edited in <see cref="Editor"/> and amounts are logged in the log panel. A shown goal that
-/// becomes a hit raises <see cref="Celebrate"/>, unless motion is reduced.
+/// The Goals page (docs/goals.md, spec stories 27 to 35): the horizon rings on top, then the ladder as
+/// four columns from this year down to today with each goal as a compact card, then next week for
+/// planning ahead. A ring shows only its horizon (the other columns fade); clicking a card lights what
+/// it feeds and what feeds it. Goals are added and edited in <see cref="Editor"/> and amounts are logged
+/// in the log panel. A shown goal that becomes a hit raises <see cref="Celebrate"/>, unless motion is reduced.
 /// </summary>
 public sealed partial class GoalsViewModel : ObservableObject
 {
@@ -25,13 +26,18 @@ public sealed partial class GoalsViewModel : ObservableObject
     private readonly Func<bool> motionReduced;
     private HashSet<string>? hits;
     private string? loggingId;
+    private IReadOnlyList<GoalItem> open = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowPeriods))]
-    private bool showTree;
+    private GoalHorizon? filter;
 
     [ObservableProperty]
-    private bool isTreeEmpty;
+    [NotifyPropertyChangedFor(nameof(HasPick), nameof(HintText))]
+    private GoalRowViewModel? picked;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HintText))]
+    private int behind;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowList))]
@@ -88,12 +94,26 @@ public sealed partial class GoalsViewModel : ObservableObject
 
     public GoalEditorViewModel Editor { get; }
 
+    /// <summary>This year, month, week and today, then next week.</summary>
     public ObservableCollection<GoalSectionViewModel> Sections { get; } = [];
 
-    /// <summary>The shown goals, each under the goal it serves when that one is shown too.</summary>
-    public ObservableCollection<GoalRowViewModel> Tree { get; } = [];
+    /// <summary>The ladder's columns: this year, month, week and today.</summary>
+    public ObservableCollection<GoalSectionViewModel> Lanes { get; } = [];
 
-    public bool ShowPeriods => !ShowTree;
+    /// <summary>The dashboard: one ring per column.</summary>
+    public ObservableCollection<HorizonRingViewModel> Rings { get; } = [];
+
+    /// <summary>Next week, for planning ahead.</summary>
+    public GoalSectionViewModel? NextWeek => Sections.Count > 4 ? Sections[4] : null;
+
+    public bool HasPick => Picked is not null;
+
+    /// <summary>The line under the rings: how to light a chain and how many goals need you, or the lit chain.</summary>
+    public string HintText => Picked is { } row
+        ? strings.Get("Goals.ChainOf", row.Title)
+        : Behind > 0
+            ? $"{strings.Get("Goals.Hint")} {strings.Get(Behind == 1 ? "Goals.NeedYouOne" : "Goals.NeedYouMany", Behind)}"
+            : strings.Get("Goals.Hint");
 
     /// <summary>The goals show unless the editor or the log panel took the page.</summary>
     public bool ShowList => !Editor.IsOpen && !IsLogging;
@@ -112,14 +132,19 @@ public sealed partial class GoalsViewModel : ObservableObject
         _ => start.ToString("dddd d MMMM", CultureInfo.CurrentCulture),
     };
 
-    /// <summary>This week's goals with where they stand, for Today's folded section.</summary>
+    /// <summary>This week's goals with where they stand, the ones that need you first, for Today's folded section.</summary>
     public static IReadOnlyList<GoalRowViewModel> ThisWeek(GoalList goals, TaskList tasks, DateOnly today, IStrings strings, HabitList? habits = null)
     {
         var week = GoalRules.PeriodStart(GoalHorizon.Week, today);
         var all = goals.All();
         var progress = ProgressOf(goals.Entries(), tasks.All(), habits);
-        return [.. all.Where(goal => goal.Horizon == GoalHorizon.Week && goal.PeriodStart == week && goal.Status != GoalRules.Dropped)
-            .Select(goal => new GoalRowViewModel(goal, progress(goal), null, 0, strings))];
+        var rows = all.Where(goal => goal.Horizon == GoalHorizon.Week && goal.PeriodStart == week && goal.Status != GoalRules.Dropped)
+            .Select(goal =>
+            {
+                var where = progress(goal);
+                return new GoalRowViewModel(goal, where, null, strings, standing: GoalRules.Standing(goal, where, today));
+            });
+        return GoalRules.ByPace(rows, row => row.Pace);
     }
 
     public void Refresh()
@@ -127,9 +152,21 @@ public sealed partial class GoalsViewModel : ObservableObject
         var today = Today();
         var all = goals.All();
         var byId = all.ToDictionary(goal => goal.Id, StringComparer.Ordinal);
-        var progress = ProgressOf(goals.Entries(), tasks.All(), habits);
-        GoalRowViewModel Row(GoalItem goal, int depth = 0) =>
-            new(goal, progress(goal), goal.ParentId is { } id && byId.TryGetValue(id, out var parent) ? parent.Title : null, depth, strings, this);
+        var entries = goals.Entries().ToLookup(entry => entry.GoalId, StringComparer.Ordinal);
+        var progress = ProgressOf(entries.SelectMany(group => group), tasks.All(), habits);
+        GoalRowViewModel Row(GoalItem goal)
+        {
+            var where = progress(goal);
+            return new(
+                goal,
+                where,
+                goal.ParentId is { } id && byId.TryGetValue(id, out var parent) ? parent.Title : null,
+                strings,
+                this,
+                GoalRules.Standing(goal, where, today),
+                GoalRules.QuickAmount(entries[goal.Id]));
+        }
+
         bool Kept(GoalItem goal, GoalHorizon horizon, DateOnly start) =>
             goal.Horizon == horizon && goal.PeriodStart == start && goal.Status != GoalRules.Dropped;
 
@@ -143,43 +180,46 @@ public sealed partial class GoalsViewModel : ObservableObject
             (GoalHorizon.Week, week.AddDays(7), strings.Get("Goals.NextWeek")),
         };
         Sections.Clear();
-        var shown = new List<GoalItem>();
-        foreach (var (horizon, start, name) in periods)
+        Lanes.Clear();
+        Rings.Clear();
+        for (var index = 0; index < periods.Length; index++)
         {
+            var (horizon, start, name) = periods[index];
+            var next = index == periods.Length - 1;
             var own = all.Where(goal => Kept(goal, horizon, start)).ToList();
-            shown.AddRange(own);
-            // A new week, month or year with no goals yet can start from the last one's (story 35).
+            // A new week, month or year with no goals yet can start from the last one's (story 35);
+            // next week's copies this week's.
             var previous = GoalRules.PeriodStart(horizon, start.AddDays(-1));
             var canCopy = own.Count == 0 && horizon != GoalHorizon.Day && all.Any(goal => Kept(goal, horizon, previous));
-            Sections.Add(new GoalSectionViewModel(
+            var rows = GoalRules.ByPace(own.Select(Row), row => row.Pace);
+            var section = new GoalSectionViewModel(
                 horizon,
                 start,
                 Upper(strings.Get("Goals.Section", name, PeriodText(horizon, start, strings))),
-                [.. own.Select(goal => Row(goal))],
+                rows,
                 canCopy,
-                strings.Get("Goals.Copy" + horizon),
+                strings.Get(next ? "Goals.CopyThisWeek" : "Goals.Copy" + horizon),
                 section => Editor.OpenNew(section.Horizon, section.Start),
-                section => goals.CopyPrevious(section.Horizon, section.Start)));
-        }
-
-        var shownIds = shown.Select(goal => goal.Id).ToHashSet(StringComparer.Ordinal);
-        var children = shown.Where(goal => goal.ParentId is { } id && shownIds.Contains(id)).ToLookup(goal => goal.ParentId!, StringComparer.Ordinal);
-        Tree.Clear();
-        void Walk(GoalItem goal, int depth)
-        {
-            Tree.Add(Row(goal, depth));
-            foreach (var child in children[goal.Id])
+                section => goals.CopyPrevious(section.Horizon, section.Start))
             {
-                Walk(child, depth + 1);
+                Badge = strings.Get("Goals.Badge" + horizon),
+                Title = horizon == GoalHorizon.Month ? start.ToString("MMMM", CultureInfo.CurrentCulture) : PeriodText(horizon, start, strings),
+                Line = strings.Get("Goals.LaneLine", strings.Get("Goals.RingHit", rows.Count(row => row.IsHit), rows.Count), Gone(horizon, start, today)),
+            };
+            Sections.Add(section);
+            if (!next)
+            {
+                Lanes.Add(section);
+                Rings.Add(new HorizonRingViewModel(section, strings, ToggleFilter));
             }
         }
 
-        foreach (var root in shown.Where(goal => goal.ParentId is not { } id || !shownIds.Contains(id)))
-        {
-            Walk(root, 0);
-        }
-
-        IsTreeEmpty = Tree.Count == 0;
+        OnPropertyChanged(nameof(NextWeek));
+        open = [.. all.Where(goal => goal.Status != GoalRules.Dropped)];
+        Behind = Lanes.SelectMany(lane => lane.Rows).Count(row => row.Pace == GoalPace.Behind);
+        var pickedId = Picked?.Id;
+        Picked = pickedId is null ? null : Sections.SelectMany(section => section.Rows).FirstOrDefault(row => row.Id == pickedId);
+        ApplyFocus();
 
         // Confetti for a goal that became a hit since the last look (design spec, level 3).
         var nowHits = Sections.SelectMany(section => section.Rows).Where(row => row.IsHit).Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
@@ -191,11 +231,46 @@ public sealed partial class GoalsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Shows only <paramref name="horizon"/>'s column, or every column when it was already the one shown.</summary>
+    public void ToggleFilter(GoalHorizon horizon)
+    {
+        Filter = Filter == horizon ? null : horizon;
+        ApplyFocus();
+    }
+
+    /// <summary>Lights the chain of the goal <paramref name="id"/>, or puts it out when it was already picked.</summary>
+    public void Pick(string id)
+    {
+        Picked = Picked?.Id == id ? null : Sections.SelectMany(section => section.Rows).FirstOrDefault(row => row.Id == id);
+        ApplyFocus();
+    }
+
     internal void Edit(GoalItem goal) => Editor.OpenEdit(goal);
 
     internal void SetStatus(string id, string status) => goals.SetStatus(id, status);
 
     internal void Delete(string id) => goals.Delete(id);
+
+    /// <summary>
+    /// The card's quick log: a numeric goal gets its latest amount again; with nothing logged yet the log
+    /// panel asks for one.
+    /// </summary>
+    internal void QuickLog(GoalRowViewModel row)
+    {
+        if (row.Goal.Mode != GoalRules.ModeNumber)
+        {
+            return;
+        }
+
+        if (row.QuickAmount is { } amount)
+        {
+            goals.LogAmount(row.Id, Today(), amount);
+        }
+        else
+        {
+            StartLog(row.Goal);
+        }
+    }
 
     internal void StartLog(GoalItem goal)
     {
@@ -206,8 +281,13 @@ public sealed partial class GoalsViewModel : ObservableObject
         IsLogging = true;
     }
 
+    /// <summary>Puts the lit chain out.</summary>
     [RelayCommand]
-    private void ToggleTree() => ShowTree = !ShowTree;
+    private void ClearPick()
+    {
+        Picked = null;
+        ApplyFocus();
+    }
 
     private bool CanLogAmount() => GoalEditorViewModel.ParseAmount(LogText) is > 0;
 
@@ -231,7 +311,42 @@ public sealed partial class GoalsViewModel : ObservableObject
         IsLogging = false;
     }
 
+    // Fades the columns a ring doesn't show, and the cards outside the lit chain.
+    private void ApplyFocus()
+    {
+        foreach (var ring in Rings)
+        {
+            ring.IsShown = ring.Horizon == Filter;
+        }
+
+        foreach (var section in Sections)
+        {
+            section.IsDimmed = Filter is { } only && section.Horizon != only;
+        }
+
+        var chain = Picked is { } row ? GoalRules.Chain(open, row.Id) : null;
+        foreach (var card in Sections.SelectMany(section => section.Rows))
+        {
+            card.IsPicked = card.Id == Picked?.Id;
+            card.IsLit = chain?.Contains(card.Id) == true;
+            card.IsDimmed = chain is not null && !card.IsLit;
+        }
+    }
+
     private DateOnly Today() => PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
+
+    // How much of a column's period is gone: "75% of the year gone", "Day 5 of 7", "Today".
+    private string Gone(GoalHorizon horizon, DateOnly start, DateOnly today)
+    {
+        var length = GoalRules.PeriodEnd(horizon, start).DayNumber - start.DayNumber + 1;
+        var day = Math.Clamp(today.DayNumber - start.DayNumber + 1, 1, length);
+        return horizon switch
+        {
+            GoalHorizon.Year => strings.Get("Goals.YearGone", GoalRules.Elapsed(horizon, start, today).ToString("P0", CultureInfo.CurrentCulture)),
+            GoalHorizon.Day => strings.Get("Goals.ThisDay"),
+            _ => strings.Get("Goals.DayOf", day, length),
+        };
+    }
 
     // Progress from the tasks that serve a goal, the amounts logged on it, and the check-ins of habits
     // serving it in its unit (story 32, docs/habits.md).

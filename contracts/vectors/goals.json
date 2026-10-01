@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Goals (docs/goals.md, supabase/migrations/0009_goals.sql). 'periods': the first and last day of the period of 'horizon' that 'day' falls in (weeks start on Monday). 'parents': whether a goal of 'parent' can serve as the parent of a goal of 'child': the parent's horizon must be longer (year > month > week > day) and its period must overlap the child's. 'progress': a goal's progress from its mode, its status, the tasks that serve it (not deleted; dropped ones don't count) and the amounts logged on it (deleted ones don't count): 'done' mode is 1 of 1 when the goal is done; 'tasks' is the tasks done of those that count; 'number' is the sum of the amounts against the target. A done goal is hit with its fraction at 1; a dropped goal is never hit; otherwise hit means the fraction reached 1. 'fraction' is value / target, at most 1 and 0 when there is nothing to count. 'copy': last period's goals copied into the next period: every goal that wasn't dropped, open again, keeping its parent only when the parent's period overlaps the new one. 2026-09-18 is a Friday.",
+  "description": "Goals (docs/goals.md, supabase/migrations/0009_goals.sql). 'periods': the first and last day of the period of 'horizon' that 'day' falls in (weeks start on Monday). 'parents': whether a goal of 'parent' can serve as the parent of a goal of 'child': the parent's horizon must be longer (year > month > week > day) and its period must overlap the child's. 'progress': a goal's progress from its mode, its status, the tasks that serve it (not deleted; dropped ones don't count) and the amounts logged on it (deleted ones don't count): 'done' mode is 1 of 1 when the goal is done; 'tasks' is the tasks done of those that count; 'number' is the sum of the amounts against the target. A done goal is hit with its fraction at 1; a dropped goal is never hit; otherwise hit means the fraction reached 1. 'fraction' is value / target, at most 1 and 0 when there is nothing to count. 'copy': last period's goals copied into the next period: every goal that wasn't dropped, open again, keeping its parent only when the parent's period overlaps the new one. 2026-09-18 is a Friday. 'pace': where an open goal stands against the share of its period gone by, the days before 'today' over the period's days (0 before it starts, 1 after it ends): dropped, hit, behind or on track. A goal counted by tasks or a number is on track while its fraction plus 0.05 reaches that share, and otherwise behind by the amount still missing to it, rounded up ('behind'). A done-or-not goal, or one with nothing to count, is behind once 0.7 of its period is gone, with no amount. 2026-10-01 is a Thursday. 'order': goals sorted for a rung, the ones behind first, then on track, then hit, then dropped, keeping their order within each. 'chain': what lights up when a goal is picked: the goal, every goal it feeds up the cascade and every goal that feeds it, however deep; a missing parent ends the climb and a loop is walked once. 'quick': the amount the quick log adds on a numeric goal: the latest positive amount logged by hand (by 'created', deleted ones skipped), or null when there is none.",
   "periods": [
     { "horizon": "year", "day": "2026-09-18", "start": "2026-01-01", "end": "2026-12-31" },
     { "horizon": "month", "day": "2026-09-18", "start": "2026-09-01", "end": "2026-09-30" },
@@ -108,6 +108,216 @@
       "goals": [{ "id": "g1", "title": "Run 80 km", "status": "open", "parent": "gone" }],
       "parents": [],
       "expect": [{ "title": "Run 80 km", "parent": null }]
+    }
+  ],
+  "pace": [
+    {
+      "name": "a dropped goal is dropped",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "number", "status": "dropped" },
+      "progress": { "value": 0, "target": 25, "fraction": 0, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "dropped", "behind": null }
+    },
+    {
+      "name": "a goal that reached its target is hit",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "number", "status": "open" },
+      "progress": { "value": 25, "target": 25, "fraction": 1, "hit": true },
+      "today": "2026-10-01",
+      "expect": { "pace": "hit", "behind": null }
+    },
+    {
+      "name": "a done-or-not goal marked done is hit",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "done", "status": "done" },
+      "progress": { "value": 1, "target": 1, "fraction": 1, "hit": true },
+      "today": "2026-10-01",
+      "expect": { "pace": "hit", "behind": null }
+    },
+    {
+      "name": "ahead of the days gone is on track",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "number", "status": "open" },
+      "progress": { "value": 17, "target": 25, "fraction": 0.68, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "behind the days gone says by how much",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "number", "status": "open" },
+      "progress": { "value": 5, "target": 25, "fraction": 0.2, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "behind", "behind": 6 }
+    },
+    {
+      "name": "a little under the days gone is still on track",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "number", "status": "open" },
+      "progress": { "value": 10, "target": 25, "fraction": 0.4, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "on the first day nothing is expected yet",
+      "goal": { "horizon": "month", "start": "2026-10-01", "mode": "number", "status": "open" },
+      "progress": { "value": 0, "target": 100, "fraction": 0, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "a year on track",
+      "goal": { "horizon": "year", "start": "2026-01-01", "mode": "number", "status": "open" },
+      "progress": { "value": 712, "target": 1000, "fraction": 0.712, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "a year behind",
+      "goal": { "horizon": "year", "start": "2026-01-01", "mode": "number", "status": "open" },
+      "progress": { "value": 600, "target": 1000, "fraction": 0.6, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "behind", "behind": 148 }
+    },
+    {
+      "name": "tasks behind count whole tasks",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "tasks", "status": "open" },
+      "progress": { "value": 1, "target": 5, "fraction": 0.2, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "behind", "behind": 2 }
+    },
+    {
+      "name": "a done-or-not goal early in the week is on track",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "done", "status": "open" },
+      "progress": { "value": 0, "target": 1, "fraction": 0, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "a done-or-not goal on Friday is on track",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "done", "status": "open" },
+      "progress": { "value": 0, "target": 1, "fraction": 0, "hit": false },
+      "today": "2026-10-02",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "a done-or-not goal on Saturday is behind",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "done", "status": "open" },
+      "progress": { "value": 0, "target": 1, "fraction": 0, "hit": false },
+      "today": "2026-10-03",
+      "expect": { "pace": "behind", "behind": null }
+    },
+    {
+      "name": "a goal of tasks with none yet is on track early",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "tasks", "status": "open" },
+      "progress": { "value": 0, "target": 0, "fraction": 0, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "a goal of tasks with none yet is behind on Sunday",
+      "goal": { "horizon": "week", "start": "2026-09-28", "mode": "tasks", "status": "open" },
+      "progress": { "value": 0, "target": 0, "fraction": 0, "hit": false },
+      "today": "2026-10-04",
+      "expect": { "pace": "behind", "behind": null }
+    },
+    {
+      "name": "a period that is over expects everything",
+      "goal": { "horizon": "week", "start": "2026-09-21", "mode": "number", "status": "open" },
+      "progress": { "value": 20, "target": 25, "fraction": 0.8, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "behind", "behind": 5 }
+    },
+    {
+      "name": "next week has not started",
+      "goal": { "horizon": "week", "start": "2026-10-05", "mode": "number", "status": "open" },
+      "progress": { "value": 0, "target": 25, "fraction": 0, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    },
+    {
+      "name": "today's goal expects nothing before the day is over",
+      "goal": { "horizon": "day", "start": "2026-10-01", "mode": "number", "status": "open" },
+      "progress": { "value": 0, "target": 6, "fraction": 0, "hit": false },
+      "today": "2026-10-01",
+      "expect": { "pace": "on_track", "behind": null }
+    }
+  ],
+  "order": [
+    {
+      "name": "behind first, then on track, hit and dropped, each in its own order",
+      "goals": [{ "id": "a", "pace": "hit" }, { "id": "b", "pace": "on_track" }, { "id": "c", "pace": "behind" }, { "id": "d", "pace": "dropped" }, { "id": "e", "pace": "behind" }, { "id": "f", "pace": "on_track" }],
+      "expect": ["c", "e", "b", "f", "a", "d"]
+    },
+    {
+      "name": "nothing to sort",
+      "goals": [],
+      "expect": []
+    }
+  ],
+  "chain": [
+    {
+      "name": "a month lights its year and everything under it",
+      "goals": [{ "id": "y1", "parent": null }, { "id": "y2", "parent": null }, { "id": "m1", "parent": "y1" }, { "id": "m2", "parent": "y2" }, { "id": "w1", "parent": "m1" }, { "id": "w2", "parent": "m1" }, { "id": "d1", "parent": "w1" }, { "id": "d2", "parent": "m2" }, { "id": "w3", "parent": "gone" }],
+      "picked": "m1",
+      "expect": ["d1", "m1", "w1", "w2", "y1"]
+    },
+    {
+      "name": "a day lights every goal it feeds up to the year",
+      "goals": [{ "id": "y1", "parent": null }, { "id": "y2", "parent": null }, { "id": "m1", "parent": "y1" }, { "id": "m2", "parent": "y2" }, { "id": "w1", "parent": "m1" }, { "id": "w2", "parent": "m1" }, { "id": "d1", "parent": "w1" }, { "id": "d2", "parent": "m2" }, { "id": "w3", "parent": "gone" }],
+      "picked": "d1",
+      "expect": ["d1", "m1", "w1", "y1"]
+    },
+    {
+      "name": "a year lights what feeds it, even past a skipped horizon",
+      "goals": [{ "id": "y1", "parent": null }, { "id": "y2", "parent": null }, { "id": "m1", "parent": "y1" }, { "id": "m2", "parent": "y2" }, { "id": "w1", "parent": "m1" }, { "id": "w2", "parent": "m1" }, { "id": "d1", "parent": "w1" }, { "id": "d2", "parent": "m2" }, { "id": "w3", "parent": "gone" }],
+      "picked": "y2",
+      "expect": ["d2", "m2", "y2"]
+    },
+    {
+      "name": "a goal whose parent is gone lights only itself",
+      "goals": [{ "id": "y1", "parent": null }, { "id": "y2", "parent": null }, { "id": "m1", "parent": "y1" }, { "id": "m2", "parent": "y2" }, { "id": "w1", "parent": "m1" }, { "id": "w2", "parent": "m1" }, { "id": "d1", "parent": "w1" }, { "id": "d2", "parent": "m2" }, { "id": "w3", "parent": "gone" }],
+      "picked": "w3",
+      "expect": ["w3"]
+    },
+    {
+      "name": "a goal that isn't there lights nothing",
+      "goals": [{ "id": "y1", "parent": null }, { "id": "y2", "parent": null }, { "id": "m1", "parent": "y1" }, { "id": "m2", "parent": "y2" }, { "id": "w1", "parent": "m1" }, { "id": "w2", "parent": "m1" }, { "id": "d1", "parent": "w1" }, { "id": "d2", "parent": "m2" }, { "id": "w3", "parent": "gone" }],
+      "picked": "x",
+      "expect": []
+    },
+    {
+      "name": "a loop is walked once",
+      "goals": [{ "id": "a", "parent": "b" }, { "id": "b", "parent": "a" }, { "id": "c", "parent": "a" }],
+      "picked": "a",
+      "expect": ["a", "b", "c"]
+    }
+  ],
+  "quick": [
+    {
+      "name": "nothing logged yet",
+      "entries": [],
+      "expect": null
+    },
+    {
+      "name": "the latest amount",
+      "entries": [{ "amount": 5, "created": "2026-09-29T07:00:00.000000Z" }, { "amount": 12.5, "created": "2026-09-30T18:00:00.000000Z" }],
+      "expect": 12.5
+    },
+    {
+      "name": "by when it was logged, not the list's order",
+      "entries": [{ "amount": 7, "created": "2026-09-30T08:00:00.000000Z" }, { "amount": 3, "created": "2026-09-28T08:00:00.000000Z" }],
+      "expect": 7
+    },
+    {
+      "name": "a correction isn't repeated",
+      "entries": [{ "amount": 5, "created": "2026-09-29T07:00:00.000000Z" }, { "amount": -2, "created": "2026-09-30T07:00:00.000000Z" }],
+      "expect": 5
+    },
+    {
+      "name": "a deleted amount is skipped",
+      "entries": [{ "amount": 5, "created": "2026-09-29T07:00:00.000000Z" }, { "amount": 8, "created": "2026-09-30T07:00:00.000000Z", "deleted": true }],
+      "expect": 5
+    },
+    {
+      "name": "only corrections",
+      "entries": [{ "amount": -1, "created": "2026-09-29T07:00:00.000000Z" }],
+      "expect": null
     }
   ]
 }
