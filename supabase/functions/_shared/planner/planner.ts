@@ -133,6 +133,8 @@ export interface HabitFields {
   goal?: string | null;
   startsOn?: Day;
   archived?: boolean;
+  /** false keeps the habit off Today; it is still checked in and counted everywhere else. */
+  showOnToday?: boolean;
 }
 
 /** The settings every planning day is worked out from. */
@@ -173,6 +175,7 @@ export interface Habit extends HabitItem {
   name: string;
   emoji: string | null;
   archived: boolean;
+  showOnToday: boolean;
 }
 
 /** A habit's rest, with the habit it belongs to. */
@@ -716,7 +719,7 @@ export class Planner {
   async habits(): Promise<Habit[]> {
     const rows = await this.db`
       select id::text, name, emoji, cadence, weekdays, times, measure, target, direction, unit,
-             goal_id::text, starts_on::text, archived_at is not null as archived
+             goal_id::text, starts_on::text, archived_at is not null as archived, show_on_today
       from public.habits where deleted_at is null order by position, created_at, id`;
     return rows.map((row) => ({
       id: row.id,
@@ -732,6 +735,7 @@ export class Planner {
       goalId: row.goal_id,
       startsOn: row.starts_on,
       archived: row.archived,
+      showOnToday: row.show_on_today,
       deleted: false,
     }));
   }
@@ -1214,10 +1218,10 @@ export class Planner {
     const id = crypto.randomUUID();
     await this.db`
       insert into public.habits (id, name, emoji, cadence, weekdays, times, measure, target, direction, unit,
-                                 goal_id, starts_on, position)
+                                 goal_id, starts_on, position, show_on_today)
       values (${id}, ${name}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${shape.cadence}, ${shape.weekdays},
               ${shape.times}, ${shape.measure}, ${shape.target}, ${shape.direction}, ${shape.unit},
-              ${goalId}, ${startsOn}, ${position})`;
+              ${goalId}, ${startsOn}, ${position}, ${fields.showOnToday ?? true})`;
     return await this.habit(id);
   }
 
@@ -1243,6 +1247,7 @@ export class Planner {
         cadence = ${shape.cadence}, weekdays = ${shape.weekdays}, times = ${shape.times},
         measure = ${shape.measure}, target = ${shape.target}, direction = ${shape.direction}, unit = ${shape.unit},
         goal_id = ${goalId}, starts_on = ${fields.startsOn ?? habit.startsOn},
+        show_on_today = ${fields.showOnToday ?? habit.showOnToday},
         archived_at = case when ${archived}::boolean then coalesce(archived_at, now()) else null end
       where id = ${id}`;
     return await this.habit(id);

@@ -563,6 +563,36 @@ Deno.test({
         assertEquals(left.n, 0, "a deleted habit takes its check-ins with it");
       });
 
+      await t.step("a habit kept off Today still counts and comes back on Today", async () => {
+        // The steps after this one need the minute's whole budget, like the wants step below.
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const added = await client.tool("add_habit", { name: "Floss", show_on_today: false });
+        assert(!added.isError, added.text);
+        assertStringIncludes(added.text, "not on Today");
+        const flossId = /\(habit id ([0-9a-f-]{36})\)/.exec(added.text)![1];
+        const [row] = await sql`select show_on_today from public.habits where id = ${flossId}`;
+        assertEquals(row.show_on_today, false);
+
+        let today = await client.tool("get_today");
+        assert(!today.text.includes("Floss"), today.text);
+        assertStringIncludes(today.text, "1 more habit is due today but kept off Today");
+        assertStringIncludes((await client.tool("get_habits")).text, "Floss · every day");
+
+        const checked = await client.tool("check_in_habit", { id: flossId });
+        assert(!checked.isError, checked.text);
+        assertStringIncludes(checked.text, "done");
+
+        const back = await client.tool("update_habit", { id: flossId, show_on_today: true });
+        assert(!back.isError, back.text);
+        assert(!back.text.includes("not on Today"), back.text);
+        today = await client.tool("get_today");
+        assertStringIncludes(today.text, "Habits:");
+        assertStringIncludes(today.text, "Floss · every day · done");
+        assert(!today.text.includes("kept off Today"), today.text);
+
+        assert(!(await client.tool("delete_habit", { id: flossId })).isError);
+      });
+
       await t.step("a project is edited and deleted, and its items stay", async () => {
         const board = await client.tool("find_project", { folder: "F:\\Relay" });
         const projectId = /\(project id ([0-9a-f-]{36})\)/.exec(board.text)![1];

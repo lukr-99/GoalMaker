@@ -28,6 +28,10 @@ export interface HabitItem {
   goalId: string | null;
   startsOn: Day;
   deleted: boolean;
+  /** Put away: off Today and the list. Left out means not archived. */
+  archived?: boolean;
+  /** false keeps the habit off Today and its widgets; left out means it shows (migration 0020). */
+  showOnToday?: boolean;
 }
 
 export interface HabitCheckin {
@@ -57,6 +61,20 @@ export function weekdayBit(day: Day): number {
 /** Whether `habit` is due on `day`; weekly and monthly habits are due any day. */
 export function isDue(habit: HabitItem, day: Day): boolean {
   return habit.cadence !== "weekdays" || ((habit.weekdays ?? 0) & weekdayBit(day)) !== 0;
+}
+
+/**
+ * Whether the habit asks something of `today`: not archived, started, due that day and not paused.
+ * A habit kept off Today is still due here, so the Habits page, the Places hub and the counts keep it.
+ */
+export function dueToday(habit: HabitItem, today: Day, pauses: HabitPause[]): boolean {
+  return habit.archived !== true && habit.startsOn <= today && isDue(habit, today) &&
+    !pauses.some((pause) => covers(pause, today, today));
+}
+
+/** Whether Today's ring row and the widgets show the habit: due today and not kept off Today. */
+export function onToday(habit: HabitItem, today: Day, pauses: HabitPause[]): boolean {
+  return habit.showOnToday !== false && dueToday(habit, today, pauses);
 }
 
 /** The first day of the habit's period holding `day`: the day, its week's Monday, or its month's first. */

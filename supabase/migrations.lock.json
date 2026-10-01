@@ -19,6 +19,7 @@
     "0016_wants.sql": "1e5a46446433af535ad50ce8abdf3fdaa802e83e7275272597b85f3ba4761d61",
     "0017_tally.sql": "f6ff08f70ec3e70e9a7646e81f444cb1c7b5c85eb482b98afe0132c5dabedece",
     "0018_board_archive.sql": "096ad0092dfdac12e1285299dc3422646fd1c92350cd4c900271dd54bc33aea6",
-    "0019_assistant.sql": "2b83ea6cb3d23d5215afbf700d4fb102848bea7eeb75b2c8228f4bad8f0c33e9"
+    "0019_assistant.sql": "2b83ea6cb3d23d5215afbf700d4fb102848bea7eeb75b2c8228f4bad8f0c33e9",
+    "0020_habit_show_on_today.sql": "7c64a68057cd041b46d6dc1129e35790b8444d7e747700ac7e3d52774fb75ffd"
   }
 }
