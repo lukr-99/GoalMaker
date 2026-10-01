@@ -41,7 +41,9 @@ export const CHAT_TOOLS = new Set([
   "add_reminder",
   "get_habits",
   "check_in_habit",
+  "add_habit",
   "get_goals",
+  "add_goal",
   "log_goal_amount",
   "get_projects",
   "get_project_board",
@@ -51,6 +53,15 @@ export const CHAT_TOOLS = new Set([
   "add_want",
   "get_activity",
 ]);
+
+/**
+ * The inputs the chat offers for a tool whose full input is long, when the owner's short line covers the
+ * rest (docs/composer.md, "Adding on Wants, Habits and Goals"). A tool not named here offers all of its own.
+ */
+export const CHAT_INPUTS: Record<string, Set<string>> = {
+  add_habit: new Set(["line", "emoji", "direction", "show_on_today"]),
+  add_goal: new Set(["line", "emoji", "parent"]),
+};
 
 /** The connector's tools the chat offers; one that deletes never is, even if listed. */
 export const chatTools: Tool[] = tools.filter((tool) => CHAT_TOOLS.has(tool.name) && !deletes(tool));
@@ -97,11 +108,11 @@ function withDescription(schema: Schema, description: string | undefined): Schem
   return description === undefined ? schema : { ...schema, description };
 }
 
-function objectOf(shape: z.ZodRawShape): Schema {
+function objectOf(shape: z.ZodRawShape, offered?: Set<string>): Schema {
   const properties: Record<string, Schema> = {};
   const required: string[] = [];
   for (const [name, type] of Object.entries(shape)) {
-    if (HIDDEN_INPUTS.has(name)) continue;
+    if (HIDDEN_INPUTS.has(name) || (offered !== undefined && !offered.has(name))) continue;
     properties[name] = schemaOf(type as AnyZod);
     if (!(type as AnyZod).isOptional()) required.push(name);
   }
@@ -110,7 +121,7 @@ function objectOf(shape: z.ZodRawShape): Schema {
 
 /** A tool as a function declaration; a tool without input gets no parameters at all. */
 export function declarationOf(tool: Tool): ToolSpec {
-  const parameters = objectOf(tool.input);
+  const parameters = objectOf(tool.input, CHAT_INPUTS[tool.name]);
   const description = `${tool.title}. ${firstSentence(tool.description)}`;
   return Object.keys(parameters.properties!).length === 0
     ? { name: tool.name, description }

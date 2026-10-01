@@ -1,8 +1,8 @@
 import type { Area, Habit, Reminder, Step, Tag } from "../planner/planner.ts";
 import type { Want } from "../planner/wantList.ts";
 import { type Day, daysBetween, weekday } from "../rules/day.ts";
-import type { GoalItem, GoalProgress } from "../rules/goals.ts";
-import type { HabitPeriodState } from "../rules/habits.ts";
+import type { GoalItem, GoalProgress, GoalStanding } from "../rules/goals.ts";
+import type { HabitStanding } from "../rules/habits.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
 import type { Column, ProjectItem, ProjectMilestone } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
@@ -81,8 +81,18 @@ export function taskLine(
   return `- ${parts.join(" · ")} (id ${task.id})`;
 }
 
-/** A goal with where it stands, the way the goals screen reads out loud. */
-export function goalLine(goal: GoalItem, progress: GoalProgress, period: string): string {
+/** What the Goals screen adds to a goal's line: its pace and the goal it feeds. */
+export interface GoalExtras {
+  standing: GoalStanding;
+  /** The title of the goal it feeds, or null when it stands on its own. */
+  feeds: string | null;
+}
+
+/**
+ * A goal with where it stands, the way the goals screen reads out loud. With `extras`, an open goal
+ * also says its pace (On track, Behind by 6 km, Needs you, Hit) and the goal it feeds.
+ */
+export function goalLine(goal: GoalItem, progress: GoalProgress, period: string, extras?: GoalExtras): string {
   const parts = [`${goal.emoji ? `${goal.emoji} ` : ""}${goal.title}`, `${goal.horizon} of ${period}`];
   if (goal.mode === "number") {
     parts.push(`${round(progress.value)} of ${round(progress.target)}${goal.unit ? ` ${goal.unit}` : ""}`);
@@ -90,34 +100,103 @@ export function goalLine(goal: GoalItem, progress: GoalProgress, period: string)
     parts.push(`${round(progress.value)} of ${round(progress.target)} tasks done`);
   }
   parts.push(goal.status === "open" ? `${Math.round(progress.fraction * 100)}%` : goal.status);
-  if (goal.status === "open" && progress.hit) parts.push("reached, waiting to be marked done");
+  if (extras !== undefined && goal.status === "open") {
+    parts.push(progress.hit ? "Hit, waiting to be marked done" : paceText(goal, extras.standing));
+  } else if (goal.status === "open" && progress.hit) {
+    parts.push("reached, waiting to be marked done");
+  }
+  if (extras?.feeds) parts.push(`feeds ${extras.feeds}`);
   return `- ${parts.join(" · ")} (goal id ${goal.id})`;
 }
 
-/** A habit with what today asks of it and the run it is on. */
-export function habitLine(
-  habit: Habit,
-  state: HabitPeriodState,
-  done: number,
-  streak: number,
-): string {
-  const asks = habit.cadence === "per_week"
-    ? `${habit.times} times a week`
-    : habit.cadence === "per_month"
-    ? `${habit.times} times a month`
-    : habit.cadence === "weekdays"
-    ? "on chosen weekdays"
-    : "every day";
-  const parts = [`${habit.emoji ? `${habit.emoji} ` : ""}${habit.name}`, asks];
-  const limit = habit.direction === "at_most";
-  if (habit.measure !== "check") {
-    const of = limit ? "of at most" : "of";
-    parts.push(`${round(done)} ${of} ${round(habit.target ?? 0)}${habit.unit ? ` ${habit.unit}` : ""} this period`);
-  } else if (limit) {
-    parts.push("not once");
+/** A goal's pace the way its card says it: On track, Behind by 6 km, Behind by 2 tasks, Needs you or Hit. */
+export function paceText(goal: Pick<GoalItem, "mode" | "unit">, standing: GoalStanding): string {
+  switch (standing.pace) {
+    case "hit":
+      return "Hit";
+    case "dropped":
+      return "Dropped";
+    case "on_track":
+      return "On track";
+    case "behind": {
+      if (standing.behind === null) return "Needs you";
+      const by = round(standing.behind);
+      if (goal.mode === "tasks") return `Behind by ${by} ${standing.behind === 1 ? "task" : "tasks"}`;
+      return `Behind by ${by}${goal.unit ? ` ${goal.unit}` : ""}`;
+    }
   }
-  parts.push(state === "met" ? "done" : state === "none" ? "not due" : state);
-  if (streak > 0) parts.push(`streak ${streak}`);
+}
+
+/** What a habit card shows for a day, worked out from the habit's rules (docs/habits.md). */
+export interface HabitView {
+  standing: HabitStanding;
+  /** The day's value: what was checked in on it, 0 with nothing. */
+  value: number;
+  /** For a weekly or monthly habit, the days met so far in its period. */
+  met: number;
+  streak: number;
+  /** The title of the goal it serves, when it serves one. */
+  serves?: string | null;
+}
+
+const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** How often a habit asks: every day, on Mon, Wed, Fri, 3 times a week, 2 times a month. */
+export function cadenceText(habit: Pick<Habit, "cadence" | "times" | "weekdays">): string {
+  switch (habit.cadence) {
+    case "per_week":
+      return `${habit.times} times a week`;
+    case "per_month":
+      return `${habit.times} times a month`;
+    case "weekdays": {
+      const days = DAY_SHORT.filter((_, index) => ((habit.weekdays ?? 0) & (1 << index)) !== 0);
+      return days.length === 0 ? "on chosen weekdays" : `on ${days.join(", ")}`;
+    }
+    default:
+      return "every day";
+  }
+}
+
+/**
+ * Where a habit stands on the day, the way its card says it: the standing (done, left, skipped, paused,
+ * limit, not due today), then the count behind it ("3 of 8 glasses today", "1 of 3 this week",
+ * "1 of at most 2 today").
+ */
+export function standingText(habit: Habit, view: HabitView): string {
+  const unit = habit.unit ? ` ${habit.unit}` : "";
+  switch (view.standing) {
+    case "none":
+      return habit.archived ? "archived" : "not due today";
+    case "paused":
+    case "skipped":
+      return view.standing;
+    case "limit": {
+      if (habit.measure === "check") return view.value >= 1 ? "limit · over the line today" : "limit · none today";
+      const over = view.value > (habit.target ?? 0) ? ", over the line" : "";
+      return `limit · ${round(view.value)} of at most ${round(habit.target ?? 0)}${unit} today${over}`;
+    }
+    default: {
+      if (habit.cadence === "per_week" || habit.cadence === "per_month") {
+        const period = habit.cadence === "per_week" ? "week" : "month";
+        return `${view.standing} · ${view.met} of ${habit.times ?? 1} this ${period}`;
+      }
+      if (habit.measure === "check") return view.standing;
+      return `${view.standing} · ${round(view.value)} of ${round(habit.target ?? 0)}${unit} today`;
+    }
+  }
+}
+
+/** `4-day streak`, `2-week streak`: a streak counts the habit's periods. */
+export function streakText(habit: Pick<Habit, "cadence">, streak: number): string {
+  const period = habit.cadence === "per_week" ? "week" : habit.cadence === "per_month" ? "month" : "day";
+  return `${streak}-${period} streak`;
+}
+
+/** A habit the way its card shows it: how often, where it stands, its streak and the goal it serves. */
+export function habitLine(habit: Habit, view: HabitView): string {
+  const parts = [`${habit.emoji ? `${habit.emoji} ` : ""}${habit.name}`, cadenceText(habit), standingText(habit, view)];
+  if (view.streak > 0) parts.push(streakText(habit, view.streak));
+  if (view.serves) parts.push(`serves ${view.serves}`);
   if (!habit.showOnToday) parts.push("not on Today");
   return `- ${parts.join(" · ")} (habit id ${habit.id})`;
 }
@@ -167,17 +246,31 @@ function section(title: string, tasks: TaskItem[], names: Names, showDay = false
   return tasks.length === 0 ? [] : [`${title}:`, ...tasks.map((task) => taskLine(task, names, { showDay }))];
 }
 
-/** Today's habits as the ring row shows them, and how many due today are kept off Today. */
+/** Today's habits as the cards show them, how many are left, and how many due today are kept off Today. */
 export interface TodayHabits {
   lines: string[];
   keptOff: number;
+  /** The habits on Today still left; a limit is never left (contracts/vectors/habits.json, standings). */
+  left: number;
+  /** Whether Today shows its all done card: none left and at least one done. */
+  allDone: boolean;
+}
+
+/** `1 habit left`, `3 habits left`. */
+export function habitsLeft(left: number): string {
+  return `${left} ${left === 1 ? "habit" : "habits"} left`;
 }
 
 /**
- * Today as the app shows it: top priorities, scheduled, more, and overdue, with the day's count, then
- * the habits on Today's ring row. Habits kept off Today are left out and only counted.
+ * Today as the app shows it: top priorities, scheduled, more, and overdue, with the day's count and the
+ * habits left, then the habits on Today with where each stands. Habits kept off Today are left out and
+ * only counted.
  */
-export function today(lists: PlanningLists, names: Names, habits: TodayHabits = { lines: [], keptOff: 0 }): string {
+export function today(
+  lists: PlanningLists,
+  names: Names,
+  habits: TodayHabits = { lines: [], keptOff: 0, left: 0, allDone: false },
+): string {
   const sections = lists.todaySections;
   const body = [
     ...section("Top priorities", sections.priorities, names),
@@ -189,10 +282,16 @@ export function today(lists: PlanningLists, names: Names, habits: TodayHabits = 
     `${habits.keptOff} more ${habits.keptOff === 1 ? "habit is" : "habits are"} due today but kept off Today; ` +
     "get_habits lists every habit.",
   ];
+  const left = habits.left === 0 ? "" : `, ${habitsLeft(habits.left)}`;
+  const heading = habits.left > 0
+    ? `Habits, ${habitsLeft(habits.left)}:`
+    : habits.allDone
+    ? "Habits, all done:"
+    : "Habits:";
   return [
-    `Today is ${longDay(lists.today)}: ${lists.summary.done} of ${lists.summary.total} done.`,
+    `Today is ${longDay(lists.today)}: ${lists.summary.done} of ${lists.summary.total} done${left}.`,
     ...(body.length === 0 ? ["Nothing open is planned for today."] : body),
-    ...(habits.lines.length === 0 ? [] : ["Habits:", ...habits.lines]),
+    ...(habits.lines.length === 0 ? [] : [heading, ...habits.lines]),
     ...keptOff,
   ].join("\n");
 }

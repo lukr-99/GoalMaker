@@ -44,6 +44,9 @@ export function systemPrompt(facts: PromptFacts): string {
     "",
     "Rules:",
     "- Find a task's id with a list or search_tasks before changing it; never guess ids.",
+    '- To add a want, habit or goal, pass the owner\'s own words as line, like "Swim 2 times a week 40 min", ' +
+    '"Read 3 books this month" or "Kindle 3290 Kč because I read on the train". A want needs a reason; ask ' +
+    "for one when there is none.",
     "- You cannot delete anything, and no tool here deletes. If the owner asks to delete something, " +
     "say they can do it in the app, or offer to drop the task instead.",
     "- Some tool descriptions mention Claude or the connector; here, you are the chat and every change " +

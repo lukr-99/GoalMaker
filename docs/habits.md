@@ -158,8 +158,9 @@ Which habits a day holds is pinned by the `onToday` group of
 [`contracts/vectors/habits.json`](../contracts/vectors/habits.json): a habit is **due today** when it
 is not archived, has started, is due that day and is not paused, and it is **on Today** when it is
 due today and not kept off. The Places hub counts the first; Today and the widget show the second.
-Through the connector, `get_today` lists the habits on Today and only counts the ones kept off it,
-`get_habits` says "not on Today" beside them, and `add_habit` and `update_habit` take
+Through the connector, `get_today` lists the habits on Today with their standings and the count of
+the ones left, and only counts the ones kept off it; `get_habits` groups them like the Habits page
+and says "not on Today" beside them ([connector](connector.md)); and `add_habit` and `update_habit` take
 `show_on_today`.
 
 ## Goals

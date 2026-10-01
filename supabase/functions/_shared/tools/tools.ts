@@ -14,13 +14,31 @@ import { AREA_COLORS } from "../planner/palette.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
 import { addDays, type Day, mondayOf } from "../rules/day.ts";
 import {
+  byPace,
   type GoalHorizon,
   type GoalItem,
   goalProgress,
+  goalStanding,
   periodEnd as goalPeriodEnd,
   periodStart as goalPeriodStart,
 } from "../rules/goals.ts";
-import { dueToday, goalAmounts, habitPeriodStart, habitState, onToday, ring, streak } from "../rules/habits.ts";
+import {
+  allDone,
+  dayMet,
+  dueToday,
+  goalAmounts,
+  type HabitCheckin,
+  type HabitGroup,
+  habitGroup,
+  type HabitPause,
+  habitPeriodEnd,
+  habitPeriodStart,
+  type HabitStanding,
+  onToday,
+  standing,
+  streak,
+} from "../rules/habits.ts";
+import { readGoalLine, readHabitLine } from "../rules/quickAdd.ts";
 import { lists } from "../rules/listRules.ts";
 import {
   board,
@@ -214,11 +232,28 @@ async function habitFields(planner: Planner, args: Record<string, unknown>): Pro
   };
 }
 
-/** The habits on Today's ring row, as lines, and how many due today are kept off it. */
+/**
+ * What a habit's card shows on `day`, from its own check-ins and pauses: its standing, the day's value,
+ * the days met in a weekly or monthly period, and its streak (contracts/vectors/habits.json).
+ */
+function habitView(habit: Habit, day: Day, own: HabitCheckin[], rests: HabitPause[]): format.HabitView {
+  const start = habitPeriodStart(habit, day);
+  const end = habitPeriodEnd(habit, start);
+  const live = own.filter((checkin) => !checkin.deleted && !checkin.skipped);
+  return {
+    standing: standing(habit, day, own, rests),
+    value: live.find((checkin) => checkin.day === day)?.value ?? 0,
+    met: live.filter((checkin) => checkin.day >= start && checkin.day <= end && dayMet(habit, checkin)).length,
+    streak: streak(habit, day, own, rests),
+  };
+}
+
+/** The habits on Today with where each stands, how many are left, and how many due today are kept off it. */
 async function todayHabits(planner: Planner, today: Day): Promise<format.TodayHabits> {
   const checkins = await planner.checkins();
   const pauses = await planner.pauses();
   const lines: string[] = [];
+  const standings: HabitStanding[] = [];
   let keptOff = 0;
   for (const habit of await planner.habits()) {
     const own = checkins.filter((checkin) => checkin.habitId === habit.id);
@@ -228,22 +263,27 @@ async function todayHabits(planner: Planner, today: Day): Promise<format.TodayHa
       keptOff++;
       continue;
     }
-    const state = habitState(habit, habitPeriodStart(habit, today), today, own, rests);
-    const done = (ring(habit, today, own) ?? 0) * (habit.measure === "check" ? 1 : habit.target ?? 1);
-    lines.push(format.habitLine(habit, state, done, streak(habit, today, own, rests)));
+    const view = habitView(habit, today, own, rests);
+    standings.push(view.standing);
+    lines.push(format.habitLine(habit, view));
   }
-  return { lines, keptOff };
+  return {
+    lines,
+    keptOff,
+    left: standings.filter((one) => one === "left").length,
+    allDone: allDone(standings),
+  };
 }
 
-/** One habit as the Habits screen shows it today, for the line after a change. */
-async function habitLineFor(planner: Planner, habit: Habit): Promise<string> {
-  const today = (await planner.now()).today;
+/** One habit as the Habits screen shows it on `day` (today by default), for the line after a change. */
+async function habitLineFor(planner: Planner, habit: Habit, day?: Day): Promise<string> {
+  const on = day ?? (await planner.now()).today;
   const own = (await planner.checkins()).filter((checkin) => checkin.habitId === habit.id);
   const rests = (await planner.pauses()).filter((pause) => pause.habitId === habit.id);
-  const state = habitState(habit, habitPeriodStart(habit, today), today, own, rests);
-  const done = (ring(habit, today, own) ?? 0) * (habit.measure === "check" ? 1 : habit.target ?? 1);
-  return format.habitLine(habit, state, done, streak(habit, today, own, rests));
+  return format.habitLine(habit, habitView(habit, on, own, rests));
 }
+
+const HABIT_GROUPS: [HabitGroup, string][] = [["days", "Every day"], ["weekly", "Weekly"], ["limits", "Limits"]];
 
 const goalId = z.string().describe("The goal's id, from get_goals.");
 const habitId = z.string().describe("The habit's id, from get_habits.");
@@ -283,6 +323,25 @@ function periodText(goal: GoalItem): string {
   if (goal.horizon === "month") return format.longDay(goal.periodStart).split(" ").slice(2).join(" ");
   if (goal.horizon === "day") return format.longDay(goal.periodStart);
   return `${goal.periodStart} to ${end}`;
+}
+
+/**
+ * Goals the way the Goals screen shows them on `today`: each line with its pace and the goal it feeds,
+ * and the pace itself so a rung can be ordered by it (docs/goals.md, "Pace").
+ */
+async function goalReader(planner: Planner) {
+  const progress = await progressOf(planner);
+  const today = (await planner.now()).today;
+  const titles = new Map((await planner.goals()).map((goal) => [goal.id, goal.title]));
+  const standingOf = (goal: GoalItem) => goalStanding(goal, progress(goal), today);
+  return {
+    standingOf,
+    line: (goal: GoalItem) =>
+      format.goalLine(goal, progress(goal), periodText(goal), {
+        standing: standingOf(goal),
+        feeds: goal.parentId === null ? null : titles.get(goal.parentId) ?? null,
+      }),
+  };
 }
 
 async function line(planner: Planner, taskId: string): Promise<string> {
@@ -796,7 +855,9 @@ export const tools: Tool[] = [
     title: "Goals",
     description:
       "The owner's goals with where each one stands, the way the Goals screen shows them: this week, this month " +
-      "and this year by default, or the periods a day falls in. A goal counts what its tasks and its habits did.",
+      "and this year by default, or the periods a day falls in. A goal counts what its tasks and its habits did. " +
+      "Each open goal has its pace against how much of its period is gone (On track, Behind by 6 km, Needs you, " +
+      "or Hit) and the goal it feeds; within a period the goals that need the owner come first.",
     input: {
       day: z.string().optional().describe(
         'Which periods to show, as "today", "tomorrow" or a date like 2026-09-21. Today by default.',
@@ -807,7 +868,7 @@ export const tools: Tool[] = [
     destructive: false,
     run: async (planner, args) => {
       const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
-      const progress = await progressOf(planner);
+      const reader = await goalReader(planner);
       const goals = (await planner.goals()).filter((goal) =>
         args.include_past === true || goal.periodStart === goalPeriodStart(goal.horizon, day)
       );
@@ -821,8 +882,20 @@ export const tools: Tool[] = [
       for (const only of order) {
         const rows = goals.filter((goal) => goal.horizon === only);
         if (rows.length === 0) continue;
-        lines.push(`${only[0].toUpperCase()}${only.slice(1)} goals:`);
-        for (const goal of rows) lines.push(format.goalLine(goal, progress(goal), periodText(goal)));
+        const paces = rows.map((goal) => reader.standingOf(goal).pace);
+        const hit = paces.filter((pace) => pace === "hit").length;
+        const behind = paces.filter((pace) => pace === "behind").length;
+        const needs = behind === 0 ? "" : `, ${behind} ${behind === 1 ? "needs" : "need"} you`;
+        lines.push(`${only[0].toUpperCase()}${only.slice(1)} goals (${hit} of ${rows.length} hit${needs}):`);
+        // Newest period first, as they come, and within a period by pace: behind, on track, hit, dropped.
+        const starts = [...new Set(rows.map((goal) => goal.periodStart))];
+        for (const start of starts) {
+          const period = byPace(
+            rows.filter((goal) => goal.periodStart === start),
+            (goal) => reader.standingOf(goal).pace,
+          );
+          for (const goal of period) lines.push(reader.line(goal));
+        }
       }
       return lines.join("\n");
     },
@@ -832,9 +905,15 @@ export const tools: Tool[] = [
     title: "Add a goal",
     description:
       "Sets a goal for a week, a month or a year. A goal is met by being marked done, by the tasks that serve it, " +
-      "or by a number it counts (a target and a unit, like 80 km), which habits and log_goal_amount add to.",
+      "or by a number it counts (a target and a unit, like 80 km), which habits and log_goal_amount add to. " +
+      'A short line like "Read 3 books this month" can go in line instead of title, horizon, day, target and unit.',
     input: {
-      title: z.string().describe("What the goal is, in the owner's words."),
+      line: z.string().optional().describe(
+        'The goal as the owner said it, like "Read 3 books this month" or "Run 30 km in November": the period ' +
+          "(this or next week, month or year, today, tomorrow, in a month or a year; this week by default) and a " +
+          "target with its unit are read from it. Fields given apart win.",
+      ),
+      title: z.string().optional().describe("What the goal is, in the owner's words. Needed without a line."),
       horizon: horizon.optional().describe("week by default."),
       day: z.string().optional().describe("Any day in the period the goal belongs to. Today by default."),
       emoji: z.string().optional().describe("One emoji for the goal."),
@@ -848,19 +927,23 @@ export const tools: Tool[] = [
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
+      const today = (await planner.now()).today;
+      const read = typeof args.line === "string" && args.line.trim() !== "" ? readGoalLine(args.line, today) : null;
+      // The line's period counts only when it named one; "this week" is also what an empty line reads as.
+      const named = read !== null && !(read.horizon === "week" && read.periodStart === mondayOf(today));
+      const target = args.target ?? read?.target ?? undefined;
       const fields: GoalFields = {
-        title: args.title,
-        horizon: args.horizon,
-        day: (await dayFrom(planner, args.day)) ?? undefined,
+        title: args.title ?? read?.title,
+        horizon: args.horizon ?? read?.horizon,
+        day: (await dayFrom(planner, args.day)) ?? (named ? read!.periodStart : undefined),
         emoji: args.emoji,
-        target: args.target,
-        unit: args.unit,
-        mode: args.counts_tasks === true ? "tasks" : args.target === undefined ? "done" : "number",
+        target,
+        unit: args.unit ?? read?.unit ?? undefined,
+        mode: args.counts_tasks === true ? "tasks" : target === undefined ? "done" : "number",
         parent: args.parent,
       };
       const goal = await planner.addGoal(fields);
-      const progress = await progressOf(planner);
-      return ["Goal set.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+      return ["Goal set.", (await goalReader(planner)).line(goal)].join("\n");
     },
   },
   {
@@ -889,8 +972,7 @@ export const tools: Tool[] = [
         unit: args.unit,
         parent: args.parent,
       });
-      const progress = await progressOf(planner);
-      return ["Goal changed.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+      return ["Goal changed.", (await goalReader(planner)).line(goal)].join("\n");
     },
   },
   {
@@ -904,8 +986,7 @@ export const tools: Tool[] = [
     destructive: false,
     run: async (planner, args) => {
       const goal = await planner.setGoalStatus(args.id, args.status);
-      const progress = await progressOf(planner);
-      return [`Goal marked ${args.status}.`, format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+      return [`Goal marked ${args.status}.`, (await goalReader(planner)).line(goal)].join("\n");
     },
   },
   {
@@ -924,8 +1005,7 @@ export const tools: Tool[] = [
     run: async (planner, args) => {
       const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
       const goal = await planner.logAmount(args.id, day, args.amount);
-      const progress = await progressOf(planner);
-      return ["Amount logged.", format.goalLine(goal, progress(goal), periodText(goal))].join("\n");
+      return ["Amount logged.", (await goalReader(planner)).line(goal)].join("\n");
     },
   },
   {
@@ -947,8 +1027,9 @@ export const tools: Tool[] = [
     name: "get_habits",
     title: "Habits",
     description:
-      "The owner's habits as the Habits screen shows them: what each one asks of the day, whether its period is " +
-      "met, how far today has got, and the streak it is on. A habit kept off Today says not on Today. Archived " +
+      "The owner's habits as the Habits screen shows them, grouped into Every day, Weekly and Limits: how often " +
+      "each one asks, where it stands on the day (done, left, skipped, paused, a limit with its count, or not " +
+      "due), the streak it is on and the goal it serves. A habit kept off Today says not on Today. Archived " +
       "habits are left out.",
     input: {
       day: z.string().optional().describe('The day to look at, as "today" or a date. Today by default.'),
@@ -962,13 +1043,32 @@ export const tools: Tool[] = [
       if (habits.length === 0) return "There are no habits yet.";
       const checkins = await planner.checkins();
       const pauses = await planner.pauses();
-      const lines = [`Habits on ${format.longDay(day)}:`];
-      for (const habit of habits) {
+      const goals = new Map((await planner.goals()).map((goal) => [goal.id, goal.title]));
+      const views = habits.map((habit) => {
         const own = checkins.filter((checkin) => checkin.habitId === habit.id);
         const rests = pauses.filter((pause) => pause.habitId === habit.id);
-        const state = habitState(habit, habitPeriodStart(habit, day), day, own, rests);
-        const done = (ring(habit, day, own) ?? 0) * (habit.measure === "check" ? 1 : habit.target ?? 1);
-        lines.push(format.habitLine(habit, state, done, streak(habit, day, own, rests)));
+        const view = habitView(habit, day, own, rests);
+        return { habit, view: { ...view, serves: habit.goalId === null ? null : goals.get(habit.goalId) ?? null } };
+      });
+      const standings = views.map(({ view }) => view.standing);
+      const done = standings.filter((one) => one === "done").length;
+      const left = standings.filter((one) => one === "left").length;
+      const count = left > 0
+        ? `${done} done, ${format.habitsLeft(left)}`
+        : allDone(standings)
+        ? "all done"
+        : "nothing left to do";
+      const lines = [`Habits on ${format.longDay(day)}: ${count}.`];
+      const groups: [string, typeof views][] = [
+        ...HABIT_GROUPS.map(([group, name]): [string, typeof views] => [
+          name,
+          views.filter(({ habit }) => !habit.archived && habitGroup(habit) === group),
+        ]),
+        ["Archived", views.filter(({ habit }) => habit.archived)],
+      ];
+      for (const [name, rows] of groups) {
+        if (rows.length === 0) continue;
+        lines.push(`${name}:`, ...rows.map(({ habit, view }) => format.habitLine(habit, view)));
       }
       return lines.join("\n");
     },
@@ -989,14 +1089,8 @@ export const tools: Tool[] = [
     run: async (planner, args) => {
       const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
       const { habit, value } = await planner.checkIn(args.id, day, args.amount ?? 1);
-      const own = (await planner.checkins()).filter((checkin) => checkin.habitId === habit.id);
-      const rests = (await planner.pauses()).filter((pause) => pause.habitId === habit.id);
-      const state = habitState(habit, habitPeriodStart(habit, day), day, own, rests);
       const amount = habit.measure === "check" ? "" : ` at ${format.round(value)}${habit.unit ? ` ${habit.unit}` : ""}`;
-      return [
-        `${habit.name} checked in for ${day}${amount}.`,
-        format.habitLine(habit, state, value, streak(habit, day, own, rests)),
-      ].join("\n");
+      return [`${habit.name} checked in for ${day}${amount}.`, await habitLineFor(planner, habit, day)].join("\n");
     },
   },
   {
@@ -1026,9 +1120,15 @@ export const tools: Tool[] = [
       "Adds a habit: what it asks of a day and how often. It runs daily, on chosen weekdays, or so many times a " +
       "week or a month, and is measured as a check, a count or an amount against a target. A limit habit (at_most) " +
       "is something to keep down, and only a daily or weekdays habit can be one. A habit may serve a numeric goal, " +
-      "and its check-ins then count toward that goal.",
+      'and its check-ins then count toward that goal. A short line like "Swim 2 times a week 40 min" can go in ' +
+      "line instead of name, cadence, measure, target and unit.",
     input: {
-      name: z.string().describe("What the habit is, in the owner's words."),
+      line: z.string().optional().describe(
+        'The habit as the owner said it, like "Swim 2 times a week 40 min", "Read 20 pages every day" or "Piano ' +
+          'every mon and thu": how often (every day by default) and how much (a plain check by default) are read ' +
+          "from it. Fields given apart win.",
+      ),
+      name: z.string().optional().describe("What the habit is, in the owner's words. Needed without a line."),
       emoji: z.string().optional().describe("One emoji for the habit."),
       cadence: cadence.optional().describe("daily by default."),
       weekdays: z.array(weekday).optional().describe("For the weekdays cadence: which days, like [mon, wed, fri]."),
@@ -1046,7 +1146,23 @@ export const tools: Tool[] = [
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
-      const habit = await planner.addHabit(await habitFields(planner, args));
+      const fields = await habitFields(planner, args);
+      if (typeof args.line === "string" && args.line.trim() !== "") {
+        // What the line says fills what wasn't given apart; how often and how much each go as a whole.
+        const read = readHabitLine(args.line);
+        fields.name ??= read.name;
+        if (fields.cadence === undefined) {
+          fields.cadence = read.cadence;
+          fields.weekdays ??= read.weekdays;
+          fields.times ??= read.times;
+        }
+        if (fields.measure === undefined && fields.target === undefined) {
+          fields.measure = read.measure;
+          fields.target = read.target;
+          fields.unit ??= read.unit;
+        }
+      }
+      const habit = await planner.addHabit(fields);
       return ["Habit added.", await habitLineFor(planner, habit)].join("\n");
     },
   },

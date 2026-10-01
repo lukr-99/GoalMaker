@@ -117,7 +117,8 @@ the top of Wants, or the habit or goal editor over the page. The quick-add box a
 
 The bar on Wants, Habits and Goals reads a line with small, predictable rules of its own, pinned by
 [`contracts/vectors/quick-add.json`](../contracts/vectors/quick-add.json) and run by both apps and the
-connector's rules. A line is read word by word, a word being what sits between spaces, compared
+connector's rules. The connector's `add_want`, `add_habit` and `add_goal` read a `line` with them too,
+which is how the quick chat adds from a short line ([assistant](assistant.md#speed)). A line is read word by word, a word being what sits between spaces, compared
 without case and without the punctuation at its end. The first phrase of each kind counts; a later
 one, and anything not understood, stays in the title. A number is written with one or two decimals
 after a dot or comma (`9,50`, `2.5`), or with groups of three after a dot, comma or space

@@ -226,8 +226,12 @@ Deno.test({
         assertStringIncludes(changed.text, "8 of 10 km · 80%");
 
         const goals = await client.tool("get_goals", { day: "2026-09-18" });
-        assertStringIncludes(goals.text, "Week goals:");
-        assertStringIncludes(goals.text, "Run 20 km");
+        assertStringIncludes(goals.text, "Week goals (0 of 1 hit, 1 needs you):");
+        // That week is over, so 8 of 10 km is behind by what it misses.
+        assertStringIncludes(
+          goals.text,
+          "Run 20 km · week of 2026-09-14 to 2026-09-20 · 8 of 10 km · 80% · Behind by 2 km",
+        );
 
         const marked = await client.tool("set_goal_status", { id, status: "done" });
         assert(!marked.isError, marked.text);
@@ -247,13 +251,13 @@ Deno.test({
           values (${habitId}, ${OWNER}, 'Water', 'daily', 'count', 8, 'glasses', '2026-09-01')`;
 
         const habits = await client.tool("get_habits", { day: "2026-09-18" });
-        assertStringIncludes(habits.text, "Water · every day · 0 of 8 glasses");
+        assertStringIncludes(habits.text, "Every day:\n- Water · every day · left · 0 of 8 glasses today");
 
         const first = await client.tool("check_in_habit", { id: habitId, day: "2026-09-18", amount: 3 });
         assert(!first.isError, first.text);
         const second = await client.tool("check_in_habit", { id: habitId, day: "2026-09-18", amount: 5 });
         assertStringIncludes(second.text, "at 8 glasses");
-        assertStringIncludes(second.text, "8 of 8 glasses this period · done");
+        assertStringIncludes(second.text, "Water · every day · done · 8 of 8 glasses today · 1-day streak");
 
         const [checkin] = await sql`
           select owner_id::text, value, skipped from public.habit_checkins
@@ -586,11 +590,79 @@ Deno.test({
         assert(!back.isError, back.text);
         assert(!back.text.includes("not on Today"), back.text);
         today = await client.tool("get_today");
-        assertStringIncludes(today.text, "Habits:");
         assertStringIncludes(today.text, "Floss · every day · done");
         assert(!today.text.includes("kept off Today"), today.text);
 
         assert(!(await client.tool("delete_habit", { id: flossId })).isError);
+      });
+
+      await t.step("habits and goals read like the apps, and add from a short line", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const swim = await client.tool("add_habit", { line: "Swim 2 times a week 40 min" });
+        assert(!swim.isError, swim.text);
+        assertStringIncludes(swim.text, "Swim · 2 times a week · left · 0 of 2 this week");
+        const swimId = /\(habit id ([0-9a-f-]{36})\)/.exec(swim.text)![1];
+        const [swimRow] = await sql`select name, cadence, times, measure, target, unit from public.habits
+          where id = ${swimId}`;
+        assertEquals(swimRow, {
+          name: "Swim",
+          cadence: "per_week",
+          times: 2,
+          measure: "amount",
+          target: 40,
+          unit: "min",
+        });
+
+        const snacks = await client.tool("add_habit", {
+          name: "Snacks",
+          measure: "count",
+          target: 2,
+          direction: "at_most",
+        });
+        const snacksId = /\(habit id ([0-9a-f-]{36})\)/.exec(snacks.text)![1];
+        await client.tool("check_in_habit", { id: snacksId, amount: 1 });
+
+        const habits = (await client.tool("get_habits")).text;
+        const [days, weekly, limits] = ["Every day:", "Weekly:", "Limits:"].map((group) => habits.indexOf(group));
+        assert(days > 0 && days < weekly && weekly < limits, habits);
+        assert(habits.indexOf("Swim ·") > weekly && habits.indexOf("Swim ·") < limits, habits);
+        assertStringIncludes(habits, "Snacks · every day · limit · 1 of at most 2 today");
+
+        // The count of habits left is the left ones on Today; a limit is never one of them.
+        const today = (await client.tool("get_today")).text;
+        const habitLines = today.split("\n").filter((line) => line.endsWith(")") && line.includes("(habit id"));
+        const left = habitLines.filter((line) => line.includes(" · left")).length;
+        assert(left >= 1, today);
+        assertStringIncludes(today, `Habits, ${left} ${left === 1 ? "habit" : "habits"} left:`);
+        assertStringIncludes(today, "Snacks · every day · limit · 1 of at most 2 today");
+
+        const month = await client.tool("add_goal", { line: "Read 3 books this month" });
+        assert(!month.isError, month.text);
+        const monthId = /\(goal id ([0-9a-f-]{36})\)/.exec(month.text)![1];
+        const [monthRow] = await sql`select title, horizon, progress_mode, target, unit, period_start::text
+          from public.goals where id = ${monthId}`;
+        assertEquals(monthRow.title, "Read 3 books");
+        assertEquals([monthRow.horizon, monthRow.progress_mode, monthRow.target, monthRow.unit], [
+          "month",
+          "number",
+          3,
+          "books",
+        ]);
+        assert(monthRow.period_start.endsWith("-01"), monthRow.period_start);
+
+        // A past week: a done-or-not goal there needs you, and it comes before the one already hit.
+        const pool = await client.tool("add_goal", { title: "Book the pool", day: "2026-09-18" });
+        const poolId = /\(goal id ([0-9a-f-]{36})\)/.exec(pool.text)![1];
+        const feeding = await client.tool("add_goal", { line: "Swim 2 km", parent: monthId });
+        assertStringIncludes(feeding.text, "feeds Read 3 books");
+        const goals = (await client.tool("get_goals", { day: "2026-09-18" })).text;
+        assertStringIncludes(goals, "Book the pool · week of 2026-09-14 to 2026-09-20 · 0% · Needs you");
+        assert(goals.indexOf("Book the pool") < goals.indexOf("Run 20 km"), goals);
+
+        for (const id of [swimId, snacksId]) assert(!(await client.tool("delete_habit", { id })).isError);
+        for (const id of [poolId, /\(goal id ([0-9a-f-]{36})\)/.exec(feeding.text)![1], monthId]) {
+          assert(!(await client.tool("delete_goal", { id })).isError);
+        }
       });
 
       await t.step("a project is edited and deleted, and its items stay", async () => {
@@ -784,6 +856,15 @@ Deno.test({
           cooldown_days: 2,
         });
         assertEquals((await rowOf(wantOf(picked.text))).cooldown_days, 2);
+        const lined = await client.tool("add_want", {
+          line: "Kindle 3 290 Kč wait 2 weeks because I read on the train",
+        });
+        assert(!lined.isError, lined.text);
+        assertStringIncludes(lined.text, "Kindle · 3290 CZK · cooling");
+        assertStringIncludes(lined.text, "Why: I read on the train");
+        assertEquals((await rowOf(wantOf(lined.text))).cooldown_days, 14, "the line's wait is the owner's pick");
+        const unreasoned = await client.tool("add_want", { line: "Kindle 3290 Kč" });
+        assert(unreasoned.isError, "a want line without because still needs a reason: " + unreasoned.text);
         const [log] = await sql`
           select actor from public.activity_log where entity = 'wants' and entity_id = ${cheapId} and action = 'create'`;
         assertEquals(log.actor, "claude");

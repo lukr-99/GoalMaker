@@ -90,8 +90,15 @@ Gemini gave it, thought signatures included, which newer models require.
 A message takes at least two model rounds (one picks the tools, one writes the answer), and every
 round sends the whole thread and every tool's declaration again. So the chat keeps each round small:
 
-- It offers only its everyday tools (`CHAT_TOOLS` in `chatTools.ts`, 27 of the connector's), each
+- It offers only its everyday tools (`CHAT_TOOLS` in `chatTools.ts`, 29 of the connector's), each
   with the first sentence of its description. The connector's longer notes are written for Claude.
+- A tool with a long input offers the chat only some of it (`CHAT_INPUTS`): `add_habit` and
+  `add_goal` take the owner's `line` ("Swim 2 times a week 40 min", "Read 3 books this month") with
+  an emoji, a limit or Show on Today, and the goal fed, and the line, read with the bottom bar's
+  rules ([composer](composer.md#adding-on-wants-habits-and-goals)), says the rest. `add_want` takes a
+  line too. The system prompt says to pass the owner's words as the line, and to ask for a want's
+  reason when it has none.
+- `assistant_test.ts` keeps every round's declarations under 16,000 characters (about 15,300 now).
 - The system prompt names the owner's areas, tags and active projects, so the model doesn't spend a
   round looking them up.
 - Thinking is set to minimal: choosing a planner tool needs little of it, and it was most of a
@@ -122,7 +129,7 @@ No test calls Gemini.
   limit, Gemini's request and answer forms against a stubbed `fetch`, telling its quota apart from
   other failures, and the prompt.
 - `assistant/endpoint_test.ts` drives the running function on the local stack: adding a task,
-  reading Today, two tool rounds, a delete refused (and not offered), a bad argument, the round
+  adding a habit, a goal and a want from short lines, reading Today, two tool rounds, a delete refused (and not offered), a bad argument, the round
   limit, another owner's rows, and the per-minute and daily limits. It makes its own users, signs
   their sessions with the local stack's development JWT secret, and deletes them after.
 
@@ -131,7 +138,8 @@ No test calls Gemini.
 the local stack, which it knows by its `SUPABASE_URL` being plain `http://` to `kong` (or localhost);
 a hosted project's is always `https://`, so there the header is ignored and Gemini answers
 (`_shared/assistant/providerChoice.ts`, with a unit test). Since every endpoint test request carries a
-script, a real key in `supabase/functions/.env` is never used by the tests.
+script, a real key in `supabase/functions/.env` is never used by the tests. A header holds only
+Latin-1, so a script can't carry text like "Kč"; `fetch` refuses it before the request is sent.
 
 ```powershell
 cd supabase/functions
