@@ -55,6 +55,10 @@ def faces_needed() -> set[tuple[str, int, float, bool]]:
         body = typography["body"]
         for weight in (body["weight"], body["strongWeight"]):
             faces.add((body["family"], weight, float(body["width"]), False))
+        # A real italic for *italic* in notes and letters, when the family has one. Without it WPF
+        # slants the upright face, and the app adds a thin space after the word instead.
+        if SOURCES[body["family"]][1] is not None:
+            faces.add((body["family"], body["weight"], float(body["width"]), True))
     return faces
 
 
