@@ -123,7 +123,7 @@ public sealed class PageSnapshots
         var box = new Shell.QuickAddWindow(composer, strings);
         var content = (FrameworkElement)box.Content;
         box.Content = null;
-        Save(content, folder, "quick-add", new Size(560, 150));
+        Save(content, folder, "quick-add", new Size(592, 190));
     });
 
     [Fact(Explicit = true)]
@@ -149,12 +149,30 @@ public sealed class PageSnapshots
         var box = new Shell.QuickAddWindow(composer, strings);
         var content = (FrameworkElement)box.Content;
         box.Content = null;
-        Save(content, folder, "quick-chat", new Size(560, 420));
+        Save(content, folder, "quick-chat", new Size(592, 460));
 
         var today = new ListViewModel(
             ListKind.Today, planner.Tasks, planner.Areas, Composer(day => day), planner.Sync, planner.Settings, strings, planner.Time,
             theme.AreaBrush, () => true, planner.Tick, action => action());
         Save(new TodayPage(today), folder, "today-with-chat");
+
+        // The thread in every theme, light and dark, since its depth and colors come from each palette.
+        // Detached content doesn't hear the application's resources change, so each look is built anew.
+        foreach (var id in new[] { "track", "electric", "night", "sunrise" })
+        {
+            foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Dark, GoalMaker.Core.Settings.ThemeMode.Light })
+            {
+                theme.Apply(Appearance.Default with { ThemeId = id, Mode = mode });
+                var look = $"{id}-{mode}".ToLowerInvariant();
+                var themed = new Shell.QuickAddWindow(Composer(_ => null), strings);
+                var themedContent = (FrameworkElement)themed.Content;
+                themed.Content = null;
+                Save(themedContent, folder, $"quick-chat-{look}", new Size(592, 460));
+                Save(new TodayPage(today), folder, $"today-with-chat-{look}");
+            }
+        }
+
+        theme.Apply(planner.Settings.Appearance);
 
         chat.ClearCommand.Execute(null);
         planner.Sync.SyncNowAsync(CancellationToken.None).GetAwaiter().GetResult();
@@ -171,7 +189,7 @@ public sealed class PageSnapshots
         Add(planner, "Buy stamps @Home #errand", Today);
         planner.Areas.Create("Health");
         planner.Areas.Archive(planner.Areas.Create("Garden")!.Id);
-        planner.Areas.SetEmoji(planner.Areas.Find("Home")!.Id, "🏠");
+        planner.Areas.SetEmoji(planner.Areas.Find("Home")!.Id, "ðŸ ");
         using var theme = Theme(planner);
         Save(new AreasPage(new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action())), folder, "areas-and-tags");
 
@@ -265,7 +283,7 @@ public sealed class PageSnapshots
     {
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
-        var year = planner.Goals.Add(new GoalDraft("Run a half marathon", GoalHorizon.Year, Today, Emoji: "🏃"))!;
+        var year = planner.Goals.Add(new GoalDraft("Run a half marathon", GoalHorizon.Year, Today, Emoji: "ðŸƒ"))!;
         var month = planner.Goals.Add(new GoalDraft("Run 80 km", GoalHorizon.Month, Today, GoalRules.ModeNumber, ParentId: year.Id, Target: 80, Unit: "km"))!;
         planner.Goals.LogAmount(month.Id, Today, 32.5);
         var week = planner.Goals.Add(new GoalDraft("3 runs this week", GoalHorizon.Week, Today, GoalRules.ModeTasks, ParentId: month.Id))!;
@@ -296,7 +314,7 @@ public sealed class PageSnapshots
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
         var goal = planner.Goals.Add(new GoalDraft("Run 80 km", GoalHorizon.Month, Today, GoalRules.ModeNumber, Target: 80, Unit: "km"))!;
-        var read = planner.Habits.Add(new HabitDraft("Read before bed", Today.AddDays(-120)) { Emoji = "📖" })!;
+        var read = planner.Habits.Add(new HabitDraft("Read before bed", Today.AddDays(-120)) { Emoji = "ðŸ“–" })!;
         var water = planner.Habits.Add(new HabitDraft("Drink water", Today.AddDays(-60)) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
         var run = planner.Habits.Add(new HabitDraft("Run", Today.AddDays(-90))
         {
@@ -306,7 +324,7 @@ public sealed class PageSnapshots
             Target = 5,
             Unit = "km",
             GoalId = goal.Id,
-            Emoji = "🏃",
+            Emoji = "ðŸƒ",
         })!;
         var gym = planner.Habits.Add(new HabitDraft("Gym", Today.AddDays(-45)) { Cadence = HabitRules.OnWeekdays, Weekdays = 21 })!;
         // A few months of history: most days read, water and runs often, the gym on its days.
@@ -466,7 +484,7 @@ public sealed class PageSnapshots
 
         var goal = planner.Goals.Add(new GoalDraft("Run 20 km", GoalHorizon.Week, weekStart, GoalRules.ModeNumber, Target: 20, Unit: "km"))!;
         planner.Goals.LogAmount(goal.Id, weekStart.AddDays(2), 12);
-        var habit = planner.Habits.Add(new HabitDraft("Read before bed", weekStart.AddDays(-60)) { Emoji = "📖" })!;
+        var habit = planner.Habits.Add(new HabitDraft("Read before bed", weekStart.AddDays(-60)) { Emoji = "ðŸ“–" })!;
         for (var back = 0; back < 20; back++)
         {
             planner.Habits.CheckIn(habit.Id, new DateOnly(2026, 9, 20).AddDays(-back));
@@ -543,7 +561,7 @@ public sealed class PageSnapshots
             planner.TallyDay(week.AddDays(-7 * back), TallyRules.Phone, "video", 60 + (back * 53 % 120));
         }
 
-        var chess = planner.Tally.AddCategory("Chess", "teal", "♟")!;
+        var chess = planner.Tally.AddCategory("Chess", "teal", "â™Ÿ")!;
         planner.Tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Any, chess.Id));
         planner.Tally.AddRule(new TallyRule(TallyRules.Folder, "GoalMaker", TallyRules.Windows, "coding", project.Id));
         using var theme = Theme(planner);
@@ -617,7 +635,7 @@ public sealed class PageSnapshots
         Add(planner, "Stretch !", Today);
         Add(planner, "Call the bank 17:00", Today);
         Add(planner, "Buy milk @Home", Today);
-        planner.Habits.Add(new HabitDraft("Read before bed", Today.AddDays(-40)) { Emoji = "📖" });
+        planner.Habits.Add(new HabitDraft("Read before bed", Today.AddDays(-40)) { Emoji = "ðŸ“–" });
         var water = planner.Habits.Add(new HabitDraft("Drink water", Today.AddDays(-40)) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
         planner.Habits.CheckIn(water.Id, Today, 5);
         planner.Habits.Add(new HabitDraft("Walk 30 minutes", Today.AddDays(-40)) { Cadence = HabitRules.PerWeek, Times = 3 });
