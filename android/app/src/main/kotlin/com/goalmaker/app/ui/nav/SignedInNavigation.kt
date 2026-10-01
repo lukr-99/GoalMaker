@@ -132,6 +132,17 @@ fun SignedInNavigation(graph: AppGraph) {
     val motion = AppTheme.motion
     val reduced = AppTheme.reduceMotion
     val transitions = remember(motion, reduced) { NavTransitions(motion, reduced) }
+    // The bottom bar's quick chat (docs/composer.md). Goals and Habits opened on top of Today keep a
+    // thread of their own, for as long as they are open.
+    val newChat = {
+        ChatViewModel(
+            assistant = graph.assistant,
+            settings = graph.settings,
+            session = graph.chatSession,
+            syncStatus = graph.sync.status,
+            syncNow = { graph.sync.syncNow() },
+        )
+    }
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
             NavDisplay(
@@ -162,16 +173,9 @@ fun SignedInNavigation(graph: AppGraph) {
                                 clock = LocalDateTime::now,
                             )
                         }
-                        // The composer's chat; its thread lives as long as this entry, in memory only.
-                        val chatViewModel = viewModel {
-                            ChatViewModel(
-                                assistant = graph.assistant,
-                                settings = graph.settings,
-                                session = graph.chatSession,
-                                syncStatus = graph.sync.status,
-                                syncNow = { graph.sync.syncNow() },
-                            )
-                        }
+                        // The composer's chat, shared by the bottom bar of every place here; its thread
+                        // lives as long as this entry, in memory only.
+                        val chatViewModel = viewModel { newChat() }
                         val projectsViewModel = viewModel {
                             ProjectsViewModel(graph.projects, graph.tasks, graph.settings, graph.io, LocalDateTime::now)
                         }
@@ -244,13 +248,13 @@ fun SignedInNavigation(graph: AppGraph) {
                                     val habitsViewModel = viewModel(key = "habits-tab") {
                                         HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
                                     }
-                                    HabitsScreen(viewModel = habitsViewModel, onBack = backToHub, actions = actions)
+                                    HabitsScreen(viewModel = habitsViewModel, chat = chatViewModel, onBack = backToHub, actions = actions)
                                 }
                                 PlaceRules.GOALS -> {
                                     val goalsViewModel = viewModel(key = "goals-tab") {
                                         GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings, graph.io, LocalDateTime::now)
                                     }
-                                    GoalsScreen(viewModel = goalsViewModel, onBack = backToHub, actions = actions)
+                                    GoalsScreen(viewModel = goalsViewModel, chat = chatViewModel, onBack = backToHub, actions = actions)
                                 }
                                 PlaceRules.REVIEWS -> {
                                     val reviewsViewModel = viewModel(key = "reviews-tab") {
@@ -297,6 +301,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                         viewModel = wantsViewModel,
                                         onBack = backToHub,
                                         actions = actions,
+                                        chat = chatViewModel,
                                         addTitle = wantTitle,
                                         onAddShown = { wantTitle = null },
                                     )
@@ -321,7 +326,7 @@ fun SignedInNavigation(graph: AppGraph) {
                     }
                     entry<GoalsKey> {
                         val goalsViewModel = viewModel { GoalsViewModel(graph.goals, graph.tasks, graph.habits, graph.settings, graph.io, LocalDateTime::now) }
-                        GoalsScreen(viewModel = goalsViewModel, onBack = { backStack.removeLastOrNull() })
+                        GoalsScreen(viewModel = goalsViewModel, chat = viewModel { newChat() }, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ReviewsKey> {
                         val reviewsViewModel = viewModel { ReviewsViewModel(graph.reviews, graph.settings, graph.io, LocalDateTime::now) }
@@ -370,7 +375,7 @@ fun SignedInNavigation(graph: AppGraph) {
                     }
                     entry<HabitsKey> {
                         val habitsViewModel = viewModel { HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now) }
-                        HabitsScreen(viewModel = habitsViewModel, onBack = { backStack.removeLastOrNull() })
+                        HabitsScreen(viewModel = habitsViewModel, chat = viewModel { newChat() }, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<PlanKey> {
                         val planViewModel = viewModel {

@@ -20,6 +20,7 @@ import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.settings.GoalsView
+import com.goalmaker.app.ui.composer.LineOutcome
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -341,5 +342,47 @@ class GoalsViewModelTest {
             state.groups.map { group -> group.rows.map { it.goal.title } },
         )
         assertEquals(GoalPace.BEHIND, state.groups[2].rows[0].standing.pace)
+    }
+
+    @Test
+    fun `the bar adds a goal for the period the line names, with its target`() = runTest {
+        val outcome = viewModel.addLine("Run 30 km next week")
+
+        assertEquals(LineOutcome.Added, outcome)
+        val run = goals.all().single()
+        assertEquals("Run 30 km", run.title)
+        assertEquals(GoalHorizon.WEEK, run.horizon)
+        assertEquals(LocalDate.parse("2026-09-21"), run.periodStart)
+        assertEquals(GoalRules.MODE_NUMBER, run.mode)
+        assertEquals(30.0, run.target!!, 1e-9)
+        assertEquals("km", run.unit)
+    }
+
+    @Test
+    fun `a goal with no period is this week's, and one without a number is done or not`() = runTest {
+        assertEquals(LineOutcome.Added, viewModel.addLine("Call grandma"))
+        assertEquals(LineOutcome.Added, viewModel.addLine("Read 3 books in November"))
+
+        val (call, read) = goals.all().sortedBy { it.title }
+        assertEquals(GoalDraft("Call grandma", GoalHorizon.WEEK, LocalDate.parse("2026-09-14")), call.let { GoalDraft(it.title, it.horizon, it.periodStart, it.mode) })
+        assertEquals(GoalHorizon.MONTH, read.horizon)
+        assertEquals(LocalDate.parse("2026-11-01"), read.periodStart)
+        assertEquals(3.0, read.target!!, 1e-9)
+    }
+
+    @Test
+    fun `a line with no title left opens the goal form filled in, and adds nothing`() = runTest {
+        val outcome = viewModel.addLine("next month")
+
+        assertEquals(LineOutcome.OpenForm(GoalDraft("", GoalHorizon.MONTH, LocalDate.parse("2026-10-01"))), outcome)
+        assertTrue(goals.all().isEmpty())
+    }
+
+    @Test
+    fun `the preview reads tomorrow as a day goal and keeps the target in the title`() {
+        assertEquals(
+            GoalDraft("Walk 10000 steps", GoalHorizon.DAY, LocalDate.parse("2026-09-19"), GoalRules.MODE_NUMBER, target = 10000.0, unit = "steps"),
+            viewModel.preview("Walk 10000 steps tomorrow"),
+        )
     }
 }

@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
@@ -40,6 +39,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import com.goalmaker.app.ui.chat.ChatViewModel
+import com.goalmaker.app.ui.composer.BottomComposer
+import com.goalmaker.app.ui.composer.LineOutcome
 import com.goalmaker.app.application.planning.HabitGroup
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.ui.components.ConfettiBurst
@@ -55,11 +61,13 @@ import kotlinx.coroutines.launch
  * pips or a bar, the week's dots and the streak; Hide done; the archived ones folded at the end. The
  * card's button checks in (an amount asks for its value), a tap on the card edits it, and a long press
  * or its menu opens the sheet where skipping lives. A streak reaching a milestone gets confetti unless
- * motion is reduced.
+ * motion is reduced. The bottom bar (docs/composer.md) adds a habit from a typed line, or opens the
+ * form filled in when no name is left; its plus opens the empty form, and its switch turns it into
+ * the quick [chat].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
+fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scope = rememberCoroutineScope()
@@ -69,6 +77,14 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
     var logging by remember { mutableStateOf<HabitItem?>(null) }
     var menuFor by remember { mutableStateOf<String?>(null) }
     var archivedOpen by rememberSaveable { mutableStateOf(false) }
+    // The bottom bar's line, and whether the open form came from it (it empties once the form saves).
+    val composer = rememberTextFieldState()
+    var fromLine by remember { mutableStateOf(false) }
+
+    fun openNew() {
+        fromLine = false
+        editing = HabitItem("", "", state.today)
+    }
 
     val reduceMotion = AppTheme.reduceMotion
     var seen by remember { mutableStateOf<Set<String>?>(null) }
@@ -96,13 +112,35 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(R.string.habits_title)) },
                     navigationIcon = { PlaceNavigationIcon(onBack) },
-                    actions = {
-                        IconButton(onClick = { editing = HabitItem("", "", state.today) }) {
-                            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.habits_add))
-                        }
-                        actions()
-                    },
+                    actions = { actions() },
                     scrollBehavior = scrollBehavior,
+                )
+            },
+            bottomBar = {
+                // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
+                val line = composer.text.toString()
+                val draft = remember(line, state.today) { viewModel.preview(line) }
+                BottomComposer(
+                    state = composer,
+                    chat = chat,
+                    chips = habitLineChips(line, draft),
+                    canAdd = line.isNotBlank(),
+                    onAdd = {
+                        if (line.isNotBlank()) scope.launch {
+                            when (val outcome = viewModel.addLine(line)) {
+                                LineOutcome.Added -> composer.clearText()
+                                is LineOutcome.OpenForm -> {
+                                    fromLine = true
+                                    editing = outcome.prefill.asNewHabit()
+                                }
+                            }
+                        }
+                    },
+                    placeholder = stringResource(R.string.bar_habit_placeholder),
+                    addLabel = stringResource(R.string.bar_add_habit),
+                    formLabel = stringResource(R.string.bar_new_habit),
+                    onOpenForm = { openNew() },
+                    modifier = Modifier.navigationBarsPadding().imePadding(),
                 )
             },
         ) { padding ->
@@ -163,7 +201,7 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
                         items(section.rows, key = { it.habit.id }) { row -> Card(row, Modifier.animateItem()) }
                     }
                     item(key = "add") {
-                        TextButton(onClick = { editing = HabitItem("", "", state.today) }) {
+                        TextButton(onClick = { openNew() }) {
                             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Text(stringResource(R.string.habits_add), modifier = Modifier.padding(start = 8.dp))
                         }
@@ -208,9 +246,14 @@ fun HabitsScreen(viewModel: HabitsViewModel, onBack: (() -> Unit)?, actions: @Co
         HabitDialog(
             habit = habit,
             goals = state.goals,
-            onSave = { draft -> viewModel.save(habit.id.ifEmpty { null }, draft) },
+            onSave = { draft ->
+                viewModel.save(habit.id.ifEmpty { null }, draft).also { saved -> if (saved && fromLine) composer.clearText() }
+            },
             onDelete = if (habit.id.isEmpty()) null else ({ viewModel.delete(habit.id) }),
-            onDismiss = { editing = null },
+            onDismiss = {
+                editing = null
+                fromLine = false
+            },
         )
     }
     logging?.let { habit ->

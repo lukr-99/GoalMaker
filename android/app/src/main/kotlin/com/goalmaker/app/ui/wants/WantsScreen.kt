@@ -27,7 +27,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +68,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.runtime.rememberCoroutineScope
+import com.goalmaker.app.application.planning.WantDraft
+import com.goalmaker.app.ui.chat.ChatViewModel
+import com.goalmaker.app.ui.composer.BottomComposer
+import com.goalmaker.app.ui.composer.LineOutcome
+import kotlinx.coroutines.launch
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.WantItem
 import com.goalmaker.app.application.planning.WantRules
@@ -83,7 +92,9 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * The Wants place (docs/wants.md, M8-04): the thresholds on top, filter chips for Ready, Cooling and
  * Decided, and a row per want with a ring counting its cooldown down. A row opens to decide.
- * [addTitle] opens the add sheet with that title (from `/want` in the composer).
+ * [addTitle] opens the add sheet with that title (from `/want` in the composer). The bottom bar
+ * (docs/composer.md) adds a want from a typed line, or opens the form when the line lacks its reason;
+ * its plus opens the empty form, and its switch turns it into the quick [chat].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,6 +102,7 @@ fun WantsScreen(
     viewModel: WantsViewModel,
     onBack: (() -> Unit)?,
     actions: @Composable () -> Unit,
+    chat: ChatViewModel,
     addTitle: String? = null,
     onAddShown: () -> Unit = {},
 ) {
@@ -99,13 +111,19 @@ fun WantsScreen(
     val snackbars = remember { SnackbarHostState() }
     val resources = LocalResources.current
     var editing by remember { mutableStateOf<WantItem?>(null) }
-    var adding by remember { mutableStateOf<String?>(null) }
+    // The want form for a new want, from the plus, `/want` or a line the bar could not add as it stood.
+    var adding by remember { mutableStateOf<WantDraft?>(null) }
+    // True when the form came from the bar's line, which empties once the form saves.
+    var fromLine by remember { mutableStateOf(false) }
+    val composer = rememberTextFieldState()
+    val scope = rememberCoroutineScope()
     var editingCooldowns by remember { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(addTitle) {
         if (addTitle != null) {
-            adding = addTitle
+            fromLine = false
+            adding = WantDraft(title = addTitle, reason = "")
             onAddShown()
         }
     }
@@ -124,12 +142,14 @@ fun WantsScreen(
         }
     }
 
-    adding?.let { title ->
+    adding?.let { draft ->
         WantSheet(
             viewModel = viewModel,
             initial = null,
-            initialTitle = title,
+            initialTitle = draft.title,
             onDismiss = { adding = null },
+            prefill = draft,
+            onSaved = { if (fromLine) composer.clearText() },
         )
     }
     editing?.let { want ->
@@ -146,13 +166,38 @@ fun WantsScreen(
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.wants_title)) },
                 navigationIcon = { PlaceNavigationIcon(onBack) },
-                actions = {
-                    IconButton(onClick = { adding = "" }) {
-                        Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.wants_add))
-                    }
-                    actions()
-                },
+                actions = { actions() },
                 scrollBehavior = scrollBehavior,
+            )
+        },
+        bottomBar = {
+            // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
+            val line = composer.text.toString()
+            val draft = remember(line, state.cooldowns) { viewModel.preview(line) }
+            BottomComposer(
+                state = composer,
+                chat = chat,
+                chips = wantLineChips(line, draft, viewModel.cooldownFor(draft.price, draft.currency, draft.pickedDays)),
+                canAdd = line.isNotBlank(),
+                onAdd = {
+                    if (line.isNotBlank()) scope.launch {
+                        when (val outcome = viewModel.addLine(line)) {
+                            LineOutcome.Added -> composer.clearText()
+                            is LineOutcome.OpenForm -> {
+                                fromLine = true
+                                adding = outcome.prefill
+                            }
+                        }
+                    }
+                },
+                placeholder = stringResource(R.string.bar_want_placeholder),
+                addLabel = stringResource(R.string.bar_add_want),
+                formLabel = stringResource(R.string.bar_new_want),
+                onOpenForm = {
+                    fromLine = false
+                    adding = WantDraft(title = "", reason = "")
+                },
+                modifier = Modifier.navigationBarsPadding().imePadding(),
             )
         },
     ) { padding ->

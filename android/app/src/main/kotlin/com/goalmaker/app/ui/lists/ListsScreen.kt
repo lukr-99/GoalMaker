@@ -77,11 +77,7 @@ import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.TaskItem
-import com.goalmaker.app.domain.settings.ComposerMode
-import com.goalmaker.app.ui.chat.ChatThread
-import com.goalmaker.app.ui.chat.ChatUnavailableNote
 import com.goalmaker.app.ui.chat.ChatViewModel
-import com.goalmaker.app.ui.chat.ComposerModeSwitch
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.GoalMakerLogo
@@ -89,7 +85,7 @@ import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.rememberTickSound
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.nav.NavTransitions
-import com.goalmaker.app.ui.composer.ComposerBar
+import com.goalmaker.app.ui.composer.BottomComposer
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
 import com.goalmaker.app.ui.goals.GoalSummaryRow
@@ -124,7 +120,6 @@ fun ListsScreen(
     onOpenWant: (String) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val chatState by chat.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val composer = rememberTextFieldState()
     val snackbars = remember { SnackbarHostState() }
@@ -134,6 +129,7 @@ fun ListsScreen(
     var taskReminders by remember { mutableStateOf(emptyList<ReminderItem>()) }
     var logging by remember { mutableStateOf<HabitItem?>(null) }
     var habitMenu by remember { mutableStateOf<String?>(null) }
+    var newTask by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
@@ -185,6 +181,15 @@ fun ListsScreen(
         taskReminders = remindFor?.let { viewModel.remindersOf(it.id) }.orEmpty()
     }
 
+    if (newTask) {
+        NewTaskSheet(
+            day = NewTaskDay.of(tab),
+            areas = state.areas,
+            onSave = viewModel::addTask,
+            onDismiss = { newTask = false },
+        )
+    }
+
     remindFor?.let { task ->
         ReminderSheet(
             task = task,
@@ -228,44 +233,32 @@ fun ListsScreen(
             },
             bottomBar = {
                 // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
-                Column(Modifier.navigationBarsPadding().imePadding()) {
-                    val line = composer.text.toString()
-                    // Picked chat but it can't run: say why, and the composer quick-adds meanwhile.
-                    if (chatState.chatBlocked) ChatUnavailableNote(chatState.availability)
-                    if (chatState.chosen == ComposerMode.CHAT && (chatState.lines.isNotEmpty() || chatState.thinking)) {
-                        ChatThread(chatState, onClear = chat::clear, onRetry = chat::retry)
-                    }
-                    // One bar for both modes, so switching keeps the line and the keyboard.
-                    val chatting = chatState.chatting
-                    val draft = remember(line) { viewModel.preview(line) }
-                    ComposerBar(
-                        state = composer,
-                        chips = if (chatting) emptyList() else composerChips(line, draft, viewModel.today(), state.areas, state.tagNames, state.projects),
-                        canSend = if (chatting) {
-                            line.isNotBlank() && !chatState.thinking
-                        } else {
-                            (draft.title.isNotBlank() && draft.command == null) ||
-                                draft.command?.name == PlanRules.COMMAND || draft.command?.name == WantRules.COMMAND
-                        },
-                        onSubmit = {
-                            if (chatting) {
-                                if (chat.send(line)) composer.clearText()
-                            } else if (draft.command?.name == PlanRules.COMMAND) {
-                                composer.clearText()
-                                onOpenPlan()
-                            } else if (draft.command?.name == WantRules.COMMAND) {
-                                composer.clearText()
-                                onOpenWant(draft.command.argument)
-                            } else if (viewModel.submit(draft, tab)) {
-                                composer.clearText()
-                            }
-                        },
-                        onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
-                        placeholder = stringResource(if (chatting) R.string.chat_placeholder else R.string.today_composer_placeholder),
-                        sendLabel = stringResource(if (chatting) R.string.chat_send else R.string.today_add),
-                        leading = { ComposerModeSwitch(chatState, chat::choose) },
-                    )
-                }
+                val line = composer.text.toString()
+                val draft = remember(line) { viewModel.preview(line) }
+                BottomComposer(
+                    state = composer,
+                    chat = chat,
+                    chips = composerChips(line, draft, viewModel.today(), state.areas, state.tagNames, state.projects),
+                    canAdd = (draft.title.isNotBlank() && draft.command == null) ||
+                        draft.command?.name == PlanRules.COMMAND || draft.command?.name == WantRules.COMMAND,
+                    onAdd = {
+                        if (draft.command?.name == PlanRules.COMMAND) {
+                            composer.clearText()
+                            onOpenPlan()
+                        } else if (draft.command?.name == WantRules.COMMAND) {
+                            composer.clearText()
+                            onOpenWant(draft.command.argument)
+                        } else if (viewModel.submit(draft, tab)) {
+                            composer.clearText()
+                        }
+                    },
+                    onRemove = { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
+                    placeholder = stringResource(R.string.today_composer_placeholder),
+                    addLabel = stringResource(R.string.today_add),
+                    formLabel = stringResource(R.string.bar_new_task),
+                    onOpenForm = { newTask = true },
+                    modifier = Modifier.navigationBarsPadding().imePadding(),
+                )
             },
         ) { padding ->
             PullToRefreshBox(

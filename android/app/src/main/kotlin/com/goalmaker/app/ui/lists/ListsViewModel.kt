@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.lists
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
@@ -171,6 +172,27 @@ class ListsViewModel(
         }
         val placed = if (draft.plannedDate == null && day != null) draft.copy(plannedDate = day) else draft
         viewModelScope.launch(io) { tasks.add(placed) }
+        return true
+    }
+
+    /**
+     * Saves the new task form (docs/composer.md, the plus on Today, Tomorrow and the Inbox): the title
+     * as typed, with no shortcuts read from it, the day picked, an area by its name, top priority and
+     * the notes. False when the title is blank, so the form stays open.
+     */
+    fun addTask(title: String, day: NewTaskDay, area: AreaItem?, topPriority: Boolean, notes: String): Boolean {
+        if (title.isBlank()) return false
+        val draft = ComposerDraft(
+            title = title.trim(),
+            plannedDate = when (day) {
+                NewTaskDay.TODAY -> today()
+                NewTaskDay.TOMORROW -> today().plusDays(1)
+                NewTaskDay.NO_DAY -> null
+            },
+            area = area?.name,
+            topPriority = topPriority,
+        )
+        viewModelScope.launch(io) { tasks.add(draft, notes.trim()) }
         return true
     }
 

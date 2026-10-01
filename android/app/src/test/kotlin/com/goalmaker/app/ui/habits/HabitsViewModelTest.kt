@@ -15,6 +15,7 @@ import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.data.replica.TestReplica
+import com.goalmaker.app.ui.composer.LineOutcome
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -333,6 +334,51 @@ class HabitsViewModelTest {
         val state = viewModel.uiState.first { it.loaded && it.archived.isNotEmpty() }
         assertEquals(listOf("Read"), state.sections.flatMap { it.rows }.map { it.habit.name })
         assertEquals(HabitStanding.NONE, state.archived.single().standing)
+    }
+
+    @Test
+    fun `the bar adds a habit with how often and how much the line says, starting today`() = runTest {
+        val outcome = viewModel.addLine("Swim 2 times a week 40 min")
+
+        assertEquals(LineOutcome.Added, outcome)
+        val swim = habits.all().single()
+        assertEquals("Swim", swim.name)
+        assertEquals(today, swim.startsOn)
+        assertEquals(HabitRules.PER_WEEK, swim.cadence)
+        assertEquals(2, swim.times)
+        assertEquals(HabitRules.AMOUNT, swim.measure)
+        assertEquals(40.0, swim.target!!, 1e-9)
+        assertEquals("min", swim.unit)
+        assertTrue(swim.showOnToday)
+    }
+
+    @Test
+    fun `a counted habit on days keeps its days and its count`() = runTest {
+        assertEquals(LineOutcome.Added, viewModel.addLine("Water 8 glasses every mon, wed and fri"))
+
+        val water = habits.all().single()
+        assertEquals("Water", water.name)
+        assertEquals(HabitRules.WEEKDAYS, water.cadence)
+        assertEquals(1 or 4 or 16, water.weekdays)
+        assertEquals(HabitRules.COUNT, water.measure)
+        assertEquals(8.0, water.target!!, 1e-9)
+        assertEquals("glasses", water.unit)
+    }
+
+    @Test
+    fun `a line with no name left opens the habit form filled in, and adds nothing`() = runTest {
+        val outcome = viewModel.addLine("3 times a week")
+
+        assertEquals(
+            LineOutcome.OpenForm(HabitDraft("", today, cadence = HabitRules.PER_WEEK, times = 3)),
+            outcome,
+        )
+        assertTrue(habits.all().isEmpty())
+    }
+
+    @Test
+    fun `the preview of a plain name is a daily check`() {
+        assertEquals(HabitDraft("Read", today), viewModel.preview("Read"))
     }
 
     // The flows re-emit on the main looper while the state is collected.

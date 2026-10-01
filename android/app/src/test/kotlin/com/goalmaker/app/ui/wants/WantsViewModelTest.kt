@@ -9,6 +9,7 @@ import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.WantState
 import com.goalmaker.app.data.replica.TestReplica
+import com.goalmaker.app.ui.composer.LineOutcome
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -110,6 +111,59 @@ class WantsViewModelTest {
         assertEquals(60, viewModel.cooldownFor(2890.0, "CZK", null))
         assertNotNull(viewModel.add(WantDraft("Headphones", "Commute", price = 2890.0)))
         assertEquals(60, wants.all().single().cooldownDays)
+    }
+
+    @Test
+    fun `the bar reads a want's price, picked wait and reason`() {
+        val draft = viewModel.preview("Kindle 3290 Kč wait 2 weeks because I read on the train")
+
+        assertEquals(WantDraft("Kindle", "I read on the train", price = 3290.0, currency = "CZK", pickedDays = 14), draft)
+        assertEquals(14, viewModel.cooldownFor(draft.price, draft.currency, draft.pickedDays))
+    }
+
+    @Test
+    fun `a line without a price takes the owner's currency, and its wait comes from the thresholds`() {
+        val draft = viewModel.preview("Desk lamp because the desk is dark")
+
+        assertEquals("CZK", draft.currency)
+        assertEquals(null, draft.price)
+        assertEquals(30, viewModel.cooldownFor(draft.price, draft.currency, draft.pickedDays))
+    }
+
+    @Test
+    fun `a line with a title and a reason adds the want with the cooldown it picked`() = runTest {
+        val outcome = viewModel.addLine("Kindle 3290 Kč wait 2 weeks because I read on the train")
+
+        assertEquals(LineOutcome.Added, outcome)
+        val want = wants.all().single()
+        assertEquals("Kindle", want.title)
+        assertEquals("I read on the train", want.reason)
+        assertEquals(3290.0, want.price!!, 1e-9)
+        assertEquals("CZK", want.currency)
+        assertEquals(14, want.cooldownDays)
+    }
+
+    @Test
+    fun `without a picked wait the price gives the cooldown`() = runTest {
+        assertEquals(LineOutcome.Added, viewModel.addLine("Bike 12 990 Kč because the old one broke"))
+
+        assertEquals(90, wants.all().single().cooldownDays)
+    }
+
+    @Test
+    fun `a line without its reason opens the want form filled in, and adds nothing`() = runTest {
+        val outcome = viewModel.addLine("Kindle 3290 Kč wait 10 days")
+
+        assertEquals(LineOutcome.OpenForm(WantDraft("Kindle", "", price = 3290.0, currency = "CZK", pickedDays = 10)), outcome)
+        assertTrue(wants.all().isEmpty())
+    }
+
+    @Test
+    fun `a line with only a reason opens the form too`() = runTest {
+        val outcome = viewModel.addLine("because I read a lot")
+
+        assertEquals(LineOutcome.OpenForm(WantDraft("", "I read a lot", currency = "CZK")), outcome)
+        assertTrue(wants.all().isEmpty())
     }
 
     private fun kotlinx.coroutines.CoroutineScope.launchCollect(model: WantsViewModel, into: MutableList<WantUndo>) =

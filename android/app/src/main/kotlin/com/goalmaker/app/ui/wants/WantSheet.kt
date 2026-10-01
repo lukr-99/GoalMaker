@@ -48,19 +48,29 @@ import kotlinx.coroutines.launch
 /**
  * Adds a want or edits one (docs/wants.md). The reason is required; a new want shows the cooldown
  * its price gives, and the owner can pick another number of days before saving. Editing never
- * changes the cooldown already set.
+ * changes the cooldown already set. A new want can start from [prefill], what the bottom bar read
+ * from a line it could not add as it stood; [onSaved] runs once the want is saved.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun WantSheet(viewModel: WantsViewModel, initial: WantItem?, initialTitle: String, onDismiss: () -> Unit) {
+internal fun WantSheet(
+    viewModel: WantsViewModel,
+    initial: WantItem?,
+    initialTitle: String,
+    onDismiss: () -> Unit,
+    prefill: WantDraft? = null,
+    onSaved: () -> Unit = {},
+) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var title by rememberSaveable { mutableStateOf(initialTitle) }
-    var reason by rememberSaveable { mutableStateOf(initial?.reason.orEmpty()) }
-    var priceText by rememberSaveable { mutableStateOf(initial?.price?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() }.orEmpty()) }
-    var currency by rememberSaveable { mutableStateOf(initial?.currency ?: viewModel.uiState.value.cooldowns.currency) }
+    var reason by rememberSaveable { mutableStateOf(initial?.reason ?: prefill?.reason.orEmpty()) }
+    var priceText by rememberSaveable {
+        mutableStateOf((initial?.price ?: prefill?.price)?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() }.orEmpty())
+    }
+    var currency by rememberSaveable { mutableStateOf(initial?.currency ?: prefill?.currency ?: viewModel.uiState.value.cooldowns.currency) }
     var link by rememberSaveable { mutableStateOf(initial?.link.orEmpty()) }
-    var picked by rememberSaveable { mutableStateOf<Int?>(null) }
+    var picked by rememberSaveable { mutableStateOf(prefill?.pickedDays) }
     val price = WantMoney.parse(priceText)
     val days = viewModel.cooldownFor(price, currency.trim().uppercase(), picked)
     val canSave = title.isNotBlank() && reason.isNotBlank()
@@ -77,7 +87,10 @@ internal fun WantSheet(viewModel: WantsViewModel, initial: WantItem?, initialTit
         )
         scope.launch {
             val saved = if (initial == null) viewModel.add(draft) != null else viewModel.update(initial.id, draft)
-            if (saved) sheet.hide()
+            if (saved) {
+                sheet.hide()
+                onSaved()
+            }
             onDismiss()
         }
     }

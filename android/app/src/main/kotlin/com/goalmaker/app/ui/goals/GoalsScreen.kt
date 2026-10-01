@@ -75,6 +75,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import com.goalmaker.app.ui.chat.ChatViewModel
+import com.goalmaker.app.ui.composer.BottomComposer
+import com.goalmaker.app.ui.composer.LineOutcome
 import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalItem
@@ -98,16 +105,27 @@ import kotlinx.coroutines.launch
  * this year down to today with each goal as a card, then next week for planning ahead. A ring shows only
  * its rung; a tap on a card lights what it feeds and what feeds it. A goal that becomes a hit gets
  * confetti unless motion is reduced. The top bar switches to the plain list, one compact row per goal
- * grouped by period, where a tap opens the goal; this phone remembers the pick.
+ * grouped by period, where a tap opens the goal; this phone remembers the pick. The bottom bar
+ * (docs/composer.md) adds a goal from a typed line, or opens the form filled in when no title is
+ * left; its plus opens the empty form for this week, and its switch turns it into the quick [chat].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
+fun GoalsScreen(viewModel: GoalsViewModel, chat: ChatViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     // null: no dialog; an empty id: a new goal.
     var editing by remember { mutableStateOf<GoalItem?>(null) }
     var logging by remember { mutableStateOf<GoalItem?>(null) }
+    // The bottom bar's line, and whether the open form came from it (it empties once the form saves).
+    val composer = rememberTextFieldState()
+    var fromLine by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    fun open(goal: GoalItem) {
+        fromLine = false
+        editing = goal
+    }
 
     // Confetti when a shown goal becomes a hit while the screen is open.
     val reduceMotion = AppTheme.reduceMotion
@@ -134,6 +152,33 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                     scrollBehavior = scrollBehavior,
                 )
             },
+            bottomBar = {
+                // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
+                val line = composer.text.toString()
+                val draft = remember(line, state.today) { viewModel.preview(line) }
+                BottomComposer(
+                    state = composer,
+                    chat = chat,
+                    chips = goalLineChips(line, draft, viewModel.today()),
+                    canAdd = line.isNotBlank(),
+                    onAdd = {
+                        if (line.isNotBlank()) scope.launch {
+                            when (val outcome = viewModel.addLine(line)) {
+                                LineOutcome.Added -> composer.clearText()
+                                is LineOutcome.OpenForm -> {
+                                    fromLine = true
+                                    editing = outcome.prefill.asNewGoal()
+                                }
+                            }
+                        }
+                    },
+                    placeholder = stringResource(R.string.bar_goal_placeholder),
+                    addLabel = stringResource(R.string.bar_add_goal),
+                    formLabel = stringResource(R.string.bar_new_goal),
+                    onOpenForm = { open(GoalItem("", "", GoalHorizon.WEEK, GoalRules.periodStart(GoalHorizon.WEEK, viewModel.today()))) },
+                    modifier = Modifier.navigationBarsPadding().imePadding(),
+                )
+            },
         ) { padding ->
             if (state.loaded && state.view == GoalsView.LIST) {
                 // The plain list: each period's goals as compact rows, no rings, rail or chain.
@@ -145,7 +190,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                     state.groups.forEach { section ->
                         val id = "${section.horizon.id}-${section.start}-${section.next}"
                         item(key = "lh-$id") {
-                            ListGroupHeader(section, onAdd = { editing = GoalItem("", "", section.horizon, section.start) })
+                            ListGroupHeader(section, onAdd = { open(GoalItem("", "", section.horizon, section.start)) })
                         }
                         items(section.rows, key = { "l-" + it.goal.id }) { row ->
                             GoalListRow(
@@ -185,7 +230,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                                     onDelete = { viewModel.delete(row.goal.id) },
                                 )
                             },
-                            onAdd = { editing = GoalItem("", "", section.horizon, section.start) },
+                            onAdd = { open(GoalItem("", "", section.horizon, section.start)) },
                             onCopy = { viewModel.copyPrevious(section) },
                         )
                     }
@@ -195,7 +240,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                         if (next.rows.isEmpty()) {
                             item(key = "copy-next") { NextWeekEmpty(next.canCopy, onCopy = { viewModel.copyPrevious(next) }) }
                         }
-                        item(key = "add-next") { AddGoal(onClick = { editing = GoalItem("", "", next.horizon, next.start) }) }
+                        item(key = "add-next") { AddGoal(onClick = { open(GoalItem("", "", next.horizon, next.start)) }) }
                     }
                 }
             }
@@ -210,9 +255,14 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
             goal = goal,
             today = state.today,
             goals = state.goals,
-            onSave = { draft -> viewModel.save(goal.id.ifEmpty { null }, draft) },
+            onSave = { draft ->
+                viewModel.save(goal.id.ifEmpty { null }, draft).also { saved -> if (saved && fromLine) composer.clearText() }
+            },
             onDelete = if (goal.id.isEmpty()) null else ({ viewModel.delete(goal.id) }),
-            onDismiss = { editing = null },
+            onDismiss = {
+                editing = null
+                fromLine = false
+            },
         )
     }
     logging?.let { goal ->
@@ -692,14 +742,14 @@ private fun GoalHorizon.label() = when (this) {
     GoalHorizon.DAY -> R.string.goals_horizon_day
 }
 
-private fun GoalHorizon.thisLabel() = when (this) {
+internal fun GoalHorizon.thisLabel() = when (this) {
     GoalHorizon.YEAR -> R.string.goals_this_year
     GoalHorizon.MONTH -> R.string.goals_this_month
     GoalHorizon.WEEK -> R.string.goals_this_week
     GoalHorizon.DAY -> R.string.goals_today
 }
 
-private fun GoalHorizon.nextLabel() = when (this) {
+internal fun GoalHorizon.nextLabel() = when (this) {
     GoalHorizon.YEAR -> R.string.goals_next_year
     GoalHorizon.MONTH -> R.string.goals_next_month
     GoalHorizon.WEEK -> R.string.goals_next_week
