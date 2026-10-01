@@ -272,6 +272,17 @@
     <sys:String x:Key="Composer.OpensPlan">opens Plan tomorrow</sys:String>
     <sys:String x:Key="Composer.UnknownCommand">unknown command</sys:String>
     <sys:String x:Key="Composer.Remove">Remove {0}</sys:String>
+    <sys:String x:Key="Composer.NewTask">New task</sys:String>
+    <sys:String x:Key="NewTask.What">What needs doing?</sys:String>
+    <sys:String x:Key="NewTask.Day">Day</sys:String>
+    <sys:String x:Key="NewTask.NoDay">No day</sys:String>
+    <sys:String x:Key="NewTask.Area">Area</sys:String>
+    <sys:String x:Key="NewTask.NoArea">No area</sys:String>
+    <sys:String x:Key="NewTask.NewArea">{0} (new)</sys:String>
+    <sys:String x:Key="NewTask.Notes">Notes</sys:String>
+    <sys:String x:Key="NewTask.Hint">Steps, reminders and a repeat wait in the task's details once it is saved.</sys:String>
+    <sys:String x:Key="NewTask.Save">Save</sys:String>
+    <sys:String x:Key="NewTask.Cancel">Cancel</sys:String>
 
     <!-- Quick chat in the composer (M7) -->
     <sys:String x:Key="Chat.Switch">Chat</sys:String>
@@ -410,6 +421,9 @@
     <sys:String x:Key="Goals.CopyWeek">Copy last week's goals</sys:String>
     <sys:String x:Key="Goals.CopyDay">Copy yesterday's goals</sys:String>
     <sys:String x:Key="Goals.New">New goal</sys:String>
+    <sys:String x:Key="Goals.BarPlaceholder">Add a goal: Run 30 km this week</sys:String>
+    <sys:String x:Key="Goals.BarAdd">Add goal</sys:String>
+    <sys:String x:Key="Goals.BarTarget">Target {0} {1}</sys:String>
     <sys:String x:Key="Goals.Edit">Edit the goal</sys:String>
     <sys:String x:Key="Goals.Name">Goal</sys:String>
     <sys:String x:Key="Goals.Emoji">Emoji (optional)</sys:String>
@@ -547,6 +561,11 @@
     <sys:String x:Key="Habits.Add">New habit</sys:String>
     <sys:String x:Key="Habits.Archived">Archived · {0}</sys:String>
     <sys:String x:Key="Habits.New">New habit</sys:String>
+    <sys:String x:Key="Habits.BarPlaceholder">Add a habit: Swim 2 times a week</sys:String>
+    <sys:String x:Key="Habits.BarAdd">Add habit</sys:String>
+    <sys:String x:Key="Habits.BarTarget">Target {0}</sys:String>
+    <sys:String x:Key="Habits.BarTargetUnit">Target {0} {1}</sys:String>
+    <sys:String x:Key="Habits.BarCheck">A simple check</sys:String>
     <sys:String x:Key="Habits.Edit">Edit</sys:String>
     <sys:String x:Key="Habits.Name">Habit</sys:String>
     <sys:String x:Key="Habits.Emoji">Emoji (optional)</sys:String>
@@ -846,6 +865,13 @@
     <sys:String x:Key="Wants.CoolsFor">COOLS FOR</sys:String>
     <sys:String x:Key="Wants.Day">{0} day</sys:String>
     <sys:String x:Key="Wants.Days">{0} days</sys:String>
+    <sys:String x:Key="Wants.New">New want</sys:String>
+    <sys:String x:Key="Wants.BarPlaceholder">Add a want: Kindle 3290 Kč because …</sys:String>
+    <sys:String x:Key="Wants.BarAdd">Add want</sys:String>
+    <sys:String x:Key="Wants.BarWaits">Waits {0} days</sys:String>
+    <sys:String x:Key="Wants.BarWaitsDay">Waits {0} day</sys:String>
+    <sys:String x:Key="Wants.BarWhy">Why: {0}</sys:String>
+    <sys:String x:Key="Wants.BarNoWhy">Add the why: because …</sys:String>
     <sys:String x:Key="Wants.FewerDays">One day less</sys:String>
     <sys:String x:Key="Wants.MoreDays">One day more</sys:String>
     <sys:String x:Key="Wants.Save">Save</sys:String>

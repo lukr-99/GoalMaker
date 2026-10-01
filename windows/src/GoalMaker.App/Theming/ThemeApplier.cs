@@ -362,6 +362,8 @@ public sealed class ThemeApplier : IDisposable
         // rather than floating in the padding, and the gutter the content keeps clear of it.
         resources["GM.PagePaddingToEdge"] = new Thickness(density.PagePadding, density.PagePadding, 0, density.PagePadding);
         resources["GM.PageGutter"] = new Thickness(0, 0, density.PagePadding, 0);
+        // The bottom bar under a page that scrolls: the page's sides and foot, nothing above it.
+        resources["GM.BarMargin"] = new Thickness(density.PagePadding, 0, density.PagePadding, density.PagePadding);
         resources["GM.CardPadding"] = new Thickness(density.CardPadding);
         resources["GM.RowGap"] = new Thickness(0, 0, 0, density.RowGap);
         resources["GM.RowMinHeight"] = (double)density.RowMinHeight;

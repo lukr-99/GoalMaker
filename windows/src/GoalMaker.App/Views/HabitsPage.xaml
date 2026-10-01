@@ -62,19 +62,21 @@
         (Every day, Weekly, Limits) as full cards, Hide done, and the archived ones folded at the end. The editor
         and the log panel take the page.
     -->
+    <Page.InputBindings>
+        <!-- The full form, from anywhere on the page (docs/composer.md). -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding Bar.OpenFormCommand}" />
+    </Page.InputBindings>
+
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
             <!-- Stretched up to the wide measure, so the groups know when there is room for two columns. -->
             <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Stretch">
                 <DockPanel Margin="0,0,0,12">
-                    <ui:Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Appearance="Primary"
-                               Command="{Binding NewHabitCommand}" Content="{DynamicResource Habits.Add}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="Add24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
                     <ui:Button DockPanel.Dock="Right"
-                               Margin="0,0,8,0"
                                VerticalAlignment="Bottom"
                                Padding="8,6"
                                Appearance="Transparent"
@@ -156,8 +158,16 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!-- The bottom bar (docs/composer.md): type a habit to add it; the plus opens the habit editor. -->
+        <ContentControl Grid.Row="1"
+                        Margin="{DynamicResource GM.BarMargin}"
+                        MaxWidth="{DynamicResource GM.PageWidth}"
+                        Focusable="False"
+                        Content="{Binding Bar}"
+                        ContentTemplate="{StaticResource ComposerTemplate}" />
+
         <!-- Adding or editing a habit. -->
-        <Border Style="{StaticResource Overlay}" Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}}">
+        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}" Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}}">
             <ui:Card Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" DataContext="{Binding Editor}">
                 <ui:Card.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding SaveCommand}" />
@@ -269,7 +279,7 @@
         </Border>
 
         <!-- Logging an amount on a count or amount habit. -->
-        <Border Style="{StaticResource Overlay}" Visibility="{Binding IsLogging, Converter={StaticResource BoolToVisibility}}">
+        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}" Visibility="{Binding IsLogging, Converter={StaticResource BoolToVisibility}}">
             <ui:Card Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ui:Card.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding AddAmountCommand}" />
@@ -291,6 +301,6 @@
             </ui:Card>
         </Border>
 
-        <controls:ConfettiBurst x:Name="Confetti" />
+        <controls:ConfettiBurst x:Name="Confetti" Grid.RowSpan="2" />
     </Grid>
 </Page>

@@ -287,9 +287,9 @@ public sealed class AppGraph : IDisposable
         Steps = new StepList(replica, newRows, Sync.Request);
         Goals = new GoalList(replica, newRows, Sync.Request);
         Habits = new HabitList(replica, newRows, Sync.Request);
-        GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits);
+        GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits, Chat);
         HabitsPage = new HabitsViewModel(
-            Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits));
+            Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits), Chat);
         Reviews = new ReviewList(replica, newRows, Sync.Request);
         // Tally's categories by name and palette color, the shipped ones and the owner's (docs/tally.md).
         TallyLabels NameTally(IReadOnlyList<TallyCategory> own) => new(tallyDefaults, own, strings, Theme.SwatchBrush);
@@ -310,7 +310,7 @@ public sealed class AppGraph : IDisposable
             Tally,
             NameTally);
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
-        WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi);
+        WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi, Chat);
         // A want added, decided or deleted moves the next alarm and may settle the wants toast.
         Wants.Changed += (_, _) => runOnUi(SettleReminders);
         TallyPage = new TallyViewModel(

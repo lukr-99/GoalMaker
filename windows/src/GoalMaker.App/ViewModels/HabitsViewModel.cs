@@ -91,7 +91,15 @@ public sealed partial class HabitsViewModel : ObservableObject
     private string summaryName = string.Empty;
 
     public HabitsViewModel(
-        HabitList habits, GoalList goals, ISettingsStore settings, IStrings strings, TimeProvider time, Func<bool> motionReduced, Action<Action> runOnUi, Action? openMini = null)
+        HabitList habits,
+        GoalList goals,
+        ISettingsStore settings,
+        IStrings strings,
+        TimeProvider time,
+        Func<bool> motionReduced,
+        Action<Action> runOnUi,
+        Action? openMini = null,
+        ChatViewModel? chat = null)
     {
         this.openMini = openMini;
         this.habits = habits;
@@ -101,6 +109,7 @@ public sealed partial class HabitsViewModel : ObservableObject
         this.time = time;
         this.motionReduced = motionReduced;
         Editor = new HabitEditorViewModel(habits, goals, strings, Today);
+        Bar = new HabitBarViewModel(habits, strings, Today, Editor.OpenFrom, chat);
         Editor.PropertyChanged += (_, change) =>
         {
             if (change.PropertyName == nameof(HabitEditorViewModel.IsOpen))
@@ -112,6 +121,9 @@ public sealed partial class HabitsViewModel : ObservableObject
         goals.Changed += (_, _) => runOnUi(Refresh);
         Refresh();
     }
+
+    /// <summary>The bottom bar: type a habit to add it, or open the editor with its plus.</summary>
+    public HabitBarViewModel Bar { get; }
 
     /// <summary>The page offers the mini window; the mini window itself has nothing to offer.</summary>
     public bool HasMini => openMini is not null;

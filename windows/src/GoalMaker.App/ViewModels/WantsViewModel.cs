@@ -3,6 +3,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
+using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 
@@ -25,6 +26,7 @@ public sealed partial class WantsViewModel : ObservableObject
     private string? editingId;
     private Action? undo;
     private ITimer? undoTimer;
+    private Action? onAdded;
 
     [ObservableProperty]
     private WantState filter = WantState.Ready;
@@ -110,8 +112,10 @@ public sealed partial class WantsViewModel : ObservableObject
     [ObservableProperty]
     private bool cooldownsRefused;
 
-    public WantsViewModel(WantList wants, ISettingsStore settings, IStrings strings, TimeProvider time, Action<Action> runOnUi)
+    /// <param name="chat">The quick chat the bottom bar switches to; null where there is none.</param>
+    public WantsViewModel(WantList wants, ISettingsStore settings, IStrings strings, TimeProvider time, Action<Action> runOnUi, ChatViewModel? chat = null)
     {
+        Bar = new WantBarViewModel(wants, strings, StartAdding, chat);
         this.wants = wants;
         this.settings = settings;
         this.strings = strings;
@@ -122,6 +126,9 @@ public sealed partial class WantsViewModel : ObservableObject
     }
 
     public ObservableCollection<WantRowViewModel> Rows { get; } = [];
+
+    /// <summary>The bottom bar: type a want to add it, or open the add panel with its plus.</summary>
+    public WantBarViewModel Bar { get; }
 
     public bool ShowsReady => Filter == WantState.Ready;
 
@@ -185,16 +192,23 @@ public sealed partial class WantsViewModel : ObservableObject
     }
 
     /// <summary>Opens the add panel with <paramref name="title"/> filled in (from <c>/want</c> in a composer).</summary>
-    public void StartAdding(string title)
+    public void StartAdding(string title) => StartAdding(new WantLine(title.Trim(), null, null, null, null), null);
+
+    /// <summary>
+    /// Opens the add panel filled in with what the bottom bar read (null: blank); <paramref name="added"/>
+    /// runs once the want is saved, so the bar can let go of its line.
+    /// </summary>
+    public void StartAdding(WantLine? line, Action? added)
     {
         editingId = null;
+        onAdded = added;
         IsAdding = true;
-        DraftTitle = title.Trim();
-        DraftReason = string.Empty;
-        DraftPrice = string.Empty;
-        DraftCurrency = wants.Cooldowns().Currency;
+        DraftTitle = line?.Title ?? string.Empty;
+        DraftReason = line?.Reason ?? string.Empty;
+        DraftPrice = line?.Price is { } price ? price.ToString(CultureInfo.CurrentCulture) : string.Empty;
+        DraftCurrency = line?.Currency ?? wants.Cooldowns().Currency;
         DraftLink = string.Empty;
-        pickedDays = null;
+        pickedDays = line?.WaitDays;
         UpdateDraftDays();
         OnPropertyChanged(nameof(PanelTitle));
         IsEditing = true;
@@ -203,6 +217,7 @@ public sealed partial class WantsViewModel : ObservableObject
     public void StartEdit(WantRowViewModel row)
     {
         editingId = row.Want.Id;
+        onAdded = null;
         IsAdding = false;
         DraftTitle = row.Want.Title;
         DraftReason = row.Want.Reason;
@@ -239,7 +254,7 @@ public sealed partial class WantsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Add() => StartAdding(string.Empty);
+    private void Add() => StartAdding(null, null);
 
     private bool CanSaveDraft() => DraftTitle.Trim().Length > 0 && DraftReason.Trim().Length > 0;
 
@@ -251,11 +266,21 @@ public sealed partial class WantsViewModel : ObservableObject
         if (saved)
         {
             IsEditing = false;
+            if (editingId is null)
+            {
+                onAdded?.Invoke();
+            }
+
+            onAdded = null;
         }
     }
 
     [RelayCommand]
-    private void CancelDraft() => IsEditing = false;
+    private void CancelDraft()
+    {
+        onAdded = null;
+        IsEditing = false;
+    }
 
     [RelayCommand]
     private void MoreDays() => Pick(+1);
@@ -360,7 +385,7 @@ public sealed partial class WantsViewModel : ObservableObject
     private string Label(string key, int count) =>
         count > 0 ? strings.Get(key) + " " + count.ToString(CultureInfo.CurrentCulture) : strings.Get(key);
 
-    private static string Money(double amount, string currency) =>
+    internal static string Money(double amount, string currency) =>
         amount.ToString(amount % 1 == 0 ? "N0" : "N2", CultureInfo.CurrentCulture) + " " + currency;
 
     /// <summary>A price typed with a comma or a point; null for nothing or something that isn't one.</summary>

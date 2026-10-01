@@ -137,14 +137,17 @@
     </Style>
 
     <!--
-        The composer (docs/composer.md): a pill that grows a preview of what the line will save. With the
+        The bottom bar (docs/composer.md): a pill that grows a preview of what the line will save. With the
         quick chat (M7) switched on, the short thread shows above it and Enter sends the line to the chat.
-        Ctrl+Shift+Space flips the switch while the keyboard is in the composer.
+        Ctrl+Shift+Space flips the switch while the keyboard is in the bar, Ctrl+N opens the page's full
+        form and Esc clears the line. The round button is a plus while the line is empty (where the page
+        has a form) and the send arrow once something is typed.
     -->
-    <DataTemplate x:Key="ComposerTemplate" DataType="{x:Type vm:ComposerViewModel}">
+    <DataTemplate x:Key="ComposerTemplate" DataType="{x:Type vm:BarViewModel}">
         <StackPanel>
             <StackPanel.InputBindings>
                 <KeyBinding Key="Space" Modifiers="Control+Shift" Command="{Binding Chat.SwitchCommand}" />
+                <KeyBinding Key="N" Modifiers="Control" Command="{Binding OpenFormCommand}" />
             </StackPanel.InputBindings>
 
             <!-- Why chat is off although chosen, or what went wrong with the last message. -->
@@ -280,8 +283,10 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
-                                    <Border Margin="0,0,6,6"
+                                    <Border x:Name="Chip"
+                                            Margin="0,0,6,6"
                                             Padding="10,2,2,2"
+                                            MinHeight="26"
                                             CornerRadius="12"
                                             BorderThickness="1"
                                             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
@@ -294,34 +299,54 @@
                                                      Fill="{Binding AreaBrush}"
                                                      Stroke="{DynamicResource GM.OutlineBrush}"
                                                      Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
-                                            <ui:SymbolIcon Margin="0,0,6,0"
+                                            <ui:SymbolIcon x:Name="Icon"
+                                                           Margin="0,0,6,0"
                                                            FontSize="14"
                                                            Symbol="{Binding Symbol}"
                                                            Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
-                                            <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
+                                            <TextBlock x:Name="Words"
+                                                       MaxWidth="420"
+                                                       VerticalAlignment="Center"
+                                                       FontSize="13"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       Text="{Binding Label}" />
                                             <Button Margin="4,0,0,0"
                                                     Style="{StaticResource GM.SubtleRoundButton}"
                                                     Command="{Binding RemoveCommand}"
                                                     ToolTip="{Binding RemoveName}"
-                                                    AutomationProperties.Name="{Binding RemoveName}">
+                                                    AutomationProperties.Name="{Binding RemoveName}"
+                                                    Visibility="{Binding CanRemove, Converter={StaticResource BoolToVisibility}}">
                                                 <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
                                             </Button>
                                         </StackPanel>
                                     </Border>
+                                    <DataTemplate.Triggers>
+                                        <!-- A chip that only shows what will be saved has no remove button, so it keeps its padding on both sides. -->
+                                        <DataTrigger Binding="{Binding CanRemove}" Value="False">
+                                            <Setter TargetName="Chip" Property="Padding" Value="10,2,10,2" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                            <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                                            <Setter TargetName="Words" Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                                            <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource GM.DangerBrush}" />
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <ui:Button DockPanel.Dock="Right"
+                        <!-- The plus (an empty line opens the full form) that turns into the send arrow as you type. -->
+                        <ui:Button x:Name="Action"
+                                   DockPanel.Dock="Right"
                                    Width="34"
                                    Height="34"
                                    Padding="0"
                                    VerticalAlignment="Center"
                                    Appearance="Primary"
                                    CornerRadius="17"
-                                   Command="{Binding AddTaskCommand}"
-                                   ToolTip="{Binding SendName}"
-                                   AutomationProperties.Name="{Binding SendName}">
-                            <ui:SymbolIcon FontSize="16" Symbol="Send24" Filled="True" />
+                                   Command="{Binding PressCommand}"
+                                   ToolTip="{Binding ButtonName}"
+                                   AutomationProperties.Name="{Binding ButtonName}">
+                            <controls:AddSendGlyph IsSend="{Binding ShowsSend}" />
                         </ui:Button>
                         <!-- The switch between quick-add and chat; it says why when chat can't be used. -->
                         <ToggleButton x:Name="Switch"
@@ -344,7 +369,7 @@
                                     Background="Transparent"
                                     FontSize="14"
                                     PlaceholderText="{Binding Placeholder}"
-                                    Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                                    Text="{Binding Line, UpdateSourceTrigger=PropertyChanged}"
                                     AutomationProperties.Name="{Binding Placeholder}">
                             <!-- No box or underline inside the pill: the pill is the text box. -->
                             <ui:TextBox.Resources>
@@ -356,7 +381,8 @@
                                 <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="Transparent" />
                             </ui:TextBox.Resources>
                             <ui:TextBox.InputBindings>
-                                <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
+                                <KeyBinding Key="Enter" Command="{Binding SendCommand}" />
+                                <KeyBinding Key="Escape" Command="{Binding ClearCommand}" />
                             </ui:TextBox.InputBindings>
                         </ui:TextBox>
                     </DockPanel>

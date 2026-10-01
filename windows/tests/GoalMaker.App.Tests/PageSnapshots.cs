@@ -429,6 +429,68 @@ public sealed class PageSnapshots
     }
 
     [Fact(Explicit = true)]
+    public void BottomBarOnEveryPage() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        SeedGoals(planner);
+        planner.Wants.Add(new WantDraft("Kindle", "Reading at night", Price: 3290, PickedDays: 0));
+        planner.Wants.Add(new WantDraft("Standing desk", "My back after long days", Price: 12990));
+        var water = planner.Habits.Add(new HabitDraft("Water", Today.AddDays(-30)) { Emoji = "💧", Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
+        planner.Habits.CheckIn(water.Id, Today, 5);
+        planner.Habits.Add(new HabitDraft("Read", Today.AddDays(-30)) { Emoji = "📖", Measure = HabitRules.Amount, Target = 30, Unit = "min" });
+        planner.Habits.Add(new HabitDraft("Swim", Today.AddDays(-30)) { Emoji = "🏊", Cadence = HabitRules.PerWeek, Times = 2 });
+        using var theme = Theme(planner);
+        var chat = new ChatViewModel(
+            new SnapshotAssistant(), new SnapshotAuth(), planner.Sync, planner.Settings, strings, planner.Time, action => action(), () => { });
+
+        // Each page with its bar empty (the plus) and typed (the send arrow and the preview), dark and light.
+        // Detached content doesn't hear the application's resources change, so each look is built anew.
+        foreach (var (id, mode) in new[] { ("track", GoalMaker.Core.Settings.ThemeMode.Dark), ("electric", GoalMaker.Core.Settings.ThemeMode.Light) })
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = id, Mode = mode });
+            var look = $"{id}-{mode}".ToLowerInvariant();
+            foreach (var typed in new[] { false, true })
+            {
+                var state = typed ? "typed" : "empty";
+                var wants = new WantsViewModel(planner.Wants, planner.Settings, strings, planner.Time, action => action(), chat);
+                wants.Bar.Line = typed ? "Kindle 3 290 Kč wait 2 weeks because I read on the train" : string.Empty;
+                Save(new WantsPage(wants), folder, $"bar-wants-{state}-{look}");
+
+                var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action(), chat: chat);
+                habits.Bar.Line = typed ? "Swim 2 times a week 40 min" : string.Empty;
+                Save(new HabitsPage(habits), folder, $"bar-habits-{state}-{look}");
+
+                var goals = new GoalsViewModel(planner.Goals, planner.Tasks, planner.Settings, strings, planner.Time, () => true, action => action(), planner.Habits, chat);
+                goals.Bar.Line = typed ? "Read 3 books this month" : string.Empty;
+                Save(new GoalsPage(goals), folder, $"bar-goals-{state}-{look}", new Size(1100, 760));
+            }
+
+            // A want with no reason yet: the warning chip; and the panel the send opens for it.
+            var wantsMissing = new WantsViewModel(planner.Wants, planner.Settings, strings, planner.Time, action => action(), chat);
+            wantsMissing.Bar.Line = "Headphones 2 490 Kč";
+            Save(new WantsPage(wantsMissing), folder, $"bar-wants-no-reason-{look}");
+            wantsMissing.Bar.SendCommand.Execute(null);
+            Save(new WantsPage(wantsMissing), folder, $"bar-wants-panel-{look}");
+
+            // Today's bar, and the new task form its plus opens.
+            var today = new ListViewModel(
+                ListKind.Today, planner.Tasks, planner.Areas, new ComposerViewModel(
+                    planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), chat: chat),
+                planner.Sync, planner.Settings, strings, planner.Time, theme.AreaBrush, () => true, planner.Tick, action => action());
+            Save(new TodayPage(today), folder, $"bar-today-empty-{look}");
+            today.Composer.PressCommand.Execute(null);
+            Save(new TodayPage(today), folder, $"bar-today-new-task-{look}");
+        }
+
+        // The quick chat: the button is the send arrow even with nothing typed.
+        theme.Apply(planner.Settings.Appearance with { ThemeId = "track", Mode = GoalMaker.Core.Settings.ThemeMode.Dark });
+        chat.IsChatChosen = true;
+        var chatting = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action(), chat: chat);
+        Save(new HabitsPage(chatting), folder, "bar-habits-chat-track-dark");
+    });
+
+    [Fact(Explicit = true)]
     public void HabitsPageAndEditor() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();

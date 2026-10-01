@@ -1,6 +1,4 @@
-using System.Collections.ObjectModel;
 using System.Windows.Media;
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
 using GoalMaker.Core.Composer;
@@ -12,30 +10,23 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// The composer on a list: the line, its live preview (docs/composer.md) and saving it. The list
 /// supplies the day when the line names none. With the quick chat (M7) switched on, the line goes to
-/// the chat instead, and quick-add is exactly as before whenever the switch is on quick-add.
+/// the chat instead, and quick-add is exactly as before whenever the switch is on quick-add. On
+/// Today, Tomorrow and the Inbox the empty bar's plus opens the new task form (<see cref="AttachForm"/>).
 /// </summary>
-public sealed partial class ComposerViewModel : ObservableObject
+public sealed class ComposerViewModel : BarViewModel
 {
     private readonly TaskList tasks;
     private readonly AreaList areas;
     private readonly TagList tags;
     private readonly ProjectList projects;
     private readonly ISettingsStore settings;
-    private readonly IStrings strings;
     private readonly TimeProvider time;
     private readonly Func<string, Brush?> areaBrush;
     private readonly Func<DateOnly, DateOnly?> defaultDay;
     private readonly Action? openPlan;
     private readonly Action<string>? openWant;
-    private readonly ChatViewModel? chat;
+    private Action<ComposerDraft?, Action>? openForm;
     private ComposerDraft draft;
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AddTaskCommand))]
-    private string newTaskTitle = string.Empty;
-
-    [ObservableProperty]
-    private bool hasChips;
 
     /// <param name="defaultDay">The day a line without one lands on, from the planning day (null: none).</param>
     /// <param name="openPlan">What `/plan` does (docs/plan-tomorrow.md); null where it can't run.</param>
@@ -55,8 +46,8 @@ public sealed partial class ComposerViewModel : ObservableObject
         Action? openPlan = null,
         Action<string>? openWant = null,
         ChatViewModel? chat = null)
+        : base(strings, chat)
     {
-        this.chat = chat;
         this.openPlan = openPlan;
         this.openWant = openWant;
         this.tasks = tasks;
@@ -64,113 +55,102 @@ public sealed partial class ComposerViewModel : ObservableObject
         this.tags = tags;
         this.projects = projects;
         this.settings = settings;
-        this.strings = strings;
         this.time = time;
         this.areaBrush = areaBrush;
         this.defaultDay = defaultDay;
         draft = Parse(string.Empty);
-        areas.Changed += (_, _) => runOnUi(UpdatePreview);
-        tags.Changed += (_, _) => runOnUi(UpdatePreview);
-        if (chat is not null)
-        {
-            chat.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName is nameof(ChatViewModel.IsChat) or nameof(ChatViewModel.IsBusy))
-                {
-                    OnPropertyChanged(nameof(IsChat));
-                    OnPropertyChanged(nameof(Placeholder));
-                    OnPropertyChanged(nameof(SendName));
-                    UpdatePreview();
-                }
-            };
-        }
+        areas.Changed += (_, _) => runOnUi(RefreshPreview);
+        tags.Changed += (_, _) => runOnUi(RefreshPreview);
     }
 
-    /// <summary>The quick chat, for the switch and the thread above the line; null where there is none.</summary>
-    public ChatViewModel? Chat => chat;
+    /// <summary>The line, under the name the lists have always used.</summary>
+    public string NewTaskTitle
+    {
+        get => Line;
+        set => Line = value;
+    }
 
-    public bool HasChat => chat is not null;
+    /// <summary>Enter: saves the line as a task, runs its command, or sends it to the chat.</summary>
+    public IAsyncRelayCommand AddTaskCommand => SendCommand;
 
-    /// <summary>Whether Enter sends the line to the chat rather than saving it as a task.</summary>
-    public bool IsChat => chat?.IsChat == true;
-
-    public string Placeholder => strings.Get(IsChat ? "Chat.Placeholder" : "Composer.Placeholder");
-
-    /// <summary>The send button's name, which says what Enter does.</summary>
-    public string SendName => strings.Get(IsChat ? "Chat.Send" : "Composer.Add");
-
-    /// <summary>What the line will save, as it's typed.</summary>
-    public ObservableCollection<ComposerChipViewModel> Chips { get; } = [];
+    public override string FormName => Strings.Get("Composer.NewTask");
 
     /// <summary>Raised after a line was saved as a task, so a quick-add box can close.</summary>
     public event EventHandler? Added;
 
-    partial void OnNewTaskTitleChanged(string value) => UpdatePreview();
+    protected override string ItemPlaceholder => Strings.Get("Composer.Placeholder");
+
+    protected override string AddName => Strings.Get("Composer.Add");
 
     private bool IsPlanCommand => draft.Command?.Name == PlanRules.Command && openPlan is not null;
 
     private bool IsWantCommand => draft.Command?.Name == WantRules.Command && openWant is not null;
 
-    private bool CanAddTask() => chat is { IsChat: true }
-        ? chat.CanSend(NewTaskTitle)
-        : (draft.Title.Trim().Length > 0 && draft.Command is null) || IsPlanCommand || IsWantCommand;
-
-    [RelayCommand(CanExecute = nameof(CanAddTask))]
-    private async Task AddTaskAsync()
+    /// <summary>
+    /// Gives the empty bar's plus a form to open: <paramref name="open"/> gets what the line says (null
+    /// for a blank form) and what to do once the form saved it.
+    /// </summary>
+    public void AttachForm(Action<ComposerDraft?, Action> open)
     {
-        if (chat is { IsChat: true })
-        {
-            // The line leaves the box as it goes, and comes back if it couldn't.
-            var line = NewTaskTitle;
-            NewTaskTitle = string.Empty;
-            if (!await chat.SendAsync(line) && NewTaskTitle.Length == 0)
-            {
-                NewTaskTitle = line;
-            }
+        openForm = open;
+        HasForm = true;
+    }
 
-            return;
-        }
+    /// <summary>The draft a line gives on this list, with the list's own day when it names none.</summary>
+    public ComposerDraft Placed(ComposerDraft parsed) =>
+        parsed.PlannedDate is null && defaultDay(Today()) is { } day ? parsed with { PlannedDate = day } : parsed;
 
+    /// <summary>The day a line without one lands on here; null for none (the Inbox).</summary>
+    public DateOnly? DefaultDay() => defaultDay(Today());
+
+    protected override void OnLineEdited()
+    {
+        draft = Parse(Line);
+        OnPropertyChanged(nameof(NewTaskTitle));
+    }
+
+    protected override bool CanAdd() => (draft.Title.Trim().Length > 0 && draft.Command is null) || IsPlanCommand || IsWantCommand;
+
+    protected override bool Add()
+    {
         if (IsPlanCommand)
         {
-            NewTaskTitle = string.Empty;
             openPlan?.Invoke();
-            return;
+            return true;
         }
 
         if (IsWantCommand)
         {
-            var title = draft.Command!.Argument;
-            NewTaskTitle = string.Empty;
-            openWant?.Invoke(title);
+            openWant?.Invoke(draft.Command!.Argument);
+            return true;
+        }
+
+        if (tasks.Add(Placed(draft)) is null)
+        {
+            return false;
+        }
+
+        Added?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    protected override void OpenFormWith(string text)
+    {
+        if (openForm is null)
+        {
             return;
         }
 
-        var placed = draft.PlannedDate is null && defaultDay(Today()) is { } day ? draft with { PlannedDate = day } : draft;
-        if (tasks.Add(placed) is not null)
-        {
-            NewTaskTitle = string.Empty;
-            Added?.Invoke(this, EventArgs.Empty);
-        }
+        var parsed = text.Length > 0 && Parse(text) is { Command: null } read ? Placed(read) : null;
+        openForm(parsed, () => ClearIf(text));
     }
+
+    protected override IEnumerable<ComposerChipViewModel> BuildChips() =>
+        ComposerChips.Build(Line, draft, Today(), areas.All(), tags.Names(), projects.All(), Strings, areaBrush, Remove);
 
     private DateOnly Today() => PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
 
-    private ComposerDraft Parse(string line) => ComposerParser.Parse(line, time.GetLocalNow().DateTime, settings.DayStartHour);
+    private ComposerDraft Parse(string text) => ComposerParser.Parse(text, time.GetLocalNow().DateTime, settings.DayStartHour);
 
-    private void UpdatePreview()
-    {
-        draft = Parse(NewTaskTitle);
-        Chips.Clear();
-        foreach (var chip in ComposerChips.Build(NewTaskTitle, draft, Today(), areas.All(), tags.Names(), projects.All(), strings, areaBrush, Remove))
-        {
-            Chips.Add(chip);
-        }
-
-        // A chat message is plain words, so it shows no preview of what a task would be.
-        HasChips = Chips.Count > 0 && !IsChat;
-        AddTaskCommand.NotifyCanExecuteChanged();
-    }
-
-    private void Remove(ComposerChipViewModel chip) => NewTaskTitle = ComposerChips.RemoveParts(NewTaskTitle, chip.Spans);
+    private void Remove(ComposerChipViewModel chip) => Line = ComposerChips.RemoveParts(Line, chip.Spans);
 }

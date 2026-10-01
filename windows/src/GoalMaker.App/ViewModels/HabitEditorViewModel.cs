@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
+using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.ViewModels;
@@ -20,6 +21,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     private readonly Func<DateOnly> today;
     private string? habitId;
     private DateOnly startsOn;
+    private Action? onAdded;
 
     [ObservableProperty]
     private bool isOpen;
@@ -150,6 +152,16 @@ public sealed partial class HabitEditorViewModel : ObservableObject
 
     public void OpenEdit(HabitItem habit) => Open(habit.Id, habit);
 
+    /// <summary>
+    /// A new habit filled in with what the bottom bar read (null: blank); <paramref name="added"/> runs
+    /// once it is saved, so the bar can let go of its line.
+    /// </summary>
+    public void OpenFrom(HabitLine? line, Action? added)
+    {
+        Open(null, line is null ? new HabitItem(string.Empty, string.Empty, today()) : HabitBarViewModel.Item(line, today()));
+        onAdded = added;
+    }
+
     partial void OnNameChanged(string value) => Error = string.Empty;
 
     partial void OnTargetTextChanged(string value) => Error = string.Empty;
@@ -176,6 +188,12 @@ public sealed partial class HabitEditorViewModel : ObservableObject
         if (saved)
         {
             IsOpen = false;
+            if (habitId is null)
+            {
+                onAdded?.Invoke();
+            }
+
+            onAdded = null;
         }
         else
         {
@@ -184,7 +202,11 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Cancel() => IsOpen = false;
+    private void Cancel()
+    {
+        onAdded = null;
+        IsOpen = false;
+    }
 
     [RelayCommand]
     private void Delete()
@@ -206,6 +228,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     private void Open(string? id, HabitItem habit)
     {
         habitId = id;
+        onAdded = null;
         startsOn = id is null ? today() : habit.StartsOn;
         Heading = strings.Get(id is null ? "Habits.New" : "Habits.Edit");
         Name = habit.Name;
