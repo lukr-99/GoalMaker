@@ -186,7 +186,7 @@ private fun PaceChip(row: GoalRow, locale: Locale) {
         GoalPace.HIT -> colors.accent to colors.onAccent
         GoalPace.BEHIND -> colors.danger.copy(alpha = 0.2f) to colors.text
         GoalPace.DROPPED -> colors.surfaceVariant to colors.textMuted
-        GoalPace.ON_TRACK -> colors.accent.copy(alpha = 0.18f) to colors.text
+        GoalPace.ON_TRACK -> colors.surfaceVariant to colors.text
     }
     Text(
         paceText(row, locale),
