@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.widget
 
 import android.content.Context
 import com.goalmaker.app.GoalMakerApplication
+import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.domain.planning.PlanningDay
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -21,6 +22,16 @@ object WidgetData {
     fun habits(context: Context): List<WidgetHabit> {
         val graph = (context.applicationContext as GoalMakerApplication).graph
         return WidgetContent.habits(graph.habits.read(), day(context))
+    }
+
+    fun goalLines(context: Context, horizon: GoalHorizon): List<String> {
+        val graph = (context.applicationContext as GoalMakerApplication).graph
+        return WidgetContent.goalLines(graph.goals.all(), horizon, day(context))
+    }
+
+    fun rings(context: Context): List<WidgetRing> {
+        val graph = (context.applicationContext as GoalMakerApplication).graph
+        return WidgetContent.rings(graph.goals.all(), graph.goals.entries(), graph.tasks.all(), graph.habits.read(), day(context))
     }
 
     /** The owner's planning day, which starts at their day-start hour, not midnight. */

@@ -17,6 +17,7 @@ import com.goalmaker.app.data.planning.ReminderAlarm
 import com.goalmaker.app.data.update.UpdateIntents
 import com.goalmaker.app.ui.GoalMakerApp
 import com.goalmaker.app.ui.StartupFailureScreen
+import com.goalmaker.app.ui.widget.WidgetOpen
 import kotlinx.coroutines.launch
 
 // A FragmentActivity rather than a plain ComponentActivity because androidx.biometric puts its
@@ -66,6 +67,10 @@ class MainActivity : FragmentActivity() {
         if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_WANTS, false)) {
             graph.openedForWants()
             intent.removeExtra(ReminderAlarm.EXTRA_OPEN_WANTS)
+        }
+        if (intent.getBooleanExtra(WidgetOpen.EXTRA_OPEN_GOALS, false)) {
+            graph.openedForGoals()
+            intent.removeExtra(WidgetOpen.EXTRA_OPEN_GOALS)
         }
         val installUpdate = intent.getBooleanExtra(UpdateIntents.EXTRA_INSTALL_UPDATE, false)
         if (installUpdate || intent.getBooleanExtra(UpdateIntents.EXTRA_OPEN_UPDATE, false)) {

@@ -2,6 +2,10 @@ package com.goalmaker.app.ui.widget
 
 import android.app.Application
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.GoalDraft
+import com.goalmaker.app.application.planning.GoalHorizon
+import com.goalmaker.app.application.planning.GoalList
+import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
@@ -31,6 +35,7 @@ class WidgetContentTest {
     private lateinit var test: TestReplica
     private lateinit var tasks: TaskList
     private lateinit var habits: HabitList
+    private lateinit var goals: GoalList
 
     @Before
     fun setUp() {
@@ -39,6 +44,7 @@ class WidgetContentTest {
         val areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), {})
         tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), ProjectList(test.replica, rows, {}), {}) { today }
         habits = HabitList(test.replica, rows, {})
+        goals = GoalList(test.replica, rows, {})
     }
 
     @After
@@ -109,6 +115,52 @@ class WidgetContentTest {
         assertTrue(row.done)
         assertEquals(1.0, row.ring, 1e-9)
         assertEquals(0, WidgetContent.habitsLeft(listOf(row)))
+    }
+
+    @Test
+    fun `the motivation widget shows one horizon's current goals as written lines`() {
+        val week = GoalRules.periodStart(GoalHorizon.WEEK, today)
+        val month = GoalRules.periodStart(GoalHorizon.MONTH, today)
+        goals.add(GoalDraft("Three runs", GoalHorizon.WEEK, week, emoji = "🏃"))
+        goals.add(GoalDraft("Call grandma", GoalHorizon.WEEK, week))!!.also { goals.setStatus(it.id, GoalRules.DONE) }
+        goals.add(GoalDraft("Old idea", GoalHorizon.WEEK, week))!!.also { goals.setStatus(it.id, GoalRules.DROPPED) }
+        goals.add(GoalDraft("Last week's", GoalHorizon.WEEK, week.minusWeeks(1)))
+        goals.add(GoalDraft("Read two books", GoalHorizon.MONTH, month))
+        goals.add(GoalDraft("Half marathon", GoalHorizon.YEAR, GoalRules.periodStart(GoalHorizon.YEAR, today)))
+
+        assertEquals(listOf("🏃 Three runs", "Call grandma"), WidgetContent.goalLines(goals.all(), GoalHorizon.WEEK, today))
+        assertEquals(listOf("Read two books"), WidgetContent.goalLines(goals.all(), GoalHorizon.MONTH, today))
+        assertEquals(listOf("Half marathon"), WidgetContent.goalLines(goals.all(), GoalHorizon.YEAR, today))
+    }
+
+    @Test
+    fun `the motivation widget has no lines when the horizon has no goals`() {
+        goals.add(GoalDraft("Three runs", GoalHorizon.WEEK, GoalRules.periodStart(GoalHorizon.WEEK, today)))
+
+        assertTrue(WidgetContent.goalLines(goals.all(), GoalHorizon.MONTH, today).isEmpty())
+    }
+
+    @Test
+    fun `the goals widget has the four rings with how many of each are hit`() {
+        val week = GoalRules.periodStart(GoalHorizon.WEEK, today)
+        goals.add(GoalDraft("Three runs", GoalHorizon.WEEK, week))!!.also { goals.setStatus(it.id, GoalRules.DONE) }
+        goals.add(GoalDraft("Call grandma", GoalHorizon.WEEK, week))
+        goals.add(GoalDraft("Dropped", GoalHorizon.WEEK, week))!!.also { goals.setStatus(it.id, GoalRules.DROPPED) }
+        goals.add(GoalDraft("Read 20 pages", GoalHorizon.DAY, today))!!.also { goals.setStatus(it.id, GoalRules.DONE) }
+        val km = goals.add(
+            GoalDraft("Run 80 km", GoalHorizon.MONTH, GoalRules.periodStart(GoalHorizon.MONTH, today), GoalRules.MODE_NUMBER, target = 80.0, unit = "km"),
+        )!!
+        goals.logAmount(km.id, today, 20.0)
+
+        val rings = WidgetContent.rings(goals.all(), goals.entries(), tasks.all(), habits.read(), today)
+
+        assertEquals(listOf(GoalHorizon.YEAR, GoalHorizon.MONTH, GoalHorizon.WEEK, GoalHorizon.DAY), rings.map(WidgetRing::horizon))
+        assertEquals(listOf(0, 0, 1, 1), rings.map(WidgetRing::hits))
+        assertEquals(listOf(0, 1, 2, 1), rings.map(WidgetRing::total))
+        assertEquals(0.0, rings[0].fraction, 1e-9)
+        assertEquals(0.25, rings[1].fraction, 1e-9)
+        assertEquals(0.5, rings[2].fraction, 1e-9)
+        assertEquals(1.0, rings[3].fraction, 1e-9)
     }
 
     private fun plan(title: String, day: LocalDate = today) = tasks.add(title)!!.also { tasks.plan(it.id, day) }
