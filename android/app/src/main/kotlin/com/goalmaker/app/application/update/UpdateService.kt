@@ -5,6 +5,9 @@ import com.goalmaker.app.domain.update.ReleasePlatform
 import com.goalmaker.app.domain.update.UpdatePolicy
 import com.goalmaker.app.domain.version.SemanticVersion
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Release discovery → signature and content check → version policy → verified download → installer
@@ -18,7 +21,17 @@ class UpdateService(
     private val verifier: ReleaseVerifier,
     private val installer: UpdateInstaller,
 ) {
-    suspend fun check(): UpdateCheckResult {
+    private val found = MutableStateFlow<UpdateCheckResult.Available?>(null)
+
+    /**
+     * The update the last check found, or null: the mark on the way to Settings. Every check
+     * replaces it, so it goes when a check finds none; a new version starts without it.
+     */
+    val waiting: StateFlow<UpdateCheckResult.Available?> = found.asStateFlow()
+
+    suspend fun check(): UpdateCheckResult = find().also { found.value = it as? UpdateCheckResult.Available }
+
+    private suspend fun find(): UpdateCheckResult {
         if (!channelConfigured) return UpdateCheckResult.NotConfigured
         if (SemanticVersion.parse(installedVersion)?.isDevelopmentBuild != false) {
             return UpdateCheckResult.DevelopmentBuild

@@ -1,5 +1,11 @@
 package com.goalmaker.app.ui.settings
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -269,7 +275,7 @@ fun SettingsScreen(
                 }
             }
             Section(stringResource(R.string.settings_updates)) {
-                UpdatesContent(state.update, viewModel)
+                UpdatesContent(state.update, state.waitingUpdate, viewModel)
             }
             Section(stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.settings_version, state.appInfo.versionName))
@@ -420,7 +426,10 @@ private fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T, onS
 }
 
 @Composable
-private fun UpdatesContent(update: UpdateUiState, viewModel: SettingsViewModel) {
+private fun UpdatesContent(update: UpdateUiState, waiting: UpdateCheckResult.Available?, viewModel: SettingsViewModel) {
+    if (waiting != null && update !is UpdateUiState.Checking && update !is UpdateUiState.Downloading) {
+        UpdateWaitingRow(waiting, onInstall = { viewModel.installUpdate(waiting) })
+    }
     when (update) {
         UpdateUiState.Idle -> Unit
         UpdateUiState.Checking -> {
@@ -467,10 +476,43 @@ private fun CheckResult(result: UpdateCheckResult, viewModel: SettingsViewModel)
         UpdateCheckResult.Untrusted -> stringResource(R.string.settings_update_untrusted)
         is UpdateCheckResult.Failed -> stringResource(R.string.settings_update_failed, result.detail)
     }
-    Text(message, style = MaterialTheme.typography.bodyLarge)
-    if (result is UpdateCheckResult.Available) {
-        Button(onClick = { viewModel.installUpdate(result) }) {
-            Text(stringResource(R.string.settings_install_update, result.manifest.version.toString()))
+    // An update found is said once, by the accent row above, with its install button.
+    if (result !is UpdateCheckResult.Available) Text(message, style = MaterialTheme.typography.bodyLarge)
+}
+
+/**
+ * The update the last check found, as the mark on the gear promised: an accent row with a download
+ * icon, the version and the install button. It stays until a check finds none or the new version
+ * starts.
+ */
+@Composable
+private fun UpdateWaitingRow(update: UpdateCheckResult.Available, onInstall: () -> Unit) {
+    val version = update.manifest.version.toString()
+    val accent = AppTheme.colors.accent
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(accent.copy(alpha = 0.12f))
+            .border(1.dp, accent, RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(36.dp).clip(CircleShape).background(accent),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Rounded.Download, contentDescription = null, tint = AppTheme.colors.onAccent, modifier = Modifier.size(20.dp))
+        }
+        Text(
+            stringResource(R.string.settings_update_available, version),
+            style = MaterialTheme.typography.titleSmall,
+            color = AppTheme.colors.text,
+            modifier = Modifier.weight(1f),
+        )
+        Button(onClick = onInstall) {
+            Text(stringResource(R.string.settings_install_update, version))
         }
     }
 }

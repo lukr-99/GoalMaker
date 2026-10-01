@@ -103,6 +103,7 @@
     <string name="problems_title">Problems</string>
     <string name="problems_what_happened">What happened</string>
     <string name="problems_waiting">Something needs a look in Settings</string>
+    <string name="update_available">Update available</string>
     <string name="problems_sync">Some changes have not reached the server</string>
     <string name="problems_sync_advice">They are still here and safe. GoalMaker keeps trying, and this goes as soon as one gets through.</string>
     <string name="problems_backup">The weekly copy of your data was not written</string>

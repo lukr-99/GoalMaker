@@ -5,6 +5,8 @@ import com.goalmaker.app.domain.update.ReleasePlatform
 import java.io.IOException
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -109,6 +111,39 @@ class UpdateServiceTest {
         val available = subject.check() as UpdateCheckResult.Available
         assertEquals(InstallResult.DownloadCorrupted, subject.install(available))
         assertTrue(installer.launched.isEmpty())
+    }
+
+    @Test
+    fun `a found update waits until a check finds none`() = runTest {
+        val channel = FakeChannel(ChannelSnapshot(manifestJson, "good"))
+        val subject = service(channel = channel)
+        assertNull(subject.waiting.value)
+
+        val available = subject.check()
+        assertSame(available, subject.waiting.value)
+
+        channel.snapshot = null
+        subject.check()
+        assertNull(subject.waiting.value)
+    }
+
+    @Test
+    fun `nothing waits when up to date, untrusted or a development build`() = runTest {
+        val upToDate = service(installed = "0.3.0").also { it.check() }
+        val forged = service(channel = FakeChannel(ChannelSnapshot(manifestJson, "forged"))).also { it.check() }
+        val dev = service(installed = "0.2.0-dev").also { it.check() }
+        assertNull(upToDate.waiting.value)
+        assertNull(forged.waiting.value)
+        assertNull(dev.waiting.value)
+    }
+
+    @Test
+    fun `an install that fails leaves the update waiting`() = runTest {
+        val channel = FakeChannel(ChannelSnapshot(manifestJson, "good"), DownloadedArtifact("/cache/app.apk", 100, "b".repeat(64)))
+        val subject = service(channel = channel)
+        val available = subject.check() as UpdateCheckResult.Available
+        subject.install(available)
+        assertSame(available, subject.waiting.value)
     }
 
     @Test
