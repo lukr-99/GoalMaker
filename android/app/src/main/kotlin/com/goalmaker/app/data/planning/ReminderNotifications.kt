@@ -180,26 +180,42 @@ class ReminderNotifications(private val context: Context) {
         .mapNotNull { notification -> notification.tag?.let { runCatching { LocalDate.parse(it) }.getOrNull() } }
 
     /** Shows [reminder]. Does nothing when notifications are switched off, which is the owner's call. */
-    fun show(reminder: ScheduledReminder) {
+    fun show(reminder: ScheduledReminder) = post(reminder.id, reminder.taskTitle, reminder.important, ReminderButtons.first)
+
+    /**
+     * Later: shows the reminder on screen again in place, quietly, with every snooze (docs/reminders.md).
+     * Does nothing when it is no longer on screen, so a reminder handled meanwhile doesn't come back.
+     */
+    fun showSnoozes(reminderId: String, taskTitle: String, important: Boolean) {
+        if (reminderId !in shown()) return
+        post(reminderId, taskTitle, important, ReminderButtons.snoozes)
+    }
+
+    private fun post(reminderId: String, taskTitle: String, important: Boolean, buttons: List<ReminderButtons.Button>) {
         if (!manager.areNotificationsEnabled()) return
-        val channel = if (reminder.important) CHANNEL_IMPORTANT else CHANNEL
-        val notification = NotificationCompat.Builder(context, channel)
+        val channel = if (important) CHANNEL_IMPORTANT else CHANNEL
+        val builder = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(reminder.taskTitle)
+            .setContentTitle(taskTitle)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
-            .setOngoing(reminder.important)
-            .setContentIntent(openApp(reminder.id))
-            .setDeleteIntent(action(reminder.id, ReminderAlarm.ACTION_DISMISS, null))
-            .addAction(0, context.getString(R.string.reminder_done), action(reminder.id, ReminderAlarm.ACTION_DONE, null))
-            .addAction(0, context.getString(R.string.reminder_snooze_ten_minutes), snooze(reminder.id, Snooze.TEN_MINUTES))
-            .addAction(0, context.getString(R.string.reminder_snooze_tomorrow), snooze(reminder.id, Snooze.TOMORROW_MORNING))
-            .build()
+            .setOngoing(important)
+            .setContentIntent(openApp(reminderId))
+            .setDeleteIntent(action(reminderId, ReminderAlarm.ACTION_DISMISS, null))
+        buttons.forEach { button ->
+            val intent = if (button.action == ReminderAlarm.ACTION_LATER) {
+                later(reminderId, taskTitle, important)
+            } else {
+                action(reminderId, button.action, button.snooze)
+            }
+            builder.addAction(0, context.getString(button.label), intent)
+        }
+        val notification = builder.build()
         // Important reminders ring alarm-style until the owner acts (spec, story 57).
-        if (reminder.important) notification.flags = notification.flags or Notification.FLAG_INSISTENT
-        notify(reminder.id, notification)
+        if (important) notification.flags = notification.flags or Notification.FLAG_INSISTENT
+        notify(reminderId, notification)
     }
 
     /** Takes a reminder's notification away, because it was handled here or on the other device. */
@@ -273,8 +289,15 @@ class ReminderNotifications(private val context: Context) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun snooze(reminderId: String, option: Snooze): PendingIntent =
-        action(reminderId, ReminderAlarm.ACTION_SNOOZE, option)
+    private fun later(reminderId: String, taskTitle: String, important: Boolean): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        (reminderId + ReminderAlarm.ACTION_LATER).hashCode(),
+        ReminderAlarm.intent(context, ReminderAlarm.ACTION_LATER)
+            .putExtra(ReminderAlarm.EXTRA_REMINDER_ID, reminderId)
+            .putExtra(ReminderAlarm.EXTRA_TASK_TITLE, taskTitle)
+            .putExtra(ReminderAlarm.EXTRA_IMPORTANT, important),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     // One request code per reminder and action, so notifications never share a pending intent.
     private fun action(reminderId: String, action: String, option: Snooze?): PendingIntent {

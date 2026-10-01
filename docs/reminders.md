@@ -40,14 +40,16 @@ ringing until it is handled.
 
 ## Snooze
 
-A notification offers Done and the snoozes below. Windows shows all three. Android allows three
-buttons on a notification, so it shows Done, 10 minutes and Tomorrow morning; for an hour, set a new
-reminder "in an hour" from the task's menu.
+A notification offers Done and the snoozes below. Windows shows all of them on the toast. Android
+shows at most three buttons on a notification, so a reminder there fires with Done, 10 min and
+Later. Later turns the same notification, quietly, into 10 min, 1 hour and Tomorrow morning; swiping
+it away still dismisses it. Later itself writes nothing; the snooze picked after it is stored and
+synced like any other. The labels are the same words on both apps.
 
 | Snooze | Comes back at |
 |---|---|
 | 10 minutes | ten minutes after the snooze |
-| 1 hour | an hour after the snooze (Windows) |
+| 1 hour | an hour after the snooze |
 | Tomorrow morning | 08:00 on the day after the current planning day |
 
 "Tomorrow morning" counts from the planning day ([lists](lists.md)), not the calendar date, so

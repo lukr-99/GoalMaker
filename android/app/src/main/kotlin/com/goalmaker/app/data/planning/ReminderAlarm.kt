@@ -9,11 +9,18 @@ object ReminderAlarm {
     const val ACTION_DONE = "com.goalmaker.app.action.REMINDER_DONE"
     const val ACTION_DISMISS = "com.goalmaker.app.action.REMINDER_DISMISS"
     const val ACTION_SNOOZE = "com.goalmaker.app.action.REMINDER_SNOOZE"
+
+    /** Later on a reminder: show the same notification again with every snooze. */
+    const val ACTION_LATER = "com.goalmaker.app.action.REMINDER_LATER"
     const val ACTION_SKIP_PLAN = "com.goalmaker.app.action.PLAN_TOMORROW_SKIP"
     const val ACTION_SKIP_REVIEW = "com.goalmaker.app.action.REVIEW_SKIP"
 
     const val EXTRA_REMINDER_ID = "reminder_id"
     const val EXTRA_SNOOZE = "snooze"
+
+    /** What Later needs to show the reminder again: its task's title and whether it is important. */
+    const val EXTRA_TASK_TITLE = "task_title"
+    const val EXTRA_IMPORTANT = "important"
 
     /** The planning day of a Plan tomorrow reminder, as an ISO date. */
     const val EXTRA_PLAN_DAY = "plan_day"
