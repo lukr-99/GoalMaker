@@ -50,6 +50,7 @@ import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.EmojiField
+import com.goalmaker.app.ui.settings.SwitchRow
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
 import java.time.format.TextStyle
@@ -57,7 +58,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Adds or edits a habit (spec, stories 36, 37 and 32): its name and emoji, how often it runs, how it is
- * measured, whether its number is something to reach or a limit to stay under, and the goal it serves.
+ * measured, whether its number is something to reach or a limit to stay under, whether it shows on Today,
+ * and the goal it serves.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -78,6 +80,7 @@ internal fun HabitDialog(
     var target by remember { mutableStateOf(habit.target?.let(::plainAmount).orEmpty()) }
     var unit by remember { mutableStateOf(habit.unit.orEmpty()) }
     var goalId by remember { mutableStateOf(habit.goalId) }
+    var showOnToday by remember { mutableStateOf(habit.showOnToday) }
     var refused by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
@@ -220,6 +223,12 @@ internal fun HabitDialog(
                         )
                     }
                 }
+                SwitchRow(
+                    title = stringResource(R.string.habits_show_on_today),
+                    hint = stringResource(R.string.habits_show_on_today_hint),
+                    checked = showOnToday,
+                    onCheckedChange = { showOnToday = it },
+                )
                 if (goals.isNotEmpty()) GoalField(goals.firstOrNull { it.id == goalId }, goals, onPick = { goalId = it })
                 if (refused) {
                     Text(stringResource(R.string.habits_invalid), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.danger)
@@ -240,6 +249,7 @@ internal fun HabitDialog(
                     unit = unit,
                     emoji = emoji,
                     goalId = goalId,
+                    showOnToday = showOnToday,
                 )
                 scope.launch { if (onSave(draft)) onDismiss() else refused = true }
             }) { Text(stringResource(R.string.habits_save)) }

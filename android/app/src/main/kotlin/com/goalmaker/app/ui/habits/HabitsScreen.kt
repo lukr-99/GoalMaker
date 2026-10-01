@@ -233,6 +233,9 @@ private fun HabitCard(
                 row.goalTitle?.let {
                     Text(stringResource(R.string.habits_serves, it), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
                 }
+                if (!habit.showOnToday && !habit.archived) {
+                    Text(stringResource(R.string.habits_not_on_today), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
+                }
             }
             HabitMenu(row, onEdit, onLog, viewModel)
         }

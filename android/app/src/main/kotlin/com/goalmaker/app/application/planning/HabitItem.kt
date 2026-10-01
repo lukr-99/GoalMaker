@@ -7,7 +7,8 @@ import java.time.LocalDate
  * per_month; [weekdays] is the weekday bitmask (Monday 1 ... Sunday 64) and [times] the days a week or
  * month needs. [measure] is check, count or amount; [target] and [unit] belong to a count or an amount.
  * [direction] is at_least (the target is something to reach) or at_most (it is a limit: going over breaks
- * the day), which only a daily or weekday habit can be.
+ * the day), which only a daily or weekday habit can be. [showOnToday] false keeps it off Today and the
+ * widgets; it still counts everywhere else.
  */
 data class HabitItem(
     val id: String,
@@ -23,6 +24,7 @@ data class HabitItem(
     val emoji: String? = null,
     val goalId: String? = null,
     val archived: Boolean = false,
+    val showOnToday: Boolean = true,
     val position: Double = 0.0,
     val deleted: Boolean = false,
 )

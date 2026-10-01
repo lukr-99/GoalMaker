@@ -33,7 +33,8 @@ object PlacesBoard {
     ): PlacesDigest {
         val lists = ListRules.lists(tasks, today)
         val open = tasks.filter { it.state == TaskState.OPEN }
-        val habitRows = HabitBoard.today(habits, today)
+        // The Habits tile counts every habit due today, the ones kept off Today too.
+        val habitRows = HabitBoard.due(habits, today)
         val goalRows = GoalBoard.thisWeek(goals, entries, tasks, today, habits)
         val items = open.filter { it.projectId != null }
         return PlacesDigest(
