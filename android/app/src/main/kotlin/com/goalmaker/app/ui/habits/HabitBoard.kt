@@ -36,11 +36,15 @@ object HabitBoard {
         )
     }
 
-    /** Today's habits for the ring row: active, not paused, and due today. */
+    /** Today's habits for the ring row: due today and not kept off Today (contracts/vectors/habits.json, onToday). */
     fun today(data: HabitData, today: LocalDate): List<HabitRow> = data.habits
-        .filter { !it.archived && HabitRules.isDue(it, today) && !today.isBefore(it.startsOn) }
+        .filter { HabitRules.onToday(it, today, data.pausesOf(it.id)) }
         .map { row(it, data, today, emptyMap(), heat = false) }
-        .filterNot(HabitRow::paused)
+
+    /** Every habit due today, the ones kept off Today too: what the Places hub counts. */
+    fun due(data: HabitData, today: LocalDate): List<HabitRow> = data.habits
+        .filter { HabitRules.dueToday(it, today, data.pausesOf(it.id)) }
+        .map { row(it, data, today, emptyMap(), heat = false) }
 
     /** "habit id:streak" of each habit whose streak, with today's period met, is a milestone. */
     fun milestones(rows: List<HabitRow>): Set<String> = rows

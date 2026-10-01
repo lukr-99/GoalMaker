@@ -131,6 +131,8 @@
                                        Visibility="{Binding HasStreak, Converter={StaticResource BoolToVisibility}}" />
                             <TextBlock Text="{Binding Serves}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
                                        Visibility="{Binding HasServes, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{DynamicResource Habits.NotOnToday}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                       Visibility="{Binding IsOffToday, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </DockPanel>
                     <controls:HabitHeatmap Margin="0,10,8,0" HorizontalAlignment="Left" Heat="{Binding Heat}" />
@@ -262,6 +264,15 @@
                             <ui:TextBox MaxLength="20" Text="{Binding Unit, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Habits.Unit}" />
                         </StackPanel>
                     </Grid>
+                    <!-- Off keeps the habit to this page; it still counts everywhere else. -->
+                    <DockPanel Margin="0,16,0,0">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding ShowOnToday}"
+                                         AutomationProperties.Name="{DynamicResource Habits.ShowOnToday}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Habits.ShowOnToday}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Habits.ShowOnTodayHint}" />
+                        </StackPanel>
+                    </DockPanel>
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Goal}" />
                     <ComboBox ItemsSource="{Binding GoalChoices}" SelectedItem="{Binding Goal}" DisplayMemberPath="Label"
                               AutomationProperties.Name="{DynamicResource Habits.Goal}" />

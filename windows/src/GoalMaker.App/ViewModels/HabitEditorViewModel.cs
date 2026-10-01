@@ -9,7 +9,7 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// Adds or edits a habit on the Habits page: name and emoji, how often it runs (weekdays get their own
 /// boxes, a week or a month a number of times), how it is measured, whether the number is something to
-/// reach or a limit to stay under, and the goal it serves. Save refuses what the habit list refuses and
+/// reach or a limit to stay under, whether it shows on Today, and the goal it serves. Save refuses what the habit list refuses and
 /// says why.
 /// </summary>
 public sealed partial class HabitEditorViewModel : ObservableObject
@@ -51,6 +51,10 @@ public sealed partial class HabitEditorViewModel : ObservableObject
 
     [ObservableProperty]
     private string targetText = string.Empty;
+
+    /// <summary>Off keeps the habit off Today and the tray; it still counts everywhere else.</summary>
+    [ObservableProperty]
+    private bool showOnToday = true;
 
     [ObservableProperty]
     private string unit = string.Empty;
@@ -166,6 +170,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
             Unit = Unit,
             Emoji = Emoji,
             GoalId = Goal?.Id,
+            ShowOnToday = ShowOnToday,
         };
         var saved = habitId is null ? habits.Add(draft) is not null : habits.Update(habitId, draft);
         if (saved)
@@ -211,6 +216,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
         Direction = Directions.FirstOrDefault(choice => choice.Id == habit.Direction) ?? Directions[0];
         TargetText = habit.Target is { } target ? HabitRowViewModel.Amount(target) : string.Empty;
         Unit = habit.Unit ?? string.Empty;
+        ShowOnToday = habit.ShowOnToday;
         var mask = habit.Weekdays ?? 31;
         foreach (var day in Days)
         {

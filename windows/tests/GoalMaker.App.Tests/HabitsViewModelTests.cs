@@ -148,6 +148,34 @@ public sealed class HabitsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AHabitKeptOffTodayStaysOnThePageAndIsStillDue()
+    {
+        planner.Habits.Add(new HabitDraft("Read", Today));
+        var page = Page();
+        page.NewHabitCommand.Execute(null);
+        Assert.True(page.Editor.ShowOnToday);
+        page.Editor.Name = "Floss";
+        page.Editor.ShowOnToday = false;
+        page.Editor.SaveCommand.Execute(null);
+
+        var floss = page.Rows.Single(row => row.Name == "Floss");
+        Assert.False(planner.Habits.All().Single(habit => habit.Name == "Floss").ShowOnToday);
+        Assert.True(floss.IsOffToday);
+        Assert.Equal(["Read"], page.TodayRows().Select(row => row.Name));
+        Assert.Equal(["Read", "Floss"], page.DueRows().Select(row => row.Name));
+
+        floss.CheckInCommand.Execute(null);
+        Assert.True(page.DueRows().Single(row => row.Name == "Floss").IsDone);
+
+        page.Editor.OpenEdit(floss.Habit);
+        Assert.False(page.Editor.ShowOnToday);
+        page.Editor.ShowOnToday = true;
+        page.Editor.SaveCommand.Execute(null);
+        Assert.Equal(["Read", "Floss"], page.TodayRows().Select(row => row.Name));
+        Assert.False(page.Rows.Single(row => row.Name == "Floss").IsOffToday);
+    }
+
+    [Fact]
     public void ArchivingMovesAHabitToItsOwnListAndDeletingRemovesIt()
     {
         planner.Habits.Add(new HabitDraft("Read", Today));

@@ -21,6 +21,19 @@ public sealed class HabitRulesContractTests
     }
 
     [Fact]
+    public void EveryHabitDueTodayAndOnToday()
+    {
+        foreach (var testCase in vectors.GetProperty("onToday").EnumerateArray())
+        {
+            var expect = testCase.GetProperty("expect");
+            var habit = Habit(testCase);
+            var today = Day(testCase, "today");
+            Assert.True(expect.GetProperty("due").GetBoolean() == HabitRules.DueToday(habit, today, Pauses(testCase)), $"{Name(testCase)}: due");
+            Assert.True(expect.GetProperty("onToday").GetBoolean() == HabitRules.OnToday(habit, today, Pauses(testCase)), $"{Name(testCase)}: on Today");
+        }
+    }
+
+    [Fact]
     public void EveryPeriod()
     {
         foreach (var testCase in vectors.GetProperty("periods").EnumerateArray())
@@ -153,6 +166,8 @@ public sealed class HabitRulesContractTests
             Measure = habit.GetProperty("measure").GetString()!,
             Target = habit.GetProperty("target").ValueKind == JsonValueKind.Null ? null : habit.GetProperty("target").GetDouble(),
             Direction = habit.TryGetProperty("direction", out var direction) ? direction.GetString()! : HabitRules.AtLeast,
+            Archived = habit.TryGetProperty("archived", out var archived) && archived.GetBoolean(),
+            ShowOnToday = !habit.TryGetProperty("showOnToday", out var shown) || shown.GetBoolean(),
         };
     }
 

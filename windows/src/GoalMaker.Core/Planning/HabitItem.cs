@@ -6,7 +6,8 @@ namespace GoalMaker.Core.Planning;
 /// <see cref="Times"/> the days a week or month needs. <see cref="Measure"/> is check, count or amount;
 /// <see cref="Target"/> and <see cref="Unit"/> belong to a count or an amount.
 /// <see cref="Direction"/> is at_least (the target is a goal) or at_most (it is a limit: going over
-/// breaks the day), which only a daily or weekday habit can be.
+/// breaks the day), which only a daily or weekday habit can be. <see cref="ShowOnToday"/> false keeps it
+/// off Today and the tray; it still counts everywhere else.
 /// </summary>
 public sealed record HabitItem(string Id, string Name, DateOnly StartsOn)
 {
@@ -29,6 +30,8 @@ public sealed record HabitItem(string Id, string Name, DateOnly StartsOn)
     public string? GoalId { get; init; }
 
     public bool Archived { get; init; }
+
+    public bool ShowOnToday { get; init; } = true;
 
     public double Position { get; init; }
 

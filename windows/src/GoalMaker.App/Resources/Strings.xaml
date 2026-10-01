@@ -527,6 +527,9 @@
     <sys:String x:Key="Habits.LimitHint">Going over breaks the day. A day you log nothing on is a day you kept it.</sys:String>
     <sys:String x:Key="Habits.LimitHintCheck">Checking in means you had one, and that breaks the day.</sys:String>
     <sys:String x:Key="Habits.Unit">Unit (optional)</sys:String>
+    <sys:String x:Key="Habits.ShowOnToday">Show on Today</sys:String>
+    <sys:String x:Key="Habits.ShowOnTodayHint">Off keeps it to this page. It still counts and keeps its streak.</sys:String>
+    <sys:String x:Key="Habits.NotOnToday">Not on Today</sys:String>
     <sys:String x:Key="Habits.Goal">Serves</sys:String>
     <sys:String x:Key="Habits.NoGoal">No goal</sys:String>
     <sys:String x:Key="Habits.GoalHint">A count or amount in the goal's unit adds to it.</sys:String>

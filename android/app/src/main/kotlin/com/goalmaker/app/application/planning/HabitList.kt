@@ -201,6 +201,7 @@ class HabitList(
         "direction" to JsonPrimitive(draft.direction),
         "unit" to (draft.unit?.let(::JsonPrimitive) ?: JsonNull),
         "goal_id" to (draft.goalId?.let(::JsonPrimitive) ?: JsonNull),
+        "show_on_today" to JsonPrimitive(draft.showOnToday),
     )
 
     private fun change(table: String, id: String, edit: (MutableMap<String, JsonElement>) -> Unit): Boolean {
@@ -227,6 +228,8 @@ class HabitList(
         emoji = row.text("emoji"),
         goalId = row.text("goal_id"),
         archived = row.text("archived_at") != null,
+        // A row from before 0020 has no value, and every habit showed then.
+        showOnToday = (row["show_on_today"] as? JsonPrimitive)?.let { it.booleanOrNull ?: it.intOrNull?.let { value -> value != 0 } } ?: true,
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
     )

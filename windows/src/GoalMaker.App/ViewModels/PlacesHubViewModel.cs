@@ -94,7 +94,8 @@ public sealed partial class PlacesHubViewModel : ObservableObject
         var lists = ListRules.Lists(all, today);
         var open = all.Where(task => task.State == TaskState.Open).ToList();
         var items = open.Where(task => task.ProjectId is not null).ToList();
-        var habitRows = habitsPage.TodayRows();
+        // The Habits tile counts every habit due today, the ones kept off Today too.
+        var habitRows = habitsPage.DueRows();
         var goalRows = GoalsViewModel.ThisWeek(goals, tasks, today, strings, habits);
         var wantStates = wants.All().Select(want => WantRules.State(want, today)).ToList();
         var ready = wantStates.Count(state => state == WantState.Ready);

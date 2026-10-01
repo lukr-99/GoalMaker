@@ -30,6 +30,18 @@ object HabitRules {
     fun isDue(habit: HabitItem, day: LocalDate): Boolean =
         habit.cadence != WEEKDAYS || ((habit.weekdays ?: 0) and weekdayBit(day)) != 0
 
+    /**
+     * Whether [habit] asks something of [today]: not archived, started, due that day and not paused. A
+     * habit kept off Today is still due here, so the Habits page, the Places hub and the counts keep it.
+     */
+    fun dueToday(habit: HabitItem, today: LocalDate, pauses: List<HabitPause>): Boolean =
+        !habit.archived && !today.isBefore(habit.startsOn) && isDue(habit, today) &&
+            pauses.none { !it.deleted && !it.from.isAfter(today) && (it.until == null || !it.until.isBefore(today)) }
+
+    /** Whether Today's ring row and the widgets show [habit]: due today and not kept off Today. */
+    fun onToday(habit: HabitItem, today: LocalDate, pauses: List<HabitPause>): Boolean =
+        habit.showOnToday && dueToday(habit, today, pauses)
+
     /** The first day of [habit]'s period holding [day]: the day, its week's Monday, or its month's first. */
     fun periodStart(habit: HabitItem, day: LocalDate): LocalDate = when (habit.cadence) {
         PER_WEEK -> day.minusDays((day.dayOfWeek.value - 1).toLong())
