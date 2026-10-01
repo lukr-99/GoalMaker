@@ -42,7 +42,7 @@ public partial class MainWindow
             [typeof(TomorrowPage)] = () => new TomorrowPage(graph.Tomorrow),
             [typeof(InboxPage)] = () => new InboxPage(graph.Inbox),
             [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
-            [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage, graph.Connector, graph.ProblemsPage),
+            [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage, graph.Connector, graph.ProblemsPage, graph.SettingsSections, graph.AreasPage),
             [typeof(ActivityPage)] = () => new ActivityPage(graph.Activity),
             [typeof(GoalsPage)] = () => new GoalsPage(graph.GoalsPage),
             [typeof(HabitsPage)] = () => new HabitsPage(graph.HabitsPage),

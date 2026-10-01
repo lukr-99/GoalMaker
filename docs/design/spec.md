@@ -206,3 +206,11 @@ widgets.
 
 Appearance holds: theme (four cards with a small preview), mode (system, light, dark), pure black,
 reduce motion (default: follow the system), completion sound.
+
+Settings is grouped into sections, each one card: Problems (only while there are some), Account,
+Appearance, Planning day and reminders, Areas and tags, then the rest (Claude, Your data, Updates,
+About; on the PC also Quick add, Startup and Mini windows), and Developer in a dev build. Areas and
+tags shows the areas in use with their colors and the tags, and opens the full manager. A jump list
+reaches each section: on the phone a row of chips under the title that stays put while the page
+scrolls, on the PC a list on the left (hidden on a narrow window). Both mark the section being read.
+The update notification and the mark on the gear land on Updates.

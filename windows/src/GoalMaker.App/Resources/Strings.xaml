@@ -238,6 +238,10 @@
     <sys:String x:Key="Areas.NewArea">New area</sys:String>
     <sys:String x:Key="Areas.NewTag">New tag</sys:String>
     <sys:String x:Key="Areas.NoTags">No tags yet. Type #name in the composer or add one here.</sys:String>
+    <sys:String x:Key="Areas.Open">Manage areas and tags</sys:String>
+    <sys:String x:Key="Areas.OpenHint">Rename, recolor and reorder areas, and tidy up tags.</sys:String>
+    <sys:String x:Key="Areas.None">No areas yet. Type @Name in the composer, or add one under Manage areas and tags.</sys:String>
+    <sys:String x:Key="Areas.NoTagsYet">No tags yet. Type #name in the composer.</sys:String>
     <sys:String x:Key="Areas.DeleteHint">Deleting an area keeps its tasks; they just lose the area.</sys:String>
     <sys:String x:Key="Areas.NameTaken">That name is empty or already taken, so it wasn't changed.</sys:String>
     <sys:String x:Key="Nav.Areas">Areas</sys:String>
@@ -333,6 +337,8 @@
 
     <sys:String x:Key="Settings.Title">Settings</sys:String>
     <sys:String x:Key="Settings.Appearance">Appearance</sys:String>
+    <sys:String x:Key="Settings.Sections">Settings sections</sys:String>
+    <sys:String x:Key="Settings.JumpTo">Jump to {0}</sys:String>
     <sys:String x:Key="Settings.Theme">Theme</sys:String>
     <sys:String x:Key="Settings.Mode">Light or dark</sys:String>
     <sys:String x:Key="Settings.PureBlack">Pure black</sys:String>
@@ -345,7 +351,7 @@
     <sys:String x:Key="Settings.ThemeSystem">System</sys:String>
     <sys:String x:Key="Settings.ThemeLight">Light</sys:String>
     <sys:String x:Key="Settings.ThemeDark">Dark</sys:String>
-    <sys:String x:Key="Settings.Planning">Planning</sys:String>
+    <sys:String x:Key="Settings.Planning">Planning day and reminders</sys:String>
     <sys:String x:Key="Settings.DayStart">The day starts at</sys:String>
     <sys:String x:Key="Settings.DayStartHint">Until then it's still yesterday, so planning after midnight lands on the right tomorrow.</sys:String>
     <sys:String x:Key="Settings.PlanReminder">Evening reminder to plan tomorrow</sys:String>

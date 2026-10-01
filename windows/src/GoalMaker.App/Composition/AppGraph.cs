@@ -389,6 +389,9 @@ public sealed class AppGraph : IDisposable
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
 
+        // The section list on the left of Settings, and its way to the full Areas page.
+        SettingsSections = new SettingsSectionsViewModel(strings, AppInfo.IsDevBuild, () => Places.Open(PlacesViewModel.Areas));
+
         // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
         Activity = new ActivityViewModel(new PostgrestActivityLog(postgrest), strings, Sync.Request);
@@ -575,6 +578,8 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The problems card on the Settings page.</summary>
     public ProblemsViewModel ProblemsPage { get; }
+
+    public SettingsSectionsViewModel SettingsSections { get; }
 
     public ListViewModel Today { get; }
 
