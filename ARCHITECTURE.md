@@ -149,7 +149,9 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   with the key built into the app → manifest validation → version policy (dev builds never update,
   pre-releases are never offered) → download → size and SHA-256 check → platform installer. The
   updater never touches user data. The first three steps also run on their own about once a day;
-  the download and the installer wait for the owner's Install.
+  the installer waits for the owner's Install. On the phone, a found update also posts one quiet
+  notification per version and is downloaded and verified in the background on an unmetered
+  network, so Install takes seconds.
 - **Sync (docs/sync.md):** a local write stores the row and queues it in the outbox in one
   transaction, then asks for a sync (debounced 2 s). A run pushes the outbox in order (the server
   stamps `updated_at`), then pulls each table from its watermark minus 60 s in (updated_at, id)
@@ -163,8 +165,9 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   arrived since its last look and arms the next. Buttons write the reminder's state through the
   outbox; after every sync each device takes down notifications that went stale.
 - **Sign-out:** push once more, then empty the replica; if changes can't be pushed, ask first.
-- **Settings:** theme, quiet hours, the last reminder look, the last update check, dev backend
-  override and (Windows) window placement stay on the device.
+- **Settings:** theme, quiet hours, the last reminder look, the last update check (on the phone
+  also the notified update and Later), dev backend override and (Windows) window placement stay on
+  the device.
 
 ## Capability modules
 
@@ -183,9 +186,19 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   this run has not shown yet. It never downloads or installs, logs failures without a problem entry,
   and never runs in a dev build or one without a channel. The last check (time and the version it
   found) sits in the settings store; Settings → Updates shows "Last checked". Check for updates goes
-  through it too, so both are recorded. Android has no WorkManager job for it: the waiting update
-  lives in memory, so a background check in a process that is gone by the next start shows nothing
-  the start check does not.
+  through it too, so both are recorded. Android has no WorkManager job for the check itself: the
+  waiting update lives in memory, so a background check in a process that is gone by the next
+  start shows nothing the start check does not.
+  On Android, `UpdateAlerts` (application layer, a clock injected) hears every check and decides
+  the rest: one notification per version (`UpdateNotifier`, the App updates channel; the notified
+  version sits in the settings store), taken down when a check finds none or the version is
+  installed; Later (`UpdatePostponement`, three days or until a newer version, also in the settings
+  store), which hides the mark and the notification; and the background download
+  (`UpdateDownloads`, one-time WorkManager work on an unmetered network with the battery not low).
+  `UpdateService.prefetch` writes the APK to the private cache through `UpdateFiles` and keeps it
+  only when it matches the manifest's size and SHA-256; Install opens a matching file at once and
+  otherwise downloads first. The gear's mark follows `UpdateAlerts.mark`; Settings keeps the row
+  and Install while an update is put off.
 - **syncing:** `Replica` / `IReplica` and `RemoteTables` / `IRemoteTables`, run by `SyncEngine` and
   scheduled by `SyncCoordinator`. Health shows under Today's title (synced at, syncing, offline
   with the number of waiting changes, or changes the server refused).

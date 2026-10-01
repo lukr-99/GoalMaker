@@ -5,6 +5,8 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -45,6 +47,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -70,6 +73,7 @@ import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
+import com.goalmaker.app.application.update.UpdateRequest
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.planning.RitualReminder
@@ -96,10 +100,20 @@ fun SettingsScreen(
     onOpenActivity: () -> Unit = {},
     problems: List<Problem> = emptyList(),
     onProblemsRead: () -> Unit = {},
+    /** What the update notification asked for: Settings scrolls to the update, and Install starts. */
+    updateRequest: UpdateRequest? = null,
+    onUpdateRequestHandled: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Opening Settings is reading them, so the mark on the gear goes (docs/problems.md).
     LaunchedEffect(Unit) { onProblemsRead() }
+    val updatesSection = remember { BringIntoViewRequester() }
+    LaunchedEffect(updateRequest) {
+        if (updateRequest == null) return@LaunchedEffect
+        updatesSection.bringIntoView()
+        if (updateRequest == UpdateRequest.INSTALL) viewModel.installRequested()
+        onUpdateRequestHandled()
+    }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -279,8 +293,8 @@ fun SettingsScreen(
                     }
                 }
             }
-            Section(stringResource(R.string.settings_updates)) {
-                UpdatesContent(state.update, state.waitingUpdate, state.updatesCheckedAt, viewModel)
+            Section(stringResource(R.string.settings_updates), Modifier.bringIntoViewRequester(updatesSection)) {
+                UpdatesContent(state, viewModel)
             }
             Section(stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.settings_version, state.appInfo.versionName))
@@ -363,8 +377,8 @@ private fun whenText(at: Instant): String {
 }
 
 @Composable
-private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun Section(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             content()
@@ -431,14 +445,18 @@ private fun <T> ConnectedChoice(options: List<Pair<T, String>>, selected: T, onS
 }
 
 @Composable
-private fun UpdatesContent(
-    update: UpdateUiState,
-    waiting: UpdateCheckResult.Available?,
-    checkedAt: Instant?,
-    viewModel: SettingsViewModel,
-) {
+private fun UpdatesContent(state: SettingsUiState, viewModel: SettingsViewModel) {
+    val update = state.update
+    val waiting = state.waitingUpdate
+    val checkedAt = state.updatesCheckedAt
     if (waiting != null && update !is UpdateUiState.Checking && update !is UpdateUiState.Downloading) {
-        UpdateWaitingRow(waiting, onInstall = { viewModel.installUpdate(waiting) })
+        UpdateWaitingRow(
+            update = waiting,
+            downloaded = state.updateDownloaded,
+            postponedUntil = state.updatePostponedUntil,
+            onInstall = { viewModel.installUpdate(waiting) },
+            onLater = { viewModel.postponeUpdate(waiting) },
+        )
     }
     when (update) {
         UpdateUiState.Idle -> Unit
@@ -501,37 +519,67 @@ private fun CheckResult(result: UpdateCheckResult, viewModel: SettingsViewModel)
 
 /**
  * The update the last check found, as the mark on the gear promised: an accent row with a download
- * icon, the version and the install button. It stays until a check finds none or the new version
- * starts.
+ * icon, the version, the install button and Later. It stays until a check finds none or the new
+ * version starts; Later only hides the mark and the notification, so Install stays here.
  */
 @Composable
-private fun UpdateWaitingRow(update: UpdateCheckResult.Available, onInstall: () -> Unit) {
+private fun UpdateWaitingRow(
+    update: UpdateCheckResult.Available,
+    downloaded: Boolean,
+    postponedUntil: Instant?,
+    onInstall: () -> Unit,
+    onLater: () -> Unit,
+) {
     val version = update.manifest.version.toString()
     val accent = AppTheme.colors.accent
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(accent.copy(alpha = 0.12f))
             .border(1.dp, accent, RoundedCornerShape(16.dp))
             .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Box(
-            modifier = Modifier.size(36.dp).clip(CircleShape).background(accent),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Rounded.Download, contentDescription = null, tint = AppTheme.colors.onAccent, modifier = Modifier.size(20.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(accent),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.Download, contentDescription = null, tint = AppTheme.colors.onAccent, modifier = Modifier.size(20.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.settings_update_available, version),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = AppTheme.colors.text,
+                )
+                if (downloaded) {
+                    Text(
+                        stringResource(R.string.settings_update_downloaded),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (postponedUntil != null) {
+                    val formatter = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withZone(ZoneId.systemDefault())
+                    Text(
+                        stringResource(R.string.settings_update_postponed, formatter.format(postponedUntil)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
-        Text(
-            stringResource(R.string.settings_update_available, version),
-            style = MaterialTheme.typography.titleSmall,
-            color = AppTheme.colors.text,
-            modifier = Modifier.weight(1f),
-        )
-        Button(onClick = onInstall) {
-            Text(stringResource(R.string.settings_install_update, version))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = onInstall) {
+                Text(stringResource(R.string.settings_install_update, version))
+            }
+            if (postponedUntil == null) {
+                TextButton(onClick = onLater) {
+                    Text(stringResource(R.string.settings_update_later))
+                }
+            }
         }
     }
 }

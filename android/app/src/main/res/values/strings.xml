@@ -249,6 +249,15 @@
     <string name="settings_update_manual">If an update will not install here, you can download it yourself and open it.</string>
     <string name="settings_update_download">Open the latest release</string>
     <string name="settings_update_last_checked">Last checked: %1$s. GoalMaker also checks once a day on its own.</string>
+    <string name="settings_update_later">Later</string>
+    <string name="settings_update_downloaded">Downloaded and checked, so it installs in a moment.</string>
+    <string name="settings_update_postponed">Put off until %1$s. The mark and the notification stay away until then.</string>
+    <string name="update_channel">App updates</string>
+    <string name="update_channel_description">Says when a new version of GoalMaker is ready. Quiet, with no sound.</string>
+    <string name="update_ready_title">GoalMaker %1$s is ready</string>
+    <string name="update_ready_text">Tap to see it in Settings. Nothing installs until you say so.</string>
+    <string name="update_ready_install">Install</string>
+    <string name="update_ready_later">Later</string>
     <string name="settings_about">About</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_backend">Backend: %1$s</string>

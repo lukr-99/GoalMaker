@@ -58,6 +58,21 @@ The script refuses to replace an existing key. From the next build on, both apps
    installed or a later check that gets an answer finds none. A check that fails (offline, GitHub
    down), quiet or asked for, leaves the mark as it is. After a restart, a found update is checked again at once, so
    the mark comes back without waiting a day.
+   On the phone, a check that finds a newer trusted release also posts one quiet notification for
+   that version, "GoalMaker X.Y.Z is ready", on its own channel (App updates: low importance, no
+   sound). It only shows when the owner has allowed notifications; the app asks once, for
+   reminders, and never again for this. Tapping it opens Settings at the update. Its Install opens
+   the installer from there, and Later puts the version off. The same check asks WorkManager to
+   fetch the APK in the background, on an unmetered network with the battery not low, into the
+   app's private cache. The file is kept only when its size and SHA-256 match the signed manifest,
+   and Install opens it at once (it is measured again first). Without it, Install downloads and
+   verifies as before. The notification goes once the new version starts or a check finds none,
+   and older APKs are deleted then too.
+   **Later** (on the notification, or next to Install in Settings) hides the mark and the
+   notification for that version for three days, or until a newer version appears. Settings still
+   shows the update with Install, and says until when it is put off. When the three days are up,
+   the next check shows the mark and the notification again.
+   Nothing installs without the owner tapping Install, and Android asks to confirm on its own screen.
 
 A failed workflow publishes no release unless it reached the last job. If a bad release went out,
 see [SECURITY.md](../../SECURITY.md) → Recovery.

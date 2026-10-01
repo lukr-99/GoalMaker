@@ -49,6 +49,9 @@ import com.goalmaker.app.application.sync.RemoteUnavailableException
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.application.sync.SyncState
 import com.goalmaker.app.application.update.AutoUpdateCheck
+import com.goalmaker.app.application.update.PrefetchResult
+import com.goalmaker.app.application.update.UpdateAlerts
+import com.goalmaker.app.application.update.UpdateRequest
 import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
 import com.goalmaker.app.application.update.UpdateCheckResult
@@ -79,6 +82,9 @@ import com.goalmaker.app.data.sync.WorkManagerSyncScheduler
 import com.goalmaker.app.data.update.ApkInstallerLauncher
 import com.goalmaker.app.data.update.EcdsaSignatureVerifier
 import com.goalmaker.app.data.update.GitHubReleaseChannel
+import com.goalmaker.app.data.update.UpdateFolder
+import com.goalmaker.app.data.update.UpdateNotifications
+import com.goalmaker.app.data.update.WorkManagerUpdateDownloads
 import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.ui.widget.Widgets
 import com.goalmaker.app.domain.design.LogoMark
@@ -181,6 +187,10 @@ class AppGraph(context: Context) {
         }
     }
 
+    // App-private: the cache folder the `updates` FileProvider shares with the package installer.
+    private val updateDirectory = File(appContext.cacheDir, "updates")
+    private val updateFolder = UpdateFolder(updateDirectory)
+
     val updates = UpdateService(
         installedVersion = BuildConfig.VERSION_NAME,
         platform = ReleasePlatform.ANDROID,
@@ -188,17 +198,40 @@ class AppGraph(context: Context) {
         channel = GitHubReleaseChannel(
             http = updateHttp,
             address = releaseChannel ?: ReleaseChannelAddress(""),
-            updatesDirectory = File(appContext.cacheDir, "updates"),
+            updatesDirectory = updateDirectory,
         ),
         verifier = ReleaseVerifier(signatureVerifier),
         installer = ApkInstallerLauncher(appContext),
+        files = updateFolder,
+    )
+
+    private val updateNotifications = UpdateNotifications(appContext)
+
+    /**
+     * A found update on this phone: the notification once per version, the APK fetched ahead on an
+     * unmetered network, and Later. A dev build or one without a channel does nothing.
+     */
+    val updateAlerts = UpdateAlerts(
+        installedVersion = BuildConfig.VERSION_NAME,
+        enabled = updates.canCheck,
+        waiting = updates.waiting,
+        memory = settings,
+        notifier = updateNotifications,
+        downloads = WorkManagerUpdateDownloads(appContext),
+        files = updateFolder,
+        now = Instant::now,
     )
 
     /**
      * The quiet check (docs/setup/signing-and-releases.md): a few seconds after the app comes to the
      * front, at most once a day. It never installs, and a failure is only logged.
      */
-    val updateChecks = AutoUpdateCheck(updates, settings, Instant::now)
+    val updateChecks = AutoUpdateCheck(updates, settings, Instant::now, afterCheck = updateAlerts::afterCheck)
+
+    private val updateRequest = MutableStateFlow<UpdateRequest?>(null)
+
+    /** What the update notification asked for, until Settings has shown it. */
+    val updateRequested: StateFlow<UpdateRequest?> = updateRequest.asStateFlow()
 
     // Sync (docs/sync.md, ADR 0007). The replica opens on first use, off the main thread.
     private val catalog = SyncedTableCatalog.parse(
@@ -372,6 +405,11 @@ class AppGraph(context: Context) {
 
     init {
         reminderNotifications.createChannels()
+        if (updates.canCheck) {
+            updateNotifications.createChannel()
+            // An update installed since the last start takes its notification and file with it.
+            scope.launch(io) { updateAlerts.settle() }
+        }
         // What would not sync belongs in Settings, where it can be read and acted on, rather than in
         // the top bar of a list (docs/problems.md). A run that comes right clears it again.
         scope.launch {
@@ -491,6 +529,30 @@ class AppGraph(context: Context) {
             appContext.startActivity(Intent.makeRestartActivityTask(launch.component))
         }
         exitProcess(0)
+    }
+
+    /**
+     * The background download (WorkManager): fetches the waiting update's APK and checks it against
+     * the signed manifest. In a process the check has not run in yet, it checks first. Null when
+     * there is nothing to fetch.
+     */
+    suspend fun prefetchUpdate(): PrefetchResult? {
+        if (!updates.canCheck) return null
+        return when (val found = updates.waiting.value ?: updateChecks.checkNow()) {
+            is UpdateCheckResult.Available -> updates.prefetch(found)
+            is UpdateCheckResult.Failed -> PrefetchResult.Failed(found.detail)
+            else -> null
+        }
+    }
+
+    /** The owner tapped the update notification, or its Install: Settings opens at the update. */
+    fun openedForUpdate(install: Boolean) {
+        updateRequest.value = if (install) UpdateRequest.INSTALL else UpdateRequest.SHOW
+    }
+
+    /** Settings has shown the update, so the request is settled. */
+    fun updateRequestHandled() {
+        updateRequest.value = null
     }
 
     /** The owner opened the app from a reminder's notification, which settles it as dismissed. */
