@@ -55,6 +55,9 @@ public interface ISettingsStore
     /// <summary>The board columns folded to a narrow strip, the same on every project's board (docs/projects.md).</summary>
     IReadOnlyList<string> FoldedBoardColumns { get; set; }
 
+    /// <summary>How the Goals page shows the goals on this PC (docs/goals.md); the ladder unless changed.</summary>
+    GoalsView GoalsView { get; set; }
+
     /// <summary>Dev builds only: another Supabase project to use from the next app start.</summary>
     BackendEnvironment? BackendOverride { get; set; }
 
