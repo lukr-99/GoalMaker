@@ -97,6 +97,28 @@ after the habit resumes, so old streaks still read right.
   habit, its streak and its map, and the archived ones folded at the end.
 - A habit can be **archived**: it leaves Today and the list, keeping its history, and can come back.
 
+## Keeping a habit off Today
+
+Some habits are worth tracking but not worth a ring on Today every day. The habit form's **Show on
+Today** switch (on by default) keeps one off Today when it is off:
+
+- It leaves Today's ring row, the Today mini window and the phone's Habits widget, and Today's "left"
+  count no longer waits for it.
+- It stays on the Habits screen and the Habits mini window, marked **Not on Today**, and is checked
+  in there as before.
+- It keeps its streak and its map, and still counts wherever habits are counted: the Places hub's
+  Habits tile, Stats, reviews and the Letter's digest, and the goal it serves.
+- It is not a pause. A pause stops the cadence, so its days neither count nor break the streak; a
+  habit kept off Today still asks for its days.
+
+Which habits a day holds is pinned by the `onToday` group of
+[`contracts/vectors/habits.json`](../contracts/vectors/habits.json): a habit is **due today** when it
+is not archived, has started, is due that day and is not paused, and it is **on Today** when it is
+due today and not kept off. The Places hub counts the first; Today and the widget show the second.
+Through the connector, `get_today` lists the habits on Today and only counts the ones kept off it,
+`get_habits` says "not on Today" beside them, and `add_habit` and `update_habit` take
+`show_on_today`.
+
 ## Goals
 
 A habit can serve a goal. When the goal counts a number and the habit's unit is the goal's (ignoring
@@ -106,5 +128,7 @@ case and spaces), the habit's check-ins in the goal's period add to it like logg
 ## Storage
 
 `habits`, `habit_checkins` and `habit_pauses` are synced tables (Supabase migration 0010, replica
-migration 0005). Deleting a habit takes its check-ins and pauses with it; deleting its goal leaves the
+migration 0005). `direction` came with Supabase migration 0014 (replica 0009) and `show_on_today`
+with Supabase migration 0020 (replica 0014); both have defaults, so a habit from before reads as it
+did. Deleting a habit takes its check-ins and pauses with it; deleting its goal leaves the
 habit without one.

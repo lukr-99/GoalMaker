@@ -301,6 +301,11 @@
           "required": true
         },
         {
+          "name": "show_on_today",
+          "kind": "boolean",
+          "required": true
+        },
+        {
           "name": "created_at",
           "kind": "timestamp",
           "required": true

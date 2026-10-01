@@ -29,6 +29,18 @@ public static class HabitRules
     public static bool IsDue(HabitItem habit, DateOnly day) =>
         habit.Cadence != OnWeekdays || ((habit.Weekdays ?? 0) & WeekdayBit(day)) != 0;
 
+    /// <summary>
+    /// Whether <paramref name="habit"/> asks something of <paramref name="today"/>: not archived, started,
+    /// due that day and not paused. A habit kept off Today is still due here, so the Habits page, the
+    /// Places hub and the counts keep it.
+    /// </summary>
+    public static bool DueToday(HabitItem habit, DateOnly today, IReadOnlyList<HabitPause> pauses) =>
+        !habit.Archived && habit.StartsOn <= today && IsDue(habit, today) && !pauses.Any(pause => Covers(pause, today, today));
+
+    /// <summary>Whether Today's ring row and the tray show <paramref name="habit"/>: due today and not kept off Today.</summary>
+    public static bool OnToday(HabitItem habit, DateOnly today, IReadOnlyList<HabitPause> pauses) =>
+        habit.ShowOnToday && DueToday(habit, today, pauses);
+
     /// <summary>The first day of the habit's period holding <paramref name="day"/>: the day, its week's Monday, or its month's first.</summary>
     public static DateOnly PeriodStart(HabitItem habit, DateOnly day) => habit.Cadence switch
     {

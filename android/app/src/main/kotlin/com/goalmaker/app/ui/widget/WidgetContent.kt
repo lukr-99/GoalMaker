@@ -33,9 +33,9 @@ object WidgetContent {
         return summary.done to summary.total
     }
 
-    /** Today's habits, the ones due first, with how far each has got. */
+    /** Today's habits, the ones on Today's ring row, with how far each has got. */
     fun habits(data: HabitData, today: LocalDate, rows: Int = ROWS): List<WidgetHabit> =
-        data.habits.filter { !it.deleted && !it.archived && HabitRules.isDue(it, today) }
+        data.habits.filter { !it.deleted && HabitRules.onToday(it, today, data.pausesOf(it.id)) }
             .take(rows)
             .map { habit ->
                 val checkins = data.checkinsOf(habit.id)

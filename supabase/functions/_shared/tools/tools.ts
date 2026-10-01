@@ -20,7 +20,7 @@ import {
   periodEnd as goalPeriodEnd,
   periodStart as goalPeriodStart,
 } from "../rules/goals.ts";
-import { goalAmounts, habitPeriodStart, habitState, ring, streak } from "../rules/habits.ts";
+import { dueToday, goalAmounts, habitPeriodStart, habitState, onToday, ring, streak } from "../rules/habits.ts";
 import { lists } from "../rules/listRules.ts";
 import {
   board,
@@ -210,7 +210,29 @@ async function habitFields(planner: Planner, args: Record<string, unknown>): Pro
     goal: args.goal as string | null | undefined,
     startsOn: (await dayFrom(planner, args.starts_on as string | undefined)) ?? undefined,
     archived: args.archived as boolean | undefined,
+    showOnToday: args.show_on_today as boolean | undefined,
   };
+}
+
+/** The habits on Today's ring row, as lines, and how many due today are kept off it. */
+async function todayHabits(planner: Planner, today: Day): Promise<format.TodayHabits> {
+  const checkins = await planner.checkins();
+  const pauses = await planner.pauses();
+  const lines: string[] = [];
+  let keptOff = 0;
+  for (const habit of await planner.habits()) {
+    const own = checkins.filter((checkin) => checkin.habitId === habit.id);
+    const rests = pauses.filter((pause) => pause.habitId === habit.id);
+    if (!dueToday(habit, today, rests)) continue;
+    if (!onToday(habit, today, rests)) {
+      keptOff++;
+      continue;
+    }
+    const state = habitState(habit, habitPeriodStart(habit, today), today, own, rests);
+    const done = (ring(habit, today, own) ?? 0) * (habit.measure === "check" ? 1 : habit.target ?? 1);
+    lines.push(format.habitLine(habit, state, done, streak(habit, today, own, rests)));
+  }
+  return { lines, keptOff };
 }
 
 /** One habit as the Habits screen shows it today, for the line after a change. */
@@ -225,6 +247,10 @@ async function habitLineFor(planner: Planner, habit: Habit): Promise<string> {
 
 const goalId = z.string().describe("The goal's id, from get_goals.");
 const habitId = z.string().describe("The habit's id, from get_habits.");
+const showOnToday = z.boolean().describe(
+  "false keeps the habit off Today and its widgets. It still counts, keeps its streak and is checked in on the " +
+    "Habits page. Not a pause: its days still count.",
+);
 const horizon = z.enum(["year", "month", "week", "day"]).describe(
   "How long the goal runs: year, month, week or day. A week starts on Monday, a month on the 1st.",
 );
@@ -270,14 +296,19 @@ export const tools: Tool[] = [
     title: "Today",
     description:
       "The owner's Today list as GoalMaker shows it: top priorities, scheduled tasks by time, more, and overdue " +
-      "tasks from earlier days, with how many of today's tasks are done. Today is the owner's planning day, " +
-      "which starts at their day-start hour, not midnight.",
+      "tasks from earlier days, with how many of today's tasks are done, then today's habits. A habit the owner " +
+      "keeps off Today is only counted; get_habits shows it. Today is the owner's planning day, which starts at " +
+      "their day-start hour, not midnight.",
     input: {},
     readOnly: true,
     destructive: false,
     run: async (planner) => {
       const { today } = await planner.now();
-      return format.today(lists(await planner.tasks(), today), await namesOf(planner));
+      return format.today(
+        lists(await planner.tasks(), today),
+        await namesOf(planner),
+        await todayHabits(planner, today),
+      );
     },
   },
   {
@@ -917,7 +948,8 @@ export const tools: Tool[] = [
     title: "Habits",
     description:
       "The owner's habits as the Habits screen shows them: what each one asks of the day, whether its period is " +
-      "met, how far today has got, and the streak it is on. Archived habits are left out.",
+      "met, how far today has got, and the streak it is on. A habit kept off Today says not on Today. Archived " +
+      "habits are left out.",
     input: {
       day: z.string().optional().describe('The day to look at, as "today" or a date. Today by default.'),
       include_archived: z.boolean().optional().describe("Also show habits put away. Off by default."),
@@ -1009,6 +1041,7 @@ export const tools: Tool[] = [
       starts_on: day.optional().describe(
         "The first day it counts from; today by default. Streaks never reach back past it.",
       ),
+      show_on_today: showOnToday.optional().describe("true by default."),
     },
     readOnly: false,
     destructive: false,
@@ -1021,8 +1054,9 @@ export const tools: Tool[] = [
     name: "update_habit",
     title: "Edit a habit",
     description:
-      "Changes a habit's name, emoji, cadence, measure, target, unit, direction, the goal it serves or the day it " +
-      "starts from, and archives it or brings it back. What is left out stays as it was. Its check-ins are kept.",
+      "Changes a habit's name, emoji, cadence, measure, target, unit, direction, the goal it serves, the day it " +
+      "starts from or whether it shows on Today, and archives it or brings it back. What is left out stays as it " +
+      "was. Its check-ins are kept.",
     input: {
       id: habitId,
       name: z.string().optional(),
@@ -1037,6 +1071,7 @@ export const tools: Tool[] = [
       goal: z.string().optional().describe("A numeric goal's id, or empty to serve none."),
       starts_on: day.optional(),
       archived: z.boolean().optional().describe("true puts it away, false brings it back."),
+      show_on_today: showOnToday.optional(),
     },
     readOnly: false,
     destructive: false,

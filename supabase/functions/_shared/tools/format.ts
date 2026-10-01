@@ -118,6 +118,7 @@ export function habitLine(
   }
   parts.push(state === "met" ? "done" : state === "none" ? "not due" : state);
   if (streak > 0) parts.push(`streak ${streak}`);
+  if (!habit.showOnToday) parts.push("not on Today");
   return `- ${parts.join(" · ")} (habit id ${habit.id})`;
 }
 
@@ -166,8 +167,17 @@ function section(title: string, tasks: TaskItem[], names: Names, showDay = false
   return tasks.length === 0 ? [] : [`${title}:`, ...tasks.map((task) => taskLine(task, names, { showDay }))];
 }
 
-/** Today as the app shows it: top priorities, scheduled, more, and overdue, with the day's count. */
-export function today(lists: PlanningLists, names: Names): string {
+/** Today's habits as the ring row shows them, and how many due today are kept off Today. */
+export interface TodayHabits {
+  lines: string[];
+  keptOff: number;
+}
+
+/**
+ * Today as the app shows it: top priorities, scheduled, more, and overdue, with the day's count, then
+ * the habits on Today's ring row. Habits kept off Today are left out and only counted.
+ */
+export function today(lists: PlanningLists, names: Names, habits: TodayHabits = { lines: [], keptOff: 0 }): string {
   const sections = lists.todaySections;
   const body = [
     ...section("Top priorities", sections.priorities, names),
@@ -175,9 +185,15 @@ export function today(lists: PlanningLists, names: Names): string {
     ...section("More today", sections.more, names),
     ...section("Overdue (planned for an earlier day)", sections.overdue, names, true),
   ];
+  const keptOff = habits.keptOff === 0 ? [] : [
+    `${habits.keptOff} more ${habits.keptOff === 1 ? "habit is" : "habits are"} due today but kept off Today; ` +
+    "get_habits lists every habit.",
+  ];
   return [
     `Today is ${longDay(lists.today)}: ${lists.summary.done} of ${lists.summary.total} done.`,
     ...(body.length === 0 ? ["Nothing open is planned for today."] : body),
+    ...(habits.lines.length === 0 ? [] : ["Habits:", ...habits.lines]),
+    ...keptOff,
   ].join("\n");
 }
 

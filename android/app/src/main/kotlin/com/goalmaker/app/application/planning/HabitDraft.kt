@@ -18,4 +18,5 @@ data class HabitDraft(
     val unit: String? = null,
     val emoji: String? = null,
     val goalId: String? = null,
+    val showOnToday: Boolean = true,
 )

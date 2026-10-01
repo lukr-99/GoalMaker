@@ -175,6 +175,21 @@ class HabitsViewModelTest {
     }
 
     @Test
+    fun `a habit kept off Today stays on the Habits page and is still due`() = runTest {
+        habits.add(HabitDraft("Read", today))
+        val floss = habits.add(HabitDraft("Floss", today, showOnToday = false))!!
+
+        assertFalse(habits.find(floss.id)!!.showOnToday)
+        assertEquals(listOf("Read"), HabitBoard.today(habits.read(), today).map { it.habit.name })
+        assertEquals(listOf("Read", "Floss"), HabitBoard.due(habits.read(), today).map { it.habit.name })
+        assertTrue(habits.tap(floss.id, today))
+        assertEquals(1.0, HabitBoard.due(habits.read(), today).single { it.habit.id == floss.id }.ring)
+
+        assertTrue(habits.update(floss.id, HabitDraft("Floss", today, showOnToday = true)))
+        assertEquals(listOf("Read", "Floss"), HabitBoard.today(habits.read(), today).map { it.habit.name })
+    }
+
+    @Test
     fun `a habit serving a goal shows it, and goals that are over stay choosable`() = runTest {
         val goal = goals.add(GoalDraft("Run 80 km", GoalHorizon.MONTH, today, GoalRules.MODE_NUMBER, target = 80.0, unit = "km"))!!
         val over = goals.add(GoalDraft("Last week", GoalHorizon.WEEK, today.minusWeeks(2), GoalRules.MODE_DONE))!!

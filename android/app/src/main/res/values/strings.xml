@@ -568,6 +568,9 @@
     <string name="habits_limit_hint">Going over breaks the day. A day you log nothing on is a day you kept it.</string>
     <string name="habits_limit_hint_check">Checking in means you had one, and that breaks the day.</string>
     <string name="habits_unit">Unit (optional)</string>
+    <string name="habits_show_on_today">Show on Today</string>
+    <string name="habits_show_on_today_hint">Off keeps it to this page. It still counts and keeps its streak.</string>
+    <string name="habits_not_on_today">Not on Today</string>
     <string name="habits_goal">Serves</string>
     <string name="habits_no_goal">No goal</string>
     <string name="habits_goal_hint">A count or amount in the goal\'s unit adds to it.</string>

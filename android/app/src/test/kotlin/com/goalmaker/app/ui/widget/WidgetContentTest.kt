@@ -81,11 +81,13 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `the habits widget shows what is due today and what one tap can do`() {
+    fun `the habits widget shows what Today shows and what one tap can do`() {
         habits.add(HabitDraft("Read", today.minusDays(3), emoji = "📖"))
         habits.add(HabitDraft("Water", today.minusDays(3), measure = HabitRules.COUNT, target = 8.0, unit = "glasses"))
         habits.add(HabitDraft("Run", today.minusDays(3), measure = HabitRules.AMOUNT, target = 5.0, unit = "km"))
         habits.add(HabitDraft("Old", today.minusDays(3))).also { habits.setArchived(it!!.id, true) }
+        habits.add(HabitDraft("Floss", today.minusDays(3), showOnToday = false))
+        habits.add(HabitDraft("Resting", today.minusDays(3))).also { habits.pause(it!!.id, today.minusDays(1)) }
 
         val rows = WidgetContent.habits(habits.read(), today)
 

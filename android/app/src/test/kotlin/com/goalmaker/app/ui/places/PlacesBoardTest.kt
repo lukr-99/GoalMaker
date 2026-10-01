@@ -1,6 +1,8 @@
 package com.goalmaker.app.ui.places
 
+import com.goalmaker.app.application.planning.HabitCheckin
 import com.goalmaker.app.application.planning.HabitData
+import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.Reflection
 import com.goalmaker.app.application.planning.ReviewItem
@@ -66,6 +68,22 @@ class PlacesBoardTest {
         assertEquals(1, digest.projectsDoing)
         assertEquals(1, digest.doneThisWeek)
         assertEquals(2, digest.archived)
+    }
+
+    @Test
+    fun `the habits tile counts a habit kept off Today`() {
+        val habits = HabitData(
+            habits = listOf(
+                HabitItem("read", "Read", startsOn = today),
+                HabitItem("floss", "Floss", startsOn = today, showOnToday = false),
+            ),
+            checkins = listOf(HabitCheckin("c", "floss", today, value = 1.0)),
+        )
+
+        val digest = PlacesBoard.build(emptyList(), habits, emptyList(), emptyList(), emptyList(), today)
+
+        assertEquals(2, digest.habitsDue)
+        assertEquals(1, digest.habitsMet)
     }
 
     @Test

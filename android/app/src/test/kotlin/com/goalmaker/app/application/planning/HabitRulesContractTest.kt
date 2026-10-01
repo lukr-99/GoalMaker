@@ -35,6 +35,8 @@ class HabitRulesContractTest {
             measure = habit.text("measure")!!,
             target = habit.number("target"),
             direction = habit.text("direction") ?: HabitRules.AT_LEAST,
+            archived = habit["archived"]?.jsonPrimitive?.boolean ?: false,
+            showOnToday = habit["showOnToday"]?.jsonPrimitive?.boolean ?: true,
         )
     }
 
@@ -52,6 +54,17 @@ class HabitRulesContractTest {
     private fun JsonObject.pauses() = getValue("pauses").jsonArray.mapIndexed { index, element ->
         val pause = element.jsonObject
         HabitPause("p$index", "h", pause.day("from"), pause.text("until")?.let(LocalDate::parse))
+    }
+
+    @Test
+    fun `every habit due today and on Today`() {
+        vectors.cases("onToday").forEach { case ->
+            val expect = case.getValue("expect").jsonObject
+            val habit = case.habit()
+            val today = case.day("today")
+            assertEquals("${case.text("name")}: due", expect.getValue("due").jsonPrimitive.boolean, HabitRules.dueToday(habit, today, case.pauses()))
+            assertEquals("${case.text("name")}: on Today", expect.getValue("onToday").jsonPrimitive.boolean, HabitRules.onToday(habit, today, case.pauses()))
+        }
     }
 
     @Test
