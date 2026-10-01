@@ -106,16 +106,20 @@ public sealed partial class HabitsViewModel : ObservableObject
 
     public bool HasLogUnit => LogUnit.Length > 0;
 
-    /// <summary>Today's habits for the ring row on Today: active, not paused, and due today.</summary>
-    public IReadOnlyList<HabitRowViewModel> TodayRows()
+    /// <summary>Today's habits for the ring row on Today: due today and not kept off Today (contracts/vectors/habits.json, onToday).</summary>
+    public IReadOnlyList<HabitRowViewModel> TodayRows() => RowsWhere(HabitRules.OnToday);
+
+    /// <summary>Every habit due today, the ones kept off Today too: what the Places page counts.</summary>
+    public IReadOnlyList<HabitRowViewModel> DueRows() => RowsWhere(HabitRules.DueToday);
+
+    private List<HabitRowViewModel> RowsWhere(Func<HabitItem, DateOnly, IReadOnlyList<HabitPause>, bool> rule)
     {
         var today = Today();
         var checkins = habits.Checkins();
         var pauses = habits.Pauses();
         return [.. habits.All()
-            .Where(habit => !habit.Archived && habit.StartsOn <= today && HabitRules.IsDue(habit, today))
-            .Select(habit => Row(habit, checkins, pauses, today, null, strings, heat: false, owner: this))
-            .Where(row => !row.IsPaused)];
+            .Where(habit => rule(habit, today, [.. pauses.Where(pause => pause.HabitId == habit.Id)]))
+            .Select(habit => Row(habit, checkins, pauses, today, null, strings, heat: false, owner: this))];
     }
 
     public void Refresh()

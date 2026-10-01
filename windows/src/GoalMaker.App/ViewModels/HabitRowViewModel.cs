@@ -147,6 +147,9 @@ public sealed class HabitRowViewModel
 
     public bool HasServes => Serves.Length > 0;
 
+    /// <summary>The habit is kept off Today: the Habits page says so under its name.</summary>
+    public bool IsOffToday => !Habit.ShowOnToday && !Habit.Archived;
+
     public IRelayCommand CheckInCommand { get; }
 
     public IRelayCommand EditCommand { get; }

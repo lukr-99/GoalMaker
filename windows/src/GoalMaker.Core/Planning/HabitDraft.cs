@@ -23,4 +23,6 @@ public sealed record HabitDraft(string Name, DateOnly StartsOn)
     public string? Emoji { get; init; }
 
     public string? GoalId { get; init; }
+
+    public bool ShowOnToday { get; init; } = true;
 }

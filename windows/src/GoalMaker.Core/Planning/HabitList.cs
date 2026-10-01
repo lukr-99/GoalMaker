@@ -298,6 +298,7 @@ public sealed class HabitList
         ["direction"] = draft.Direction,
         ["unit"] = draft.Unit,
         ["goal_id"] = draft.GoalId,
+        ["show_on_today"] = draft.ShowOnToday,
     };
 
     private static double? Number(JsonNode? node) => node is JsonValue value
@@ -330,6 +331,9 @@ public sealed class HabitList
         Emoji = (string?)row["emoji"],
         GoalId = (string?)row["goal_id"],
         Archived = row["archived_at"] is not null,
+
+        // A row from before 0020 has no value, and every habit showed then.
+        ShowOnToday = row["show_on_today"] is null || Flag(row["show_on_today"]),
         Position = Number(row["position"]) ?? 0,
         Deleted = row[SyncedTable.DeletedAt] is not null,
     };
