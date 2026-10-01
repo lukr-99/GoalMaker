@@ -1,0 +1,1355 @@
+<!doctype html>
+<!--
+  PROTOTYPE v2, throwaway. The owner's picks from habits-goals-add-prototype.html (v1), put together
+  and polished, on the phone (Android, Material 3 Expressive) and the PC (Windows, WPF UI / Fluent):
+    - Add: folded into the bottom bar (the composer with the quick chat switch) on Today, Wants,
+      Habits and Goals. Empty, its button is a plus that opens the full form; with text it becomes
+      the send arrow and quick-adds that page's item, with a live preview.
+    - Goals: the horizon rings on top, then the ladder from the year down to today, each goal as a
+      card with its big number, bar, pace and quick log.
+    - Habits: Today switches between Tasks and Habits; habits are cards with pips and a round
+      check-in button. The Habits page is built from the same cards.
+  Theme tokens are copied from contracts/design/themes.json. Fonts load from fonts/ when the file is
+  served from the repository root, and fall back to Google Fonts otherwise:
+    python -m http.server 8765   then open http://localhost:8765/docs/design/prototypes/habits-goals-add-v2.html
+  State is in the URL (?screen=today&device=both&theme=track&mode=dark&send=A).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Habits, goals and add v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Outfit:wght@100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Space+Grotesk:wght@300..700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..600,0..1,0&display=block">
+<style>
+/* The repository's own font files win when the page is served from the repository root. */
+@font-face { font-family: "GM Archivo"; src: url("../../../fonts/archivo/Archivo%5Bwdth,wght%5D.ttf"); font-weight: 100 900; font-stretch: 62.5% 125%; font-style: normal; font-display: swap; }
+@font-face { font-family: "GM Archivo"; src: url("../../../fonts/archivo/Archivo-Italic%5Bwdth,wght%5D.ttf"); font-weight: 100 900; font-stretch: 62.5% 125%; font-style: italic; font-display: swap; }
+@font-face { font-family: "GM Plus Jakarta Sans"; src: url("../../../fonts/plusjakartasans/PlusJakartaSans%5Bwght%5D.ttf"); font-weight: 200 800; font-display: swap; }
+@font-face { font-family: "GM Space Grotesk"; src: url("../../../fonts/spacegrotesk/SpaceGrotesk%5Bwght%5D.ttf"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "GM Outfit"; src: url("../../../fonts/outfit/Outfit%5Bwght%5D.ttf"); font-weight: 100 900; font-display: swap; }
+
+:root {
+  --quick: 120ms; --standard: 250ms; --emph: 400ms;
+  --ease: cubic-bezier(.2, .8, .2, 1); --spring: cubic-bezier(.2, 1.25, .35, 1);
+  --chrome: #1b1c1f; --chrome2: #26272b; --chromeLine: #3a3b40; --chromeText: #e9e9ea; --chromeMuted: #a3a4a8;
+}
+.reduce { --standard: 120ms; --emph: 120ms; --spring: linear; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: #2a2b2e; color: var(--chromeText); font: 14px/1.45 system-ui, "Segoe UI", sans-serif; min-height: 100vh; }
+.ms { font-family: "Material Symbols Outlined"; font-weight: 400; font-style: normal; font-size: 22px; line-height: 1; width: 1em; overflow: hidden;
+  display: inline-block; white-space: nowrap; font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; user-select: none; vertical-align: middle; flex: none; }
+.ms.fill { font-variation-settings: "FILL" 1; }
+
+/* ---------------- prototype chrome (not part of the design) ---------------- */
+.pbar { position: sticky; top: 0; z-index: 60; background: var(--chrome); border-bottom: 1px solid var(--chromeLine); padding: 10px 16px 8px; display: flex; flex-direction: column; gap: 8px; }
+.pbar .r { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.pbar .brand { font-weight: 700; letter-spacing: .02em; color: #fff; }
+.pbar .brand small { font-weight: 500; color: var(--chromeMuted); margin-left: 6px; }
+.pbar label, .pbar .grp { display: flex; gap: 6px; align-items: center; color: var(--chromeMuted); font-size: 13px; }
+.pbar select, .pbar .btn { background: var(--chrome2); color: var(--chromeText); border: 1px solid #45464c; border-radius: 8px; padding: 5px 9px; font: inherit; font-size: 13px; cursor: pointer; }
+.seg { display: inline-flex; background: var(--chrome2); border: 1px solid #45464c; border-radius: 10px; padding: 2px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--chromeText); font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: #ececec; color: #111; font-weight: 600; }
+.qtabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.qtabs button { flex: none; border: 1px solid #45464c; background: transparent; color: var(--chromeText); border-radius: 999px; padding: 6px 14px; font: inherit; font-size: 13px; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.qtabs button b { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 99px; background: #3a3b40; font-size: 12px; }
+.qtabs button[aria-pressed="true"] { background: #ececec; color: #111; border-color: #ececec; }
+.qtabs button[aria-pressed="true"] b { background: #111; color: #fff; }
+.qtabs button .pk { font-size: 11px; color: #7fd36b; font-weight: 700; }
+.picks { margin-left: auto; font-size: 12px; color: var(--chromeMuted); display: flex; gap: 8px; align-items: center; }
+.picks b { color: #fff; }
+.wrap { max-width: 1520px; margin: 0 auto; padding: 0 16px; }
+.intro { margin: 14px 0 0; background: var(--chrome); border: 1px solid var(--chromeLine); border-radius: 12px; padding: 10px 14px; color: #cfd0d3; }
+.intro summary { cursor: pointer; font-weight: 600; color: #fff; }
+.intro p { margin: 8px 0 2px; max-width: 900px; }
+.optbar { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.opts { display: flex; gap: 6px; flex-wrap: wrap; }
+.opts button { border: 1px solid #45464c; background: var(--chrome); color: var(--chromeText); border-radius: 12px; padding: 8px 12px; font: inherit; cursor: pointer; text-align: left; display: flex; gap: 10px; align-items: center; }
+.opts button .l { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: #3a3b40; font-weight: 800; }
+.opts button[aria-pressed="true"] { border-color: #ececec; background: #ececec; color: #111; }
+.opts button[aria-pressed="true"] .l { background: #111; color: #fff; }
+.opts button .chosen { font-size: 11px; color: #2e8b1f; font-weight: 700; }
+.note { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; background: var(--chrome); border: 1px solid var(--chromeLine); border-radius: 12px; padding: 10px 14px; }
+.note .t { flex: 1 1 420px; color: #dcdde0; }
+.note .t b { color: #fff; }
+.note .t .trade { display: block; color: var(--chromeMuted); margin-top: 2px; }
+.pickbtn { border: 1px solid #7fd36b; color: #7fd36b; background: transparent; border-radius: 999px; padding: 7px 14px; font: inherit; font-weight: 600; cursor: pointer; }
+.pickbtn[aria-pressed="true"] { background: #7fd36b; color: #0d1a09; }
+.subnav { margin-top: 10px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; color: var(--chromeMuted); font-size: 13px; }
+.stage { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; align-items: flex-start; padding: 22px 0 60px; }
+.winwrap { position: relative; flex: none; }
+.winwrap > .win { transform-origin: top left; position: absolute; top: 0; left: 0; }
+.devcap { color: var(--chromeMuted); font-size: 12px; text-align: center; margin-bottom: 8px; letter-spacing: .04em; text-transform: uppercase; }
+
+/* ---------------- design surface ---------------- */
+.gm { background: var(--bg); color: var(--text); font-family: var(--body-font); font-weight: var(--body-weight); font-size: 15px; position: relative; overflow: hidden; }
+:where(.gm) button, :where(.gm) input { font: inherit; color: inherit; }
+:where(.gm) button { background: none; border: 0; cursor: pointer; padding: 0; }
+.gm .headline { font-family: var(--head-font); font-weight: var(--head-weight); font-style: var(--head-style); font-stretch: var(--head-width);
+  text-transform: var(--head-transform); letter-spacing: var(--head-tracking); color: var(--accent); margin: 0; line-height: 1.05; }
+.gm .num { font-family: var(--num-font); font-weight: var(--num-weight); font-style: var(--num-style); font-stretch: var(--num-width); font-variant-numeric: tabular-nums; }
+.gm .label { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); }
+.gm .muted { color: var(--muted); }
+.gm .strong { font-weight: var(--strong-weight); }
+.gm .iconbtn { width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center; color: var(--text); flex: none; transition: background var(--quick) var(--ease); }
+.gm .iconbtn.sm { width: 34px; height: 34px; }
+.gm .iconbtn.sm .ms { font-size: 20px; }
+.gm .iconbtn:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.gm .chip { height: 32px; padding: 0 12px; border-radius: 99px; border: 1px solid color-mix(in srgb, var(--outline) 70%, transparent); color: var(--text); font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex: none; transition: background var(--standard) var(--ease), color var(--standard) var(--ease); }
+.gm .chip .ms { font-size: 18px; }
+.gm .chip[aria-pressed="true"] { background: var(--accent); color: var(--onAccent); border-color: var(--accent); }
+.gm .tonal { background: var(--surfaceVariant); border-color: transparent; }
+.gm .primary { background: var(--primary); color: var(--onPrimary); border-color: var(--primary); }
+.gm .flame { display: inline-flex; align-items: center; gap: 2px; color: var(--accent); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gm .flame .ms { font-size: 15px; }
+.gm .flame.cold { color: var(--muted); font-weight: 500; }
+
+.page.pagein { animation: pageIn var(--standard) var(--ease) both; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.reduce .page.pagein { animation: fadeIn var(--quick) linear both; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fresh { animation: freshIn var(--emph) var(--spring) both; }
+@keyframes freshIn { from { opacity: 0; transform: translateY(-10px) scale(.97); } to { opacity: 1; transform: none; } }
+.reduce .fresh { animation: fadeIn var(--quick) linear both; }
+
+/* sections, rows, tasks */
+.sech { display: flex; align-items: center; gap: 8px; min-height: 34px; margin: 14px 0 6px; width: 100%; text-align: left; }
+.sech .chev { margin-left: auto; color: var(--muted); font-size: 20px; transition: transform var(--standard) var(--ease); }
+.sech[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.sech .more { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); }
+.rows { display: flex; flex-direction: column; gap: var(--rowgap); }
+.row { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: var(--r-row); padding: 0 12px; min-height: var(--rowh); }
+.check { width: 22px; height: 22px; border-radius: var(--r-check); border: 2px solid var(--outline); flex: none; display: grid; place-items: center;
+  transition: background var(--quick) var(--ease), border-color var(--quick) var(--ease); }
+.check .ms { font-size: 17px; }
+.check.on { background: var(--accent); border-color: var(--accent); color: var(--onAccent); }
+.task .ttl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task .time { color: var(--accent); font-weight: 700; margin-right: 8px; font-variant-numeric: tabular-nums; }
+.task .meta { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.task.done .ttl { text-decoration: line-through; opacity: .5; }
+.adot { width: 8px; height: 8px; border-radius: 9px; flex: none; }
+.summary { color: var(--muted); margin: 0 0 4px; font-size: 14px; }
+
+/* rings */
+.ring { position: relative; display: inline-grid; place-items: center; width: var(--s); height: var(--s); flex: none; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); overflow: visible; }
+.ring .trk { fill: none; stroke: color-mix(in srgb, var(--outline) 32%, transparent); }
+.ring .arc { fill: none; stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset var(--emph) var(--spring), opacity var(--quick) linear; }
+.ring.over .arc { stroke: var(--danger); }
+.ring.skip .trk { stroke-dasharray: 3 4; }
+.ring.skip .arc { opacity: 0 !important; }
+.ring.skip .in { opacity: .45; filter: grayscale(1); }
+.ring .in { position: relative; line-height: 1; display: grid; place-items: center; }
+.ring.burst { animation: pop var(--emph) var(--spring); }
+.ring.burst::after { content: ""; position: absolute; inset: -3px; border-radius: 50%; border: 3px dotted var(--accent); animation: burst var(--emph) ease-out forwards; pointer-events: none; }
+@keyframes pop { 0% { transform: scale(1); } 30% { transform: scale(1.14); } 100% { transform: scale(1); } }
+@keyframes burst { from { transform: scale(.85) rotate(0deg); opacity: 1; } to { transform: scale(1.55) rotate(30deg); opacity: 0; } }
+.reduce .ring.burst, .reduce .ring.burst::after { animation: none; border: 0; }
+
+/* confetti */
+.confetti { position: absolute; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+.confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; animation: fall 1100ms cubic-bezier(.3,.6,.4,1) forwards; }
+@keyframes fall { to { transform: translate(var(--dx), 720px) rotate(var(--r)); opacity: .2; } }
+
+/* Q1 A: ring tiles */
+.strip { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; margin: 0 -8px; padding: 2px 4px 4px; }
+.rtile { width: 70px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0 6px; border-radius: 14px; position: relative; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+.rtile:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
+.rtile .rname { font-size: 12px; font-weight: 600; max-width: 66px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rtile .rsub { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; height: 14px; line-height: 14px; }
+.rtile.done .rname { color: var(--muted); }
+.rbadge { position: absolute; top: 40px; left: 46px; width: 20px; height: 20px; border-radius: 99px; background: var(--accent); color: var(--onAccent); display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); animation: freshIn var(--standard) var(--spring) both; }
+.rbadge .ms { font-size: 14px; }
+.rbadge.sk { background: var(--surfaceVariant); color: var(--muted); }
+.stripcard { background: var(--surface); border-radius: var(--r-card); padding: 6px 8px 4px; margin: 8px 0 2px; }
+.stripcard .head { display: flex; align-items: center; gap: 8px; padding: 4px 6px 0; }
+.stripcard .head .more { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--accent); }
+.hint { font-size: 11px; color: var(--muted); padding: 0 6px 4px; }
+.tilegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bigtile { background: var(--surface); border-radius: var(--r-card); padding: 14px 12px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; position: relative; }
+.bigtile .nm { font-weight: var(--strong-weight); font-size: 15px; }
+.bigtile .st { font-size: 12px; color: var(--muted); }
+.bigtile.skipped { opacity: .75; }
+.bigtile .tmenu { position: absolute; top: 4px; right: 4px; }
+.wdots { display: flex; gap: 4px; }
+.wdots span { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; color: var(--muted); font-weight: 600; }
+.wdots i { width: 10px; height: 10px; border-radius: 99px; display: block; background: color-mix(in srgb, var(--outline) 30%, transparent); }
+.wdots i.met { background: var(--accent); }
+.wdots i.skip { background: transparent; border: 1.5px dashed var(--outline); }
+.wdots i.miss { background: color-mix(in srgb, var(--outline) 30%, transparent); }
+.wdots i.over { background: var(--danger); }
+.wdots i.today { background: transparent; border: 2px solid var(--accent); }
+.wdots i.off { background: transparent; }
+
+/* Q1 B: habit cards */
+.hcards { display: flex; flex-direction: column; gap: 8px; }
+.hcard { background: var(--surface); border-radius: var(--r-card); padding: 10px 6px 10px 12px; display: flex; align-items: center; gap: 12px; transition: opacity var(--standard) var(--ease); }
+.hcard .emo { width: 40px; height: 40px; border-radius: calc(var(--r-card) * .8); background: var(--surfaceVariant); display: grid; place-items: center; font-size: 20px; flex: none; }
+.hcard .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hcard .nm { display: flex; align-items: center; gap: 8px; font-weight: var(--strong-weight); }
+.hcard .nm .flame { margin-left: auto; }
+.hcard .st { font-size: 12px; color: var(--muted); }
+.hcard.skipped { opacity: .62; }
+.hcard.skipped .st { font-style: italic; }
+.hcard.done .nm > span:first-child { color: var(--muted); }
+.pips { display: flex; gap: 3px; margin-top: 3px; }
+.pips i { flex: 1; height: 6px; border-radius: 9px; background: color-mix(in srgb, var(--outline) 30%, transparent); transition: background var(--standard) var(--ease); }
+.pips i.on { background: var(--accent); }
+.pips i.ov { background: var(--danger); }
+.bar { height: 6px; border-radius: 9px; background: color-mix(in srgb, var(--outline) 30%, transparent); overflow: hidden; margin-top: 3px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 9px; transition: width var(--emph) var(--spring); }
+.cibtn { width: 52px; height: 48px; border-radius: 16px; background: var(--surfaceVariant); color: var(--text); display: grid; place-items: center; flex: none; font-weight: 800; font-size: 14px;
+  transition: border-radius var(--standard) var(--spring), background var(--standard) var(--ease), color var(--standard) var(--ease), transform var(--quick) var(--ease); }
+.cibtn:active { transform: scale(.92); border-radius: 12px; }
+.cibtn.on { background: var(--accent); color: var(--onAccent); border-radius: 26px; }
+.cibtn small { font-size: 10px; font-weight: 600; display: block; margin-top: -2px; opacity: .8; }
+.cibtn:disabled { opacity: .5; cursor: default; }
+.donechips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.hcols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* Q1 C: segment + morph rows */
+.segbtns { display: flex; background: var(--surfaceVariant); border-radius: 999px; padding: 4px; margin: 8px 0 6px; }
+.segbtns button { flex: 1; height: 40px; border-radius: 999px; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted);
+  transition: background var(--standard) var(--ease), color var(--standard) var(--ease); }
+.segbtns button[aria-pressed="true"] { background: var(--accent); color: var(--onAccent); }
+.segbtns .cnt { font-size: 12px; font-weight: 800; padding: 1px 7px; border-radius: 99px; background: color-mix(in srgb, currentColor 18%, transparent); }
+.hrow { background: var(--surface); border-radius: var(--r-row); display: flex; align-items: center; gap: 12px; padding: 8px 4px 8px 8px; min-height: 64px; }
+.hrow .mid { flex: 1; min-width: 0; }
+.hrow .nm { font-weight: var(--strong-weight); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hrow .st { font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hrow.skipped { opacity: .62; }
+.morph { width: 48px; height: 48px; border-radius: 14px; background: var(--surfaceVariant); position: relative; overflow: hidden; flex: none; display: grid; place-items: center;
+  transition: border-radius var(--emph) var(--spring), transform var(--quick) var(--ease); }
+.morph:active { transform: scale(.9); }
+.morph .fillv { position: absolute; left: 0; right: 0; bottom: 0; background: var(--accent); transition: height var(--emph) var(--spring); }
+.morph.over .fillv { background: var(--danger); }
+.morph .lab { position: relative; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; line-height: 1; text-align: center; }
+.morph .lab small { display: block; font-size: 10px; font-weight: 600; opacity: .75; margin-top: 1px; }
+.morph.on { border-radius: 50%; }
+.morph.on .lab, .morph.hi .lab { color: var(--onAccent); }
+.morph.skip { background: transparent; border: 2px dashed var(--outline); }
+.nudge { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: var(--r-row); border: 1px dashed color-mix(in srgb, var(--outline) 70%, transparent); width: 100%; text-align: left; }
+.nudge .ms { color: var(--accent); }
+.sidepanel .wdots span { font-size: 0; }
+.sidepanel { background: var(--surface); border-radius: var(--r-card); padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.sidepanel .hrow { background: var(--bg); }
+
+/* goals */
+.gtabs { display: flex; border-bottom: 1px solid color-mix(in srgb, var(--outline) 35%, transparent); margin: 4px 0 12px; }
+.gtabs button { flex: 1; height: 46px; font-weight: 700; color: var(--muted); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 14px; }
+.gtabs button small { font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.gtabs button[aria-selected="true"] { color: var(--accent); }
+.gtabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--accent); animation: barIn var(--standard) var(--spring) both; }
+@keyframes barIn { from { transform: scaleX(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+.hero { background: var(--hero); color: var(--onHero); border-radius: var(--r-card); padding: 14px 16px; }
+.hero .num { color: var(--heroAccent); }
+.hero .label { color: inherit; opacity: .85; }
+.hero .ring .arc { stroke: var(--heroAccent); }
+.hero .ring .trk { stroke: color-mix(in srgb, var(--onHero) 22%, transparent); }
+.gcard { background: var(--surface); border-radius: var(--r-card); padding: 12px 8px 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.gcard .top { display: flex; align-items: flex-start; gap: 10px; }
+.gcard .tt { flex: 1; min-width: 0; }
+.gcard .tt b { font-weight: var(--strong-weight); display: block; }
+.gcard .serves { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+.gcard .serves .ms { font-size: 15px; }
+.gcard .amt { display: flex; align-items: baseline; gap: 6px; }
+.gcard .amt .num { font-size: 26px; line-height: 1; color: var(--accent); }
+.gcard .amt .of { color: var(--muted); font-size: 13px; }
+.gcard .foot { display: flex; align-items: center; gap: 8px; }
+.gcard .foot .bar { flex: 1; margin: 0; height: 8px; }
+.gcard.hit .amt .num { color: var(--accent); }
+.gcard.dropped { opacity: .55; }
+.gcard.dropped b { text-decoration: line-through; }
+.pace { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.pace.ok { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text); }
+.pace.behind { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--text); }
+.pace.hit { background: var(--accent); color: var(--onAccent); }
+.pace.drop { background: var(--surfaceVariant); color: var(--muted); }
+.logbtn { height: 34px; padding: 0 12px; border-radius: 99px; background: var(--surfaceVariant); font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.logbtn .ms { font-size: 18px; }
+.gcards { display: flex; flex-direction: column; gap: 8px; }
+.gcards.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+.copyrow { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px dashed color-mix(in srgb, var(--outline) 70%, transparent); border-radius: var(--r-card); color: var(--muted); font-size: 13px; }
+.copyrow .chip { margin-left: auto; }
+/* ladder */
+.rung { position: relative; padding-left: 30px; margin-bottom: 4px; }
+.rung::before { content: ""; position: absolute; left: 11px; top: 30px; bottom: -6px; width: 2px; background: color-mix(in srgb, var(--outline) 35%, transparent); }
+.rung:last-child::before { display: none; }
+.rung .rh { display: flex; align-items: center; gap: 10px; min-height: 34px; width: 100%; text-align: left; }
+.rung .hb { position: absolute; left: 0; top: 5px; width: 24px; height: 24px; border-radius: 8px; background: var(--accent); color: var(--onAccent); display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+.rung .rh .pt { font-weight: var(--strong-weight); }
+.rung .rh .chev { margin-left: auto; color: var(--muted); transition: transform var(--standard) var(--ease); }
+.rung .rh[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.node { background: var(--surface); border-radius: var(--r-row); display: flex; align-items: center; gap: 10px; padding: 8px 6px 8px 10px; min-height: 52px; margin-bottom: 6px; width: 100%; text-align: left; position: relative;
+  transition: opacity var(--standard) var(--ease), box-shadow var(--standard) var(--ease), transform var(--standard) var(--ease); }
+.node::before { content: ""; position: absolute; left: -24px; top: 50%; width: 14px; height: 2px; background: color-mix(in srgb, var(--outline) 35%, transparent); }
+.node .tt { flex: 1; min-width: 0; }
+.node .tt b { font-weight: var(--strong-weight); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.node .tt span { font-size: 12px; color: var(--muted); }
+.node .for { font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 3px; font-weight: 600; }
+.node .for .ms { font-size: 14px; }
+.ladder.focus .node { opacity: .35; }
+.ladder.focus .node.chain { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.ladder.focus .node.chain::before { background: var(--accent); }
+.node.dropped b { text-decoration: line-through; }
+.node.dropped { opacity: .55; }
+.lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.lane { background: color-mix(in srgb, var(--surface) 55%, transparent); border-radius: var(--r-card); padding: 8px; min-width: 0; min-height: 380px; }
+.lane .lh { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.lane .lh .hb { width: 24px; height: 24px; border-radius: 8px; background: var(--accent); color: var(--onAccent); display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+.lane .node::before { display: none; }
+.lanes.focus .node { opacity: .35; }
+.lanes.focus .node.chain { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.lanearrow { text-align: center; color: var(--muted); margin: -2px 0 4px; }
+/* dashboard */
+.rings4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 12px; }
+.rings4 button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 2px 8px; border-radius: var(--r-card); transition: background var(--standard) var(--ease); }
+.rings4 button[aria-pressed="true"] { background: var(--surface); box-shadow: inset 0 0 0 2px var(--accent); }
+.rings4 .rl { font-size: 12px; font-weight: 700; }
+.rings4 .rs { font-size: 11px; color: var(--muted); margin-top: -4px; }
+.drow { background: var(--surface); border-radius: var(--r-row); display: flex; align-items: center; gap: 10px; padding: 8px 6px 8px 10px; min-height: 56px; }
+.drow .tt { flex: 1; min-width: 0; }
+.drow .tt b { font-weight: var(--strong-weight); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.drow .tt span { font-size: 12px; color: var(--muted); }
+.hzc { font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 1px 6px; border-radius: 6px; background: var(--surfaceVariant); color: var(--muted); margin-right: 6px; }
+.dcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+
+/* add (Q3) */
+.fab { position: absolute; right: 16px; bottom: 92px; height: 56px; min-width: 56px; padding: 0 20px 0 16px; border-radius: 18px; background: var(--primary); color: var(--onPrimary);
+  display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 6px 18px rgba(0,0,0,.28); z-index: 8; overflow: hidden; white-space: nowrap;
+  transition: padding var(--standard) var(--ease), border-radius var(--standard) var(--ease), transform var(--quick) var(--ease); }
+.fab .ms { font-size: 24px; }
+.fab .fl { max-width: 160px; transition: max-width var(--standard) var(--ease), opacity var(--quick) linear; }
+.fab.shrunk { padding: 0 16px; }
+.fab.shrunk .fl { max-width: 0; opacity: 0; }
+.fab:active { transform: scale(.94); }
+.addrow { display: flex; align-items: center; gap: 12px; min-height: var(--rowh); padding: 0 12px; border-radius: var(--r-row); border: 1.5px dashed color-mix(in srgb, var(--outline) 75%, transparent);
+  color: var(--accent); font-weight: 700; width: 100%; text-align: left; margin-bottom: var(--rowgap); }
+.addrow .kbd { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; border: 1px solid color-mix(in srgb, var(--outline) 50%, transparent); border-radius: 5px; padding: 1px 6px; }
+.addform { background: var(--surface); border-radius: var(--r-row); padding: 10px 12px; margin-bottom: var(--rowgap); box-shadow: 0 0 0 2px var(--accent); }
+.addform input { width: 100%; background: transparent; border: 0; outline: 0; font-size: 15px; padding: 6px 0; }
+.addform .acts { display: flex; gap: 8px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.addform .acts .sp { flex: 1; }
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.field span { font-size: 12px; font-weight: 700; color: var(--accent); }
+.field input { background: var(--surfaceVariant); border: 1px solid transparent; border-radius: var(--r-button); padding: 10px 12px; outline: 0; font-size: 15px; }
+.field input:focus { border-color: var(--accent); }
+.chipsrow { display: flex; gap: 6px; flex-wrap: wrap; }
+.wantrow .tt { flex: 1; min-width: 0; }
+.wantrow .tt b { font-weight: var(--strong-weight); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wantrow .tt span { font-size: 12px; color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wantrow .price { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wantrow { min-height: 60px; }
+
+/* composer */
+.composer { position: absolute; left: 12px; right: 12px; bottom: 88px; border-radius: 26px; background: var(--surfaceVariant); z-index: 7; box-shadow: 0 4px 18px rgba(0,0,0,.2); padding: 0; overflow: hidden; }
+.composer .preview { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px; max-height: 0; overflow: hidden; transition: max-height var(--standard) var(--ease), padding var(--standard) var(--ease); }
+.composer .preview.has { max-height: 140px; padding: 10px 12px 0; }
+.composer .preview .chip { height: 26px; font-size: 12px; background: var(--surface); border-color: transparent; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.composer .preview .chip.warn { color: var(--danger); }
+.composer .line { display: flex; align-items: center; height: 50px; padding: 0 6px 0 18px; gap: 8px; }
+.composer input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; }
+.composer input::placeholder { color: var(--muted); }
+.composer .send { width: 38px; height: 38px; border-radius: 99px; background: var(--primary); color: var(--onPrimary); display: grid; place-items: center; flex: none; }
+.composer .modepill { width: 32px; height: 32px; border-radius: 99px; background: color-mix(in srgb, var(--text) 8%, transparent); display: grid; place-items: center; color: var(--muted); flex: none; margin-left: -10px; }
+.composer .modepill .ms { font-size: 18px; }
+
+/* sheets, menus, snackbars */
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.42); z-index: 30; animation: fadeIn var(--standard) linear both; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; padding: 10px 18px 22px; z-index: 31; animation: sheetUp var(--emph) var(--spring) both; max-height: 88%; overflow: auto; }
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+.reduce .sheet { animation: fadeIn var(--quick) linear both; }
+.grabber { width: 36px; height: 4px; border-radius: 9px; background: var(--outline); opacity: .5; margin: 0 auto 14px; }
+.menuitem { display: flex; align-items: center; gap: 14px; width: 100%; height: 50px; padding: 0 6px; border-radius: 12px; text-align: left; font-size: 15px; }
+.menuitem:hover { background: color-mix(in srgb, var(--text) 6%, transparent); }
+.menuitem .ms { color: var(--muted); }
+.flyout { position: absolute; top: 0; right: 0; bottom: 0; width: 380px; background: var(--surface); z-index: 31; padding: 20px 22px; box-shadow: -12px 0 30px rgba(0,0,0,.25); animation: flyIn var(--standard) var(--ease) both;
+  border-left: 1px solid color-mix(in srgb, var(--outline) 30%, transparent); overflow: auto; }
+@keyframes flyIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.popmenu { position: absolute; z-index: 31; width: 260px; background: var(--surface); border-radius: 10px; padding: 6px; box-shadow: 0 12px 34px rgba(0,0,0,.35); border: 1px solid color-mix(in srgb, var(--outline) 35%, transparent);
+  animation: freshIn var(--standard) var(--ease) both; left: 50%; top: 120px; transform: translateX(-50%); }
+.popmenu .menuitem { height: 36px; font-size: 14px; border-radius: 6px; }
+.snack { position: absolute; left: 12px; right: 12px; bottom: 150px; z-index: 35; background: var(--text); color: var(--bg); border-radius: 10px; padding: 12px 14px; font-size: 14px; display: flex; align-items: center; gap: 10px;
+  animation: freshIn var(--standard) var(--ease) both; box-shadow: 0 6px 20px rgba(0,0,0,.3); }
+.snack.win { left: auto; right: 24px; bottom: 24px; width: 340px; }
+
+/* ---------------- phone frame ---------------- */
+.phone { width: 392px; height: 820px; border-radius: 46px; border: 10px solid #0b0b0c; box-shadow: 0 30px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; flex: none;
+  --rowh: 52px; --rowgap: 8px; }
+.phone .status { height: 30px; flex: none; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 12px; font-weight: 600; }
+.phone .status .ms { font-size: 15px; }
+.phone .topbar { flex: none; display: flex; align-items: center; gap: 2px; padding: 4px 6px 2px 16px; min-height: 64px; }
+.phone .topbar.back { padding-left: 4px; }
+.phone .topbar .headline { font-size: 32px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 4px; }
+.phone .content { flex: 1; overflow: auto; padding: 0 16px 170px; position: relative; scrollbar-width: none; }
+.phone .navbar { flex: none; height: 80px; display: flex; background: var(--surface); padding: 0 4px 10px; z-index: 9; position: relative; }
+.phone .navbar button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.phone .navbar .pill { width: 56px; height: 32px; border-radius: 99px; display: grid; place-items: center; position: relative; }
+.phone .navbar button[aria-current="true"] { color: var(--text); }
+.phone .navbar button[aria-current="true"] .pill { background: var(--accent); color: var(--onAccent); }
+.phone .navbar .badge { position: absolute; top: -4px; right: 4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 99px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; }
+
+/* ---------------- windows frame ---------------- */
+.win { width: 1100px; height: 700px; border-radius: 10px; box-shadow: 0 30px 60px rgba(0,0,0,.5); display: flex; flex-direction: column; border: 1px solid #444; font-size: 14px;
+  --rowh: 40px; --rowgap: 4px; }
+.win .titlebar { height: 34px; flex: none; display: flex; align-items: center; padding-left: 14px; font-size: 12px; gap: 8px; color: var(--muted); }
+.win .titlebar .ms { font-size: 16px; }
+.win .titlebar .caps { margin-left: auto; display: flex; }
+.win .titlebar .caps span { width: 46px; text-align: center; font-size: 14px; }
+.win .body { flex: 1; display: flex; min-height: 0; }
+.win .side { width: 220px; flex: none; padding: 4px 8px; display: flex; flex-direction: column; gap: 1px; overflow: auto; scrollbar-width: none; }
+.win .navitem { display: flex; align-items: center; gap: 12px; height: 34px; padding: 0 10px; border-radius: 6px; font-size: 13.5px; width: 100%; text-align: left; position: relative; white-space: nowrap; }
+.win .navitem .ms { font-size: 19px; }
+.win .navitem:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+.win .navitem[aria-current="true"] { background: color-mix(in srgb, var(--accent) 15%, transparent); font-weight: 650; }
+.win .navitem[aria-current="true"]::before { content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; width: 3px; border-radius: 3px; background: var(--accent); }
+.win .navitem .trail { margin-left: auto; font-size: 12px; color: var(--muted); }
+.win .sidehead { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 10px 4px; }
+.win .main { flex: 1; background: var(--bg); border-top-left-radius: 10px; overflow: auto; position: relative; min-width: 0; scrollbar-width: thin;
+  border-left: 1px solid color-mix(in srgb, var(--outline) 22%, transparent); border-top: 1px solid color-mix(in srgb, var(--outline) 22%, transparent); }
+.win .mainin { padding: 18px 28px 120px; max-width: 980px; margin: 0 auto; }
+.win .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; min-height: 44px; }
+.win .toolbar .headline { font-size: 34px; }
+.win .toolbar .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.win .chip { height: 32px; border-radius: var(--r-button-w); }
+.win .row, .win .hrow, .win .drow, .win .node { min-height: var(--rowh); }
+.win .composer { position: sticky; left: auto; right: auto; bottom: 16px; margin: 18px auto 0; max-width: 760px; }
+.win .winbtn { height: 32px; padding: 0 14px; border-radius: var(--r-button-w); display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; border: 1px solid color-mix(in srgb, var(--outline) 45%, transparent); background: var(--surface); }
+.win .winbtn.accent { background: var(--primary); color: var(--onPrimary); border-color: var(--primary); }
+.win .winbtn .ms { font-size: 18px; }
+.win .cibtn { width: 46px; height: 36px; border-radius: 10px; }
+.win .cibtn.on { border-radius: 18px; }
+.win .morph { width: 38px; height: 38px; border-radius: 10px; }
+.win .morph.on { border-radius: 50%; }
+.win .hrow { min-height: 52px; padding: 6px 4px 6px 8px; }
+.win .gcard .amt .num { font-size: 24px; }
+
+@media (max-width: 480px) {
+  .phone { width: calc(100vw - 24px); height: 760px; border-width: 6px; border-radius: 32px; }
+  .pbar { padding: 8px 12px; position: static; }
+  .wrap { padding: 0 12px; }
+  .picks { margin-left: 0; width: 100%; }
+  .opts button { flex: 1 1 100%; }
+}
+
+/* ---------------- v2 additions ---------------- */
+.qtabs button .ms { font-size: 18px; width: 18px; }
+.note b { color: #fff; }
+.note ul { margin: 6px 0 0; padding-left: 18px; color: #cfd0d3; }
+.note li { margin: 2px 0; }
+.phone .content { padding-bottom: 190px; }
+
+/* the bottom bar: quick chat switch, field, and one button that is both "add" and "send" */
+.cmpwrap { position: absolute; left: 12px; right: 12px; bottom: 90px; z-index: 7; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.cmpwrap > * { pointer-events: auto; }
+.win .cmpwrap { position: sticky; left: auto; right: auto; bottom: 16px; margin: 20px auto 0; max-width: 760px; }
+.cmp { background: var(--surfaceVariant); border-radius: 26px; box-shadow: 0 4px 18px rgba(0,0,0,.22); overflow: hidden; border: 1px solid color-mix(in srgb, var(--outline) 18%, transparent);
+  transition: box-shadow var(--standard) var(--ease), border-color var(--standard) var(--ease); }
+.cmp:focus-within { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.cmp .preview { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px; max-height: 0; overflow: hidden; transition: max-height var(--standard) var(--ease), padding var(--standard) var(--ease); }
+.cmp .preview.has { max-height: 140px; padding: 10px 12px 2px; }
+.cmp .preview .chip { height: 26px; font-size: 12px; background: var(--surface); border-color: transparent; max-width: 100%; overflow: hidden; text-overflow: ellipsis; animation: freshIn var(--standard) var(--spring) both; }
+.cmp .preview .chip.kind { background: var(--accent); color: var(--onAccent); }
+.cmp .preview .chip.warn { color: var(--danger); }
+.cmp .preview .chip.all { background: transparent; border: 1px solid color-mix(in srgb, var(--outline) 60%, transparent); color: var(--accent); }
+.cmp .line { display: flex; align-items: center; height: 54px; padding: 0 7px; gap: 6px; }
+.cmp input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 15px; padding: 0 4px; }
+.cmp input::placeholder { color: var(--muted); }
+.aiswitch { width: 38px; height: 38px; border-radius: 99px; display: grid; place-items: center; flex: none; color: var(--muted);
+  background: color-mix(in srgb, var(--text) 9%, transparent); transition: background var(--standard) var(--ease), color var(--standard) var(--ease), transform var(--quick) var(--ease); }
+.aiswitch .ms { font-size: 20px; }
+.aiswitch:active { transform: scale(.9); }
+.cmp.ai .aiswitch { background: var(--primary); color: var(--onPrimary); }
+.expand { width: 0; opacity: 0; height: 38px; border-radius: 99px; display: grid; place-items: center; flex: none; overflow: hidden; color: var(--accent);
+  transition: width var(--standard) var(--spring), opacity var(--quick) linear, background var(--quick) var(--ease); }
+.expand .ms { font-size: 20px; }
+.expand:hover { background: color-mix(in srgb, var(--text) 8%, transparent); }
+.cmp.has:not(.ai) .expand { width: 38px; opacity: 1; }
+.sendbtn { width: 42px; height: 42px; border-radius: 14px; background: var(--primary); color: var(--onPrimary); position: relative; flex: none; overflow: hidden;
+  transition: border-radius var(--emph) var(--spring), transform var(--quick) var(--ease), opacity var(--quick) linear, width var(--standard) var(--spring); }
+.sendbtn .ms { position: absolute; inset: 0; margin: auto; width: 24px; height: 24px; font-size: 24px; transition: transform var(--standard) var(--spring), opacity var(--quick) linear; }
+.sendbtn .i-send { opacity: 0; transform: translateY(12px) scale(.5); }
+.sendbtn:active { transform: scale(.9); }
+.cmp.has .sendbtn, .cmp.ai .sendbtn { border-radius: 50%; }
+.cmp.has .sendbtn .i-plus, .cmp.ai .sendbtn .i-plus { opacity: 0; transform: rotate(135deg) scale(.4); }
+.cmp.has .sendbtn .i-send, .cmp.ai .sendbtn .i-send { opacity: 1; transform: none; }
+.cmp.ai:not(.has) .sendbtn { opacity: .4; }
+.sendbtn .holdring { position: absolute; inset: 0; border-radius: inherit; background: conic-gradient(color-mix(in srgb, var(--onPrimary) 35%, transparent) calc(var(--h, 0) * 360deg), transparent 0); pointer-events: none; }
+.sendbtn.holding .holdring { --h: 1; transition: --h 480ms linear; }
+@property --h { syntax: "<number>"; inherits: false; initial-value: 0; }
+.reduce .sendbtn .ms { transition: opacity var(--quick) linear; transform: none !important; }
+.thread { background: var(--surface); border-radius: var(--r-card); box-shadow: 0 10px 28px rgba(0,0,0,.25); border: 1px solid color-mix(in srgb, var(--outline) 30%, transparent);
+  padding: 10px 12px; max-height: 240px; overflow: auto; display: flex; flex-direction: column; gap: 8px; animation: freshIn var(--standard) var(--ease) both; }
+.thread .th { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--accent); }
+.thread .th .ms { font-size: 16px; }
+.thread .th button { margin-left: auto; }
+.msg { max-width: 86%; padding: 8px 12px; border-radius: 16px; font-size: 14px; line-height: 1.35; animation: freshIn var(--standard) var(--spring) both; }
+.msg.me { align-self: flex-end; background: var(--primary); color: var(--onPrimary); border-bottom-right-radius: 6px; }
+.msg.bot { align-self: flex-start; background: var(--surfaceVariant); border-bottom-left-radius: 6px; }
+.msg.typing { color: var(--muted); }
+
+/* full forms (sheet on the phone, side panel on the PC) */
+.form .fhead { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.form .fhead .ico { width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--onAccent); display: grid; place-items: center; flex: none; }
+.form .from { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+.form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form select { background: var(--surfaceVariant); border: 1px solid transparent; border-radius: var(--r-button); padding: 10px 12px; font: inherit; color: var(--text); font-size: 15px; outline: 0; }
+.form .live { font-size: 13px; color: var(--muted); margin: -6px 0 12px; display: flex; gap: 6px; align-items: center; }
+.form .live .ms { font-size: 16px; color: var(--accent); }
+.form .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; position: sticky; bottom: -22px; background: var(--surface); padding: 10px 0 4px; }
+.form .chipsrow .chip { height: 34px; }
+
+/* Today: segments and cards */
+.segbtns.win { max-width: 420px; }
+.panelhead { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.panelhead .chip { margin-left: auto; height: 28px; }
+.habpanel { background: color-mix(in srgb, var(--surface) 50%, transparent); border-radius: var(--r-card); padding: 12px; display: flex; flex-direction: column; gap: 6px; border: 1px solid color-mix(in srgb, var(--outline) 18%, transparent); }
+.habpanel .hcard { background: var(--surface); }
+.win .hcard { padding: 8px 4px 8px 10px; gap: 10px; }
+.win .hcard .emo { width: 34px; height: 34px; font-size: 17px; }
+.alldone { display: flex; align-items: center; gap: 10px; padding: 14px; border-radius: var(--r-card); background: var(--hero); color: var(--onHero); font-weight: 700; animation: freshIn var(--emph) var(--spring) both; }
+.alldone .ms { color: var(--heroAccent); font-size: 26px; }
+
+/* Habits page */
+.hhero { display: flex; align-items: center; gap: 16px; margin: 6px 0 4px; }
+.hhero .sub { font-size: 13px; opacity: .9; margin-top: 2px; }
+.groupbar { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; flex-wrap: wrap; }
+
+/* Goals: rings on top, then the ladder of cards */
+.rings4 { margin-bottom: 6px; }
+.win .rings4 { grid-template-columns: repeat(4, 110px); gap: 10px; }
+.rung { padding-left: 32px; }
+.rung .gcard { position: relative; margin-bottom: 8px; transition: opacity var(--standard) var(--ease), box-shadow var(--standard) var(--ease); cursor: pointer; }
+.rung .gcard::before { content: ""; position: absolute; left: -21px; top: 26px; width: 14px; height: 2px; background: color-mix(in srgb, var(--outline) 35%, transparent); }
+.rung .rh .gone { font-size: 11px; color: var(--muted); }
+.ladder.focus .gcard, .lanes.focus .gcard { opacity: .32; }
+.ladder.focus .gcard.chain, .lanes.focus .gcard.chain { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.ladder.focus .gcard.chain::before { background: var(--accent); }
+.gcard.sel { box-shadow: 0 0 0 3px var(--accent) !important; }
+.lanes .gcard { margin-bottom: 8px; cursor: pointer; padding: 10px 8px 10px 10px; gap: 6px; transition: opacity var(--standard) var(--ease), box-shadow var(--standard) var(--ease); }
+.lanes .gcard .tt b { font-size: 13.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.lanes .gcard .amt .num { font-size: 20px; }
+.lanes .gcard .foot .bar { height: 6px; }
+.lanes .gcard .serves { font-size: 11px; }
+.lane { min-height: 0; }
+.lane.dim, .rung.dim { opacity: .35; }
+.lane .lh .gone { font-size: 11px; color: var(--muted); }
+.gcard .crow { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lanes .gcard .pace { font-size: 10px; padding: 2px 6px; }
+.gcard .crow .logbtn { margin-left: auto; }
+.chainhint { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: 10px 0 2px; min-height: 30px; }
+.chainhint b { color: var(--text); }
+.chainhint .chip { margin-left: auto; height: 28px; }
+
+/* Wants */
+.wantrow .decided { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--surfaceVariant); color: var(--muted); }
+.empty { padding: 26px 12px; text-align: center; color: var(--muted); }
+</style>
+</head>
+<body>
+<header class="pbar">
+  <div class="r">
+    <span class="brand">GoalMaker prototype v2<small>the owner's picks, put together</small></span>
+  </div>
+  <nav class="qtabs" id="qtabs" aria-label="Screen"></nav>
+  <div class="r">
+    <span class="grp">Device <span class="seg" id="deviceSeg"></span></span>
+    <label>Theme <select id="themeSel"><option value="track">Track</option><option value="electric">Electric</option><option value="night">Night</option><option value="sunrise">Sunrise</option></select></label>
+    <span class="grp">Mode <span class="seg" id="modeSeg"></span></span>
+    <label><input type="checkbox" id="reduceChk"> Reduce motion</label>
+    <button class="btn" id="resetBtn">Reset data</button>
+  </div>
+</header>
+<div class="wrap">
+  <details class="intro" id="intro" open>
+    <summary>What this is</summary>
+    <p>Version 2 shows only the picked directions, put together: adding lives in the bottom bar on every list, Goals shows the rings on top and the ladder of goal cards below, and habits on Today sit behind a Tasks and Habits switch as cards. Switch screens at the top. Everything is clickable, and the phone and the PC share the same data, like after a sync.</p>
+    <p>Try the bottom bar: with an empty field the round button is a plus that opens the full form; type something and it turns into the send arrow, with a preview of what will be saved. The sparkle on the left switches to the quick chat, as today.</p>
+  </details>
+  <div class="note" id="note"></div>
+  <div class="subnav" id="subnav"></div>
+  <div class="stage" id="stage"></div>
+</div>
+
+<script>
+// ------------------------------------------------------------------ tokens (contracts/design/themes.json)
+const THEMES = {"track":{"light":{"background":"#FFFFFF","surface":"#F2F2EF","surfaceVariant":"#E8E8E3","text":"#0A0A0A","textMuted":"#5A5A56","outline":"#6E6E69","primary":"#0A0A0A","onPrimary":"#D6FF3A","accent":"#0A0A0A","onAccent":"#D6FF3A","hero":"#0A0A0A","onHero":"#FFFFFF","heroAccent":"#D6FF3A","danger":"#C8231B"},"dark":{"background":"#111310","surface":"#1B1D19","surfaceVariant":"#252821","text":"#F5F5F2","textMuted":"#A4A79D","outline":"#80837A","primary":"#D6FF3A","onPrimary":"#0A0A0A","accent":"#D6FF3A","onAccent":"#0A0A0A","hero":"#D6FF3A","onHero":"#0A0A0A","heroAccent":"#0A0A0A","danger":"#FF7A6E"},"shape":{"card":12,"row":8,"checkbox":3,"button":8},"typography":{"heading":{"family":"Archivo","weight":900,"width":112.5,"italic":true,"uppercase":true,"tracking":-0.01},"body":{"family":"Archivo","weight":400,"strongWeight":600,"width":100},"number":{"family":"Archivo","weight":900,"width":112.5,"italic":true}}},"electric":{"light":{"background":"#F6F3FF","surface":"#FFFFFF","surfaceVariant":"#ECE6FF","text":"#1B1433","textMuted":"#5E5680","outline":"#7D74A2","primary":"#5B2EE6","onPrimary":"#FFFFFF","accent":"#CA3924","onAccent":"#FFFFFF","hero":"#5B2EE6","onHero":"#FFFFFF","heroAccent":"#FFD0C4","danger":"#C62828"},"dark":{"background":"#15111F","surface":"#211B31","surfaceVariant":"#2A2340","text":"#F2EEFF","textMuted":"#A69EC6","outline":"#8A81B0","primary":"#9579FF","onPrimary":"#120A2E","accent":"#FF7A5E","onAccent":"#1F0904","hero":"#5B2EE6","onHero":"#FFFFFF","heroAccent":"#FFB8A6","danger":"#FF8A80"},"shape":{"card":24,"row":16,"checkbox":999,"button":999},"typography":{"heading":{"family":"Plus Jakarta Sans","weight":800,"width":100,"italic":false,"uppercase":false,"tracking":-0.03},"body":{"family":"Plus Jakarta Sans","weight":400,"strongWeight":600,"width":100},"number":{"family":"Plus Jakarta Sans","weight":800,"width":100,"italic":false}}},"night":{"light":{"background":"#FBFAFF","surface":"#F0EEFA","surfaceVariant":"#E6E3F6","text":"#12101F","textMuted":"#5A5679","outline":"#76729A","primary":"#4F46E5","onPrimary":"#FFFFFF","accent":"#0E7490","onAccent":"#FFFFFF","hero":"#4F46E5","onHero":"#FFFFFF","heroAccent":"#A5F3FC","danger":"#C62828"},"dark":{"background":"#0B0A14","surface":"#15132A","surfaceVariant":"#1C1935","text":"#E9E7FF","textMuted":"#938FB8","outline":"#76729A","primary":"#8B80FF","onPrimary":"#0B0A14","accent":"#22D3EE","onAccent":"#04141A","hero":"#3730A3","onHero":"#FFFFFF","heroAccent":"#67E8F9","danger":"#FF7A7A"},"shape":{"card":10,"row":7,"checkbox":5,"button":8},"typography":{"heading":{"family":"Space Grotesk","weight":700,"width":100,"italic":false,"uppercase":false,"tracking":-0.02},"body":{"family":"Space Grotesk","weight":400,"strongWeight":500,"width":100},"number":{"family":"Space Grotesk","weight":700,"width":100,"italic":false}}},"sunrise":{"light":{"background":"#FFF6EC","surface":"#FFFFFF","surfaceVariant":"#FFE7D1","text":"#2B1408","textMuted":"#765646","outline":"#957464","primary":"#C2410C","onPrimary":"#FFFFFF","accent":"#C2185B","onAccent":"#FFFFFF","hero":"#C2185B","onHero":"#FFFFFF","heroAccent":"#FFD23F","danger":"#B91C1C"},"dark":{"background":"#1C120C","surface":"#2A1C14","surfaceVariant":"#33231A","text":"#FFF1E6","textMuted":"#C4A696","outline":"#9E8070","primary":"#FF8A3D","onPrimary":"#2B1408","accent":"#FF5C93","onAccent":"#2B0612","hero":"#B0205A","onHero":"#FFFFFF","heroAccent":"#FFD23F","danger":"#FF8A80"},"shape":{"card":28,"row":20,"checkbox":7,"button":999},"typography":{"heading":{"family":"Outfit","weight":800,"width":100,"italic":false,"uppercase":false,"tracking":-0.02},"body":{"family":"Outfit","weight":400,"strongWeight":600,"width":100},"number":{"family":"Outfit","weight":800,"width":100,"italic":false}}}};
+const FAMILY = { "Archivo": '"GM Archivo", "Archivo"', "Plus Jakarta Sans": '"GM Plus Jakarta Sans", "Plus Jakarta Sans"', "Space Grotesk": '"GM Space Grotesk", "Space Grotesk"', "Outfit": '"GM Outfit", "Outfit"' };
+const AREA = { work: "#8B5CF6", school: "#3B82F6", personal: "#EC4899", health: "#22C55E" };
+const AREA_NAME = { work: "Work", school: "School", personal: "Personal", health: "Health" };
+
+// ------------------------------------------------------------------ screens
+const SCREENS = {
+  today: { label: "Today", icon: "today",
+    note: `<b>Today.</b> Tasks and Habits are two segments under the date line, each with what is left. The Habits segment shows the habit cards: pips for counts, a bar for amounts, a check-in button that turns round when done, and Hide done.`,
+    calls: ["On the PC I kept a side panel instead of segments: the window is wide, so habits can stay in sight next to the tasks without crowding them. The panel uses the same cards, one column. The PC layout switch below shows segments for comparison.",
+            "When every habit is done, the segment's count turns into a check and the list shows a short 'all done' card.",
+            "The bottom bar adds a task here. With an empty field, the plus opens the full task form."] },
+  habits: { label: "Habits", icon: "donut_large",
+    note: `<b>Habits page.</b> Built from the same cards as Today, with more on each: how often, this week's dots and the streak. A hero card sums up today.`,
+    calls: ["Habits are grouped into Every day, Weekly and Limits, so the limit habits (Snacks) never read as 'not done'.",
+            "Hide done works here too, and a skipped habit stays in place with a dashed button that undoes the skip.",
+            "The bottom bar adds a habit: try 'Swim 2 times a week' or 'Floss every day'."] },
+  goals: { label: "Goals", icon: "flag",
+    note: `<b>Goals.</b> Four rings sum up the year, October, this week and today; a tap shows one horizon. Below, the ladder steps down from 2026 to today with each goal as a card. A tap on a card lights up its chain: what it feeds and what feeds it.`,
+    calls: ["On the PC the ladder becomes four columns, and the cards get smaller: two-line titles, a smaller number, the log button as an icon with its amount.",
+            "A ring tap hides the other rungs on the phone and dims the other columns on the PC, so the cascade never disappears there.",
+            "The bottom bar adds a goal: try 'Run 30 km this week' or 'Read 3 books this month'."] },
+  wants: { label: "Wants", icon: "shopping_bag",
+    note: `<b>Wants.</b> The list stays as it is today; the plus moved from the top bar into the bottom bar, like on every other list.`,
+    calls: ["Try 'Kindle 3290 Kč because I read at night': the preview shows the price, the cooldown it will get and the reason. Without 'because', the preview reminds you that the why is the point.",
+            "Ready, Cooling and Decided filter the list."] },
+};
+const SEND = {
+  A: { name: "Plus turns into send, with a corner button", text: "Empty: a plus that opens the full form. Typing: it morphs into the send arrow, and a small 'open in full' button slides in beside it, which opens the form filled with what you typed. Holding the arrow does the same." },
+  B: { name: "Plus turns into send, 'All fields' in the preview", text: "The same plus and arrow, but the way to the full form is the last chip of the live preview, right next to what will be saved. The bar keeps one button; holding the arrow still opens the form." },
+};
+
+// ------------------------------------------------------------------ sample data (Thursday 1 October 2026)
+const DAYS = ["F", "S", "S", "M", "T", "W", "T"];
+function freshData() {
+  return {
+    habits: [
+      { id: "water", name: "Water", emoji: "💧", measure: "count", cadence: "daily", target: 8, unit: "glasses", step: 1, value: 5, streak: 23, week: ["met", "met", "met", "met", "met", "met"] },
+      { id: "read", name: "Read", emoji: "📖", measure: "amount", cadence: "daily", target: 30, unit: "min", step: 10, value: 20, streak: 12, week: ["met", "met", "met", "met", "met", "met"] },
+      { id: "meditate", name: "Meditate", emoji: "🧘", measure: "check", cadence: "daily", value: 1, streak: 41, week: ["met", "met", "met", "met", "met", "met"] },
+      { id: "stretch", name: "Stretch", emoji: "🤸", measure: "check", cadence: "daily", value: 0, streak: 29, week: ["met", "met", "skip", "met", "met", "met"] },
+      { id: "guitar", name: "Guitar", emoji: "🎸", measure: "check", cadence: "daily", value: 0, skipped: true, streak: 9, week: ["met", "met", "met", "met", "met", "met"] },
+      { id: "run", name: "Run", emoji: "🏃", measure: "check", cadence: "week", times: 3, met: 2, today: false, streak: 4, week: ["miss", "met", "off", "met", "off", "met"] },
+      { id: "snacks", name: "Snacks", emoji: "🍪", measure: "count", cadence: "daily", limit: true, target: 2, unit: "snacks", step: 1, value: 1, streak: 6, week: ["met", "over", "met", "met", "met", "met"] },
+    ],
+    tasks: [
+      { id: "t1", sec: "pri", title: "Finish the Tally rule editor", meta: "GoalMaker", area: "work" },
+      { id: "t2", sec: "pri", title: "Algorithms problem set 4", meta: "deadline Fri", area: "school", done: true },
+      { id: "t3", sec: "sch", time: "09:30", title: "Thesis group standup", area: "school", done: true },
+      { id: "t4", sec: "sch", time: "14:00", title: "Dentist, Dr. Novák", area: "health" },
+      { id: "t5", sec: "more", title: "Reply to Jana about the flat", area: "personal" },
+      { id: "t6", sec: "more", title: "Pick up the parcel", area: "personal" },
+      { id: "t7", sec: "more", title: "Check the Wants prices", area: "personal" },
+    ],
+    goals: [
+      { id: "y1", h: "year", title: "Run 1 000 km in 2026", emoji: "🏃", mode: "number", value: 712, target: 1000, unit: "km", step: 5, status: "open" },
+      { id: "y2", h: "year", title: "Ship GoalMaker 2.0", emoji: "🚀", mode: "tasks", value: 34, target: 52, status: "open" },
+      { id: "y3", h: "year", title: "Read 24 books", emoji: "📚", mode: "number", value: 17, target: 24, unit: "books", step: 1, status: "open" },
+      { id: "y4", h: "year", title: "Learn to juggle", emoji: "🤹", mode: "done", status: "dropped" },
+      { id: "m1", h: "month", parent: "y1", title: "Run 100 km in October", mode: "number", value: 6, target: 100, unit: "km", step: 5, status: "open" },
+      { id: "m2", h: "month", parent: "y2", title: "Finish M8: Wants and Tally", mode: "tasks", value: 9, target: 14, status: "open" },
+      { id: "m3", h: "month", parent: "y3", title: "Read 2 books", mode: "number", value: 0, target: 2, unit: "books", step: 1, status: "open" },
+      { id: "m4", h: "month", title: "Pass the Algorithms midterm", emoji: "🎓", mode: "done", status: "open" },
+      { id: "w1", h: "week", parent: "m1", title: "Run 25 km", mode: "number", value: 17, target: 25, unit: "km", step: 5, status: "open" },
+      { id: "w2", h: "week", parent: "m2", title: "Close the Tally rules milestone", mode: "tasks", value: 3, target: 5, status: "open" },
+      { id: "w3", h: "week", title: "Call grandma", emoji: "☎️", mode: "done", status: "done" },
+      { id: "w4", h: "week", parent: "m3", title: "Finish chapter 3 of Dune", mode: "done", status: "open" },
+      { id: "w5", h: "week", title: "Inbox zero by Sunday", mode: "done", status: "dropped" },
+      { id: "d1", h: "day", parent: "w2", title: "Write the Tally rule editor", mode: "tasks", value: 1, target: 3, status: "open" },
+      { id: "d2", h: "day", parent: "w1", title: "Run 6 km", emoji: "👟", mode: "number", value: 0, target: 6, unit: "km", step: 2, status: "open" },
+    ],
+    nextWeek: [],
+    wants: [
+      { id: "k1", title: "Mechanical keyboard", price: 2890, reason: "My laptop keys are wearing out and I type all day", cool: 14, left: 0 },
+      { id: "k2", title: "Trail running shoes", price: 3400, reason: "The old pair has 900 km on it", cool: 14, left: 0 },
+      { id: "k3", title: "Kindle Paperwhite", price: 3290, reason: "Reading at night without the phone", cool: 14, left: 4 },
+      { id: "k4", title: "Standing desk", price: 12900, reason: "Back pain after long coding days", cool: 30, left: 18 },
+      { id: "k5", title: "Noise-cancelling headphones", price: 7990, reason: "The library is loud", cool: 30, left: 25 },
+      { id: "k6", title: "Climbing chalk bag", price: 450, reason: "Borrowing one every time", cool: 3, left: 1 },
+      { id: "k7", title: "Bluetooth speaker", price: 1890, reason: "For the balcony", cool: 14, left: 0, decided: "dropped", when: "12 Sep" },
+      { id: "k8", title: "Bike lights", price: 690, reason: "Dark evenings are coming", cool: 3, left: 0, decided: "bought", when: "20 Sep" },
+    ],
+  };
+}
+const HZ = { year: { label: "Year", short: "Y", period: "2026", elapsed: 273 / 365, gone: "75% of the year gone" },
+             month: { label: "Month", short: "M", period: "October", elapsed: 1 / 31, gone: "Day 1 of 31" },
+             week: { label: "Week", short: "W", period: "Week 40 · 28 Sep to 4 Oct", elapsed: 4 / 7, gone: "Day 4 of 7" },
+             day: { label: "Today", short: "D", period: "Thursday 1 October", elapsed: .55, gone: "Afternoon" } };
+const HZ_ORDER = ["year", "month", "week", "day"];
+
+// ------------------------------------------------------------------ state
+const qs = new URLSearchParams(location.search);
+const S = {
+  screen: SCREENS[qs.get("screen")] ? qs.get("screen") : "today",
+  device: ["phone", "win", "both"].includes(qs.get("device")) ? qs.get("device") : (window.innerWidth < 700 ? "phone" : "both"),
+  theme: THEMES[qs.get("theme")] ? qs.get("theme") : "track",
+  mode: qs.get("mode") === "light" ? "light" : "dark",
+  reduce: qs.get("reduce") === "1",
+  send: qs.get("send") === "B" ? "B" : "A",
+  pcToday: qs.get("pc") === "segments" ? "segments" : "panel",
+};
+let D = freshData();
+function freshUi() { return { menu: null, sheet: null, fold: {}, hideDone: false, seg: "tasks", sel: null, filter: null, ctext: "", ai: false, thread: [], snack: null, wantTab: "open", shrunk: false }; }
+const U = { phone: freshUi(), win: freshUi() };
+const PREV = {}; const LASTKEY = {};
+let CONFETTI = null;
+
+function syncUrl() {
+  const p = new URLSearchParams({ screen: S.screen, device: S.device, theme: S.theme, mode: S.mode, send: S.send });
+  if (S.pcToday !== "panel") p.set("pc", S.pcToday);
+  if (S.reduce) p.set("reduce", "1");
+  try { history.replaceState(null, "", "?" + p); } catch (e) { /* file:// in some browsers */ }
+}
+
+// ------------------------------------------------------------------ helpers
+const ic = (n, fill) => `<span class="ms${fill ? " fill" : ""}" aria-hidden="true">${n}</span>`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = n => (Math.round(n * 100) / 100).toLocaleString("en-US").replace(/,/g, " ");
+const money = n => fmt(n) + " Kč";
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+
+function ring(key, frac, size, sw, inner = "", cls = "") {
+  const r = (size - sw) / 2, c = 2 * Math.PI * r, f = clamp(frac), to = c * (1 - f);
+  const from = key in PREV ? PREV[key].to : to;
+  return `<span class="ring ${cls}" style="--s:${size}px"><svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`
+    + `<circle class="trk" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${sw}"/>`
+    + `<circle class="arc" data-rk="${key}" data-to="${to}" data-c="${c}" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${sw}" stroke-dasharray="${c}" style="stroke-dashoffset:${from};opacity:${f > 0 ? 1 : 0}"/></svg>`
+    + `<span class="in">${inner}</span></span>`;
+}
+
+// ---- habits
+const H = id => D.habits.find(h => h.id === id);
+function hFrac(h) {
+  if (h.cadence === "week") return clamp(h.met / h.times);
+  if (h.measure === "check") return h.value >= 1 ? 1 : 0;
+  return clamp(h.value / h.target);
+}
+const hOver = h => h.limit && h.value > h.target;
+const hDone = h => !h.skipped && !h.limit && hFrac(h) >= 1;
+const hLeft = h => !h.skipped && !h.limit && !hDone(h);
+function hStatus(h) {
+  if (h.skipped) return "Skipped today, streak kept";
+  if (h.cadence === "week") return `${h.met} of ${h.times} this week${h.today ? ", one today" : ""}`;
+  if (h.limit) return hOver(h) ? `${fmt(h.value)} of at most ${h.target} ${h.unit}, over` : `${fmt(h.value)} of at most ${h.target} ${h.unit}`;
+  if (h.measure === "check") return h.value >= 1 ? "Done" : "Not yet";
+  return `${fmt(h.value)} of ${h.target} ${h.unit}`;
+}
+const hCadence = h => h.cadence === "week" ? `${h.times} times a week` : h.limit ? "Every day, a limit" : "Every day";
+const hStreak = (h, short) => h.streak ? (short ? `${h.streak}` : `${h.streak}-${h.cadence === "week" ? "week" : "day"} streak`) : (short ? "0" : "No streak yet");
+const flame = h => `<span class="flame ${h.streak ? "" : "cold"}" title="${hStreak(h)}">${ic("local_fire_department", !!h.streak)}${h.streak}${h.cadence === "week" ? "w" : ""}</span>`;
+function todayDot(h) {
+  if (h.skipped) return "skip";
+  if (h.limit) return hOver(h) ? "over" : "met";
+  if (h.cadence === "week") return h.today ? "met" : "today";
+  return hDone(h) ? "met" : "today";
+}
+function weekDots(h) {
+  const all = h.week.concat(todayDot(h));
+  return `<span class="wdots" aria-label="Last seven days">${all.map((s, i) => `<span><i class="${s}"></i>${DAYS[i]}</span>`).join("")}</span>`;
+}
+function checkIn(id, d) {
+  const h = H(id); if (!h || h.skipped) return;
+  const was = hDone(h);
+  if (h.cadence === "week") { if (h.today) { h.today = false; h.met--; } else { h.today = true; h.met++; } }
+  else if (h.measure === "check") h.value = h.value >= 1 ? 0 : 1;
+  else h.value += h.step;
+  const now = hDone(h);
+  if (!was && now) { h.streak++; if ([7, 14, 30, 50, 100, 200, 365].includes(h.streak)) celebrate(d, `${h.name}: ${h.streak}-day streak!`); }
+  if (was && !now) h.streak = Math.max(0, h.streak - 1);
+  if (h.limit && hOver(h)) snack(d, `${h.name}: over today's limit`);
+}
+function skipHabit(id, d) {
+  const h = H(id); if (!h) return;
+  if (h.skipped) { h.skipped = false; snack(d, `${h.name} is due again today`); }
+  else { if (hDone(h)) h.streak = Math.max(0, h.streak - 1); h.skipped = true; if (h.measure === "check" && h.cadence !== "week") h.value = 0; snack(d, `Skipped ${h.name} for today. The streak stays.`); }
+}
+function clearHabit(id) {
+  const h = H(id); if (!h) return;
+  const was = hDone(h);
+  if (h.cadence === "week") { if (h.today) { h.today = false; h.met--; } } else h.value = 0;
+  if (was && !hDone(h)) h.streak = Math.max(0, h.streak - 1);
+}
+const habitsLeft = () => D.habits.filter(hLeft).length;
+
+// ---- goals
+const G = id => D.goals.find(g => g.id === id);
+function gFrac(g) { if (g.mode === "done") return g.status === "done" ? 1 : 0; return clamp(g.value / g.target); }
+const gHit = g => g.status === "done" || (g.mode !== "done" && g.value >= g.target);
+function gText(g) {
+  if (g.status === "dropped") return "Dropped";
+  if (g.mode === "done") return g.status === "done" ? "Done" : "Not done yet";
+  if (g.mode === "tasks") return `${g.value} of ${g.target} tasks`;
+  return `${fmt(g.value)} of ${fmt(g.target)} ${g.unit}`;
+}
+function gPace(g) {
+  if (g.status === "dropped") return { cls: "drop", text: "Dropped", k: "drop" };
+  if (gHit(g)) return { cls: "hit", text: "Hit", k: "hit" };
+  const e = HZ[g.h].elapsed;
+  if (g.mode === "done") return e > .7 ? { cls: "behind", text: "Due soon", k: "behind" } : { cls: "ok", text: "Open", k: "ok" };
+  const expect = e * g.target, gap = expect - g.value;
+  if (gFrac(g) + .05 >= e) return { cls: "ok", text: "On track", k: "ok" };
+  return { cls: "behind", text: `Behind by ${g.mode === "tasks" ? Math.ceil(gap) + " tasks" : fmt(Math.ceil(gap)) + " " + g.unit}`, k: "behind" };
+}
+function logGoal(id, d) {
+  const g = G(id); if (!g || g.status === "dropped") return;
+  const was = gHit(g);
+  if (g.mode === "done") g.status = g.status === "done" ? "open" : "done";
+  else g.value = g.value + (g.mode === "tasks" ? 1 : g.step);
+  if (!was && gHit(g)) { if (g.mode !== "done") g.status = "done"; celebrate(d, `Goal hit: ${g.title}`); }
+  else if (g.mode !== "done") snack(d, `${g.title}: ${gText(g)}`);
+}
+const goalsIn = h => D.goals.filter(g => g.h === h);
+function chainOf(id) {
+  const set = new Set([id]); let g = G(id);
+  while (g && g.parent) { set.add(g.parent); g = G(g.parent); }
+  let grew = true;
+  while (grew) { grew = false; D.goals.forEach(x => { if (x.parent && set.has(x.parent) && !set.has(x.id) && (isDesc(x.id, id))) { set.add(x.id); grew = true; } }); }
+  return set;
+}
+function isDesc(x, root) { let g = G(x); while (g && g.parent) { if (g.parent === root) return true; g = G(g.parent); } return false; }
+function logLabel(g) { if (g.mode === "done") return g.status === "done" ? "Undo" : "Done"; if (g.mode === "tasks") return "1 task"; return `${fmt(g.step)} ${g.step === 1 && /s$/.test(g.unit || "") ? g.unit.slice(0, -1) : g.unit}`; }
+function logBtn(g) {
+  if (g.status === "dropped" || (gHit(g) && g.mode !== "done")) return "";
+  return `<button class="logbtn" data-log="${g.id}" aria-label="Log ${esc(logLabel(g))} on ${esc(g.title)}">${ic(g.mode === "done" ? (g.status === "done" ? "undo" : "check") : "add")}${g.mode === "done" ? logLabel(g) : logLabel(g)}</button>`;
+}
+
+// ---- feedback
+function snack(d, text) { U[d].snack = { text, t: Date.now() }; const t = U[d].snack.t; setTimeout(() => { if (U[d].snack && U[d].snack.t === t) { U[d].snack = null; render(); } }, 2600); }
+function celebrate(d, text) { snack(d, text); if (!S.reduce) CONFETTI = d; }
+
+// ------------------------------------------------------------------ Q1: habit items
+function itemRingTile(h, d) {
+  const sub = h.skipped ? "skipped" : h.cadence === "week" ? `${h.met}/${h.times} wk` : h.measure === "check" ? (hDone(h) ? "done" : "") : `${fmt(h.value)}/${h.target}`;
+  const badge = hDone(h) ? `<span class="rbadge">${ic("check")}</span>` : h.skipped ? `<span class="rbadge sk">${ic("redo")}</span>` : "";
+  return `<button class="rtile ${hDone(h) ? "done" : ""}" data-checkin="${h.id}" data-hold="${h.id}" aria-label="${esc(h.name)}: ${esc(hStatus(h))}. Tap to check in, hold for more">
+    ${ring(d + "s:" + h.id, hFrac(h), 56, 5, `<span style="font-size:22px">${h.emoji}</span>`, (h.skipped ? "skip " : "") + (hOver(h) ? "over" : ""))}${badge}
+    <span class="rname">${h.name}</span><span class="rsub">${sub}</span></button>`;
+}
+function itemBigTile(h, d) {
+  return `<div class="bigtile ${h.skipped ? "skipped" : ""}">
+    <button class="iconbtn sm tmenu" data-menu="${h.id}" aria-label="More for ${esc(h.name)}">${ic("more_vert")}</button>
+    <button data-checkin="${h.id}" data-hold="${h.id}" aria-label="Check in ${esc(h.name)}" style="position:relative">${ring(d + "b:" + h.id, hFrac(h), d === "win" ? 84 : 92, 8, `<span style="font-size:${d === "win" ? 30 : 34}px">${h.emoji}</span>`, (h.skipped ? "skip " : "") + (hOver(h) ? "over" : ""))}
+      ${hDone(h) ? `<span class="rbadge" style="top:auto;bottom:0;left:auto;right:0;width:26px;height:26px">${ic("check")}</span>` : ""}</button>
+    <span class="nm">${h.name}</span><span class="st">${hStatus(h)}</span>${flame(h)}${weekDots(h)}</div>`;
+}
+function progressPips(h) {
+  if (h.cadence === "week") return `<div class="pips">${Array.from({ length: h.times }, (_, i) => `<i class="${i < h.met ? "on" : ""}"></i>`).join("")}</div>`;
+  if (h.measure === "check") return "";
+  if (h.measure === "count" && Math.max(h.target, h.value) <= 12) {
+    const n = Math.max(h.target, h.value);
+    return `<div class="pips">${Array.from({ length: n }, (_, i) => `<i class="${i < h.value ? (h.limit && i >= h.target ? "ov" : "on") : ""}"></i>`).join("")}</div>`;
+  }
+  return `<div class="bar"><i style="width:${hFrac(h) * 100}%"></i></div>`;
+}
+function ciLabel(h) {
+  if (h.skipped) return ic("redo");
+  if (h.measure === "check" || h.cadence === "week") return (hDone(h) || h.today) ? ic("check") : ic("add");
+  return `+${h.step}<small>${h.unit === "glasses" ? "glass" : h.unit === "snacks" ? "snack" : h.unit}</small>`;
+}
+function itemCard(h, d, full) {
+  const on = hDone(h) || (h.cadence === "week" && h.today);
+  return `<div class="hcard ${h.skipped ? "skipped" : ""} ${hDone(h) ? "done" : ""}" data-hold="${h.id}">
+    <span class="emo">${h.emoji}</span>
+    <div class="mid"><div class="nm"><span>${h.name}</span>${flame(h)}</div><div class="st">${full ? hCadence(h) + " · " : ""}${hStatus(h)}</div>${h.skipped ? "" : progressPips(h)}${full ? `<div style="margin-top:6px">${weekDots(h)}</div>` : ""}</div>
+    <button class="cibtn ${on ? "on" : ""}" ${h.skipped ? `data-skip="${h.id}" aria-label="Undo the skip"` : `data-checkin="${h.id}" aria-label="Check in ${esc(h.name)}"`}>${ciLabel(h)}</button>
+    <button class="iconbtn sm" data-menu="${h.id}" aria-label="More for ${esc(h.name)}">${ic("more_vert")}</button></div>`;
+}
+function itemMorph(h, d) {
+  const on = hDone(h) || (h.cadence === "week" && h.today);
+  const f = h.skipped ? 0 : h.measure === "check" && h.cadence !== "week" ? (on ? 1 : 0) : hFrac(h);
+  let lab;
+  if (h.skipped) lab = ic("redo");
+  else if (h.measure === "check" || h.cadence === "week") lab = on ? ic("check") : (h.cadence === "week" ? `${h.met}<small>of ${h.times}</small>` : "");
+  else lab = `${fmt(h.value)}<small>of ${h.target}</small>`;
+  return `<button class="morph ${on ? "on" : ""} ${h.skipped ? "skip" : ""} ${hOver(h) ? "over" : ""} ${f >= .55 ? "hi" : ""}" ${h.skipped ? `data-skip="${h.id}"` : `data-checkin="${h.id}"`} data-hold="${h.id}" aria-label="${esc(h.name)}: ${esc(hStatus(h))}">
+    <span class="fillv" style="height:${f * 100}%"></span><span class="lab">${lab}</span></button>`;
+}
+function itemRow(h, d) {
+  return `<div class="hrow ${h.skipped ? "skipped" : ""}">${itemMorph(h, d)}
+    <div class="mid"><div class="nm">${h.emoji} ${h.name}</div><div class="st"><span>${hStatus(h)}</span>${flame(h)}</div></div>
+    ${weekDots(h)}<button class="iconbtn sm" data-menu="${h.id}" aria-label="More for ${esc(h.name)}">${ic("more_vert")}</button></div>`;
+}
+
+// ------------------------------------------------------------------ tasks (from v1)
+function taskRow(t) {
+  return `<div class="row task ${t.done ? "done" : ""}"><button class="check ${t.done ? "on" : ""}" data-task="${t.id}" aria-label="Done: ${esc(t.title)}">${t.done ? ic("check") : ""}</button>
+    <span class="ttl">${t.time ? `<span class="time">${t.time}</span>` : ""}${esc(t.title)}</span>${t.meta ? `<span class="meta">${t.meta}</span>` : ""}<span class="adot" style="background:${AREA[t.area]}"></span></div>`;
+}
+const taskSec = (sec, label) => { const ts = D.tasks.filter(t => t.sec === sec); return ts.length ? `<div class="sech"><span class="label">${label}</span></div><div class="rows">${ts.map(taskRow).join("")}</div>` : ""; };
+function foldSec(d, key, label, inner) {
+  const open = U[d].fold[key];
+  return `<button class="sech" data-fold="${key}" aria-expanded="${!!open}"><span class="label">${label}</span>${ic("expand_more").replace('class="ms"', 'class="ms chev"')}</button>${open ? inner : ""}`;
+}
+function todayTail(d) {
+  const wk = goalsIn("week").filter(g => g.status !== "dropped");
+  return foldSec(d, "overdue", "Overdue · 2", `<div class="rows">${taskRow({ id: "o1", title: "Renew the library card", meta: "Mon", area: "personal" })}${taskRow({ id: "o2", title: "Email the landlord", meta: "Tue", area: "personal" })}</div>`)
+    + foldSec(d, "goals", `This week's goals · ${wk.filter(gHit).length} of ${wk.length} hit`, `<div class="rows">${wk.map(g => `<div class="row">${ring(d + "tg:" + g.id, gFrac(g), 28, 3)}<span style="flex:1">${esc(g.title)}</span><span class="meta muted" style="font-size:12px">${gText(g)}</span></div>`).join("")}</div>`);
+}
+const todaySummary = () => { const done = D.tasks.filter(t => t.done).length; const l = habitsLeft(); return `Thursday 1 October · ${done} of ${D.tasks.length} done, ${l ? `${l} habit${l > 1 ? "s" : ""} left` : "habits all done"}`; };
+
+// ------------------------------------------------------------------ shells
+function phoneShell(d, { title, back, body, extra = "", nav = "today" }) {
+  const tabs = [["today", "Today", "today"], ["tomorrow", "Tomorrow", "wb_twilight"], ["inbox", "Inbox", "inbox"], ["projects", "Projects", "dashboard"], ["places", "Places", "apps"]];
+  return `<div class="gm phone" data-dev="${d}">
+    <div class="status"><span>9:41</span><span>${ic("signal_cellular_alt")} ${ic("wifi")} ${ic("battery_full")}</span></div>
+    <div class="topbar ${back ? "back" : ""}">${back ? `<button class="iconbtn" data-go="today" aria-label="Back to Places">${ic("arrow_back")}</button>` : ""}<h1 class="headline">${title}</h1>
+      <button class="iconbtn" aria-label="Synced">${ic("cloud_done")}</button>${nav === "today" ? `<button class="iconbtn" aria-label="Plan tomorrow">${ic("edit_calendar")}</button>` : ""}<button class="iconbtn" aria-label="Settings">${ic("settings")}</button></div>
+    <div class="content" data-scroll="${d}">${body}</div>
+    ${extra}
+    <nav class="navbar" aria-label="Places">${tabs.map(([k, l, i]) => {
+      const on = k === nav; const badge = k === "inbox" ? `<span class="badge">6</span>` : k === "places" && nav !== "places" ? `<span class="badge">2</span>` : "";
+      return `<button ${k === "today" ? `data-go="today"` : ""} aria-current="${on}"><span class="pill">${ic(i, on)}${badge}</span>${l}</button>`; }).join("")}</nav>
+    ${overlays(d)}</div>`;
+}
+function winShell(d, { title, place, toolbar = "", body }) {
+  const item = (k, l, i, trail = "") => `<button class="navitem" ${SCREENS[k] ? `data-go="${k}"` : ""} aria-current="${place === k}">${ic(i, place === k)}<span>${l}</span>${trail ? `<span class="trail">${trail}</span>` : ""}</button>`;
+  return `<div class="gm win" data-dev="${d}">
+    <div class="titlebar">${ic("target")}<span>GoalMaker</span><span class="caps"><span>–</span><span>▢</span><span>✕</span></span></div>
+    <div class="body"><nav class="side" aria-label="Places">
+      <button class="navitem">${ic("search")}<span class="muted">Go to…</span><span class="trail">Ctrl K</span></button>
+      <div class="sidehead">Pinned</div>
+      ${item("today", "Today", "today", `${D.tasks.filter(t => !t.done && t.sec !== "later").length}`)}${item("tomorrow", "Tomorrow", "wb_twilight", "4")}${item("inbox", "Inbox", "inbox", "6")}${item("projects", "Projects", "dashboard")}
+      <div class="sidehead">All places</div>
+      ${item("calendar", "Calendar", "calendar_month")}${item("habits", "Habits", "donut_large", habitsLeft() ? `${habitsLeft()} left` : "done")}${item("goals", "Goals", "flag")}${item("wants", "Wants", "shopping_bag", `${D.wants.filter(w => !w.left && !w.decided).length} ready`)}${item("tally", "Tally", "hourglass_bottom")}${item("reviews", "Reviews", "menu_book")}${item("stats", "Stats", "trending_up")}
+      <div style="flex:1"></div>${item("settings", "Settings", "settings")}
+    </nav>
+    <main class="main" data-scroll="${d}"><div class="mainin">
+      <div class="toolbar"><h1 class="headline">${title}</h1>${toolbar}</div>
+      ${body}</div></main></div>${overlays(d)}</div>`;
+}
+function pageWrap(d, key, html) {
+  const changed = LASTKEY[d] !== key; LASTKEY[d] = key;
+  return `<div class="page ${changed ? "pagein" : ""}">${html}</div>`;
+}
+const winTools = extra => `<span class="right">${extra || ""}<button class="iconbtn sm" aria-label="Synced">${ic("cloud_done")}</button></span>`;
+
+function overlays(d) {
+  const u = U[d]; let out = "";
+  if (u.menu) {
+    const h = H(u.menu);
+    if (h) {
+      const items = `<div style="padding:4px 6px 8px"><div class="strong">${h.emoji} ${h.name}</div><div class="muted" style="font-size:13px">${hStatus(h)} · ${hStreak(h)}</div></div>
+        ${h.skipped ? "" : `<button class="menuitem" data-checkin="${h.id}" data-closemenu="1">${ic(h.measure === "check" || h.cadence === "week" ? "check" : "add")}${h.measure === "check" || h.cadence === "week" ? (hDone(h) || h.today ? "Undo today's check-in" : "Check in") : `Log ${h.step} ${h.unit}`}</button>`}
+        <button class="menuitem" data-skip="${h.id}">${ic(h.skipped ? "replay" : "redo")}${h.skipped ? "Undo the skip" : h.cadence === "week" ? "Skip this week" : "Skip today"}</button>
+        ${!h.skipped && (h.value > 0 || h.today) ? `<button class="menuitem" data-clear="${h.id}">${ic("backspace")}Clear today</button>` : ""}
+        <button class="menuitem" data-closemenu="1">${ic("pause_circle")}Pause</button>
+        <button class="menuitem" data-closemenu="1">${ic("edit")}Edit</button>`;
+      out += d === "phone" ? `<div class="scrim" data-close="1"></div><div class="sheet"><div class="grabber"></div>${items}</div>`
+        : `<div class="scrim" data-close="1" style="background:rgba(0,0,0,.18)"></div><div class="popmenu">${items}</div>`;
+    }
+  }
+  if (u.sheet) {
+    const form = fullForm(u.sheet.kind, d, u.sheet.pre);
+    out += d === "phone" ? `<div class="scrim" data-close="1"></div><div class="sheet"><div class="grabber"></div>${form}</div>`
+      : `<div class="scrim" data-close="1" style="background:rgba(0,0,0,.18)"></div><div class="flyout">${form}</div>`;
+  }
+  if (u.snack) out += `<div class="snack ${d === "win" ? "win" : ""}" style="${d === "phone" ? "bottom:160px" : ""}">${ic("info")}<span style="flex:1">${esc(u.snack.text)}</span></div>`;
+  if (CONFETTI === d) {
+    const cols = ["var(--accent)", "var(--primary)", "var(--heroAccent)", "#F76B15", "#12A594", "#E5484D"];
+    out += `<div class="confetti">${Array.from({ length: 36 }, (_, i) => `<i style="left:${(i * 37) % 100}%;background:${cols[i % cols.length]};--dx:${((i * 53) % 120) - 60}px;--r:${(i * 97) % 720}deg;animation-delay:${(i % 9) * 40}ms"></i>`).join("")}</div>`;
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------ the bottom bar
+const KIND = {
+  tasks:  { one: "Task",  icon: "task_alt",     title: "New task",  place: "Add a task: tomorrow 17:00 #tag @Area" },
+  wants:  { one: "Want",  icon: "shopping_bag", title: "New want",  place: "Add a want: Kindle 3290 Kč because …" },
+  habits: { one: "Habit", icon: "donut_large",  title: "New habit", place: "Add a habit: Swim 2 times a week" },
+  goals:  { one: "Goal",  icon: "flag",         title: "New goal",  place: "Add a goal: Run 30 km this week" },
+};
+const kindOf = screen => screen === "today" ? "tasks" : screen;
+const cooldown = p => p == null ? 7 : p < 1000 ? 3 : p < 5000 ? 14 : 30;
+function parse(kind, text) {
+  let t = " " + text + " "; const chips = [], data = {};
+  const cut = m => { t = t.replace(m[0], " "); };
+  if (kind === "tasks") {
+    let m = t.match(/\b(today|tomorrow|someday)\b/i);
+    data.when = "today"; if (m) { data.when = m[1].toLowerCase(); cut(m); }
+    chips.push(["event", data.when === "today" ? "Today" : data.when === "tomorrow" ? "Tomorrow" : "Someday"]);
+    m = t.match(/\b(\d{1,2}):(\d{2})\b/); if (m) { data.time = m[0]; cut(m); chips.push(["schedule", data.time]); }
+    m = t.match(/@(\w+)/); if (m) { const a = Object.keys(AREA_NAME).find(k => AREA_NAME[k].toLowerCase().startsWith(m[1].toLowerCase())); if (a) { data.area = a; chips.push(["circle", AREA_NAME[a]]); } cut(m); }
+    m = t.match(/#(\w+)/); if (m) { data.tag = m[1]; cut(m); chips.push(["tag", m[1]]); }
+    m = t.match(/(^|\s)!(\s|$)/); if (m) { data.top = true; cut(m); chips.push(["priority_high", "Top priority"]); }
+  } else if (kind === "wants") {
+    const m = t.match(/(\d[\d ]*\d|\d)\s*(kč|kc|czk)/i);
+    if (m) { data.price = +m[1].replace(/ /g, ""); cut(m); chips.push(["payments", money(data.price)]); }
+    const b = t.match(/\b(because|since)\b(.*)$/i);
+    if (b) { data.reason = b[2].trim(); t = t.slice(0, b.index); }
+    chips.push(["hourglass_bottom", `waits ${cooldown(data.price)} days`]);
+    chips.push(data.reason ? ["edit_note", "Why: " + data.reason] : ["warning", "Add the why: because …", "warn"]);
+  } else if (kind === "habits") {
+    let m = t.match(/(\d+)\s*(x|times)\s*(a|per)?\s*week/i);
+    if (m) { data.cadence = "week"; data.times = +m[1]; cut(m); chips.push(["event_repeat", `${m[1]} times a week`]); }
+    m = t.match(/\b(every day|daily)\b/i); if (m) cut(m);
+    if (!data.cadence) chips.push(["event_repeat", "Every day"]);
+    m = t.match(/(\d+)\s*(glasses|min|minutes|pages|km|steps)\b/i);
+    if (m) { data.target = +m[1]; data.unit = m[2].toLowerCase().replace("minutes", "min"); cut(m); chips.push(["straighten", `${m[1]} ${data.unit} a day`]); }
+    else chips.push(["check_circle", "A simple check"]);
+  } else {
+    const hz = [[/\bthis year\b|\bin 2026\b/i, "year"], [/\bthis month\b|\bin october\b/i, "month"], [/\bthis week\b/i, "week"], [/\btoday\b/i, "day"]];
+    data.h = "week";
+    for (const [re, h] of hz) { const m = t.match(re); if (m) { data.h = h; cut(m); break; } }
+    chips.push(["date_range", data.h === "day" ? "Today" : data.h === "week" ? "This week" : data.h === "month" ? "October" : "2026"]);
+    const m = t.match(/(\d[\d ]*)\s*(km|books|pages|hours|runs|steps)\b/i);
+    if (m) { data.target = +m[1].replace(/ /g, ""); data.unit = m[2]; chips.push(["straighten", `target ${fmt(data.target)} ${data.unit}`]); }
+    else chips.push(["check_box", "Done or not done"]);
+  }
+  data.title = t.replace(/\s+/g, " ").trim();
+  return { chips, data };
+}
+function composer(d, kind) {
+  const u = U[d], has = u.ctext.trim().length > 0, k = KIND[kind];
+  const thread = u.ai && u.thread.length ? `<div class="thread"><div class="th">${ic("auto_awesome", true)}Quick chat<button class="iconbtn sm" data-closethread="1" aria-label="Close the chat">${ic("close")}</button></div>
+    ${u.thread.map(m => `<div class="msg ${m.me ? "me" : "bot"} ${m.typing ? "typing" : ""}">${esc(m.text)}</div>`).join("")}</div>` : "";
+  return `<div class="cmpwrap">${thread}<div class="cmp ${u.ai ? "ai" : ""} ${has ? "has" : ""}" id="cmp-${d}">
+    <div class="preview" id="prev-${d}"></div>
+    <div class="line">
+      <button class="aiswitch" data-ai="1" aria-pressed="${u.ai}" aria-label="Quick chat" title="Quick chat">${ic("auto_awesome", u.ai)}</button>
+      <input id="comp-${d}" autocomplete="off" placeholder="${u.ai ? "Ask, or tell GoalMaker what to change" : esc(k.place)}" aria-label="${u.ai ? "Quick chat" : k.title}" value="${esc(u.ctext)}">
+      ${S.send === "A" ? `<button class="expand" data-full="1" aria-label="Open all fields" title="Open all fields">${ic("open_in_full")}</button>` : ""}
+      <button class="sendbtn" data-send="1" data-holdfull="1" aria-label="${u.ai ? "Send" : has ? "Save" : k.title}" title="${u.ai ? "Send" : has ? "Save (hold for all fields)" : k.title}">
+        <span class="holdring"></span><span class="ms i-plus" aria-hidden="true">add</span><span class="ms i-send" aria-hidden="true">arrow_upward</span></button>
+    </div></div></div>`;
+}
+function updateComposer(d) {
+  const u = U[d], c = document.getElementById("cmp-" + d), p = document.getElementById("prev-" + d); if (!c) return;
+  const has = u.ctext.trim().length > 0;
+  c.classList.toggle("has", has); c.classList.toggle("ai", u.ai);
+  const btn = c.querySelector(".sendbtn"); if (btn) btn.setAttribute("aria-label", u.ai ? "Send" : has ? "Save" : KIND[kindOf(S.screen)].title);
+  if (!p) return;
+  if (!has || u.ai) { p.className = "preview"; p.innerHTML = ""; return; }
+  const kind = kindOf(S.screen), { chips } = parse(kind, u.ctext);
+  p.className = "preview has";
+  const sig = chips.map(c => c[1]).join("|");
+  if (p.dataset.sig === sig) return; p.dataset.sig = sig;
+  p.innerHTML = `<span class="chip kind">${ic(KIND[kind].icon)}${KIND[kind].one}</span>` + chips.map(([i, t, cls]) => `<span class="chip ${cls || ""}">${ic(i)}${esc(t)}</span>`).join("")
+    + (S.send === "B" ? `<button class="chip all" data-full="1">${ic("tune")}All fields</button>` : "");
+}
+function sendComposer(d) {
+  const u = U[d], txt = u.ctext.trim(), kind = kindOf(S.screen);
+  if (u.ai) {
+    if (!txt) return false;
+    u.thread.push({ me: true, text: txt }, { typing: true, text: "Thinking…" }); u.ctext = "";
+    setTimeout(() => { const i = u.thread.findIndex(m => m.typing); if (i >= 0) u.thread[i] = { text: "This is the quick chat, unchanged: it answers here and can act through the connector. The switch on the left goes back to adding." }; render(); }, 700);
+    return true;
+  }
+  if (!txt) { u.sheet = { kind, pre: null }; return true; }
+  const { data } = parse(kind, txt);
+  if (!data.title) { u.sheet = { kind, pre: data }; return true; }
+  addItem(kind, data, d); u.ctext = ""; return true;
+}
+function openFull(d) {
+  const u = U[d], kind = kindOf(S.screen), txt = u.ctext.trim();
+  u.sheet = { kind, pre: txt ? parse(kind, txt).data : null };
+}
+
+// ------------------------------------------------------------------ full forms
+function radio(name, opts, sel) { return `<div class="chipsrow" data-radio="${name}">${opts.map(([v, l]) => `<button class="chip" data-val="${v}" aria-pressed="${v === sel}">${l}</button>`).join("")}</div>`; }
+const field = (label, id, val, ph, extra = "") => `<label class="field"><span>${label}</span><input id="${id}" autocomplete="off" value="${esc(val ?? "")}" placeholder="${esc(ph)}" ${extra}></label>`;
+function fullForm(kind, d, pre) {
+  const p = pre || {}, k = KIND[kind];
+  let f = "";
+  if (kind === "tasks") {
+    f = field("Title", `f-title-${d}`, p.title, "What needs doing?")
+      + `<div class="field"><span>When</span>${radio("when", [["today", "Today"], ["tomorrow", "Tomorrow"], ["someday", "Someday"]], p.when || "today")}</div>`
+      + `<div class="two">${field("Time (optional)", `f-time-${d}`, p.time, "17:00")}${field("Tag (optional)", `f-tag-${d}`, p.tag, "errands")}</div>`
+      + `<div class="field"><span>Area</span>${radio("area", Object.entries(AREA_NAME), p.area || "personal")}</div>`
+      + `<div class="field"><span>Priority</span>${radio("top", [["no", "Normal"], ["yes", "Top priority"]], p.top ? "yes" : "no")}</div>`;
+  } else if (kind === "wants") {
+    f = field("What", `f-title-${d}`, p.title, "Mechanical keyboard")
+      + field("Why you want it", `f-why-${d}`, p.reason, "The reason is the point: you read it when the cooldown ends")
+      + field("Price", `f-price-${d}`, p.price != null ? fmt(p.price) + " Kč" : "", "2 890 Kč", 'inputmode="numeric"')
+      + `<div class="live" id="f-cool-${d}">${ic("hourglass_bottom")}Waits ${cooldown(p.price ?? null)} days before you can decide</div>`;
+  } else if (kind === "habits") {
+    f = field("Name", `f-title-${d}`, p.title, "Floss")
+      + `<div class="field"><span>How often</span>${radio("cad", [["daily", "Every day"], ["weekdays", "Chosen weekdays"], ["week", "Times a week"]], p.cadence || "daily")}</div>`
+      + `<div class="two">${field("Times a week", `f-times-${d}`, p.times, "3", 'inputmode="numeric"')}<span></span></div>`
+      + `<div class="field"><span>Measure</span>${radio("measure", [["check", "Check"], ["count", "Count"], ["amount", "Amount"]], p.target ? (p.unit === "glasses" || p.unit === "pages" ? "count" : "amount") : "check")}</div>`
+      + `<div class="two">${field("Target", `f-target-${d}`, p.target, "8", 'inputmode="numeric"')}${field("Unit", `f-unit-${d}`, p.unit, "glasses")}</div>`;
+  } else {
+    const parents = D.goals.filter(g => g.status === "open" && HZ_ORDER.indexOf(g.h) < HZ_ORDER.indexOf(p.h || "week"));
+    f = field("Name", `f-title-${d}`, p.title, "Run 30 km")
+      + `<div class="field"><span>Horizon</span>${radio("h", HZ_ORDER.map(h => [h, HZ[h].label]), p.h || "week")}</div>`
+      + `<div class="field"><span>Progress</span>${radio("mode", [["done", "Done or not"], ["tasks", "Linked tasks"], ["number", "A number"]], p.target ? "number" : "done")}</div>`
+      + `<div class="two">${field("Target", `f-target-${d}`, p.target, "30", 'inputmode="numeric"')}${field("Unit", `f-unit-${d}`, p.unit, "km")}</div>`
+      + `<label class="field"><span>Serves (optional)</span><select id="f-parent-${d}"><option value="">Nothing, a goal on its own</option>${parents.map(g => `<option value="${g.id}">${HZ[g.h].label}: ${esc(g.title)}</option>`).join("")}</select></label>`;
+  }
+  return `<div class="form" data-kind="${kind}"><div class="fhead"><span class="ico">${ic(k.icon)}</span><h2 class="headline" style="font-size:24px">${k.title}</h2></div>
+    <p class="from">${pre ? "Filled in from the bar. Check it and save." : "Every field. For a quick one, just type in the bar and send."}</p>${f}
+    <div class="acts"><button class="chip" data-close="1" style="border:0">Cancel</button><button class="chip primary" data-save="${kind}">${ic("check")}Save</button></div></div>`;
+}
+const val = (d, name) => (document.getElementById(`f-${name}-${d}`) || {}).value || "";
+const pick = (d, name) => { const dv = document.querySelector(`[data-dev="${d}"] [data-radio="${name}"] [aria-pressed="true"]`); return dv ? dv.dataset.val : null; };
+function submitForm(kind, d) {
+  const title = val(d, "title").trim();
+  if (!title) { const el = document.getElementById("f-title-" + d); if (el) { el.focus(); el.style.borderColor = "var(--danger)"; } return false; }
+  const data = { title };
+  if (kind === "tasks") { data.when = pick(d, "when"); data.time = val(d, "time").trim(); data.area = pick(d, "area"); data.top = pick(d, "top") === "yes"; }
+  if (kind === "wants") { data.reason = val(d, "why").trim(); const n = val(d, "price").replace(/[^\d]/g, ""); data.price = n ? +n : null; }
+  if (kind === "habits") { const c = pick(d, "cad"); data.cadence = c === "week" ? "week" : "daily"; data.times = +val(d, "times") || 3; const m = pick(d, "measure"); if (m !== "check") { data.target = +val(d, "target") || 1; data.unit = val(d, "unit") || "times"; } }
+  if (kind === "goals") { data.h = pick(d, "h"); const m = pick(d, "mode"); if (m === "number") { data.target = +val(d, "target") || 1; data.unit = val(d, "unit"); } if (m === "tasks") { data.tasks = +val(d, "target") || 3; } data.parent = val(d, "parent") || undefined; }
+  addItem(kind, data, d); U[d].sheet = null; U[d].ctext = ""; return true;
+}
+function addItem(kind, data, d) {
+  const id = "n" + Date.now();
+  if (!data.title) return false;
+  if (kind === "tasks") {
+    if (data.when && data.when !== "today") { snack(d, `Added "${data.title}" to ${data.when === "tomorrow" ? "Tomorrow" : "Someday in the Inbox"}`); return true; }
+    D.tasks.push({ id, sec: data.top ? "pri" : data.time ? "sch" : "more", time: data.time || undefined, title: data.title, meta: data.tag ? "#" + data.tag : "", area: data.area || "personal", fresh: true });
+    U[d].seg = "tasks";
+  } else if (kind === "wants") { D.wants.unshift({ id, title: data.title, price: data.price ?? null, reason: data.reason || "", cool: cooldown(data.price ?? null), left: cooldown(data.price ?? null), fresh: true }); U[d].wantTab = "open"; }
+  else if (kind === "habits") D.habits.unshift({ id, name: data.title, emoji: "✨", measure: data.target ? "amount" : "check", cadence: data.cadence || "daily", times: data.times, met: 0, today: false, target: data.target, unit: data.unit, step: data.target ? Math.max(1, Math.round(data.target / 4)) : 1, value: 0, streak: 0, week: ["off", "off", "off", "off", "off", "off"], fresh: true });
+  else D.goals.push({ id, h: data.h || "week", parent: data.parent, title: data.title, mode: data.tasks ? "tasks" : data.target ? "number" : "done", value: 0, target: data.tasks || data.target, unit: data.unit, step: data.target ? Math.max(1, Math.round(data.target / 5)) : 1, status: "open", fresh: true });
+  snack(d, `Added ${KIND[kind].one.toLowerCase()} "${data.title}"`);
+  return true;
+}
+
+// ------------------------------------------------------------------ Today
+function habitCards(d, list, full) { return list.map(h => itemCard(h, d, full)).join(""); }
+function habitsBlock(d, cols) {
+  const u = U[d], list = u.hideDone ? D.habits.filter(h => !hDone(h)) : D.habits, done = D.habits.filter(hDone);
+  const cards = `<div class="${cols ? "hcols" : "hcards"}">${habitCards(d, list)}</div>`;
+  const allDone = !habitsLeft() ? `<div class="alldone">${ic("verified", true)}<span>Every habit for today is done.</span></div>` : "";
+  return allDone + cards + (u.hideDone && done.length ? `<div class="donechips">${done.map(h => `<button class="chip tonal" data-checkin="${h.id}" style="height:28px" title="Undo">${ic("check")}${h.emoji} ${h.name}</button>`).join("")}</div>` : "");
+}
+const hideDoneChip = d => `<button class="chip" data-hidedone="1" aria-pressed="${U[d].hideDone}" style="height:28px">${ic(U[d].hideDone ? "visibility" : "visibility_off")}${U[d].hideDone ? "Show done" : "Hide done"}</button>`;
+function segButtons(d, cls = "") {
+  const u = U[d], open = D.tasks.filter(t => !t.done).length, left = habitsLeft();
+  return `<div class="segbtns ${cls}" role="tablist"><button data-seg="tasks" aria-pressed="${u.seg === "tasks"}">${ic("checklist")}Tasks <span class="cnt">${open}</span></button><button data-seg="habits" aria-pressed="${u.seg === "habits"}">${ic("donut_large")}Habits <span class="cnt">${left || "✓"}</span></button></div>`;
+}
+const taskList = d => taskSec("pri", "Top priorities") + taskSec("sch", "Scheduled") + taskSec("more", "More today");
+function todayBody(d) {
+  const u = U[d]; let body = d === "phone" ? `<p class="summary">${todaySummary()}</p>` : "";
+  const pcPanel = d === "win" && S.pcToday === "panel";
+  if (pcPanel) {
+    return body + `<div style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start">
+      <div>${taskList(d)}${todayTail(d)}</div>
+      <div class="habpanel" style="margin-top:14px"><div class="panelhead"><span class="label">${habitsLeft() ? `Habits · ${habitsLeft()} left` : "Habits · all done"}</span>${hideDoneChip(d)}<button class="iconbtn sm" data-go="habits" aria-label="Open Habits">${ic("open_in_new")}</button></div>
+      ${habitsBlock(d, false)}</div></div>`;
+  }
+  body += segButtons(d, d === "win" ? "win" : "");
+  if (u.seg === "tasks") {
+    body += taskList(d) + (habitsLeft() ? `<button class="nudge" data-seg="habits">${ic("donut_large")}<span style="flex:1">${habitsLeft()} habits left today: ${D.habits.filter(hLeft).map(h => h.emoji).join(" ")}</span>${ic("chevron_right")}</button>` : "") + todayTail(d);
+  } else {
+    body += `<div class="groupbar" style="margin:6px 0 8px"><span class="label">${habitsLeft() ? `${habitsLeft()} left today` : "All done"}</span><span style="flex:1"></span>${hideDoneChip(d)}</div>` + habitsBlock(d, d === "win");
+  }
+  return body;
+}
+
+// ------------------------------------------------------------------ Habits page
+function habitsBody(d) {
+  const due = D.habits.filter(h => !h.limit && !h.skipped), done = due.filter(hDone).length, best = D.habits.reduce((a, h) => h.streak > a.streak ? h : a, D.habits[0]);
+  const avg = due.length ? due.reduce((a, h) => a + hFrac(h), 0) / due.length : 0;
+  let body = `<div class="hero hhero"><div style="flex:1"><div class="label">Thursday 1 October</div><div class="num" style="font-size:${d === "win" ? 42 : 46}px;line-height:1.05;margin-top:4px">${done}<span style="font-size:22px;opacity:.8"> / ${due.length} done</span></div>
+    <div class="sub">Longest streak: ${best.emoji} ${best.name}, ${hStreak(best)}${H("stretch") && H("stretch").streak === 29 && !hDone(H("stretch")) ? " · Stretch is one day from 30" : ""}</div></div>
+    ${ring(d + "hh", avg, 72, 9, `<span class="num" style="font-size:16px;color:var(--heroAccent)">${Math.round(avg * 100)}%</span>`)}</div>
+    <div class="groupbar"><span class="muted" style="font-size:13px">Tap the button to check in · hold a card or use its menu to skip</span><span style="flex:1"></span>${hideDoneChip(d)}</div>`;
+  const u = U[d], show = h => !(u.hideDone && hDone(h));
+  const groups = [["Every day", D.habits.filter(h => h.cadence !== "week" && !h.limit)], ["Weekly", D.habits.filter(h => h.cadence === "week")], ["Limits", D.habits.filter(h => h.limit)]];
+  groups.forEach(([l, hs]) => { const vis = hs.filter(show); if (!hs.length) return; body += `<div class="sech"><span class="label">${l} · ${hs.length}</span></div>` + (vis.length ? `<div class="${d === "win" ? "hcols" : "hcards"}">${habitCards(d, vis, true)}</div>` : `<div class="muted" style="font-size:13px;padding:4px 2px">All done.</div>`); });
+  return body + foldSec(d, "archived", "Archived · 1", `<div class="hcards"><div class="hcard" style="opacity:.6"><span class="emo">🧊</span><div class="mid"><div class="nm"><span>Cold shower</span></div><div class="st">Archived in August · best streak 18 days</div></div></div></div>`);
+}
+
+// ------------------------------------------------------------------ Goals
+function goalCard2(g, d, compact, chain) {
+  const p = gPace(g), parent = g.parent ? G(g.parent) : null, sel = U[d].sel === g.id;
+  const lead = g.mode === "done" && g.status !== "dropped"
+    ? `<button class="check ${g.status === "done" ? "on" : ""}" data-log="${g.id}" style="margin-top:1px" aria-label="Done: ${esc(g.title)}">${g.status === "done" ? ic("check") : ""}</button>`
+    : ring(d + "gc:" + g.id, gFrac(g), compact ? 22 : 26, 4);
+  const log = g.status === "dropped" || gHit(g) ? "" : g.mode === "done" ? "" :
+    `<button class="logbtn" data-log="${g.id}" aria-label="Log ${esc(logLabel(g))} on ${esc(g.title)}" ${compact ? 'style="height:28px;padding:0 8px;font-size:12px"' : ""}>${ic("add")}${logLabel(g)}</button>`;
+  const amount = g.mode === "number" || g.mode === "tasks"
+    ? `<div class="amt"><span class="num">${fmt(g.value)}</span><span class="of">of ${fmt(g.target)} ${g.mode === "tasks" ? "tasks" : g.unit}</span></div><div class="bar" style="height:${compact ? 6 : 8}px"><i style="width:${gFrac(g) * 100}%"></i></div>`
+    : `<div class="muted" style="font-size:13px">${gText(g)}</div>`;
+  return `<div class="gcard ${gHit(g) ? "hit" : ""} ${g.status === "dropped" ? "dropped" : ""} ${chain && chain.has(g.id) ? "chain" : ""} ${sel ? "sel" : ""} ${g.fresh ? "fresh" : ""}" data-gsel="${g.id}">
+    <div class="top">${lead}<div class="tt"><b>${g.emoji ? g.emoji + " " : ""}${esc(g.title)}</b>${parent ? `<div class="serves">${ic("north_east")}feeds ${esc(parent.title)}</div>` : ""}</div>${compact ? "" : log}</div>
+    ${amount}<div class="crow"><span class="pace ${p.cls}">${p.text}</span>${compact ? log : ""}</div></div>`;
+}
+function goalsBody(d) {
+  const u = U[d], f = u.filter, chain = u.sel ? chainOf(u.sel) : null;
+  const rings = `<div class="rings4">${HZ_ORDER.map(h => { const l = goalsIn(h).filter(g => g.status !== "dropped"), avg = l.length ? l.reduce((a, g) => a + gFrac(g), 0) / l.length : 0;
+    return `<button data-gfilter="${h}" aria-pressed="${f === h}">${ring(d + "dr:" + h, avg, d === "win" ? 76 : 70, 8, `<span class="num" style="font-size:17px">${Math.round(avg * 100)}<span style="font-size:11px">%</span></span>`)}<span class="rl">${HZ[h].label}</span><span class="rs">${l.filter(gHit).length} of ${l.length} hit</span></button>`; }).join("")}</div>`;
+  const behind = D.goals.filter(g => gPace(g).k === "behind");
+  const hint = `<div class="chainhint">${u.sel ? `${ic("account_tree")}<span>The chain of <b>${esc(G(u.sel).title)}</b></span><button class="chip" data-gsel="${u.sel}">${ic("close")}Clear</button>`
+    : `${ic("touch_app")}<span>Tap a goal to light up what it feeds and what feeds it.${behind.length ? ` ${behind.length} behind pace.` : ""}</span>`}</div>`;
+  let ladder;
+  if (d === "win") {
+    ladder = `<div class="lanes ${chain ? "focus" : ""}" style="margin-top:6px">${HZ_ORDER.map(h => `<div class="lane ${f && f !== h ? "dim" : ""}"><div class="lh"><span class="hb">${HZ[h].short}</span><div style="min-width:0"><div class="strong" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${h === "day" ? "Today" : h === "week" ? "Week 40" : HZ[h].period}</div><div class="gone">${HZ[h].gone}</div></div></div>
+      ${goalsIn(h).map(g => goalCard2(g, d, true, chain)).join("")}</div>`).join("")}</div>`;
+  } else {
+    ladder = `<div class="ladder ${chain ? "focus" : ""}" style="margin-top:8px">${HZ_ORDER.filter(h => !f || f === h).map(h => {
+      const open = u.fold["r" + h] !== false, l = goalsIn(h).filter(g => g.status !== "dropped");
+      return `<div class="rung"><span class="hb">${HZ[h].short}</span><button class="rh" data-rung="${h}" aria-expanded="${open}"><span class="pt">${HZ[h].period}</span><span class="gone">${l.filter(gHit).length}/${l.length} hit · ${HZ[h].gone}</span><span class="ms chev">expand_more</span></button>
+        ${open ? goalsIn(h).map(g => goalCard2(g, d, false, chain)).join("") : ""}</div>`; }).join("")}</div>`;
+  }
+  let next = "";
+  if (!f || f === "week") next = `<div class="sech"><span class="label">Next week · 5 to 11 Oct</span></div>` + (D.nextWeek.length
+    ? `<div class="rows">${D.nextWeek.map(g => `<div class="row fresh">${ring(d + "nw:" + g.id, 0, 24, 4)}<span style="flex:1">${esc(g.title)}</span></div>`).join("")}</div>`
+    : `<div class="copyrow">${ic("event_upcoming")}Nothing planned for next week yet.<button class="chip tonal" data-copyweek="1">${ic("content_copy")}Copy this week's goals</button></div>`);
+  return rings + hint + ladder + next;
+}
+
+// ------------------------------------------------------------------ Wants
+function wantRow2(w, d) {
+  const ready = !w.left, frac = w.cool ? (w.cool - w.left) / w.cool : 1;
+  if (w.decided) return `<div class="row wantrow">${ring(d + "w:" + w.id, 1, 34, 4, `<span class="ms" style="font-size:18px;color:var(--muted)">${w.decided === "bought" ? "shopping_cart" : "block"}</span>`)}<div class="tt"><b>${esc(w.title)}</b><span>${w.decided} ${w.when} · ${esc(w.reason)}</span></div><span class="decided">${w.decided}</span></div>`;
+  return `<div class="row wantrow ${w.fresh ? "fresh" : ""}">${ring(d + "w:" + w.id, frac, 34, 4, ready ? `<span class="ms" style="font-size:18px;color:var(--accent)">check</span>` : "")}
+    <div class="tt"><b>${esc(w.title)}</b><span>${ready ? "ready to decide" : `${w.left} day${w.left > 1 ? "s" : ""} left`}${w.reason ? " · " + esc(w.reason) : " · no reason yet"}</span></div><span class="price">${w.price != null ? money(w.price) : ""}</span></div>`;
+}
+function wantsBody(d) {
+  const u = U[d], open = D.wants.filter(w => !w.decided), ready = open.filter(w => !w.left), cooling = open.filter(w => w.left), decided = D.wants.filter(w => w.decided);
+  const tab = u.wantTab;
+  const list = tab === "ready" ? ready : tab === "cooling" ? cooling : tab === "decided" ? decided : open.slice().sort((a, b) => a.left - b.left);
+  return `<div class="chipsrow" style="margin:2px 0 6px"><button class="chip" data-wtab="open" aria-pressed="${tab === "open"}">All open ${open.length}</button><button class="chip" data-wtab="ready" aria-pressed="${tab === "ready"}">Ready ${ready.length}</button><button class="chip" data-wtab="cooling" aria-pressed="${tab === "cooling"}">Cooling ${cooling.length}</button><button class="chip" data-wtab="decided" aria-pressed="${tab === "decided"}">Decided ${decided.length}</button></div>
+    <p class="summary" style="font-size:12px">Under 1 000 Kč waits 3 days, under 5 000 Kč 14, more 30, no price 7.</p>
+    <div class="rows">${list.map(w => wantRow2(w, d)).join("") || `<div class="empty">Nothing here.</div>`}</div>`;
+}
+
+// ------------------------------------------------------------------ render
+function screenHtml(d) {
+  const s = S.screen, kind = kindOf(s);
+  const body = s === "today" ? todayBody(d) : s === "habits" ? habitsBody(d) : s === "goals" ? goalsBody(d) : wantsBody(d);
+  const key = s + (d === "win" ? S.pcToday : "");
+  const title = SCREENS[s].label;
+  if (d === "phone") return phoneShell(d, { title, back: s !== "today", nav: s === "today" ? "today" : "places", body: pageWrap(d, key, body), extra: composer(d, kind) });
+  const tools = s === "today" ? `<span class="muted">${todaySummary().split(" · ")[1]}</span><span class="right"><button class="iconbtn sm">${ic("cloud_done")}</button><button class="winbtn accent">${ic("edit_calendar")}Plan tomorrow</button></span>` : winTools();
+  return winShell(d, { title, place: s, toolbar: tools, body: pageWrap(d, key, body + composer(d, kind)) });
+}
+function applyTheme() {
+  const t = THEMES[S.theme], c = t[S.mode], ty = t.typography, h = ty.heading, b = ty.body, n = ty.number, r = document.documentElement.style;
+  const fam = f => `${FAMILY[f] || `"${f}"`}, system-ui, sans-serif`;
+  const map = { "--bg": c.background, "--surface": c.surface, "--surfaceVariant": c.surfaceVariant, "--text": c.text, "--muted": c.textMuted, "--outline": c.outline,
+    "--primary": c.primary, "--onPrimary": c.onPrimary, "--accent": c.accent, "--onAccent": c.onAccent, "--hero": c.hero, "--onHero": c.onHero, "--heroAccent": c.heroAccent, "--danger": c.danger,
+    "--r-card": t.shape.card + "px", "--r-row": t.shape.row + "px", "--r-check": t.shape.checkbox + "px", "--r-button": Math.min(t.shape.button, 14) + "px", "--r-button-w": Math.min(t.shape.button, 8) + "px",
+    "--head-font": fam(h.family), "--head-weight": h.weight, "--head-style": h.italic ? "italic" : "normal", "--head-width": h.width + "%", "--head-transform": h.uppercase ? "uppercase" : "none", "--head-tracking": h.tracking + "em",
+    "--body-font": fam(b.family), "--body-weight": b.weight, "--strong-weight": b.strongWeight || 600,
+    "--num-font": fam(n.family), "--num-weight": n.weight, "--num-style": n.italic ? "italic" : "normal", "--num-width": (n.width || 100) + "%" };
+  for (const [k, v] of Object.entries(map)) r.setProperty(k, v);
+  document.body.classList.toggle("reduce", S.reduce);
+}
+function seg(id, opts, key) { document.getElementById(id).innerHTML = opts.map(([v, l]) => `<button data-${key}="${v}" aria-pressed="${S[key] === v}">${l}</button>`).join(""); }
+function renderChrome() {
+  document.getElementById("qtabs").innerHTML = Object.entries(SCREENS).map(([k, s]) => `<button data-screen="${k}" aria-pressed="${S.screen === k}">${ic(s.icon)}${s.label}</button>`).join("");
+  const sc = SCREENS[S.screen];
+  document.getElementById("note").innerHTML = `<div class="t">${sc.note}<ul>${sc.calls.map(c => `<li>${c}</li>`).join("")}</ul></div>`;
+  let sub = `Bottom bar <span class="seg">${["A", "B"].map(v => `<button data-send="${v}" aria-pressed="${S.send === v}">${v}. ${SEND[v].name}</button>`).join("")}</span><span style="flex-basis:100%">${SEND[S.send].text}</span>`;
+  if (S.screen === "today") sub = `PC layout <span class="seg"><button data-pctoday="panel" aria-pressed="${S.pcToday === "panel"}">Side panel (my pick)</button><button data-pctoday="segments" aria-pressed="${S.pcToday === "segments"}">Segments, as on the phone</button></span>` + `<span style="width:100%;height:0"></span>` + sub;
+  document.getElementById("subnav").innerHTML = sub;
+  seg("deviceSeg", [["phone", "Phone"], ["win", "PC"], ["both", "Both"]], "device");
+  seg("modeSeg", [["light", "Light"], ["dark", "Dark"]], "mode");
+  document.getElementById("themeSel").value = S.theme;
+  document.getElementById("reduceChk").checked = S.reduce;
+}
+function render() {
+  const ae = document.activeElement, keepFocus = ae && ae.id && ae.closest && ae.closest(".gm") ? ae.id : null;
+  const scrolls = {}; document.querySelectorAll("[data-scroll]").forEach(el => scrolls[el.dataset.scroll] = el.scrollTop);
+  applyTheme(); syncUrl(); renderChrome();
+  let html = "";
+  if (S.device !== "win") html += `<div><div class="devcap">Phone · Android</div>${screenHtml("phone")}</div>`;
+  if (S.device !== "phone") html += `<div><div class="devcap">PC · Windows</div><div class="winwrap" id="winwrap">${screenHtml("win")}</div></div>`;
+  document.getElementById("stage").innerHTML = html;
+  document.querySelectorAll("[data-scroll]").forEach(el => { if (scrolls[el.dataset.scroll]) el.scrollTop = scrolls[el.dataset.scroll]; });
+  fitWin();
+  const arcs = document.querySelectorAll("[data-rk]");
+  requestAnimationFrame(() => requestAnimationFrame(() => arcs.forEach(el => {
+    const k = el.dataset.rk, to = +el.dataset.to, prev = PREV[k];
+    el.style.strokeDashoffset = to;
+    if (prev && prev.to > .5 && to < .01 && !S.reduce) el.closest(".ring").classList.add("burst");
+    PREV[k] = { to };
+  })));
+  D.wants.concat(D.habits, D.goals, D.nextWeek, D.tasks).forEach(x => { if (x.fresh) setTimeout(() => { x.fresh = false; }, 0); });
+  if (CONFETTI) setTimeout(() => { CONFETTI = null; }, 0);
+  ["phone", "win"].forEach(updateComposer);
+  document.querySelectorAll(".thread").forEach(t => { t.scrollTop = t.scrollHeight; });
+  if (keepFocus) { const el = document.getElementById(keepFocus); if (el) { el.focus(); if (el.setSelectionRange && el.type !== "number") el.setSelectionRange(el.value.length, el.value.length); } }
+  else { const ft = document.querySelector("[id^='f-title-']"); if (ft && !ft.value) ft.focus(); }
+}
+function fitWin() {
+  const w = document.getElementById("winwrap"); if (!w) return;
+  const inner = w.firstElementChild, avail = Math.min(document.getElementById("stage").clientWidth, window.innerWidth - 24);
+  const s = Math.min(1, avail / 1102);
+  inner.style.transform = s < 1 ? `scale(${s})` : "";
+  w.style.width = 1102 * s + "px"; w.style.height = 702 * s + "px";
+}
+window.addEventListener("resize", fitWin);
+
+// ------------------------------------------------------------------ events
+let holdTimer = null, held = false, holdEl = null;
+document.addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  const s = e.target.closest("[data-holdfull]");
+  if (s) {
+    const d = s.closest("[data-dev]").dataset.dev; if (U[d].ai || !U[d].ctext.trim()) return;
+    held = false; clearTimeout(holdTimer); holdEl = s; s.classList.add("holding");
+    holdTimer = setTimeout(() => { held = true; s.classList.remove("holding"); openFull(d); render(); }, 480);
+    return;
+  }
+  const t = e.target.closest("[data-hold]"); if (!t) return;
+  held = false; clearTimeout(holdTimer);
+  holdTimer = setTimeout(() => { held = true; const d = t.closest("[data-dev]").dataset.dev; U[d].menu = t.dataset.hold; render(); }, 480);
+});
+["pointerup", "pointerleave", "pointercancel"].forEach(ev => document.addEventListener(ev, () => { clearTimeout(holdTimer); if (holdEl) { holdEl.classList.remove("holding"); holdEl = null; } }, true));
+document.addEventListener("contextmenu", e => {
+  const t = e.target.closest("[data-hold]"); if (!t) return;
+  e.preventDefault(); const d = t.closest("[data-dev]").dataset.dev; U[d].menu = t.dataset.hold; render();
+});
+document.addEventListener("click", e => {
+  if (held) { held = false; e.preventDefault(); return; }
+  const t = e.target.closest("button,[data-gsel],[data-close]"); if (!t) return;
+  if (t.closest("[data-radio]") && t.dataset.val) { t.parentElement.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c === t)); return; }
+  const ds = t.dataset, dv = t.closest("[data-dev]"), d = dv ? dv.dataset.dev : null, u = d ? U[d] : null;
+  if (!u) {
+    if (ds.screen) { S.screen = ds.screen; Object.values(U).forEach(x => { x.menu = null; x.sheet = null; x.ctext = ""; }); }
+    else if (ds.device) S.device = ds.device;
+    else if (ds.mode) S.mode = ds.mode;
+    else if (ds.send) S.send = ds.send;
+    else if (ds.pctoday) S.pcToday = ds.pctoday;
+    else return;
+    render(); return;
+  }
+  if (ds.close !== undefined) { if (e.target !== t) return; u.menu = null; u.sheet = null; }
+  else if (ds.go) { if (SCREENS[ds.go]) { S.screen = ds.go; u.ctext = ""; } else return; }
+  else if (ds.checkin) { checkIn(ds.checkin, d); if (ds.closemenu) u.menu = null; }
+  else if (ds.menu) u.menu = ds.menu;
+  else if (ds.closemenu) u.menu = null;
+  else if (ds.skip) { skipHabit(ds.skip, d); u.menu = null; }
+  else if (ds.clear) { clearHabit(ds.clear); u.menu = null; }
+  else if (ds.task) { const tk = D.tasks.find(x => x.id === ds.task); if (tk) tk.done = !tk.done; else return; }
+  else if (ds.fold) u.fold[ds.fold] = !u.fold[ds.fold];
+  else if (ds.hidedone) u.hideDone = !u.hideDone;
+  else if (ds.seg) u.seg = ds.seg;
+  else if (ds.log) { logGoal(ds.log, d); }
+  else if (ds.gsel) u.sel = u.sel === ds.gsel ? null : ds.gsel;
+  else if (ds.rung) u.fold["r" + ds.rung] = u.fold["r" + ds.rung] === false;
+  else if (ds.gfilter) u.filter = u.filter === ds.gfilter ? null : ds.gfilter;
+  else if (ds.copyweek) { D.nextWeek = goalsIn("week").filter(g => g.status !== "dropped").map(g => ({ id: "c" + g.id, title: g.title, fresh: true })); snack(d, `Copied ${D.nextWeek.length} goals to next week`); }
+  else if (ds.wtab) u.wantTab = ds.wtab;
+  else if (ds.ai) { u.ai = !u.ai; if (!u.ai) u.thread = []; render(); const i = document.getElementById("comp-" + d); if (i) i.focus(); return; }
+  else if (ds.closethread) { u.thread = []; }
+  else if (ds.full) { openFull(d); }
+  else if (ds.send) { if (!sendComposer(d)) { const i = document.getElementById("comp-" + d); if (i) i.focus(); return; } }
+  else if (ds.save) { if (!submitForm(ds.save, d)) return; }
+  else return;
+  render();
+});
+document.addEventListener("input", e => {
+  const id = e.target.id || "";
+  if (id.startsWith("comp-")) { const d = id.slice(5); U[d].ctext = e.target.value; updateComposer(d); }
+  if (id.startsWith("f-price-")) { const d = id.slice(8), n = e.target.value.replace(/[^\d]/g, ""), el = document.getElementById("f-cool-" + d); if (el) el.innerHTML = `${ic("hourglass_bottom")}Waits ${cooldown(n ? +n : null)} days before you can decide`; }
+});
+document.addEventListener("keydown", e => {
+  const id = e.target.id || "";
+  if (id.startsWith("comp-")) {
+    const d = id.slice(5);
+    if (e.key === "Enter") { e.preventDefault(); if (e.ctrlKey || e.metaKey || e.shiftKey) openFull(d); else if (!U[d].ctext.trim()) return; else sendComposer(d); render(); }
+    if (e.key === "Escape") { U[d].ctext = ""; render(); }
+    return;
+  }
+  if (id.startsWith("f-") && e.key === "Enter") { const d = id.endsWith("phone") ? "phone" : "win"; if (U[d].sheet && submitForm(U[d].sheet.kind, d)) render(); return; }
+  if (e.key === "Escape") { Object.values(U).forEach(x => { x.menu = null; x.sheet = null; }); render(); return; }
+  if (e.target.closest && e.target.closest("input,select,textarea")) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "n") { e.preventDefault(); U.win.sheet = { kind: kindOf(S.screen), pre: null }; render(); return; }
+  const keys = Object.keys(SCREENS);
+  if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const i = keys.indexOf(S.screen); S.screen = keys[(i + (e.key === "ArrowRight" ? 1 : -1) + keys.length) % keys.length]; render(); }
+});
+document.getElementById("themeSel").onchange = e => { S.theme = e.target.value; render(); };
+document.getElementById("reduceChk").onchange = e => { S.reduce = e.target.checked; render(); };
+document.getElementById("resetBtn").onclick = () => { D = freshData(); U.phone = freshUi(); U.win = freshUi(); render(); };
+try { if (localStorage.getItem("gm-proto2-intro") === "closed") document.getElementById("intro").open = false; } catch (e) { /* ignore */ }
+document.getElementById("intro").addEventListener("toggle", e => { try { localStorage.setItem("gm-proto2-intro", e.target.open ? "open" : "closed"); } catch (err) { /* ignore */ } });
+render();
+</script>
+</body>
+</html>
