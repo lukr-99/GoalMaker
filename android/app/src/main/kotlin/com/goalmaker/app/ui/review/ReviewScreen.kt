@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -110,10 +111,13 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
             )
         },
         bottomBar = {
+            // A bottomBar slot adds no insets of its own, unlike a NavigationBar or BottomAppBar:
+            // without the navigation bar padding, three-button navigation covers Next.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .imePadding()
                     .padding(horizontal = AppTheme.density.pagePadding.dp, vertical = 12.dp),
             ) {

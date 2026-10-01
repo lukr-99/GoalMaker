@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -206,7 +207,8 @@ fun ListsScreen(
                 )
             },
             bottomBar = {
-                Column(Modifier.imePadding()) {
+                // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
+                Column(Modifier.navigationBarsPadding().imePadding()) {
                     val line = composer.text.toString()
                     // Picked chat but it can't run: say why, and the composer quick-adds meanwhile.
                     if (chatState.chatBlocked) ChatUnavailableNote(chatState.availability)
