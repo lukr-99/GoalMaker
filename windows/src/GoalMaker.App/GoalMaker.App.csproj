@@ -64,8 +64,13 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
     <PackageReference Include="NHotkey.Wpf" Version="4.0.0" />
-    <PackageReference Include="WPF-UI" Version="4.3.0" />
+    <!--
+      The shared tray kit (CodePrint): WPF UI's themes and controls, the theme applier, the menu
+      builder, .ico files, dialogs and the notification area icon. It brings WPF UI 4.3 and
+      H.NotifyIcon along, which the shell also uses directly. From dotnetlib's GitHub Packages feed,
+      see windows/nuget.config.
+    -->
+    <PackageReference Include="DotNetLib.Tray" Version="0.2.0" />
   </ItemGroup>
 </Project>

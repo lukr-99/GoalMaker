@@ -28,7 +28,9 @@
 
 - Android: Kotlin + Compose (Material 3 Expressive pinned alpha, Navigation 3), supabase-kt, min SDK
   26, compile 37, target 36, package root `com.goalmaker.app`. Device scripts in `android/tools/`.
-- Windows: .NET 10 WPF with WPF UI, CommunityToolkit.Mvvm, H.NotifyIcon, Supabase C# client.
+- Windows: .NET 10 WPF with `DotNetLib.Tray` 0.2.0 (the tray kit, which brings WPF UI and H.NotifyIcon;
+  private `dotnetlib` feed, see `docs/setup/local-development.md`), CommunityToolkit.Mvvm, NHotkey,
+  Supabase C# client.
   All copy in `windows/src/GoalMaker.App/Resources/Strings.xaml`; view models get text via `IStrings`.
 - Local Supabase stack: ports 553xx (`supabase/config.toml`); sign-in codes appear in the mail viewer
   at http://127.0.0.1:55324. Debug builds point at it by default.

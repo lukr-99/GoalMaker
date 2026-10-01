@@ -454,12 +454,12 @@ it), target SDK 36 until Android 17's behavior changes are reviewed. Debug build
 
 ### Windows
 
-.NET 10 WPF with **WPF UI** (Fluent shell), H.NotifyIcon (tray), charts drawn by its own WPF controls, toast notifications
+.NET 10 WPF with **WPF UI** (Fluent shell) and H.NotifyIcon (tray), both through the `DotNetLib.Tray` kit (ADR 0017), charts drawn by its own WPF controls, toast notifications
 through the Windows SDK projection (unpackaged, without the Windows App SDK; ADR 0009),
 NHotkey (global hotkey), Markdig, the Supabase C# client, the shared SQLite replica through
 Microsoft.Data.Sqlite (ADR 0007).
 Published framework-dependent, which kept it under the first update channel's 50 MB file limit (ADR 0004).
-`dotnetlib` was checked; see ADR 0006. Single instance, launch
+`dotnetlib` was checked (ADR 0006), and its tray kit is used (ADR 0017). Single instance, launch
 switches, `goalmaker://` links, Startup Profiles registration through its public contract.
 
 ### Supabase operations

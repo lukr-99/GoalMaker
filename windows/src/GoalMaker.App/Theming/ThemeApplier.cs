@@ -1,12 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using DotNetLib.Tray;
 using GoalMaker.App.Controls;
 using GoalMaker.Core.Design;
 using GoalMaker.Core.Settings;
-using Microsoft.Win32;
-using Wpf.Ui.Appearance;
-using Wpf.Ui.Controls;
 using ThemeMode = GoalMaker.Core.Settings.ThemeMode;
 
 namespace GoalMaker.App.Theming;
@@ -15,22 +13,35 @@ namespace GoalMaker.App.Theming;
 /// Applies the chosen theme from contracts/design/themes.json (ADR 0008) in light, dark or pure
 /// black: GoalMaker's own resources (GM.* brushes, fonts, corners, spacing), and WPF UI's theme and
 /// the resource keys its controls use, so built-in controls match. Views read GM.* keys through
-/// DynamicResource, so switching applies at once. Follows Windows' light or dark when the mode is
-/// System. With the <paramref name="logo"/> mark it also sets the theme's logo colors and renders the
-/// logo as the window and tray icon (<see cref="LogoIcon"/>).
+/// DynamicResource, so switching applies at once. With the <paramref name="logo"/> mark it also sets
+/// the theme's logo colors and renders the logo as the window and tray icon (<see cref="LogoIcon"/>).
+/// <para>
+/// The tray kit's <see cref="TrayThemeApplier"/> does the part every tray app shares: WPF UI's light,
+/// dark or high-contrast theme, the kit's Tray.* brushes in the theme's colors
+/// (<see cref="TrayPalettes"/>), and following Windows' light or dark while the mode is System. Its
+/// palettes are fixed when it is made, so a switch to another theme or to pure black makes a new one.
+/// Every apply of the kit's, including one Windows started, runs GoalMaker's own part after it.
+/// </para>
 /// </summary>
 public sealed class ThemeApplier : IDisposable
 {
     private readonly ResourceDictionary resources;
     private readonly LogoMark? logo;
+    private readonly Func<bool> systemIsDark;
     private Appearance current = Appearance.Default;
+    private TrayThemeApplier? kit;
+    private (string ThemeId, bool PureBlack)? kitPalettes;
 
-    public ThemeApplier(DesignTokens tokens, ResourceDictionary resources, LogoMark? logo = null)
+    /// <param name="tokens">The themes from contracts/design/themes.json.</param>
+    /// <param name="resources">The application's resources, where every key is set.</param>
+    /// <param name="logo">The logo mark, or null for no logo and no icons.</param>
+    /// <param name="systemIsDark">Whether Windows is dark; <see cref="TrayThemeApplier.WindowsAppsUseDark"/> when null. A test passes its own.</param>
+    public ThemeApplier(DesignTokens tokens, ResourceDictionary resources, LogoMark? logo = null, Func<bool>? systemIsDark = null)
     {
         Tokens = tokens;
         this.resources = resources;
         this.logo = logo;
-        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
+        this.systemIsDark = systemIsDark ?? TrayThemeApplier.WindowsAppsUseDark;
     }
 
     public DesignTokens Tokens { get; }
@@ -56,20 +67,53 @@ public sealed class ThemeApplier : IDisposable
     /// </summary>
     public void Attach(Window target) => target.SetResourceReference(Control.FontFamilyProperty, "GM.BodyFont");
 
+    /// <summary>The saved mode as the tray kit's.</summary>
+    public static TrayThemeMode ToTrayMode(ThemeMode mode) => mode switch
+    {
+        ThemeMode.Light => TrayThemeMode.Light,
+        ThemeMode.Dark => TrayThemeMode.Dark,
+        _ => TrayThemeMode.System,
+    };
+
     public void Apply(Appearance appearance)
     {
         current = appearance;
-        IsDark = appearance.Mode switch
+        var theme = Tokens.Theme(appearance.ThemeId);
+        if (kit is null || kitPalettes != (theme.Id, appearance.PureBlack))
         {
-            ThemeMode.Light => false,
-            ThemeMode.Dark => true,
-            _ => SystemIsDark(),
-        };
+            if (kit is not null)
+            {
+                kit.Applied -= OnKitApplied;
+                kit.Dispose();
+            }
+
+            var (light, dark) = TrayPalettes.For(theme, appearance.PureBlack);
+            kit = new TrayThemeApplier(resources, systemIsDark, light, dark);
+            kit.Applied += OnKitApplied;
+            kitPalettes = (theme.Id, appearance.PureBlack);
+        }
+
+        // WPF UI's theme and the Tray.* brushes, then GoalMaker's part in OnKitApplied.
+        kit.Apply(ToTrayMode(appearance.Mode));
+    }
+
+    public void Dispose()
+    {
+        if (kit is not null)
+        {
+            kit.Applied -= OnKitApplied;
+            kit.Dispose();
+        }
+    }
+
+    // Runs after every apply of the kit's: from Apply, and when Windows turns light or dark in System mode.
+    private void OnKitApplied(object? sender, EventArgs e)
+    {
+        var appearance = current;
+        IsDark = kit!.IsDark;
         var theme = Tokens.Theme(appearance.ThemeId);
         var palette = !IsDark ? theme.Light : appearance.PureBlack ? theme.Black : theme.Dark;
-        var wpfTheme = IsDark ? ApplicationTheme.Dark : ApplicationTheme.Light;
 
-        ApplicationThemeManager.Apply(wpfTheme, WindowBackdropType.None, false);
         SetAccent(palette);
         SetColors(palette);
         SetFonts(theme.Typography);
@@ -88,9 +132,6 @@ public sealed class ThemeApplier : IDisposable
         SetLogo(theme.Logo);
         Applied?.Invoke(this, EventArgs.Empty);
     }
-
-    public void Dispose() => SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
-
 
     public static Color ToColor(uint argb) =>
         Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb);
@@ -376,14 +417,6 @@ public sealed class ThemeApplier : IDisposable
         resources["GM.StandardDuration"] = new Duration(TimeSpan.FromMilliseconds(motion.Standard));
     }
 
-    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
-    {
-        if (current.Mode == ThemeMode.System && e.Category is UserPreferenceCategory.General or UserPreferenceCategory.Color)
-        {
-            Application.Current?.Dispatcher.BeginInvoke(() => Apply(current));
-        }
-    }
-
     private static SolidColorBrush Frozen(Color color)
     {
         var brush = new SolidColorBrush(color);
@@ -397,8 +430,4 @@ public sealed class ThemeApplier : IDisposable
         (byte)Math.Round(from.R + ((to.R - from.R) * amount)),
         (byte)Math.Round(from.G + ((to.G - from.G) * amount)),
         (byte)Math.Round(from.B + ((to.B - from.B) * amount)));
-
-    private static bool SystemIsDark() =>
-        ApplicationThemeManager.GetSystemTheme() is SystemTheme.Dark or SystemTheme.Glow or SystemTheme.CapturedMotion
-            or SystemTheme.HCBlack;
 }

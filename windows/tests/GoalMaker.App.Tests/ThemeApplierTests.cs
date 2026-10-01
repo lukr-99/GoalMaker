@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using DotNetLib.Tray;
 using GoalMaker.App.Theming;
 using GoalMaker.Core.Settings;
 using GoalMaker.Infrastructure.Sync;
@@ -72,6 +73,66 @@ public sealed class ThemeApplierTests
         Assert.Equal(onPrimary, ((SolidColorBrush)button.Foreground).Color);
     });
 
+    // The tray kit's applier sets the Tray.* brushes its dialogs and Window style read; GoalMaker
+    // gives it the theme's palettes, so they match the GM.* brushes.
+    [Theory]
+    [MemberData(nameof(Looks))]
+    public void TheKitsBrushesWearTheThemesColors(string id, ThemeMode mode, bool pureBlack) => OnStaThread(() =>
+    {
+        var resources = WpfUiResources();
+        using var theme = new ThemeApplier(ContractResources.Themes(), resources);
+
+        theme.Apply(Appearance.Default with { ThemeId = id, Mode = mode, PureBlack = pureBlack });
+
+        var definition = theme.Tokens.Theme(id);
+        var palette = mode == ThemeMode.Light ? definition.Light : pureBlack ? definition.Black : definition.Dark;
+        Assert.Equal(ThemeApplier.ToColor(palette.Background), BrushColor(resources, TrayThemeTokens.Background));
+        Assert.Equal(ThemeApplier.ToColor(palette.Text), BrushColor(resources, TrayThemeTokens.TextPrimary));
+        Assert.Equal(ThemeApplier.ToColor(palette.Primary), BrushColor(resources, TrayThemeTokens.Primary));
+        Assert.Equal(BrushColor(resources, "GM.BackgroundBrush"), BrushColor(resources, TrayThemeTokens.Background));
+    });
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SystemModeFollowsWindowsLightOrDark(bool windowsIsDark) => OnStaThread(() =>
+    {
+        var resources = WpfUiResources();
+        using var theme = new ThemeApplier(ContractResources.Themes(), resources, systemIsDark: () => windowsIsDark);
+
+        theme.Apply(Appearance.Default with { ThemeId = "electric", Mode = ThemeMode.System });
+
+        var definition = theme.Tokens.Theme("electric");
+        var expected = windowsIsDark ? definition.Dark : definition.Light;
+        Assert.Equal(windowsIsDark, theme.IsDark);
+        Assert.Equal(ThemeApplier.ToColor(expected.Background), BrushColor(resources, "GM.BackgroundBrush"));
+        Assert.Equal(ThemeApplier.ToColor(expected.Background), BrushColor(resources, TrayThemeTokens.Background));
+    });
+
+    [Fact]
+    public void ASwitchToAnotherThemeOrToPureBlackRepaintsTheKitsBrushes() => OnStaThread(() =>
+    {
+        var resources = WpfUiResources();
+        using var theme = new ThemeApplier(ContractResources.Themes(), resources);
+        var applied = 0;
+        theme.Applied += (_, _) => applied++;
+
+        theme.Apply(Appearance.Default with { ThemeId = "electric", Mode = ThemeMode.Dark });
+        theme.Apply(Appearance.Default with { ThemeId = "sunrise", Mode = ThemeMode.Dark });
+        Assert.Equal(ThemeApplier.ToColor(theme.Tokens.Theme("sunrise").Dark.Background), BrushColor(resources, TrayThemeTokens.Background));
+
+        theme.Apply(Appearance.Default with { ThemeId = "sunrise", Mode = ThemeMode.Dark, PureBlack = true });
+        Assert.Equal(ThemeApplier.ToColor(theme.Tokens.Theme("sunrise").Black.Background), BrushColor(resources, TrayThemeTokens.Background));
+        Assert.Equal(3, applied);
+    });
+
+    [Theory]
+    [InlineData(ThemeMode.System, TrayThemeMode.System)]
+    [InlineData(ThemeMode.Light, TrayThemeMode.Light)]
+    [InlineData(ThemeMode.Dark, TrayThemeMode.Dark)]
+    public void EverySavedModeHasTheKitsMode(ThemeMode mode, TrayThemeMode expected) =>
+        Assert.Equal(expected, ThemeApplier.ToTrayMode(mode));
+
     [Fact]
     public void TheAccentKeysCoverWhatWpfUiWritesForItsAccent() => OnStaThread(() =>
     {
@@ -87,7 +148,7 @@ public sealed class ThemeApplierTests
         }, keys);
     });
 
-    // App.xaml's WPF UI dictionaries, with Windows' accent already written into them.
+    // The WPF UI dictionaries the tray kit merges (Theming/AppResources), with Windows' accent already written into them.
     private static ResourceDictionary WpfUiResources()
     {
         // WPF UI finds its dictionaries by pack URIs, which Application's static constructor registers.
@@ -114,6 +175,8 @@ public sealed class ThemeApplierTests
         var palette = mode == ThemeMode.Light ? definition.Light : pureBlack ? definition.Black : definition.Dark;
         return (ThemeApplier.ToColor(palette.Primary), ThemeApplier.ToColor(palette.OnPrimary));
     }
+
+    private static Color BrushColor(ResourceDictionary resources, string key) => ((SolidColorBrush)resources[key]).Color;
 
     private static Color ColorOf(object value) => value is SolidColorBrush brush ? brush.Color : (Color)value;
 
