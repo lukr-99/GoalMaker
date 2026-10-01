@@ -15,3 +15,7 @@ places below it, Settings at the bottom, and Ctrl+K to jump to any place by typi
 setting, like the theme, so the phone and the PC keep their own. Sections (B) scaled well in the
 sidebar but made every phone place two taps deep; a menu or sheet hides exactly the places worth
 noticing, which is why the hub shows live numbers instead of names.
+
+**Note, 2026-10-01.** The owner asked for the phone's hub on the PC too. All places now opens a
+Places page with the same live tiles and Edit (PC pin rules: no limit, the last pin stays); the
+arrow at its side only folds its list. The pins and Ctrl+K are unchanged.

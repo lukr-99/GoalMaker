@@ -62,7 +62,7 @@ public sealed class PlacesViewModelTests
 
         places.OpenPaletteCommand.Execute(null);
         Assert.True(places.IsPaletteOpen);
-        Assert.Equal(15, places.Matches.Count);
+        Assert.Equal(16, places.Matches.Count);
 
         places.Query = "nav.s";
         Assert.Equal(["stats", "settings"], places.Matches.Select(entry => entry.Id));

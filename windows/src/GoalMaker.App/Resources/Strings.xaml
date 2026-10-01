@@ -864,4 +864,28 @@
     <sys:String x:Key="Places.GoToShortcut">Ctrl K</sys:String>
     <sys:String x:Key="Places.GoToHint">Go to a place…</sys:String>
     <sys:String x:Key="Places.NothingFound">Nothing called that</sys:String>
+    <sys:String x:Key="Places.AllHelp">Opens a page with every place. Right and Left fold the list.</sys:String>
+    <!-- The Places page, which All places opens (ADR 0014) -->
+    <sys:String x:Key="Places.InSidebar">In the sidebar: {0}</sys:String>
+    <sys:String x:Key="Places.Edit">Edit</sys:String>
+    <sys:String x:Key="Places.EditLabel">Edit pinned places</sys:String>
+    <sys:String x:Key="Places.Done">Done</sys:String>
+    <sys:String x:Key="Places.EditHint">{0} pinned. Click a place to pin or unpin it. The last pin stays.</sys:String>
+    <sys:String x:Key="Places.IsPinned">Pinned</sys:String>
+    <sys:String x:Key="Places.NotPinned">Not pinned</sys:String>
+    <sys:String x:Key="Places.OutOf">/ {0}</sys:String>
+    <sys:String x:Key="Places.TomorrowLine">{0} planned</sys:String>
+    <sys:String x:Key="Places.InboxWord">to sort</sys:String>
+    <sys:String x:Key="Places.CalendarLine">{0} in the next 7 days</sys:String>
+    <sys:String x:Key="Places.HabitsNone">Nothing due today</sys:String>
+    <sys:String x:Key="Places.GoalsNone">No goals this week</sys:String>
+    <sys:String x:Key="Places.ProjectsLine">{0} open · {1} doing</sys:String>
+    <sys:String x:Key="Places.Letter">Your letter is here</sys:String>
+    <sys:String x:Key="Places.ReviewsLine">Past weeks and months</sys:String>
+    <sys:String x:Key="Places.StatsLine">{0} done this week</sys:String>
+    <sys:String x:Key="Places.ArchiveLine">{0} done</sys:String>
+    <sys:String x:Key="Places.WantsReady">ready</sys:String>
+    <sys:String x:Key="Places.WantsCooling">{0} cooling</sys:String>
+    <sys:String x:Key="Places.TallyLine">{0} today</sys:String>
+    <sys:String x:Key="Places.TallyNone">Nothing counted today</sys:String>
 </ResourceDictionary>

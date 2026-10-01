@@ -306,6 +306,9 @@ public sealed class AppGraph : IDisposable
         ProjectsPage = new ProjectsViewModel(Projects, Tasks, Settings, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
             Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
+        // The Places page that All places opens: a live tile for every place (ADR 0014).
+        PlacesHub = new PlacesHubViewModel(
+            Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
@@ -503,6 +506,9 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The Calendar page (docs/calendar.md).</summary>
     public CalendarViewModel CalendarPage { get; private set; } = null!;
+
+    /// <summary>The Places page: every place as a live tile, with Edit for the pins.</summary>
+    public PlacesHubViewModel PlacesHub { get; private set; } = null!;
 
     /// <summary>The guided review, opened from the Reviews page.</summary>
     public ReviewViewModel Review { get; private set; } = null!;
@@ -876,6 +882,7 @@ public sealed class AppGraph : IDisposable
         StatsPage.Refresh();
         ProjectsPage.Refresh();
         CalendarPage.Refresh();
+        PlacesHub.Refresh();
     }
 
     // Back online: flush the outbox now instead of waiting for the next offline retry.

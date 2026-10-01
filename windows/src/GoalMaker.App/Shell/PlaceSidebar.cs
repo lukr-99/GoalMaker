@@ -10,36 +10,38 @@ namespace GoalMaker.App.Shell;
 
 /// <summary>
 /// The sidebar's items (ADR 0014): a Pinned header with the pinned places in the owner's order, then
-/// All places, which folds out the rest. Every place offers Pin or Unpin on a right click.
+/// All places, which opens the Places page and whose arrow folds out the rest. Every place offers Pin
+/// or Unpin on a right click.
 /// </summary>
 internal static class PlaceSidebar
 {
     /// <summary>The tag All places carries, so the shell can tell whether it is folded out.</summary>
-    public const string AllPlaces = "all-places";
+    public const string AllPlaces = PlacesViewModel.AllPlaces;
 
-    private static readonly Dictionary<string, (Type Page, SymbolRegular Icon)> Places = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, Type> Places = new(StringComparer.Ordinal)
     {
-        [PlaceRules.Today] = (typeof(TodayPage), SymbolRegular.CalendarToday24),
-        [PlaceRules.Tomorrow] = (typeof(TomorrowPage), SymbolRegular.CalendarArrowRight24),
-        [PlaceRules.Inbox] = (typeof(InboxPage), SymbolRegular.MailInbox24),
-        [PlaceRules.Calendar] = (typeof(CalendarPage), SymbolRegular.CalendarLtr24),
-        [PlaceRules.Habits] = (typeof(HabitsPage), SymbolRegular.ArrowRepeatAll24),
-        [PlaceRules.Goals] = (typeof(GoalsPage), SymbolRegular.Flag24),
-        [PlaceRules.Projects] = (typeof(ProjectsPage), SymbolRegular.Board24),
-        [PlaceRules.Reviews] = (typeof(ReviewsPage), SymbolRegular.BookOpen24),
-        [PlaceRules.Stats] = (typeof(StatsPage), SymbolRegular.DataTrending24),
-        [PlaceRules.Wants] = (typeof(WantsPage), SymbolRegular.ShoppingBag24),
-        [PlaceRules.Tally] = (typeof(TallyPage), SymbolRegular.Timer24),
-        [PlaceRules.Archive] = (typeof(ArchivePage), SymbolRegular.Archive24),
-        [PlacesViewModel.Settings] = (typeof(SettingsPage), SymbolRegular.Settings24),
-        [PlacesViewModel.Activity] = (typeof(ActivityPage), SymbolRegular.History24),
-        [PlacesViewModel.Areas] = (typeof(AreasPage), SymbolRegular.Tag24),
+        [PlaceRules.Today] = typeof(TodayPage),
+        [PlaceRules.Tomorrow] = typeof(TomorrowPage),
+        [PlaceRules.Inbox] = typeof(InboxPage),
+        [PlaceRules.Calendar] = typeof(CalendarPage),
+        [PlaceRules.Habits] = typeof(HabitsPage),
+        [PlaceRules.Goals] = typeof(GoalsPage),
+        [PlaceRules.Projects] = typeof(ProjectsPage),
+        [PlaceRules.Reviews] = typeof(ReviewsPage),
+        [PlaceRules.Stats] = typeof(StatsPage),
+        [PlaceRules.Wants] = typeof(WantsPage),
+        [PlaceRules.Tally] = typeof(TallyPage),
+        [PlaceRules.Archive] = typeof(ArchivePage),
+        [PlacesViewModel.AllPlaces] = typeof(PlacesPage),
+        [PlacesViewModel.Settings] = typeof(SettingsPage),
+        [PlacesViewModel.Activity] = typeof(ActivityPage),
+        [PlacesViewModel.Areas] = typeof(AreasPage),
     };
 
-    public static Type PageOf(string place) => Places.TryGetValue(place, out var look) ? look.Page : typeof(TodayPage);
+    public static Type PageOf(string place) => Places.TryGetValue(place, out var page) ? page : typeof(TodayPage);
 
     /// <summary>The place a page is, or null for a page that is not one (a task, the review, Plan tomorrow).</summary>
-    public static string? PlaceOf(Type page) => Places.FirstOrDefault(entry => entry.Value.Page == page).Key;
+    public static string? PlaceOf(Type page) => Places.FirstOrDefault(entry => entry.Value == page).Key;
 
     /// <summary>Fills <paramref name="items"/> again from the pins, keeping All places open or folded as it was.</summary>
     public static void Build(System.Collections.IList items, PlacesViewModel places, bool allOpen)
@@ -62,18 +64,16 @@ internal static class PlaceSidebar
             items.Add(Item(entry, places));
         }
 
-        if (places.Others.Count == 0)
-        {
-            return;
-        }
-
-        var all = new NavigationViewItem
+        // All places stays even with every place pinned: it opens the Places page.
+        var all = new AllPlacesItem(() => places.Open(AllPlaces))
         {
             Content = Application.Current.FindResource("Places.All"),
-            Icon = new SymbolIcon { Symbol = SymbolRegular.Apps24 },
+            Icon = new SymbolIcon { Symbol = PlaceIcons.Of(AllPlaces) },
+            TargetPageType = typeof(PlacesPage),
             IsExpanded = allOpen,
             Tag = AllPlaces,
         };
+        System.Windows.Automation.AutomationProperties.SetHelpText(all, (string)Application.Current.FindResource("Places.AllHelp"));
         foreach (var entry in places.Others)
         {
             all.MenuItems.Add(Item(entry, places));
@@ -97,12 +97,11 @@ internal static class PlaceSidebar
 
     private static NavigationViewItem Item(PlaceEntry entry, PlacesViewModel places)
     {
-        var look = Places[entry.Id];
         var item = new NavigationViewItem
         {
             Content = entry.Label,
-            Icon = new SymbolIcon { Symbol = look.Icon },
-            TargetPageType = look.Page,
+            Icon = new SymbolIcon { Symbol = PlaceIcons.Of(entry.Id) },
+            TargetPageType = Places[entry.Id],
             Tag = entry.Id,
         };
         var pinned = places.IsPinned(entry.Id);

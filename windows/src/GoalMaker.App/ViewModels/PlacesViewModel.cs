@@ -9,7 +9,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The sidebar's places (ADR 0014): the ones pinned to the top in the owner's order, All places below
-/// them, the Pin toggle for the page on show, and Go to (Ctrl+K), which finds any page by typing.
+/// them (which opens the Places page), the Pin toggle for the page on show, and Go to (Ctrl+K), which
+/// finds any page by typing.
 /// Pins are this PC's own setting; the rules are <see cref="PlaceRules"/>.
 /// </summary>
 public sealed partial class PlacesViewModel : ObservableObject
@@ -21,7 +22,10 @@ public sealed partial class PlacesViewModel : ObservableObject
 
     public const string Areas = "areas";
 
-    private static readonly string[] Extras = [Settings, Activity, Areas];
+    /// <summary>The Places page: a live tile for every place, opened from All places or Go to.</summary>
+    public const string AllPlaces = "places";
+
+    private static readonly string[] Extras = [AllPlaces, Settings, Activity, Areas];
 
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
@@ -86,6 +90,7 @@ public sealed partial class PlacesViewModel : ObservableObject
         PlaceRules.Archive => "Nav.Archive",
         Activity => "Nav.Activity",
         Areas => "Nav.AreasAndTags",
+        AllPlaces => "Places.All",
         _ => "Nav.Settings",
     });
 
@@ -150,8 +155,11 @@ public sealed partial class PlacesViewModel : ObservableObject
         }
 
         IsPaletteOpen = false;
-        PlaceChosen?.Invoke(this, chosen);
+        Open(chosen);
     }
+
+    /// <summary>Asks the shell to open <paramref name="place"/>, from Go to or a tile on the Places page.</summary>
+    public void Open(string place) => PlaceChosen?.Invoke(this, place);
 
     partial void OnQueryChanged(string value) => FilterMatches();
 
