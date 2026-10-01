@@ -1024,7 +1024,9 @@ public sealed class PageSnapshots
         var page = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
         page.CheckForUpdatesCommand.ExecuteAsync(null).GetAwaiter().GetResult();
         var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
-        Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action())), folder, "update-mark-settings-page", new Size(852, 4200));
+        var sections = new SettingsSectionsViewModel(strings, devBuild: false, () => { });
+        var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
+        Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action()), sections, areas), folder, "update-mark-settings-page", new Size(852, 4200));
 
         updates.Latest = "1.0.0";
         updates.Service.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
@@ -1032,6 +1034,59 @@ public sealed class PageSnapshots
         Sidebar("update-mark-problem-only-track-dark");
         problems.Clear(ProblemRules.Sync);
         Sidebar("update-mark-none-track-dark");
+    });
+
+    // Settings with its section list on the left, in dark and light: the top of the page, the page
+    // after a jump to Areas and tags, and the whole page, with a few areas and tags to show.
+    [Fact(Explicit = true)]
+    public void SettingsSections() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        foreach (var (name, emoji, color) in new[] { ("Health", "🏃", "blue"), ("Work", "💼", "violet"), ("Home", "🏠", "blue"), ("School", "", "violet") })
+        {
+            var area = planner.Areas.Create(name)!;
+            planner.Areas.Recolor(area.Id, color);
+            if (emoji.Length > 0)
+            {
+                planner.Areas.SetEmoji(area.Id, emoji);
+            }
+        }
+
+        foreach (var tag in new[] { "errand", "deep-work", "call" })
+        {
+            planner.Tags.FindOrCreate(tag);
+        }
+
+        using var theme = Theme(planner);
+        var updates = new TestUpdates();
+        var problems = new ProblemLog(planner.Time);
+        var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
+        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Dark, GoalMaker.Core.Settings.ThemeMode.Light })
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = "track", Mode = mode });
+            var suffix = mode.ToString().ToLowerInvariant();
+
+            // Built again after each theme switch: a page taken out of its window misses the change.
+            SettingsPage Page(out SettingsSectionsViewModel sections)
+            {
+                sections = new SettingsSectionsViewModel(strings, devBuild: false, () => { });
+                var settings = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
+                var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
+                return new SettingsPage(settings, connector, new ProblemsViewModel(problems, strings, action => action()), sections, areas);
+            }
+
+            var size = new Size(1100, 760);
+            Save(Page(out _), folder, $"settings-sections-{suffix}", size);
+
+            var jumped = Page(out var list);
+            Save(jumped, folder, $"settings-sections-areas-{suffix}", size);
+            list.JumpTo(SettingsSectionsViewModel.Areas);
+            Save(jumped, folder, $"settings-sections-areas-{suffix}", size);
+            Assert.Equal(SettingsSectionsViewModel.Areas, list.Current);
+
+            Save(Page(out _), folder, $"settings-sections-full-{suffix}", new Size(1100, 4600));
+        }
     });
 
     [Fact(Explicit = true)]

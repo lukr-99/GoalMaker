@@ -23,419 +23,547 @@
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
         </Style>
+        <!-- An entry of the section list: the title, and an accent bar with a stronger face on the current one. -->
+        <Style x:Key="SectionLink" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Row" Margin="0,0,0,2" Padding="12,7" CornerRadius="{DynamicResource GM.RowCorner}"
+                                Background="Transparent" BorderThickness="1" BorderBrush="Transparent">
+                            <DockPanel>
+                                <Border x:Name="Bar" DockPanel.Dock="Left" Width="3" Margin="0,1,10,1" CornerRadius="1.5"
+                                        Background="{DynamicResource GM.AccentBrush}" Visibility="Hidden" />
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="Row" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                                <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- An area or a tag as a small pill. -->
+        <Style x:Key="Pill" TargetType="Border">
+            <Setter Property="Margin" Value="0,0,8,8" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+        </Style>
     </Page.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
-            <controls:HeadlineText Margin="0,0,0,24" Title="{DynamicResource Settings.Title}" FontSize="40" />
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
 
-            <!-- What went wrong while nobody was watching (docs/problems.md); the view model is set in code. -->
-            <ui:Card x:Name="ProblemsCard" Margin="0,0,0,12" Padding="20"
-                     Visibility="{Binding HasProblems, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Problems.Title}" />
-                    <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,0,0,16">
-                                    <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
-                                               FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding Advice}" />
-                                    <TextBlock Style="{StaticResource Hint}" Text="{Binding When}" FontSize="12" />
-                                    <Expander Margin="0,8,0,0"
-                                              Header="{DynamicResource Problems.WhatHappened}"
-                                              Visibility="{Binding HasDetail, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBox Margin="0,8,0,0"
-                                                 Text="{Binding Detail, Mode=OneWay}"
-                                                 IsReadOnly="True"
-                                                 TextWrapping="Wrap"
-                                                 BorderThickness="0"
-                                                 Background="Transparent"
-                                                 FontSize="12"
-                                                 Foreground="{DynamicResource GM.TextMutedBrush}"
-                                                 AutomationProperties.Name="{DynamicResource Problems.WhatHappened}" />
-                                    </Expander>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <!-- The mark takes on the theme's colors, and redraws itself when the theme changes. -->
-                    <DockPanel>
-                        <controls:GoalMakerLogo DockPanel.Dock="Right" Width="44" Height="44" VerticalAlignment="Top" />
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Appearance}" />
-                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.Theme}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <ItemsControl ItemsSource="{Binding Themes}" Focusable="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <UniformGrid Columns="4" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <RadioButton Margin="0,0,8,8"
-                                             GroupName="ThemePick"
-                                             Cursor="Hand"
-                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
-                                             ToolTip="{Binding Summary}"
-                                             AutomationProperties.Name="{Binding AccessibleName}">
-                                    <RadioButton.Template>
-                                        <ControlTemplate TargetType="RadioButton">
-                                            <Border x:Name="Card"
-                                                    Padding="12"
-                                                    CornerRadius="10"
-                                                    BorderThickness="1"
-                                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                                    Background="{Binding Background}">
-                                                <StackPanel>
-                                                    <TextBlock Text="{Binding Name}" FontFamily="{Binding HeadingFont}" FontSize="18" Foreground="{Binding Text}" />
-                                                    <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
-                                                        <Border Padding="8,0" CornerRadius="6" Background="{Binding Hero}">
-                                                            <TextBlock Text="3/5" FontFamily="{Binding NumberFont}" FontSize="18" Foreground="{Binding HeroAccent}" />
-                                                        </Border>
-                                                        <Border Width="16" Height="16" Margin="8,0,0,0" VerticalAlignment="Center" CornerRadius="3" Background="{Binding Accent}" />
-                                                        <Ellipse Width="16" Height="16" Margin="6,0,0,0" VerticalAlignment="Center" Fill="{Binding Primary}" />
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsChecked" Value="True">
-                                                    <Setter TargetName="Card" Property="BorderThickness" Value="3" />
-                                                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.PrimaryBrush}" />
-                                                </Trigger>
-                                                <Trigger Property="IsKeyboardFocused" Value="True">
-                                                    <Setter TargetName="Card" Property="BorderThickness" Value="3" />
-                                                    <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </RadioButton.Template>
-                                </RadioButton>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Settings.Mode}" />
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton Margin="0,0,24,0" GroupName="Mode" Content="{DynamicResource Settings.ThemeSystem}" IsChecked="{Binding IsSystemTheme}" />
-                        <RadioButton Margin="0,0,24,0" GroupName="Mode" Content="{DynamicResource Settings.ThemeLight}" IsChecked="{Binding IsLightTheme}" />
-                        <RadioButton GroupName="Mode" Content="{DynamicResource Settings.ThemeDark}" IsChecked="{Binding IsDarkTheme}" />
-                    </StackPanel>
-
-                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
-                    <DockPanel Margin="0,16,0,0">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding PureBlack}"
-                                         AutomationProperties.Name="{DynamicResource Settings.PureBlack}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.PureBlack}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.PureBlackHint}" />
-                        </StackPanel>
-                    </DockPanel>
-
-                    <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Settings.ReduceMotion}" />
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton Margin="0,0,24,0" GroupName="Motion" Content="{DynamicResource Settings.ThemeSystem}" IsChecked="{Binding IsReduceMotionSystem}" />
-                        <RadioButton Margin="0,0,24,0" GroupName="Motion" Content="{DynamicResource Settings.ReduceMotionOn}" IsChecked="{Binding IsReduceMotionOn}" />
-                        <RadioButton GroupName="Motion" Content="{DynamicResource Settings.ReduceMotionOff}" IsChecked="{Binding IsReduceMotionOff}" />
-                    </StackPanel>
-
-                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
-                    <DockPanel Margin="0,16,0,0">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding CompletionSound}"
-                                         AutomationProperties.Name="{DynamicResource Settings.CompletionSound}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.CompletionSound}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.CompletionSoundHint}" />
-                        </StackPanel>
-                    </DockPanel>
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Planning}" />
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.DayStart}" />
-                    <ComboBox MinWidth="140"
-                              HorizontalAlignment="Left"
-                              ItemsSource="{Binding DayStartHours}"
-                              SelectedIndex="{Binding DayStartHour}"
-                              AutomationProperties.Name="{DynamicResource Settings.DayStart}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.DayStartHint}" />
-                    <!-- A setting row: the label and its hint on the left, the switch at the end. -->
-                    <DockPanel Margin="0,20,0,8">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding PlanReminderOn}"
-                                         AutomationProperties.Name="{DynamicResource Settings.PlanReminder}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.PlanReminder}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{Binding PlanReminderSummary}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <ComboBox MinWidth="140"
-                              HorizontalAlignment="Left"
-                              ItemsSource="{Binding PlanReminderChoices}"
-                              SelectedIndex="{Binding PlanReminderTime}"
-                              IsEnabled="{Binding PlanReminderOn}"
-                              AutomationProperties.Name="{DynamicResource Settings.PlanReminderTime}" />
-                    <DockPanel Margin="0,20,0,8">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding WeeklyReviewOn}"
-                                         AutomationProperties.Name="{DynamicResource Settings.WeeklyReview}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.WeeklyReview}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{Binding WeeklyReviewSummary}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <ComboBox MinWidth="140"
-                                  ItemsSource="{Binding PlanReminderChoices}"
-                                  SelectedIndex="{Binding WeeklyReviewTime}"
-                                  IsEnabled="{Binding WeeklyReviewOn}"
-                                  AutomationProperties.Name="{DynamicResource Settings.WeeklyReview}" />
-                        <ComboBox MinWidth="140"
-                                  Margin="12,0,0,0"
-                                  ItemsSource="{Binding ReviewWeekdays}"
-                                  SelectedIndex="{Binding WeeklyReviewDay}"
-                                  IsEnabled="{Binding WeeklyReviewOn}"
-                                  AutomationProperties.Name="{DynamicResource Settings.WeeklyReviewDay}" />
-                    </StackPanel>
-                    <DockPanel Margin="0,20,0,8">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding MonthlyReviewOn}"
-                                         AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.MonthlyReview}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{Binding MonthlyReviewSummary}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <ComboBox MinWidth="140"
-                              HorizontalAlignment="Left"
-                              ItemsSource="{Binding PlanReminderChoices}"
-                              SelectedIndex="{Binding MonthlyReviewTime}"
-                              IsEnabled="{Binding MonthlyReviewOn}"
-                              AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
-                    <DockPanel Margin="0,20,0,8">
-                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding WantsReadyOn}"
-                                         AutomationProperties.Name="{DynamicResource Settings.WantsReady}" />
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{DynamicResource Settings.WantsReady}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Style="{StaticResource Hint}" Text="{Binding WantsReadySummary}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <ComboBox MinWidth="140"
-                              HorizontalAlignment="Left"
-                              ItemsSource="{Binding PlanReminderChoices}"
-                              SelectedIndex="{Binding WantsReadyTime}"
-                              IsEnabled="{Binding WantsReadyOn}"
-                              AutomationProperties.Name="{DynamicResource Settings.WantsReady}" />
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ComboBox MinWidth="120"
-                                  ItemsSource="{Binding QuietHourChoices}"
-                                  SelectedIndex="{Binding QuietHoursStart}"
-                                  AutomationProperties.Name="{DynamicResource Settings.QuietHoursStart}" />
-                        <TextBlock VerticalAlignment="Center" Margin="12,0" Text="{DynamicResource Settings.QuietHoursTo}" />
-                        <ComboBox MinWidth="120"
-                                  ItemsSource="{Binding QuietHourChoices}"
-                                  SelectedIndex="{Binding QuietHoursEnd}"
-                                  AutomationProperties.Name="{DynamicResource Settings.QuietHoursEnd}" />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding QuietHoursSummary}" />
-                </StackPanel>
-            </ui:Card>
-
-            <!-- The Claude connector (docs/connector.md); its DataContext is the ConnectorViewModel, set in code. -->
-            <controls:ConnectorCard x:Name="ConnectorCard" Margin="0,0,0,12" />
-
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.QuickAdd}" />
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.QuickAddShortcut}" />
-                    <StackPanel Orientation="Horizontal">
-                        <!-- Press the new keys here; SettingsPage.xaml.cs turns them into the shortcut. -->
-                        <TextBox x:Name="QuickAddShortcut"
-                                 MinWidth="200"
-                                 IsReadOnly="True"
-                                 IsReadOnlyCaretVisible="False"
-                                 Text="{Binding QuickAddHotkeyText, Mode=OneWay}"
-                                 PreviewKeyDown="OnQuickAddShortcutKeyDown"
-                                 ToolTip="{DynamicResource Settings.QuickAddPress}"
-                                 AutomationProperties.Name="{DynamicResource Settings.QuickAddShortcut}"
-                                 AutomationProperties.HelpText="{DynamicResource Settings.QuickAddPress}" />
-                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.QuickAddReset}" Command="{Binding ResetQuickAddHotkeyCommand}" />
-                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.QuickAddTurnOff}" Command="{Binding TurnOffQuickAddHotkeyCommand}" />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding QuickAddHotkeyStatus}" />
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Your data (docs/backup.md): one file with everything, and the weekly one. -->
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Backup}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" Text="{DynamicResource Settings.BackupHint}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Content="{DynamicResource Settings.BackupExport}" Command="{Binding ExportDataCommand}" />
-                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.BackupRestore}" Command="{Binding OfferRestoreCommand}" />
-                        <ui:Button Margin="8,0,0,0"
-                                   Appearance="Primary"
-                                   Content="{DynamicResource Settings.BackupRestoreGo}"
-                                   Command="{Binding RestoreDataCommand}"
-                                   Visibility="{Binding HasPendingRestore, Converter={StaticResource BoolToVisibility}}" />
-                    </StackPanel>
-
-                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,16,0,4" Text="{DynamicResource Settings.BackupWeekly}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Settings.BackupWeeklyHint}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Content="{DynamicResource Settings.BackupWeeklyChoose}" Command="{Binding ChooseWeeklyBackupCommand}" />
-                        <ui:Button Margin="8,0,0,0"
-                                   Content="{DynamicResource Settings.BackupWeeklyOffButton}"
-                                   Command="{Binding TurnOffWeeklyBackupCommand}"
-                                   Visibility="{Binding HasWeeklyBackup, Converter={StaticResource BoolToVisibility}}" />
-                    </StackPanel>
-                    <TextBlock Style="{StaticResource Hint}"
-                               Margin="0,8,0,0"
-                               Text="{Binding WeeklyBackupFolder}"
-                               Visibility="{Binding HasWeeklyBackup, Converter={StaticResource BoolToVisibility}}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding BackupStatus}" />
-                </StackPanel>
-            </ui:Card>
-
-            <!-- Startup: GoalMaker's own (story 81) and the ask that hands it to Startup Profiles (story 84). -->
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Startup}" />
-                    <ui:ToggleSwitch Content="{DynamicResource Settings.StartWithWindows}" IsChecked="{Binding StartsWithWindows}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.StartWithWindowsHint}" />
-                    <StackPanel Margin="0,16,0,0" Visibility="{Binding HasStartupProfiles, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4" Text="{DynamicResource Settings.StartupProfiles}" />
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Settings.StartupProfilesHint}" />
-                        <ui:Button HorizontalAlignment="Left"
-                                   Content="{DynamicResource Settings.StartupProfilesAdd}"
-                                   Command="{Binding AddToStartupProfilesCommand}" />
-                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding StartupProfilesStatus}" />
-                    </StackPanel>
-                </StackPanel>
-            </ui:Card>
-
-            <!-- The mini windows (spec, story 80); the tray and the mini switch open the same two. -->
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.MiniWindows}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" Text="{DynamicResource Settings.MiniWindowsHint}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Content="{DynamicResource Mini.Today}" Command="{Binding OpenTodayMiniCommand}" />
-                        <ui:Button Margin="8,0,0,0" Content="{DynamicResource Mini.Habits}" Command="{Binding OpenHabitsMiniCommand}" />
-                    </StackPanel>
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />
-                    <!-- A dev build that stays on this PC has no account (docs/sign-in.md). -->
-                    <TextBlock Text="{DynamicResource Settings.LocalOnly}" FontSize="15" TextWrapping="Wrap"
-                               Visibility="{Binding IsLocalOnly, Converter={StaticResource BoolToVisibility}}" />
-                    <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="{Binding Email}" FontSize="15" />
-                        <TextBlock Margin="0,2,0,12" Text="{Binding SignsInAgain}" TextWrapping="Wrap"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}"
-                                   Visibility="{Binding HasSignsInAgain, Converter={StaticResource BoolToVisibility}}" />
-                        <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />
-                        <StackPanel Margin="0,12,0,0" Visibility="{Binding HasSignOutWarning, Converter={StaticResource BoolToVisibility}}">
-                            <TextBlock Margin="0,0,0,8" Text="{Binding SignOutWarning}" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}" />
-                            <ui:Button Appearance="Danger" Content="{DynamicResource Settings.SignOutAnyway}" Command="{Binding SignOutAnywayCommand}" />
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Updates}" />
-                    <TextBlock Margin="0,0,0,12"
-                               Text="{Binding UpdateStatus}"
-                               TextWrapping="Wrap"
-                               FontSize="15"
-                               Visibility="{Binding HasUpdateStatus, Converter={StaticResource BoolToVisibility}}" />
-                    <ProgressBar Margin="0,0,0,12"
-                                 Maximum="1"
-                                 Value="{Binding DownloadProgress}"
-                                 Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVisibility}}" />
-                    <!-- An update the check found: the accent row, as the mark on the Settings item promised. -->
-                    <Grid Margin="0,0,0,12"
-                          AutomationProperties.Name="{Binding AvailableText}"
-                          Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}">
-                        <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.AccentBrush}" Opacity="0.12" />
-                        <Border CornerRadius="{DynamicResource GM.RowCorner}" BorderBrush="{DynamicResource GM.AccentBrush}" BorderThickness="1" Padding="12,10">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Border Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GM.AccentBrush}" VerticalAlignment="Center">
-                                    <ui:SymbolIcon Symbol="ArrowDownload20" Filled="True" FontSize="18" Foreground="{DynamicResource GM.OnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                                <TextBlock Grid.Column="1"
-                                           Margin="12,0,12,0"
-                                           VerticalAlignment="Center"
-                                           Text="{Binding AvailableText}"
-                                           TextWrapping="Wrap"
-                                           FontSize="15"
-                                           FontFamily="{DynamicResource GM.BodyStrongFont}"
-                                           Foreground="{DynamicResource GM.TextBrush}" />
-                                <ui:Button Grid.Column="2"
-                                           Appearance="Primary"
-                                           VerticalAlignment="Center"
-                                           Content="{Binding InstallText}"
-                                           Command="{Binding InstallUpdateCommand}" />
-                            </Grid>
-                        </Border>
-                    </Grid>
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Margin="0,0,8,0" Content="{DynamicResource Settings.CheckUpdates}" Command="{Binding CheckForUpdatesCommand}" />
-                    </StackPanel>
-                    <!-- GoalMaker also looks on its own once a day; this says when a check last got through. -->
-                    <TextBlock Margin="0,8,0,0"
-                               Text="{Binding LastCheckedText}"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Visibility="{Binding HasLastChecked, Converter={StaticResource BoolToVisibility}}" />
-                    <ui:Button Margin="0,12,0,0"
-                               Content="{DynamicResource Settings.Update.DownloadYourself}"
-                               Command="{Binding OpenReleasesPageCommand}"
-                               Visibility="{Binding HasReleasesPage, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12" Padding="20">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.About}" />
-                    <TextBlock Text="{Binding VersionText}" FontSize="15" />
-                    <TextBlock Margin="0,4,0,0" Text="{Binding BackendText}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                </StackPanel>
-            </ui:Card>
-
-            <ui:Card Margin="0,0,0,12" Padding="20" Visibility="{Binding IsDevBuild, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel>
-                    <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Developer}" />
-                    <TextBlock Margin="0,0,0,12"
-                               Text="{DynamicResource Settings.BackendHint}"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    <ui:TextBox Margin="0,0,0,8" PlaceholderText="{DynamicResource Settings.BackendUrl}" Text="{Binding BackendUrlDraft, UpdateSourceTrigger=PropertyChanged}" />
-                    <ui:TextBox Margin="0,0,0,12" PlaceholderText="{DynamicResource Settings.BackendKey}" Text="{Binding BackendKeyDraft, UpdateSourceTrigger=PropertyChanged}" />
-                    <StackPanel Orientation="Horizontal">
-                        <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{DynamicResource Settings.BackendSave}" Command="{Binding SaveBackendCommand}" />
-                        <ui:Button Content="{DynamicResource Settings.BackendReset}" Command="{Binding ResetBackendCommand}" />
-                    </StackPanel>
-                </StackPanel>
-            </ui:Card>
+        <!-- The section list (SettingsSectionsViewModel, set in code): it stays put while the page
+             scrolls, jumps to a section, and marks the one being read. Hidden on a narrow window. -->
+        <StackPanel x:Name="SectionList" Width="200" Margin="16,32,0,16">
+            <TextBlock Margin="12,0,0,8" FontSize="12" Text="{DynamicResource Settings.Sections}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+            <ItemsControl ItemsSource="{Binding Items}" Focusable="False" AutomationProperties.Name="{DynamicResource Settings.Sections}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource SectionLink}"
+                                Command="{Binding JumpCommand}"
+                                AutomationProperties.Name="{Binding AccessibleName}">
+                            <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </StackPanel>
-    </ScrollViewer>
+
+        <ScrollViewer x:Name="Scroller" Grid.Column="1" VerticalScrollBarVisibility="Auto" ScrollChanged="OnScrollChanged">
+            <StackPanel x:Name="SectionsPanel" Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center">
+                <controls:HeadlineText Margin="0,0,0,24" Title="{DynamicResource Settings.Title}" FontSize="40" />
+
+                <!-- What went wrong while nobody was watching (docs/problems.md); the view model is set in code. -->
+                <ui:Card x:Name="ProblemsCard" Margin="0,0,0,12" Padding="20"
+                         Visibility="{Binding HasProblems, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Problems.Title}" />
+                        <ItemsControl ItemsSource="{Binding Rows}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,16">
+                                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap"
+                                                   FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                        <TextBlock Style="{StaticResource Hint}" Text="{Binding Advice}" />
+                                        <TextBlock Style="{StaticResource Hint}" Text="{Binding When}" FontSize="12" />
+                                        <Expander Margin="0,8,0,0"
+                                                  Header="{DynamicResource Problems.WhatHappened}"
+                                                  Visibility="{Binding HasDetail, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBox Margin="0,8,0,0"
+                                                     Text="{Binding Detail, Mode=OneWay}"
+                                                     IsReadOnly="True"
+                                                     TextWrapping="Wrap"
+                                                     BorderThickness="0"
+                                                     Background="Transparent"
+                                                     FontSize="12"
+                                                     Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                     AutomationProperties.Name="{DynamicResource Problems.WhatHappened}" />
+                                        </Expander>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card x:Name="AccountSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Account}" />
+                        <!-- A dev build that stays on this PC has no account (docs/sign-in.md). -->
+                        <TextBlock Text="{DynamicResource Settings.LocalOnly}" FontSize="15" TextWrapping="Wrap"
+                                   Visibility="{Binding IsLocalOnly, Converter={StaticResource BoolToVisibility}}" />
+                        <StackPanel Visibility="{Binding HasAccount, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding Email}" FontSize="15" />
+                            <TextBlock Margin="0,2,0,12" Text="{Binding SignsInAgain}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                                       Visibility="{Binding HasSignsInAgain, Converter={StaticResource BoolToVisibility}}" />
+                            <ui:Button Content="{DynamicResource Settings.SignOut}" Command="{Binding SignOutCommand}" />
+                            <StackPanel Margin="0,12,0,0" Visibility="{Binding HasSignOutWarning, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Margin="0,0,0,8" Text="{Binding SignOutWarning}" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}" />
+                                <ui:Button Appearance="Danger" Content="{DynamicResource Settings.SignOutAnyway}" Command="{Binding SignOutAnywayCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card x:Name="AppearanceSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <!-- The mark takes on the theme's colors, and redraws itself when the theme changes. -->
+                        <DockPanel>
+                            <controls:GoalMakerLogo DockPanel.Dock="Right" Width="44" Height="44" VerticalAlignment="Top" />
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Appearance}" />
+                                <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.Theme}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ItemsControl ItemsSource="{Binding Themes}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Columns="4" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <RadioButton Margin="0,0,8,8"
+                                                 GroupName="ThemePick"
+                                                 Cursor="Hand"
+                                                 IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                 ToolTip="{Binding Summary}"
+                                                 AutomationProperties.Name="{Binding AccessibleName}">
+                                        <RadioButton.Template>
+                                            <ControlTemplate TargetType="RadioButton">
+                                                <Border x:Name="Card"
+                                                        Padding="12"
+                                                        CornerRadius="10"
+                                                        BorderThickness="1"
+                                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                        Background="{Binding Background}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontFamily="{Binding HeadingFont}" FontSize="18" Foreground="{Binding Text}" />
+                                                        <StackPanel Margin="0,8,0,0" Orientation="Horizontal">
+                                                            <Border Padding="8,0" CornerRadius="6" Background="{Binding Hero}">
+                                                                <TextBlock Text="3/5" FontFamily="{Binding NumberFont}" FontSize="18" Foreground="{Binding HeroAccent}" />
+                                                            </Border>
+                                                            <Border Width="16" Height="16" Margin="8,0,0,0" VerticalAlignment="Center" CornerRadius="3" Background="{Binding Accent}" />
+                                                            <Ellipse Width="16" Height="16" Margin="6,0,0,0" VerticalAlignment="Center" Fill="{Binding Primary}" />
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsChecked" Value="True">
+                                                        <Setter TargetName="Card" Property="BorderThickness" Value="3" />
+                                                        <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.PrimaryBrush}" />
+                                                    </Trigger>
+                                                    <Trigger Property="IsKeyboardFocused" Value="True">
+                                                        <Setter TargetName="Card" Property="BorderThickness" Value="3" />
+                                                        <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </RadioButton.Template>
+                                    </RadioButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Settings.Mode}" />
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Margin="0,0,24,0" GroupName="Mode" Content="{DynamicResource Settings.ThemeSystem}" IsChecked="{Binding IsSystemTheme}" />
+                            <RadioButton Margin="0,0,24,0" GroupName="Mode" Content="{DynamicResource Settings.ThemeLight}" IsChecked="{Binding IsLightTheme}" />
+                            <RadioButton GroupName="Mode" Content="{DynamicResource Settings.ThemeDark}" IsChecked="{Binding IsDarkTheme}" />
+                        </StackPanel>
+
+                        <!-- A setting row: the label and its hint on the left, the switch at the end. -->
+                        <DockPanel Margin="0,16,0,0">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding PureBlack}"
+                                             AutomationProperties.Name="{DynamicResource Settings.PureBlack}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Settings.PureBlack}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.PureBlackHint}" />
+                            </StackPanel>
+                        </DockPanel>
+
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Settings.ReduceMotion}" />
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Margin="0,0,24,0" GroupName="Motion" Content="{DynamicResource Settings.ThemeSystem}" IsChecked="{Binding IsReduceMotionSystem}" />
+                            <RadioButton Margin="0,0,24,0" GroupName="Motion" Content="{DynamicResource Settings.ReduceMotionOn}" IsChecked="{Binding IsReduceMotionOn}" />
+                            <RadioButton GroupName="Motion" Content="{DynamicResource Settings.ReduceMotionOff}" IsChecked="{Binding IsReduceMotionOff}" />
+                        </StackPanel>
+
+                        <!-- A setting row: the label and its hint on the left, the switch at the end. -->
+                        <DockPanel Margin="0,16,0,0">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding CompletionSound}"
+                                             AutomationProperties.Name="{DynamicResource Settings.CompletionSound}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Settings.CompletionSound}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Settings.CompletionSoundHint}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card x:Name="PlanningSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Planning}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.DayStart}" />
+                        <ComboBox MinWidth="140"
+                                  HorizontalAlignment="Left"
+                                  ItemsSource="{Binding DayStartHours}"
+                                  SelectedIndex="{Binding DayStartHour}"
+                                  AutomationProperties.Name="{DynamicResource Settings.DayStart}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.DayStartHint}" />
+                        <!-- A setting row: the label and its hint on the left, the switch at the end. -->
+                        <DockPanel Margin="0,20,0,8">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding PlanReminderOn}"
+                                             AutomationProperties.Name="{DynamicResource Settings.PlanReminder}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Settings.PlanReminder}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding PlanReminderSummary}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ComboBox MinWidth="140"
+                                  HorizontalAlignment="Left"
+                                  ItemsSource="{Binding PlanReminderChoices}"
+                                  SelectedIndex="{Binding PlanReminderTime}"
+                                  IsEnabled="{Binding PlanReminderOn}"
+                                  AutomationProperties.Name="{DynamicResource Settings.PlanReminderTime}" />
+                        <DockPanel Margin="0,20,0,8">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding WeeklyReviewOn}"
+                                             AutomationProperties.Name="{DynamicResource Settings.WeeklyReview}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Settings.WeeklyReview}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding WeeklyReviewSummary}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox MinWidth="140"
+                                      ItemsSource="{Binding PlanReminderChoices}"
+                                      SelectedIndex="{Binding WeeklyReviewTime}"
+                                      IsEnabled="{Binding WeeklyReviewOn}"
+                                      AutomationProperties.Name="{DynamicResource Settings.WeeklyReview}" />
+                            <ComboBox MinWidth="140"
+                                      Margin="12,0,0,0"
+                                      ItemsSource="{Binding ReviewWeekdays}"
+                                      SelectedIndex="{Binding WeeklyReviewDay}"
+                                      IsEnabled="{Binding WeeklyReviewOn}"
+                                      AutomationProperties.Name="{DynamicResource Settings.WeeklyReviewDay}" />
+                        </StackPanel>
+                        <DockPanel Margin="0,20,0,8">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding MonthlyReviewOn}"
+                                             AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Settings.MonthlyReview}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding MonthlyReviewSummary}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ComboBox MinWidth="140"
+                                  HorizontalAlignment="Left"
+                                  ItemsSource="{Binding PlanReminderChoices}"
+                                  SelectedIndex="{Binding MonthlyReviewTime}"
+                                  IsEnabled="{Binding MonthlyReviewOn}"
+                                  AutomationProperties.Name="{DynamicResource Settings.MonthlyReview}" />
+                        <DockPanel Margin="0,20,0,8">
+                            <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding WantsReadyOn}"
+                                             AutomationProperties.Name="{DynamicResource Settings.WantsReady}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{DynamicResource Settings.WantsReady}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                <TextBlock Style="{StaticResource Hint}" Text="{Binding WantsReadySummary}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <ComboBox MinWidth="140"
+                                  HorizontalAlignment="Left"
+                                  ItemsSource="{Binding PlanReminderChoices}"
+                                  SelectedIndex="{Binding WantsReadyTime}"
+                                  IsEnabled="{Binding WantsReadyOn}"
+                                  AutomationProperties.Name="{DynamicResource Settings.WantsReady}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,20,0,8" Text="{DynamicResource Settings.QuietHours}" />
+                        <StackPanel Orientation="Horizontal">
+                            <ComboBox MinWidth="120"
+                                      ItemsSource="{Binding QuietHourChoices}"
+                                      SelectedIndex="{Binding QuietHoursStart}"
+                                      AutomationProperties.Name="{DynamicResource Settings.QuietHoursStart}" />
+                            <TextBlock VerticalAlignment="Center" Margin="12,0" Text="{DynamicResource Settings.QuietHoursTo}" />
+                            <ComboBox MinWidth="120"
+                                      ItemsSource="{Binding QuietHourChoices}"
+                                      SelectedIndex="{Binding QuietHoursEnd}"
+                                      AutomationProperties.Name="{DynamicResource Settings.QuietHoursEnd}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding QuietHoursSummary}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Areas and tags: the areas in use and the tags (AreasViewModel, set in code), and the way to the full manager. -->
+                <ui:Card x:Name="AreasSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Areas.Title}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,4" Text="{DynamicResource Areas.OpenHint}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,8" Text="{DynamicResource Areas.Areas}" />
+                        <ItemsControl ItemsSource="{Binding Areas}" Focusable="False" AutomationProperties.Name="{DynamicResource Areas.Areas}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Pill}" Background="{DynamicResource GM.SurfaceBrush}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="10" Height="10" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{Binding Color.Brush}" />
+                                            <TextBlock Margin="0,0,4,0" VerticalAlignment="Center" Text="{Binding Emoji, Mode=OneWay}" />
+                                            <TextBlock VerticalAlignment="Center" Text="{Binding Name, Mode=OneWay}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{DynamicResource Areas.None}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource Hint}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Areas.Count}" Value="0">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,8,0,8" Text="{DynamicResource Areas.Tags}" />
+                        <ItemsControl ItemsSource="{Binding Tags}" Focusable="False" AutomationProperties.Name="{DynamicResource Areas.Tags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Pill}">
+                                        <TextBlock Text="{Binding Name, Mode=OneWay, StringFormat=#{0}}" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="{DynamicResource Areas.NoTagsYet}"
+                                   Visibility="{Binding HasNoTags, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- Its DataContext is the section list, which knows the way to the Areas page. -->
+                        <ui:Button x:Name="OpenAreasButton"
+                                   Margin="0,12,0,0"
+                                   Content="{DynamicResource Areas.Open}"
+                                   Command="{Binding OpenAreasCommand}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- The Claude connector (docs/connector.md); its DataContext is the ConnectorViewModel, set in code. -->
+                <controls:ConnectorCard x:Name="ConnectorCard" Margin="0,0,0,12" />
+
+                <ui:Card x:Name="QuickAddSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.QuickAdd}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,8" Text="{DynamicResource Settings.QuickAddShortcut}" />
+                        <StackPanel Orientation="Horizontal">
+                            <!-- Press the new keys here; SettingsPage.xaml.cs turns them into the shortcut. -->
+                            <TextBox x:Name="QuickAddShortcut"
+                                     MinWidth="200"
+                                     IsReadOnly="True"
+                                     IsReadOnlyCaretVisible="False"
+                                     Text="{Binding QuickAddHotkeyText, Mode=OneWay}"
+                                     PreviewKeyDown="OnQuickAddShortcutKeyDown"
+                                     ToolTip="{DynamicResource Settings.QuickAddPress}"
+                                     AutomationProperties.Name="{DynamicResource Settings.QuickAddShortcut}"
+                                     AutomationProperties.HelpText="{DynamicResource Settings.QuickAddPress}" />
+                            <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.QuickAddReset}" Command="{Binding ResetQuickAddHotkeyCommand}" />
+                            <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.QuickAddTurnOff}" Command="{Binding TurnOffQuickAddHotkeyCommand}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding QuickAddHotkeyStatus}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Your data (docs/backup.md): one file with everything, and the weekly one. -->
+                <ui:Card x:Name="BackupSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Backup}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" Text="{DynamicResource Settings.BackupHint}" />
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="{DynamicResource Settings.BackupExport}" Command="{Binding ExportDataCommand}" />
+                            <ui:Button Margin="8,0,0,0" Content="{DynamicResource Settings.BackupRestore}" Command="{Binding OfferRestoreCommand}" />
+                            <ui:Button Margin="8,0,0,0"
+                                       Appearance="Primary"
+                                       Content="{DynamicResource Settings.BackupRestoreGo}"
+                                       Command="{Binding RestoreDataCommand}"
+                                       Visibility="{Binding HasPendingRestore, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource FieldLabel}" Margin="0,16,0,4" Text="{DynamicResource Settings.BackupWeekly}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Settings.BackupWeeklyHint}" />
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="{DynamicResource Settings.BackupWeeklyChoose}" Command="{Binding ChooseWeeklyBackupCommand}" />
+                            <ui:Button Margin="8,0,0,0"
+                                       Content="{DynamicResource Settings.BackupWeeklyOffButton}"
+                                       Command="{Binding TurnOffWeeklyBackupCommand}"
+                                       Visibility="{Binding HasWeeklyBackup, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Margin="0,8,0,0"
+                                   Text="{Binding WeeklyBackupFolder}"
+                                   Visibility="{Binding HasWeeklyBackup, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding BackupStatus}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- Startup: GoalMaker's own (story 81) and the ask that hands it to Startup Profiles (story 84). -->
+                <ui:Card x:Name="StartupSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Startup}" />
+                        <ui:ToggleSwitch Content="{DynamicResource Settings.StartWithWindows}" IsChecked="{Binding StartsWithWindows}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Settings.StartWithWindowsHint}" />
+                        <StackPanel Margin="0,16,0,0" Visibility="{Binding HasStartupProfiles, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,4" Text="{DynamicResource Settings.StartupProfiles}" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Settings.StartupProfilesHint}" />
+                            <ui:Button HorizontalAlignment="Left"
+                                       Content="{DynamicResource Settings.StartupProfilesAdd}"
+                                       Command="{Binding AddToStartupProfilesCommand}" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{Binding StartupProfilesStatus}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:Card>
+
+                <!-- The mini windows (spec, story 80); the tray and the mini switch open the same two. -->
+                <ui:Card x:Name="MiniWindowsSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.MiniWindows}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,12" Text="{DynamicResource Settings.MiniWindowsHint}" />
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Content="{DynamicResource Mini.Today}" Command="{Binding OpenTodayMiniCommand}" />
+                            <ui:Button Margin="8,0,0,0" Content="{DynamicResource Mini.Habits}" Command="{Binding OpenHabitsMiniCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card x:Name="UpdatesSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Updates}" />
+                        <TextBlock Margin="0,0,0,12"
+                                   Text="{Binding UpdateStatus}"
+                                   TextWrapping="Wrap"
+                                   FontSize="15"
+                                   Visibility="{Binding HasUpdateStatus, Converter={StaticResource BoolToVisibility}}" />
+                        <ProgressBar Margin="0,0,0,12"
+                                     Maximum="1"
+                                     Value="{Binding DownloadProgress}"
+                                     Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- An update the check found: the accent row, as the mark on the Settings item promised. -->
+                        <Grid Margin="0,0,0,12"
+                              AutomationProperties.Name="{Binding AvailableText}"
+                              Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}">
+                            <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.AccentBrush}" Opacity="0.12" />
+                            <Border CornerRadius="{DynamicResource GM.RowCorner}" BorderBrush="{DynamicResource GM.AccentBrush}" BorderThickness="1" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GM.AccentBrush}" VerticalAlignment="Center">
+                                        <ui:SymbolIcon Symbol="ArrowDownload20" Filled="True" FontSize="18" Foreground="{DynamicResource GM.OnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <TextBlock Grid.Column="1"
+                                               Margin="12,0,12,0"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding AvailableText}"
+                                               TextWrapping="Wrap"
+                                               FontSize="15"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                               Foreground="{DynamicResource GM.TextBrush}" />
+                                    <ui:Button Grid.Column="2"
+                                               Appearance="Primary"
+                                               VerticalAlignment="Center"
+                                               Content="{Binding InstallText}"
+                                               Command="{Binding InstallUpdateCommand}" />
+                                </Grid>
+                            </Border>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Margin="0,0,8,0" Content="{DynamicResource Settings.CheckUpdates}" Command="{Binding CheckForUpdatesCommand}" />
+                        </StackPanel>
+                        <!-- GoalMaker also looks on its own once a day; this says when a check last got through. -->
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="{Binding LastCheckedText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Visibility="{Binding HasLastChecked, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Margin="0,12,0,0"
+                                   Content="{DynamicResource Settings.Update.DownloadYourself}"
+                                   Command="{Binding OpenReleasesPageCommand}"
+                                   Visibility="{Binding HasReleasesPage, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card x:Name="AboutSection" Margin="0,0,0,12" Padding="20">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.About}" />
+                        <TextBlock Text="{Binding VersionText}" FontSize="15" />
+                        <TextBlock Margin="0,4,0,0" Text="{Binding BackendText}" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </ui:Card>
+
+                <ui:Card x:Name="DeveloperSection" Margin="0,0,0,12" Padding="20" Visibility="{Binding IsDevBuild, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Settings.Developer}" />
+                        <TextBlock Margin="0,0,0,12"
+                                   Text="{DynamicResource Settings.BackendHint}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ui:TextBox Margin="0,0,0,8" PlaceholderText="{DynamicResource Settings.BackendUrl}" Text="{Binding BackendUrlDraft, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:TextBox Margin="0,0,0,12" PlaceholderText="{DynamicResource Settings.BackendKey}" Text="{Binding BackendKeyDraft, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Orientation="Horizontal">
+                            <ui:Button Margin="0,0,8,0" Appearance="Primary" Content="{DynamicResource Settings.BackendSave}" Command="{Binding SaveBackendCommand}" />
+                            <ui:Button Content="{DynamicResource Settings.BackendReset}" Command="{Binding ResetBackendCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ui:Card>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
 </Page>
