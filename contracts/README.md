@@ -4,8 +4,8 @@ Behavior that the Android app (Kotlin) and the Windows app (C#) must implement i
 here as data. Both test suites load the same files, so a disagreement fails CI in whichever app is
 wrong. The Claude connector's TypeScript rules (`supabase/functions/_shared/rules/rules_test.ts`) run
 the planning files too: lists, plan, recurrence, archive, the ritual ids in reminders, reviews, goals,
-habits and projects, and `wants_test.ts`, `digest_test.ts` and `tally_test.ts` run wants, the
-review digest and Tally.
+habits and projects, and `wants_test.ts`, `digest_test.ts`, `tally_test.ts` and `quickAdd_test.ts`
+run wants, the review digest, Tally and the bottom bar's lines.
 
 | File | Rule | Kotlin test | C# test |
 | --- | --- | --- | --- |
@@ -14,6 +14,7 @@ review digest and Tally.
 | `vectors/release-channel.json` | Where the update channel's manifest, signature and artifacts live on GitHub Releases (ADR 0010) | `ReleaseChannelContractTest` | `ReleaseChannelContractTests` |
 | `vectors/sync-merge.json` | Sync merge, full resync, pull start, timestamp form ([sync](../docs/sync.md)) | `SyncRulesContractTest` | `SyncRulesContractTests` |
 | `vectors/composer.json` | The composer's shortcut grammar ([composer](../docs/composer.md)) | `ComposerParserContractTest` | `ComposerParserContractTests` |
+| `vectors/quick-add.json` | What the bottom bar reads from a want, habit or goal line ([composer](../docs/composer.md#adding-on-wants-habits-and-goals)) | `QuickAddLinesContractTest` | `QuickAddLinesContractTests` |
 | `vectors/lists.json` | What Today, Tomorrow and Inbox hold, and filtering by area and tag ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |
 | `vectors/plan.json` | The Plan tomorrow ritual ([plan tomorrow](../docs/plan-tomorrow.md)) | `PlanRulesContractTest` | `PlanRulesContractTests` |
 | `vectors/recurrence.json` | Repeating tasks and their occurrences ([repeating](../docs/repeating.md)) | `RecurrenceContractTest` | `RecurrenceContractTests` |
