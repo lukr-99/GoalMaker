@@ -22,6 +22,8 @@ class AutoUpdateCheck(
     private val now: () -> Instant,
     private val interval: Duration = DAILY,
     private val startDelay: kotlin.time.Duration = START_DELAY,
+    /** Told about every check, quiet or asked for: the notification and the background download follow it. */
+    private val afterCheck: (UpdateCheckResult) -> Unit = {},
 ) {
     private val running = AtomicBoolean(false)
 
@@ -74,6 +76,7 @@ class AutoUpdateCheck(
         if (result is UpdateCheckResult.UpToDate || result is UpdateCheckResult.Available || result == UpdateCheckResult.Untrusted) {
             settings.setUpdateCheck(now(), (result as? UpdateCheckResult.Available)?.manifest?.version?.toString())
         }
+        afterCheck(result)
         return result
     }
 

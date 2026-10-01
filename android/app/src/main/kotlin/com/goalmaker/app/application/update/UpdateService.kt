@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.update
 
 import com.goalmaker.app.domain.update.ManifestCheck
+import com.goalmaker.app.domain.update.ReleaseArtifact
 import com.goalmaker.app.domain.update.ReleasePlatform
 import com.goalmaker.app.domain.update.UpdatePolicy
 import com.goalmaker.app.domain.version.SemanticVersion
@@ -20,6 +21,8 @@ class UpdateService(
     private val channel: ReleaseChannel,
     private val verifier: ReleaseVerifier,
     private val installer: UpdateInstaller,
+    /** Where a file fetched ahead of Install waits; none keeps every Install a download first. */
+    private val files: UpdateFiles = UpdateFiles.None,
 ) {
     private val found = MutableStateFlow<UpdateCheckResult.Available?>(null)
 
@@ -66,8 +69,46 @@ class UpdateService(
         }
     }
 
+    /**
+     * The file kept for [update] when it still matches the signed manifest's size and SHA-256, so
+     * Install can open it at once; null when there is none or it no longer matches.
+     */
+    fun ready(update: UpdateCheckResult.Available): String? =
+        files.measure(update.artifact.path)?.takeIf { it.matches(update.artifact) }?.localPath
+
+    /**
+     * Fetches [update]'s file into private storage ahead of Install and checks it against the signed
+     * manifest. A file that does not match is deleted, so it is never offered. Never installs.
+     */
+    suspend fun prefetch(update: UpdateCheckResult.Available): PrefetchResult {
+        ready(update)?.let { return PrefetchResult.Ready(it) }
+        val downloaded = try {
+            channel.download(update.artifact.path) { }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            files.clean()
+            return PrefetchResult.Failed(error.message ?: error::class.simpleName.orEmpty())
+        }
+        if (!downloaded.matches(update.artifact)) {
+            files.clean()
+            return PrefetchResult.Corrupted
+        }
+        files.clean(keepPath = update.artifact.path)
+        return PrefetchResult.Ready(downloaded.localPath)
+    }
+
+    /**
+     * Opens the platform installer for [update]: at once with a file fetched ahead and still
+     * matching, or after a verified download. The installer asks the owner to confirm.
+     */
     suspend fun install(update: UpdateCheckResult.Available, onProgress: (Float) -> Unit = {}): InstallResult {
         val expected = update.artifact
+        ready(update)?.let { path ->
+            onProgress(1f)
+            installer.launch(path)
+            return InstallResult.InstallerOpened
+        }
         val downloaded = try {
             channel.download(expected.path) { read -> onProgress((read.toFloat() / expected.size).coerceIn(0f, 1f)) }
         } catch (cancelled: CancellationException) {
@@ -75,10 +116,14 @@ class UpdateService(
         } catch (error: Exception) {
             return InstallResult.Failed(error.message ?: error::class.simpleName.orEmpty())
         }
-        if (downloaded.size != expected.size || !downloaded.sha256.equals(expected.sha256, ignoreCase = true)) {
+        if (!downloaded.matches(expected)) {
+            files.clean()
             return InstallResult.DownloadCorrupted
         }
         installer.launch(downloaded.localPath)
         return InstallResult.InstallerOpened
     }
+
+    private fun DownloadedArtifact.matches(expected: ReleaseArtifact) =
+        size == expected.size && sha256.equals(expected.sha256, ignoreCase = true)
 }
