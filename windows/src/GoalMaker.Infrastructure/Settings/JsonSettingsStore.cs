@@ -162,6 +162,18 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { WeeklyBackupWritten = value });
     }
 
+    public DateTimeOffset? UpdatesCheckedAt
+    {
+        get => document.UpdatesCheckedAt;
+        set => Save(document with { UpdatesCheckedAt = value });
+    }
+
+    public string? UpdateFound
+    {
+        get => document.UpdateFound;
+        set => Save(document with { UpdateFound = value });
+    }
+
     public bool TallyOn
     {
         get => document.TallyOn;

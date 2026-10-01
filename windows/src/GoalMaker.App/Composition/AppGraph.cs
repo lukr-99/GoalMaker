@@ -43,6 +43,8 @@ public sealed class AppGraph : IDisposable
     private static readonly TimeSpan SyncDebounce = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan DayCheckInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan UpdateCheckDelay = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan UpdateCheckLook = TimeSpan.FromHours(1);
 
     private readonly Supabase.Client supabase;
     private readonly IDisposable? signatureKey;
@@ -110,6 +112,18 @@ public sealed class AppGraph : IDisposable
             releases is null ? new NotConfiguredReleaseChannel() : new GitHubReleaseChannel(updatesHttp, releases, Paths.Updates),
             new ReleaseVerifier(signatures),
             new InstallerLauncher(shutdownApp));
+
+        // The quiet check (docs/setup/signing-and-releases.md): half a minute after the start, then a
+        // look every hour that checks once a day. It never installs, and a failure is only logged.
+        UpdateChecks = new AutoUpdateCheck(Updates, Settings, TimeProvider.System, AutoUpdateCheck.Daily);
+        UpdateChecks.Checked += (_, result) =>
+        {
+            if (result is UpdateCheckResult.Failed failed)
+            {
+                System.Diagnostics.Trace.WriteLine("GoalMaker: the update check failed: " + failed.Detail);
+            }
+        };
+        UpdateChecks.Start(UpdateCheckDelay, UpdateCheckLook);
 
         catalog = ContractResources.SyncedTables();
         var design = ContractResources.Themes();
@@ -356,7 +370,7 @@ public sealed class AppGraph : IDisposable
         // Profiles through that app's own window when it is installed (story 84).
         var executable = Environment.ProcessPath ?? string.Empty;
         SettingsPage = new SettingsViewModel(
-            Auth, Sync, Settings, Updates, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm,
+            Auth, Sync, Settings, Updates, UpdateChecks, AppInfo, strings, Theme.Tokens, () => Theme.IsDark, Theme.Apply, PlanningDayChanged, Reminders.Rearm,
             gesture => ApplyQuickAddHotkey(gesture), OpenMini,
             Backup, Weekly, backupFolder, Sync.Request, PickExport, PickImport, PickFolder,
             new WindowsSignInStartup(build.InstanceName, executable),
@@ -433,6 +447,9 @@ public sealed class AppGraph : IDisposable
     public IAuthGateway Auth { get; }
 
     public UpdateService Updates { get; }
+
+    /// <summary>The quiet daily check for updates and the record of the last one.</summary>
+    public AutoUpdateCheck UpdateChecks { get; }
 
     public SyncCoordinator Sync { get; }
 
@@ -581,6 +598,7 @@ public sealed class AppGraph : IDisposable
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         SystemEvents.TimeChanged -= OnTimeChanged;
         reminderTimer.Dispose();
+        UpdateChecks.Dispose();
 
         // The open stretch and the touched days go into the replica before it closes.
         TallyTracker.Dispose();

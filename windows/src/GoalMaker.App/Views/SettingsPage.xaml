@@ -400,6 +400,12 @@
                     <StackPanel Orientation="Horizontal">
                         <ui:Button Margin="0,0,8,0" Content="{DynamicResource Settings.CheckUpdates}" Command="{Binding CheckForUpdatesCommand}" />
                     </StackPanel>
+                    <!-- GoalMaker also looks on its own once a day; this says when a check last got through. -->
+                    <TextBlock Margin="0,8,0,0"
+                               Text="{Binding LastCheckedText}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Visibility="{Binding HasLastChecked, Converter={StaticResource BoolToVisibility}}" />
                     <ui:Button Margin="0,12,0,0"
                                Content="{DynamicResource Settings.Update.DownloadYourself}"
                                Command="{Binding OpenReleasesPageCommand}"

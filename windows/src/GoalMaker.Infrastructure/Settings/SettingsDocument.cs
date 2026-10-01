@@ -63,6 +63,10 @@ public sealed record SettingsDocument
 
     public DateTimeOffset? WeeklyBackupWritten { get; init; }
 
+    public DateTimeOffset? UpdatesCheckedAt { get; init; }
+
+    public string? UpdateFound { get; init; }
+
     public bool TallyOn { get; init; }
 
     public string? DeviceId { get; init; }

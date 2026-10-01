@@ -132,6 +132,35 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.True(shell.HasSettingsMark);
     }
 
+    [Fact]
+    public async Task AnUpdateTheQuietCheckFoundStandsOutInTheCard()
+    {
+        var channel = new TestUpdates();
+        var settings = Settings(ReleasesPage, channel.Service);
+        Assert.False(settings.CanInstall);
+
+        // The daily check runs outside the page, through the same service.
+        await channel.Service.CheckAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(settings.CanInstall);
+        Assert.Equal("Settings.Update.Available(1.1.0)", settings.AvailableText);
+        Assert.Empty(channel.Launched);
+    }
+
+    [Fact]
+    public async Task TheCardSaysWhenACheckLastGotThrough()
+    {
+        var channel = new TestUpdates(installed: "1.1.0");
+        var settings = Settings(ReleasesPage, channel.Service);
+        Assert.False(settings.HasLastChecked);
+
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.True(settings.HasLastChecked);
+        Assert.StartsWith("Settings.Update.LastChecked", settings.LastCheckedText, StringComparison.Ordinal);
+        Assert.Equal(planner.Time.GetUtcNow(), planner.Settings.UpdatesCheckedAt);
+    }
+
     public void Dispose() => planner.Dispose();
 
     private ShellViewModel Shell(UpdateService updates, ProblemLog? problems = null)
@@ -165,6 +194,7 @@ public sealed class SettingsViewModelTests : IDisposable
             planner.Sync,
             planner.Settings,
             updates,
+            new AutoUpdateCheck(updates, planner.Settings, planner.Time, AutoUpdateCheck.Daily),
             new AppInfo("1.0.0", false, backend, backend),
             strings,
             ContractResources.Themes(),

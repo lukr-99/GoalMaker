@@ -23,6 +23,13 @@ public sealed class UpdateService(
     /// <summary><see cref="Waiting"/> changed. May be raised off the UI thread.</summary>
     public event EventHandler? WaitingChanged;
 
+    /// <summary>
+    /// Whether a check can reach anything at all: the build has a channel and is a release. A dev
+    /// build or one without the key answers every check without the network.
+    /// </summary>
+    public bool CanCheck =>
+        channelConfigured && SemanticVersion.Parse(installedVersion) is { IsDevelopmentBuild: false };
+
     public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken)
     {
         var result = await FindAsync(cancellationToken).ConfigureAwait(false);
