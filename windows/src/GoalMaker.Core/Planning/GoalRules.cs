@@ -10,6 +10,23 @@ public static class GoalRules
     public const string Done = "done";
     public const string Dropped = "dropped";
 
+    /// <summary>How far under the share of its period gone by a goal can be and still be on track.</summary>
+    public const double PaceSlack = 0.05;
+
+    /// <summary>The share of its period gone by after which an open done-or-not goal needs you.</summary>
+    public const double DueSoon = 0.7;
+
+    private const double Epsilon = 1e-9;
+
+    /// <summary>How the vectors name a pace.</summary>
+    public static string PaceId(GoalPace pace) => pace switch
+    {
+        GoalPace.Behind => "behind",
+        GoalPace.OnTrack => "on_track",
+        GoalPace.Hit => "hit",
+        _ => "dropped",
+    };
+
     /// <summary>How the server and the vectors name a horizon.</summary>
     public static string Id(GoalHorizon horizon) => horizon.ToString().ToLowerInvariant();
 
@@ -91,6 +108,98 @@ public static class GoalRules
             : [];
         return Progress(goal.Mode, goal.Status, goal.Target, tasks, [.. entries, .. amounts]);
     }
+
+    /// <summary>The share of the <paramref name="horizon"/> period starting on <paramref name="start"/> gone by before <paramref name="today"/>: 0 before it starts, 1 after it ends.</summary>
+    public static double Elapsed(GoalHorizon horizon, DateOnly start, DateOnly today)
+    {
+        var length = PeriodEnd(horizon, start).DayNumber - start.DayNumber + 1;
+        var gone = Math.Clamp(today.DayNumber - start.DayNumber, 0, length);
+        return (double)gone / length;
+    }
+
+    /// <summary>
+    /// Where <paramref name="goal"/> stands on <paramref name="today"/> with its <paramref name="progress"/>:
+    /// dropped, hit, behind or on track. A goal counted by tasks or a number is on track while its fraction
+    /// is within <see cref="PaceSlack"/> of the share of its period gone by, and otherwise behind by what
+    /// is missing to it, rounded up. A done-or-not goal, or one with nothing to count, is behind once
+    /// <see cref="DueSoon"/> of its period is gone.
+    /// </summary>
+    public static GoalStanding Standing(GoalItem goal, GoalProgress progress, DateOnly today)
+    {
+        if (goal.Status == Dropped)
+        {
+            return new GoalStanding(GoalPace.Dropped);
+        }
+
+        if (progress.Hit)
+        {
+            return new GoalStanding(GoalPace.Hit);
+        }
+
+        var gone = Elapsed(goal.Horizon, goal.PeriodStart, today);
+        if (goal.Mode == ModeDone || progress.Target <= 0)
+        {
+            return new GoalStanding(gone >= DueSoon ? GoalPace.Behind : GoalPace.OnTrack);
+        }
+
+        return progress.Fraction + PaceSlack >= gone
+            ? new GoalStanding(GoalPace.OnTrack)
+            : new GoalStanding(GoalPace.Behind, Math.Ceiling((gone * progress.Target) - progress.Value - Epsilon));
+    }
+
+    /// <summary><paramref name="items"/> for a rung: the ones behind first, then on track, hit and dropped, each in its own order.</summary>
+    public static IReadOnlyList<T> ByPace<T>(IEnumerable<T> items, Func<T, GoalPace> pace) => [.. items.OrderBy(item => (int)pace(item))];
+
+    /// <summary>
+    /// What lights up when the goal <paramref name="id"/> is picked: it, every goal it feeds up the
+    /// cascade and every goal that feeds it, however deep. Empty when <paramref name="goals"/> has no such goal.
+    /// </summary>
+    public static IReadOnlySet<string> Chain(IEnumerable<GoalItem> goals, string id)
+    {
+        var list = goals.ToList();
+        var byId = new Dictionary<string, GoalItem>(StringComparer.Ordinal);
+        foreach (var goal in list)
+        {
+            byId[goal.Id] = goal;
+        }
+
+        var lit = new HashSet<string>(StringComparer.Ordinal);
+        if (!byId.ContainsKey(id))
+        {
+            return lit;
+        }
+
+        lit.Add(id);
+        var up = byId[id].ParentId;
+        while (up is not null && byId.TryGetValue(up, out var parent) && lit.Add(up))
+        {
+            up = parent.ParentId;
+        }
+
+        var children = list.Where(goal => goal.ParentId is not null).ToLookup(goal => goal.ParentId!, StringComparer.Ordinal);
+        var seen = new HashSet<string>(StringComparer.Ordinal) { id };
+        var down = new Queue<string>([id]);
+        while (down.Count > 0)
+        {
+            foreach (var child in children[down.Dequeue()])
+            {
+                if (seen.Add(child.Id))
+                {
+                    lit.Add(child.Id);
+                    down.Enqueue(child.Id);
+                }
+            }
+        }
+
+        return lit;
+    }
+
+    /// <summary>What the quick log adds on a numeric goal: the latest positive amount logged by hand, or null.</summary>
+    public static double? QuickAmount(IEnumerable<GoalEntryItem> entries) =>
+        entries.Where(entry => !entry.Deleted && entry.Amount > 0)
+            .OrderByDescending(entry => entry.CreatedAt, StringComparer.Ordinal)
+            .Select(entry => (double?)entry.Amount)
+            .FirstOrDefault();
 
     /// <summary>
     /// Last period's goals as copies for a new <paramref name="horizon"/> period starting on

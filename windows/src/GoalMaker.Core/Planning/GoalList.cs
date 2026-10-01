@@ -220,7 +220,8 @@ public sealed class GoalList
         (string?)row["goal_id"] ?? string.Empty,
         Day(row["day"]),
         Number(row["amount"]) ?? 0,
-        row[SyncedTable.DeletedAt] is not null);
+        row[SyncedTable.DeletedAt] is not null,
+        (string?)row["created_at"] ?? string.Empty);
 
     private bool Change(string id, Action<JsonObject> edit)
     {
