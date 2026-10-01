@@ -25,6 +25,14 @@ space, while the advance width stays the same. Check with `Typeface.TryGetGlyphT
 has one (`tools/build_windows_fonts.py`), and leave room after a slanted word when it doesn't
 (`GM.ItalicGap`).
 
+## Ordering by a column the select turned into text
+
+2026-10-01, PR 36. The connector's `get_activity` selected `id::text as id` and then said `order by
+id desc`. Postgres sorts by the output column of that name, which is the text, so change 99 came
+before change 105. Nothing showed until a test run wrote its hundredth change: the wants step then
+could not find the decision it had just made among the "newest" ten. Order by the table's own column
+(`activity_log.id`), or cast in the select under another name.
+
 ## The endpoint test fails once right after an edit
 
 2026-09-28 and 2026-09-30. `supabase functions serve` reloads the function when a file under

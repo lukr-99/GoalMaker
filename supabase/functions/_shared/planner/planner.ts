@@ -1060,7 +1060,8 @@ export class Planner {
 
   /** The latest changes to the owner's rows, newest first, the way the Activity screen reads them. */
   async changes(limit: number): Promise<Change[]> {
-    const rows = await this.db`${this.changeColumns()} order by id desc limit ${limit}`;
+    // The table's id, not the text the select names "id": as text, change 99 sorts after change 100.
+    const rows = await this.db`${this.changeColumns()} order by activity_log.id desc limit ${limit}`;
     return rows.map(toChange);
   }
 
