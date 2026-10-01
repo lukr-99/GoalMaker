@@ -160,6 +160,7 @@ class GoalList(
         day = row.text("day")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         amount = (row["amount"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
+        createdAt = row.text("created_at").orEmpty(),
     )
 
     private companion object {

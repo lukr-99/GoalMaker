@@ -104,4 +104,62 @@ class GoalRulesContractTest {
             assertEquals(case.text("name"), expected, actual)
         }
     }
+
+    @Test
+    fun `every pace`() {
+        vectors.cases("pace").forEach { case ->
+            val goal = case.getValue("goal").jsonObject
+            val progress = case.getValue("progress").jsonObject
+            val item = GoalItem("g", "Goal", goal.horizon(), goal.day("start"), mode = goal.text("mode")!!, status = goal.text("status")!!)
+            val standing = GoalRules.standing(
+                item,
+                GoalProgress(
+                    progress.getValue("value").jsonPrimitive.double,
+                    progress.getValue("target").jsonPrimitive.double,
+                    progress.getValue("fraction").jsonPrimitive.double,
+                    progress.getValue("hit").jsonPrimitive.boolean,
+                ),
+                case.day("today"),
+            )
+            val expect = case.getValue("expect").jsonObject
+            val name = case.text("name")
+            assertEquals(name, expect.text("pace"), standing.pace.id)
+            assertEquals(name, expect.text("behind")?.toDouble(), standing.behind)
+        }
+    }
+
+    @Test
+    fun `every order`() {
+        vectors.cases("order").forEach { case ->
+            val goals = case.cases("goals").map { it.text("id")!! to GoalPace.of(it.text("pace"))!! }
+            val expected = case.getValue("expect").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(case.text("name"), expected, GoalRules.byPace(goals) { it.second }.map { it.first })
+        }
+    }
+
+    @Test
+    fun `every chain`() {
+        vectors.cases("chain").forEach { case ->
+            val goals = case.cases("goals").map { GoalItem(it.text("id")!!, "Goal", GoalHorizon.WEEK, LocalDate.parse("2026-09-28"), parentId = it.text("parent")) }
+            val expected = case.getValue("expect").jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(case.text("name"), expected, GoalRules.chain(goals, case.text("picked")!!).sorted())
+        }
+    }
+
+    @Test
+    fun `every quick amount`() {
+        vectors.cases("quick").forEach { case ->
+            val entries = case.cases("entries").mapIndexed { index, entry ->
+                GoalEntryItem(
+                    "e$index",
+                    "g",
+                    LocalDate.parse("2026-09-30"),
+                    entry.getValue("amount").jsonPrimitive.double,
+                    entry["deleted"]?.jsonPrimitive?.boolean ?: false,
+                    entry.text("created")!!,
+                )
+            }
+            assertEquals(case.text("name"), case.text("expect")?.toDouble(), GoalRules.quickAmount(entries))
+        }
+    }
 }
