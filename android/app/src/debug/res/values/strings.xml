@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A dev build installs next to the release app (com.goalmaker.app.debug), with its own rows. Its
+     launcher name and widgets say Dev, so the two are never mixed up in the widget picker. -->
+<resources>
+    <string name="app_label">GoalMaker Dev</string>
+    <string name="widget_today_label">Today (Dev)</string>
+    <string name="widget_habits_label">Habits (Dev)</string>
+    <string name="widget_goals_label">Goals (Dev)</string>
+    <string name="widget_motivation_label">Motivation (Dev)</string>
+    <string name="widget_quick_add_label">Quick add (Dev)</string>
+</resources>

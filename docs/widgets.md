@@ -75,4 +75,16 @@ later (`res/layout/widget_*_preview.xml`). A preview is a fixed layout, drawn be
 known, so it uses the default theme's colors, light or dark with the system.
 
 A widget is drawn again after a tap on one, after a background sync brings changes in, and every half
-hour by the launcher; a Motivation widget also as soon as its configure screen saves.
+hour by the launcher; a Motivation widget also as soon as its configure screen saves. `Widgets`
+draws them again by the ids the launcher keeps for each receiver (`WidgetKind`), not with Glance's
+`updateAll`, which goes by the drawing class: R8 once folded those classes together and each widget
+was drawn over with another's rows ([pitfalls](pitfalls.md)). `proguard-rules.pro` keeps the widget
+classes apart as well.
+
+When a widget's rows cannot be read (the replica would not open, or a rule throws), it shows a plain
+card with "Open GoalMaker to see this." instead of Android's "Can't load widget" box, and the error
+goes to `files/crash.log` (`android/tools/pull-debug-files.ps1 -FilePattern '\.log$'`). An error
+while Glance draws is written there too.
+
+A debug build installs next to the release app as "GoalMaker Dev", with its own rows, and its
+widgets are labelled "(Dev)" in the picker.

@@ -3,6 +3,24 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## R8 folds Glance widget classes together, and updateAll draws into the wrong widgets
+
+2026-10-02. On the 1.9.0 release APK the owner saw the Today and Habits widgets not showing what they
+should. After a sync or a tap, the Today and quick-add widgets were drawn with the Habits rows, and
+the Goals widget with the Motivation widget's lines. Debug builds were fine, because R8 only runs on
+release. R8's class merging had folded `TodayWidget`, `HabitsWidget` and
+`QuickAddWidget` into one class (`u52`, with a hidden id field), and `GoalsWidget` with
+`MotivationWidget` into another. Glance's `updateAll` and `getGlanceIds` find a widget's placed
+copies by `javaClass.canonicalName`, so `TodayWidget().updateAll()` drew Today into every widget of
+the group, then `HabitsWidget().updateAll()` drew over all of them. The launcher's own half-hourly
+update was right, which made it look random. To see it, run `dexdump` on
+`build/intermediates/dex/release/minifyReleaseWithR8/classes.dex` and compare the field types of the
+`*WidgetReceiver` classes: the same type in two receivers means merged classes. The fix:
+`-keep,allowshrinking class * extends androidx.glance.appwidget.GlanceAppWidget` in
+`proguard-rules.pro`, and `Widgets` now draws by the launcher's ids per receiver
+(`AppWidgetManager.getAppWidgetIds(ComponentName)`), never by `updateAll`. The same goes for any
+library that looks a class up by its name at run time.
+
 ## WPF UI's dictionaries must load before GoalMaker's
 
 2026-10-02, moving onto `DotNetLib.Tray`. The first try kept GoalMaker's dictionaries in App.xaml

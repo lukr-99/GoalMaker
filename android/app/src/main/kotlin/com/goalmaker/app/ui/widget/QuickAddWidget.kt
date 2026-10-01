@@ -40,7 +40,11 @@ import com.goalmaker.app.R
  */
 class QuickAddWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val skin = WidgetSkin.of(context)
+        val skin = WidgetFallback.load(context) { WidgetSkin.of(context) }
+        if (skin == null) {
+            provideContent { WidgetFallback.Content(context) }
+            return
+        }
         provideContent {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -63,6 +67,12 @@ class QuickAddWidget : GlanceAppWidget() {
                 Today(skin, context)
             }
         }
+    }
+
+    // A failure while drawing goes to the crash log too, before Android's own error box.
+    override fun onCompositionError(context: Context, glanceId: GlanceId, appWidgetId: Int, throwable: Throwable) {
+        WidgetFallback.log(context, throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
     }
 
     @Composable

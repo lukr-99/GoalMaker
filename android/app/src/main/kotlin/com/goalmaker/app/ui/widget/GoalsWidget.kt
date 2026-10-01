@@ -48,8 +48,12 @@ class GoalsWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val skin = WidgetSkin.of(context)
-        val rings = WidgetData.rings(context)
+        val shown = WidgetFallback.load(context) { WidgetSkin.of(context) to WidgetData.rings(context) }
+        if (shown == null) {
+            provideContent { WidgetFallback.Content(context) }
+            return
+        }
+        val (skin, rings) = shown
         val density = context.resources.displayMetrics.density
         val percent = NumberFormat.getPercentInstance(context.resources.configuration.locales[0])
         val track = Color(skin.textMuted).copy(alpha = 0.25f).toArgb()
@@ -80,6 +84,12 @@ class GoalsWidget : GlanceAppWidget() {
                 }
             }
         }
+    }
+
+    // A failure while drawing goes to the crash log too, before Android's own error box.
+    override fun onCompositionError(context: Context, glanceId: GlanceId, appWidgetId: Int, throwable: Throwable) {
+        WidgetFallback.log(context, throwable)
+        super.onCompositionError(context, glanceId, appWidgetId, throwable)
     }
 
     @Composable
