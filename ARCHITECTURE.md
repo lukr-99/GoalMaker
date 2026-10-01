@@ -65,7 +65,8 @@ composition root creates everything
   `chat/` (the quick chat's switch and thread in the composer),
   `plan/`, `task/`, `goals/`, `habits/`, `review/`, `stats/`, `projects/`, `calendar/`, `archive/`,
   `activity/`, `areas/`, `connector/`, `settings/`, `share/` (the sheet a share from another app
-  opens), `widget/` (the Glance home screen widgets), `nav/` (Navigation 3 back stack).
+  opens), `widget/` (the Glance home screen widgets and the Motivation widget's configure screen),
+  `nav/` (Navigation 3 back stack).
 - `composition/AppGraph` is the composition root, owned by `GoalMakerApplication`, which also hands
   WorkManager a worker factory wired to it.
 

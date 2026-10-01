@@ -1,14 +1,19 @@
 package com.goalmaker.app.ui.widget
 
+import com.goalmaker.app.application.planning.GoalEntryItem
+import com.goalmaker.app.application.planning.GoalHorizon
+import com.goalmaker.app.application.planning.GoalItem
+import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitData
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.goals.GoalBoard
 import java.time.LocalDate
 
 /**
- * What the home screen widgets show (docs/widgets.md, spec stories 85 and 86), worked out from the
+ * What the home screen widgets show (docs/widgets.md, spec stories 85 to 87), worked out from the
  * same rules the screens use, so a widget never disagrees with the app.
  */
 object WidgetContent {
@@ -59,6 +64,29 @@ object WidgetContent {
 
     /** How many of today's habits are still open, for the header. */
     fun habitsLeft(habits: List<WidgetHabit>): Int = habits.count(WidgetHabit::left)
+
+    /**
+     * The Motivation widget's goals: the goals of this [horizon]'s current period as plain written
+     * lines, in the order the owner keeps them, each with its emoji. Dropped goals stay off; a goal
+     * already done stays, since it is still one the owner wrote down.
+     */
+    fun goalLines(all: List<GoalItem>, horizon: GoalHorizon, today: LocalDate): List<String> {
+        val start = GoalRules.periodStart(horizon, today)
+        return all.filter { !it.deleted && it.horizon == horizon && it.periodStart == start && it.status != GoalRules.DROPPED }
+            .sortedWith(compareBy(GoalItem::position).thenBy { it.title.lowercase(java.util.Locale.ROOT) })
+            .map { goal -> goal.emoji?.takeIf(String::isNotBlank)?.let { "$it ${goal.title}" } ?: goal.title }
+    }
+
+    /** The Goals widget's rings: this year, month, week and today, by the Goals screen's own board. */
+    fun rings(
+        all: List<GoalItem>,
+        entries: List<GoalEntryItem>,
+        tasks: List<TaskItem>,
+        habits: HabitData,
+        today: LocalDate,
+    ): List<WidgetRing> = GoalBoard.build(all, entries, tasks, today, habits).rings.map { section ->
+        WidgetRing(section.horizon, section.fraction, section.hits, section.rows.size)
+    }
 
     private fun amount(value: Double, target: Double, unit: String?): String {
         val text = "${number(value)} of ${number(target)}"

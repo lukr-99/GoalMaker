@@ -70,8 +70,10 @@ the content rather than over it, and none of that is read until it comes down. T
 close rather than the emailed code, which would be a strange thing to offer someone half way through
 sharing a link.
 
-The home screen widget is a different thing and is left as it was: it puts today's tasks on the home
-screen on purpose, which is what it is for, and it is not a way into the app.
+The home screen widgets are a different thing and are left as they were: they put today's tasks,
+habits and goals on the home screen on purpose, which is what they are for, and they are not a way
+into the app. The Motivation widget's configure screen goes with them: it only sets what that widget
+shows.
 
 **What it asks for.** A weak biometric or the screen lock, together. That pairing is the one
 androidx.biometric supports on every Android the app runs on, and it means a phone with no

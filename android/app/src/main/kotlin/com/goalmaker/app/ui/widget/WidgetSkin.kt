@@ -15,6 +15,8 @@ data class WidgetSkin(
     val text: Int,
     val textMuted: Int,
     val accent: Int,
+    /** True when the theme's headings slant (Track), so the Motivation widget's words do too. */
+    val italicHeadings: Boolean = false,
 ) {
     companion object {
         fun of(context: Context): WidgetSkin {
@@ -39,6 +41,7 @@ data class WidgetSkin(
                 text = palette.text,
                 textMuted = palette.textMuted,
                 accent = palette.accent,
+                italicHeadings = theme.typography.heading.italic,
             )
         }
     }

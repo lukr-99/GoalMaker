@@ -383,6 +383,11 @@ class AppGraph(context: Context) {
     /** True while the wants notification asked for the Wants place and it isn't on screen yet. */
     val wantsRequested: StateFlow<Boolean> = wantsRequest.asStateFlow()
 
+    private val goalsRequest = MutableStateFlow(false)
+
+    /** True while a home screen widget asked for the Goals place and it isn't on screen yet (docs/widgets.md). */
+    val goalsRequested: StateFlow<Boolean> = goalsRequest.asStateFlow()
+
     private val reviewRequest = MutableStateFlow<Pair<String, LocalDate>?>(null)
 
     /** The review a reminder asked for (its kind and period), until it is on screen (docs/reviews.md). */
@@ -584,6 +589,16 @@ class AppGraph(context: Context) {
     /** The Wants place is on screen, so the request is settled. */
     fun wantsOpened() {
         wantsRequest.value = false
+    }
+
+    /** The owner tapped the Goals or Motivation widget: the Goals place opens. */
+    fun openedForGoals() {
+        goalsRequest.value = true
+    }
+
+    /** The Goals place is on screen, so the request is settled. */
+    fun goalsOpened() {
+        goalsRequest.value = false
     }
 
     /**

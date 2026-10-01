@@ -125,6 +125,14 @@ fun SignedInNavigation(graph: AppGraph) {
             graph.wantsOpened()
         }
     }
+    // The Goals and Motivation widgets open the Goals place, pinned or not.
+    val goalsRequested by graph.goalsRequested.collectAsState()
+    LaunchedEffect(goalsRequested) {
+        if (goalsRequested) {
+            select(PlaceRules.GOALS)
+            graph.goalsOpened()
+        }
+    }
     // A review reminder opens the review it asked for, on top of whatever was open.
     val reviewRequested by graph.reviewRequested.collectAsState()
     LaunchedEffect(reviewRequested) {
