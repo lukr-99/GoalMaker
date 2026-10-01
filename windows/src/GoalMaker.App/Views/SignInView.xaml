@@ -11,7 +11,7 @@
                            Text="{DynamicResource App.Name}"
                            FontSize="16"
                            FontWeight="SemiBold"
-                           Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                           Foreground="{DynamicResource GM.AccentBrush}" />
             </StackPanel>
             <TextBlock Margin="0,12,0,24"
                        Text="{DynamicResource SignIn.Title}"
