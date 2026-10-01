@@ -219,7 +219,7 @@
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_planning">Planning</string>
+    <string name="settings_planning">Planning day and reminders</string>
     <string name="settings_day_start">The day starts at %1$s</string>
     <string name="settings_day_start_hint">Until then it\'s still yesterday, so planning after midnight lands on the right tomorrow.</string>
     <string name="settings_account">Account</string>
@@ -307,8 +307,11 @@
     <string name="filter_all_tags">All tags</string>
     <string name="filter_clear">Clear the filter</string>
     <string name="areas_title">Areas and tags</string>
-    <string name="areas_open">Areas and tags</string>
+    <string name="areas_open">Manage areas and tags</string>
     <string name="areas_open_hint">Rename, recolor and reorder areas, and tidy up tags.</string>
+    <string name="areas_none">No areas yet. Type @Name in the composer, or add one under Manage areas and tags.</string>
+    <string name="settings_sections">Settings sections</string>
+    <string name="settings_jump_to">Jump to %1$s</string>
     <string name="areas_areas">Areas</string>
     <string name="areas_tags">Tags</string>
     <string name="areas_no_tags">No tags yet. Type #name in the composer or add one here.</string>

@@ -1,12 +1,28 @@
 package com.goalmaker.app.ui.settings
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.TagItem
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -103,17 +119,38 @@ fun SettingsScreen(
     /** What the update notification asked for: Settings scrolls to the update, and Install starts. */
     updateRequest: UpdateRequest? = null,
     onUpdateRequestHandled: () -> Unit = {},
+    /** The areas in use and the tags, shown in their own section with the way to the full manager. */
+    areas: List<AreaItem> = emptyList(),
+    tags: List<TagItem> = emptyList(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     // Opening Settings is reading them, so the mark on the gear goes (docs/problems.md).
     LaunchedEffect(Unit) { onProblemsRead() }
-    val updatesSection = remember { BringIntoViewRequester() }
+    val sections = SettingsSections.visible(hasProblems = problems.isNotEmpty(), devBuild = state.appInfo.isDevBuild)
+    val scroll = rememberScrollState()
+    // Where each section's card starts in the scrolling column, measured as it is placed.
+    val tops = remember { mutableStateMapOf<SettingsSection, Int>() }
+    val slack = with(LocalDensity.current) { 24.dp.roundToPx() }
+    var jumped by remember { mutableStateOf<SettingsSection?>(null) }
+    val current by remember(sections) {
+        derivedStateOf { SettingsSections.current(sections, tops, scroll.value, scroll.maxValue, slack, jumped) }
+    }
+    val scope = rememberCoroutineScope()
+    val jump: (SettingsSection) -> Unit = { section ->
+        tops[section]?.let { top ->
+            jumped = section
+            scope.launch { scroll.animateScrollTo(top) }
+        }
+    }
     LaunchedEffect(updateRequest) {
-        if (updateRequest == null) return@LaunchedEffect
-        updatesSection.bringIntoView()
+        val target = SettingsSections.target(updateRequest) ?: return@LaunchedEffect
+        jumped = target
+        // The cards are measured on the first frame; wait for the one the notification wants.
+        scroll.animateScrollTo(snapshotFlow { tops[target] }.filterNotNull().first())
         if (updateRequest == UpdateRequest.INSTALL) viewModel.installRequested()
         onUpdateRequestHandled()
     }
+    fun Modifier.section(section: SettingsSection) = onPlaced { tops[section] = it.positionInParent().y.roundToInt() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -135,208 +172,246 @@ fun SettingsScreen(
                 .padding(padding)
                 // The keyboard shrinks the page, so the field being typed in can scroll above it.
                 .consumeWindowInsets(padding)
-                .imePadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .imePadding(),
         ) {
-            if (problems.isNotEmpty()) {
-                Section(stringResource(R.string.problems_title)) {
-                    problems.forEach { problem -> ProblemRow(problem) }
+            SectionChips(sections = sections, current = current, onJump = jump)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(scroll)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                if (problems.isNotEmpty()) {
+                    Section(stringResource(R.string.problems_title), Modifier.section(SettingsSection.PROBLEMS)) {
+                        problems.forEach { problem -> ProblemRow(problem) }
+                    }
                 }
-            }
-            Section(stringResource(R.string.settings_appearance)) {
-                // The mark takes on the theme's colors, and redraws itself when the theme changes.
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { Label(stringResource(R.string.settings_theme)) }
-                    GoalMakerLogo(size = 44.dp)
-                }
-                ThemePicker(
-                    themes = state.themes,
-                    selectedId = state.themeId,
-                    dark = AppTheme.colors.isDark,
-                    onSelect = viewModel::setTheme,
-                )
-                Label(stringResource(R.string.settings_mode))
-                ConnectedChoice(
-                    options = listOf(
-                        ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
-                        ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
-                        ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
-                    ),
-                    selected = state.appearance.mode,
-                    onSelect = viewModel::setThemeMode,
-                )
-                SwitchRow(
-                    title = stringResource(R.string.settings_pure_black),
-                    hint = stringResource(R.string.settings_pure_black_hint),
-                    checked = state.appearance.pureBlack,
-                    onCheckedChange = viewModel::setPureBlack,
-                )
-                Label(stringResource(R.string.settings_reduce_motion))
-                ConnectedChoice(
-                    options = listOf(
-                        ReduceMotion.SYSTEM to stringResource(R.string.settings_theme_system),
-                        ReduceMotion.ON to stringResource(R.string.settings_reduce_motion_on),
-                        ReduceMotion.OFF to stringResource(R.string.settings_reduce_motion_off),
-                    ),
-                    selected = state.appearance.reduceMotion,
-                    onSelect = viewModel::setReduceMotion,
-                )
-                SwitchRow(
-                    title = stringResource(R.string.settings_completion_sound),
-                    hint = stringResource(R.string.settings_completion_sound_hint),
-                    checked = state.appearance.completionSound,
-                    onCheckedChange = viewModel::setCompletionSound,
-                )
-            }
-            Section(stringResource(R.string.settings_planning)) {
-                Label(stringResource(R.string.settings_day_start, "%02d:00".format(state.dayStartHour)))
-                Slider(
-                    value = state.dayStartHour.toFloat(),
-                    onValueChange = { viewModel.setDayStartHour(it.roundToInt()) },
-                    valueRange = PlanningDay.START_HOURS.first.toFloat()..PlanningDay.START_HOURS.last.toFloat(),
-                    steps = PlanningDay.START_HOURS.last - PlanningDay.START_HOURS.first - 1,
-                )
-                Text(
-                    stringResource(R.string.settings_day_start_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                PlanReminderRow(state.planTomorrowReminder, viewModel::setPlanTomorrowReminder)
-                ReviewReminderRow(
-                    title = stringResource(R.string.settings_weekly_review),
-                    hint = stringResource(R.string.settings_weekly_review_hint),
-                    time = state.weeklyReviewReminder,
-                    weekday = state.weeklyReviewWeekday,
-                    onTime = viewModel::setWeeklyReviewReminder,
-                    onWeekday = viewModel::setWeeklyReviewWeekday,
-                )
-                ReviewReminderRow(
-                    title = stringResource(R.string.settings_monthly_review),
-                    hint = stringResource(R.string.settings_monthly_review_hint),
-                    time = state.monthlyReviewReminder,
-                    weekday = null,
-                    onTime = viewModel::setMonthlyReviewReminder,
-                    onWeekday = {},
-                )
-                ReviewReminderRow(
-                    title = stringResource(R.string.settings_wants_ready),
-                    hint = stringResource(R.string.settings_wants_ready_hint),
-                    time = state.wantsReadyReminder,
-                    weekday = null,
-                    onTime = viewModel::setWantsReadyReminder,
-                    onWeekday = {},
-                )
-                QuietHoursRow(state.quietHours, viewModel::setQuietHours)
-                OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
-                Text(
-                    stringResource(R.string.areas_open_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Section(stringResource(R.string.settings_claude)) {
-                OutlinedButton(onClick = onOpenConnector) { Text(stringResource(R.string.connector_open)) }
-                Text(
-                    stringResource(R.string.connector_open_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedButton(onClick = onOpenActivity) { Text(stringResource(R.string.activity_open)) }
-                Text(
-                    stringResource(R.string.activity_open_hint),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Section(stringResource(R.string.settings_backup)) {
-                BackupCard(viewModel, state.backup)
-            }
-            Section(stringResource(R.string.settings_account)) {
-                // A dev build that stays on the phone has no account to show or leave (docs/sign-in.md).
-                if (state.appInfo.localOnly) {
-                    Text(stringResource(R.string.settings_local_only), style = MaterialTheme.typography.bodyLarge)
-                } else {
-                    Text(state.email, style = MaterialTheme.typography.bodyLarge)
-                }
-                // The owner can go and enrol a fingerprint and come straight back, which resumes
-                // this window rather than building it again, so asking once would read stale.
-                LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.checkUnlock() }
-                SwitchRow(
-                    title = stringResource(R.string.settings_app_lock),
-                    hint = stringResource(appLockHint(state.unlock)),
-                    checked = state.appLock,
-                    enabled = state.unlock == UnlockAvailability.READY || state.appLock,
-                    onCheckedChange = viewModel::setAppLock,
-                )
-                if (!state.appInfo.localOnly) {
-                    val unsynced = state.unsyncedAtSignOut
-                    if (unsynced == null) {
-                        OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
-                            Text(stringResource(R.string.settings_sign_out))
-                        }
+                Section(stringResource(R.string.settings_account), Modifier.section(SettingsSection.ACCOUNT)) {
+                    // A dev build that stays on the phone has no account to show or leave (docs/sign-in.md).
+                    if (state.appInfo.localOnly) {
+                        Text(stringResource(R.string.settings_local_only), style = MaterialTheme.typography.bodyLarge)
                     } else {
-                        Text(
-                            pluralStringResource(R.plurals.settings_sign_out_unsynced, unsynced, unsynced),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(state.email, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    // The owner can go and enrol a fingerprint and come straight back, which resumes
+                    // this window rather than building it again, so asking once would read stale.
+                    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.checkUnlock() }
+                    SwitchRow(
+                        title = stringResource(R.string.settings_app_lock),
+                        hint = stringResource(appLockHint(state.unlock)),
+                        checked = state.appLock,
+                        enabled = state.unlock == UnlockAvailability.READY || state.appLock,
+                        onCheckedChange = viewModel::setAppLock,
+                    )
+                    if (!state.appInfo.localOnly) {
+                        val unsynced = state.unsyncedAtSignOut
+                        if (unsynced == null) {
                             OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
                                 Text(stringResource(R.string.settings_sign_out))
                             }
-                            TextButton(onClick = { viewModel.signOut(discardUnsynced = true) }, enabled = !state.signingOut) {
-                                Text(stringResource(R.string.settings_sign_out_anyway))
+                        } else {
+                            Text(
+                                pluralStringResource(R.plurals.settings_sign_out_unsynced, unsynced, unsynced),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { viewModel.signOut() }, enabled = !state.signingOut) {
+                                    Text(stringResource(R.string.settings_sign_out))
+                                }
+                                TextButton(onClick = { viewModel.signOut(discardUnsynced = true) }, enabled = !state.signingOut) {
+                                    Text(stringResource(R.string.settings_sign_out_anyway))
+                                }
                             }
                         }
                     }
                 }
-            }
-            Section(stringResource(R.string.settings_updates), Modifier.bringIntoViewRequester(updatesSection)) {
-                UpdatesContent(state, viewModel)
-            }
-            Section(stringResource(R.string.settings_about)) {
-                Text(stringResource(R.string.settings_version, state.appInfo.versionName))
-                Text(
-                    stringResource(R.string.settings_backend, state.appInfo.backend.url),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (state.appInfo.isDevBuild) {
-                Section(stringResource(R.string.settings_developer)) {
+                Section(stringResource(R.string.settings_appearance), Modifier.section(SettingsSection.APPEARANCE)) {
+                    // The mark takes on the theme's colors, and redraws itself when the theme changes.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { Label(stringResource(R.string.settings_theme)) }
+                        GoalMakerLogo(size = 44.dp)
+                    }
+                    ThemePicker(
+                        themes = state.themes,
+                        selectedId = state.themeId,
+                        dark = AppTheme.colors.isDark,
+                        onSelect = viewModel::setTheme,
+                    )
+                    Label(stringResource(R.string.settings_mode))
+                    ConnectedChoice(
+                        options = listOf(
+                            ThemeMode.SYSTEM to stringResource(R.string.settings_theme_system),
+                            ThemeMode.LIGHT to stringResource(R.string.settings_theme_light),
+                            ThemeMode.DARK to stringResource(R.string.settings_theme_dark),
+                        ),
+                        selected = state.appearance.mode,
+                        onSelect = viewModel::setThemeMode,
+                    )
                     SwitchRow(
-                        title = stringResource(R.string.settings_dev_sign_in),
-                        hint = stringResource(R.string.settings_dev_sign_in_hint),
-                        checked = !state.appInfo.localOnly,
-                        onCheckedChange = viewModel::setDevSignIn,
+                        title = stringResource(R.string.settings_pure_black),
+                        hint = stringResource(R.string.settings_pure_black_hint),
+                        checked = state.appearance.pureBlack,
+                        onCheckedChange = viewModel::setPureBlack,
+                    )
+                    Label(stringResource(R.string.settings_reduce_motion))
+                    ConnectedChoice(
+                        options = listOf(
+                            ReduceMotion.SYSTEM to stringResource(R.string.settings_theme_system),
+                            ReduceMotion.ON to stringResource(R.string.settings_reduce_motion_on),
+                            ReduceMotion.OFF to stringResource(R.string.settings_reduce_motion_off),
+                        ),
+                        selected = state.appearance.reduceMotion,
+                        onSelect = viewModel::setReduceMotion,
+                    )
+                    SwitchRow(
+                        title = stringResource(R.string.settings_completion_sound),
+                        hint = stringResource(R.string.settings_completion_sound_hint),
+                        checked = state.appearance.completionSound,
+                        onCheckedChange = viewModel::setCompletionSound,
+                    )
+                }
+                Section(stringResource(R.string.settings_planning), Modifier.section(SettingsSection.PLANNING)) {
+                    Label(stringResource(R.string.settings_day_start, "%02d:00".format(state.dayStartHour)))
+                    Slider(
+                        value = state.dayStartHour.toFloat(),
+                        onValueChange = { viewModel.setDayStartHour(it.roundToInt()) },
+                        valueRange = PlanningDay.START_HOURS.first.toFloat()..PlanningDay.START_HOURS.last.toFloat(),
+                        steps = PlanningDay.START_HOURS.last - PlanningDay.START_HOURS.first - 1,
                     )
                     Text(
-                        stringResource(R.string.settings_backend_hint),
+                        stringResource(R.string.settings_day_start_hint),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    OutlinedTextField(
-                        value = state.backendUrlDraft,
-                        onValueChange = viewModel::onBackendUrlChange,
-                        label = { Text(stringResource(R.string.settings_backend_url)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                    PlanReminderRow(state.planTomorrowReminder, viewModel::setPlanTomorrowReminder)
+                    ReviewReminderRow(
+                        title = stringResource(R.string.settings_weekly_review),
+                        hint = stringResource(R.string.settings_weekly_review_hint),
+                        time = state.weeklyReviewReminder,
+                        weekday = state.weeklyReviewWeekday,
+                        onTime = viewModel::setWeeklyReviewReminder,
+                        onWeekday = viewModel::setWeeklyReviewWeekday,
                     )
-                    OutlinedTextField(
-                        value = state.backendKeyDraft,
-                        onValueChange = viewModel::onBackendKeyChange,
-                        label = { Text(stringResource(R.string.settings_backend_key)) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
+                    ReviewReminderRow(
+                        title = stringResource(R.string.settings_monthly_review),
+                        hint = stringResource(R.string.settings_monthly_review_hint),
+                        time = state.monthlyReviewReminder,
+                        weekday = null,
+                        onTime = viewModel::setMonthlyReviewReminder,
+                        onWeekday = {},
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = viewModel::saveBackend) { Text(stringResource(R.string.settings_backend_save)) }
-                        TextButton(onClick = viewModel::resetBackend) { Text(stringResource(R.string.settings_backend_reset)) }
+                    ReviewReminderRow(
+                        title = stringResource(R.string.settings_wants_ready),
+                        hint = stringResource(R.string.settings_wants_ready_hint),
+                        time = state.wantsReadyReminder,
+                        weekday = null,
+                        onTime = viewModel::setWantsReadyReminder,
+                        onWeekday = {},
+                    )
+                    QuietHoursRow(state.quietHours, viewModel::setQuietHours)
+                }
+                Section(stringResource(R.string.areas_title), Modifier.section(SettingsSection.AREAS)) {
+                    AreasAndTagsCard(areas = areas, tags = tags, onOpenAreas = onOpenAreas)
+                }
+                Section(stringResource(R.string.settings_claude), Modifier.section(SettingsSection.CLAUDE)) {
+                    OutlinedButton(onClick = onOpenConnector) { Text(stringResource(R.string.connector_open)) }
+                    Text(
+                        stringResource(R.string.connector_open_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(onClick = onOpenActivity) { Text(stringResource(R.string.activity_open)) }
+                    Text(
+                        stringResource(R.string.activity_open_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Section(stringResource(R.string.settings_backup), Modifier.section(SettingsSection.BACKUP)) {
+                    BackupCard(viewModel, state.backup)
+                }
+                Section(stringResource(R.string.settings_updates), Modifier.section(SettingsSection.UPDATES)) {
+                    UpdatesContent(state, viewModel)
+                }
+                Section(stringResource(R.string.settings_about), Modifier.section(SettingsSection.ABOUT)) {
+                    Text(stringResource(R.string.settings_version, state.appInfo.versionName))
+                    Text(
+                        stringResource(R.string.settings_backend, state.appInfo.backend.url),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (state.appInfo.isDevBuild) {
+                    Section(stringResource(R.string.settings_developer), Modifier.section(SettingsSection.DEVELOPER)) {
+                        SwitchRow(
+                            title = stringResource(R.string.settings_dev_sign_in),
+                            hint = stringResource(R.string.settings_dev_sign_in_hint),
+                            checked = !state.appInfo.localOnly,
+                            onCheckedChange = viewModel::setDevSignIn,
+                        )
+                        Text(
+                            stringResource(R.string.settings_backend_hint),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        OutlinedTextField(
+                            value = state.backendUrlDraft,
+                            onValueChange = viewModel::onBackendUrlChange,
+                            label = { Text(stringResource(R.string.settings_backend_url)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = state.backendKeyDraft,
+                            onValueChange = viewModel::onBackendKeyChange,
+                            label = { Text(stringResource(R.string.settings_backend_key)) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = viewModel::saveBackend) { Text(stringResource(R.string.settings_backend_save)) }
+                            TextButton(onClick = viewModel::resetBackend) { Text(stringResource(R.string.settings_backend_reset)) }
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * The jump list under the title: a chip for each section, the one being read marked, and a tap
+ * scrolls the page to that section. It stays put while the page scrolls under it.
+ */
+@Composable
+private fun SectionChips(sections: List<SettingsSection>, current: SettingsSection?, onJump: (SettingsSection) -> Unit) {
+    val list = rememberLazyListState()
+    val label = stringResource(R.string.settings_sections)
+    // Keep the marked chip in sight as the page scrolls past sections.
+    LaunchedEffect(current, sections) {
+        val index = sections.indexOf(current)
+        if (index < 0) return@LaunchedEffect
+        val info = list.layoutInfo
+        val whole = info.visibleItemsInfo.any { it.index == index && it.offset >= 0 && it.offset + it.size <= info.viewportEndOffset }
+        if (!whole) list.animateScrollToItem((index - 1).coerceAtLeast(0))
+    }
+    LazyRow(
+        state = list,
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = label },
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(sections, key = { it.name }) { section ->
+            val title = stringResource(section.title)
+            val jumpTo = stringResource(R.string.settings_jump_to, title)
+            ChoiceChip(
+                selected = section == current,
+                onClick = { onJump(section) },
+                label = title,
+                modifier = Modifier.semantics { contentDescription = jumpTo },
+            )
         }
     }
 }
@@ -380,7 +455,12 @@ private fun whenText(at: Instant): String {
 private fun Section(title: String, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.semantics { heading() },
+            )
             content()
         }
     }

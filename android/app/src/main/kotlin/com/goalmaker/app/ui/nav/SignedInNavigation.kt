@@ -426,8 +426,13 @@ fun SignedInNavigation(graph: AppGraph) {
                                 appLockTurned = graph.appLock::turned,
                             )
                         }
+                        // The Areas and tags section shows the areas in use and the tags, read as the manager reads them.
+                        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.io) }
+                        val areasState by areasViewModel.uiState.collectAsStateWithLifecycle()
                         SettingsScreen(
                             viewModel = settingsViewModel,
+                            areas = areasState.active,
+                            tags = areasState.tags,
                             onBack = { backStack.removeLastOrNull() },
                             onOpenAreas = { backStack.add(AreasKey) },
                             onOpenConnector = { backStack.add(ConnectorKey) },
