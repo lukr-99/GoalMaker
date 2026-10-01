@@ -15,7 +15,8 @@ SIL Open Font License 1.1; the license text sits next to the font and ships with
 - **Android** packages these variable fonts as assets (`app/build.gradle.kts`, `sharedAssets`) and
   sets weight, width and italic per theme.
 - **Windows** can't select variable axes, so `tools/build_windows_fonts.py` (needs `fonttools`) cuts
-  the static faces each theme uses into `windows/src/GoalMaker.App/Assets/Fonts/`. Rerun it after
+  the static faces each theme uses into `windows/src/GoalMaker.App/Assets/Fonts/`, plus the body's real
+  italic where the family has one (Archivo). Rerun it after
   changing a font or a theme's typography; the output is committed and reproducible.
 
 Fonts are never loaded from the network.

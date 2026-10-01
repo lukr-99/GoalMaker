@@ -3,6 +3,17 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## An italic word swallows the space after it on Windows
+
+2026-10-01. "The bank call moved *four* times" read "fourtimes" in notes and letters. The parser and
+the runs were fine: the space was its own upright run. Each Windows font file is one face with its
+own family name ("GoalMaker Archivo 400"), so `FontStyle = Italic` has no italic face to pick, and
+WPF slants the upright glyphs instead. The slant moves the top of the last letter right, over the
+space, while the advance width stays the same. Check with `Typeface.TryGetGlyphTypeface`:
+`StyleSimulations.ItalicSimulation` means the italic is fake. Ship a real italic face when the family
+has one (`tools/build_windows_fonts.py`), and leave room after a slanted word when it doesn't
+(`GM.ItalicGap`).
+
 ## The endpoint test fails once right after an edit
 
 2026-09-28 and 2026-09-30. `supabase functions serve` reloads the function when a file under
