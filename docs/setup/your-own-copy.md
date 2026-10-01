@@ -13,6 +13,10 @@ The licence is PolyForm Noncommercial: run it, change it, share your changes, bu
 - An email sending account (free tier), unless you only ever run against the local stack.
 - Windows for the desktop app, Android 8 or newer for the phone app, and Docker Desktop if you want
   the local stack.
+- For the Windows app, read access to the private `dotnetlib` package feed. Its tray kit,
+  `DotNetLib.Tray`, is not on nuget.org, so without a `read:packages` token for that feed the
+  Windows app does not build ([local development](local-development.md#windows)). CI needs the same
+  token as the `DOTNETLIB_PACKAGES_TOKEN` secret.
 
 ## 1. Make it yours
 
@@ -70,5 +74,5 @@ not yours**, which is the one mistake here with teeth.
 ## 5. Check
 
 - `python tools/check_own_copy.py` passes.
-- `gh secret list` shows eight `GOALMAKER_*` secrets.
+- `gh secret list` shows eight `GOALMAKER_*` secrets and `DOTNETLIB_PACKAGES_TOKEN`.
 - A task made on the phone turns up on the PC within a few seconds.

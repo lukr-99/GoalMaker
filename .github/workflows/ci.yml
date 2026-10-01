@@ -118,6 +118,11 @@ jobs:
     name: Windows format, build and tests
     runs-on: windows-latest
     timeout-minutes: 25
+    env:
+      # DotNetLib.Tray comes from dotnetlib's private GitHub Packages feed, the "dotnetlib" source in
+      # windows/nuget.config. NuGet reads its credentials from this variable. The secret is a classic
+      # PAT with read:packages only. Pull requests from forks get no secrets, so their restore fails.
+      NuGetPackageSourceCredentials_dotnetlib: Username=lukr-99;Password=${{ secrets.DOTNETLIB_PACKAGES_TOKEN }}
     defaults:
       run:
         working-directory: windows

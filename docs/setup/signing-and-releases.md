@@ -33,7 +33,10 @@ The script refuses to replace an existing key. From the next build on, both apps
 ## 3. The other secrets and branch protection
 
 - The three Supabase secrets: [cloud-supabase.md](cloud-supabase.md), step 4.
-- `gh secret list` should show eight `GOALMAKER_*` secrets.
+- `DOTNETLIB_PACKAGES_TOKEN`: a classic PAT with only `read:packages`, so CI and the release
+  workflow can restore `DotNetLib.Tray` from the private `dotnetlib` feed
+  ([local development](local-development.md#windows)). Set it with `gh secret set DOTNETLIB_PACKAGES_TOKEN`.
+- `gh secret list` should show eight `GOALMAKER_*` secrets and `DOTNETLIB_PACKAGES_TOKEN`.
 - In the GitHub repository settings, protect `main` and require the CI checks: "Supabase migrations,
   row security and the connector", "Android build, unit tests and lint", "Windows format, build and
   tests" and "validate". Branch protection on a private repository needs a paid plan; a public one
