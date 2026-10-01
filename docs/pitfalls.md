@@ -141,3 +141,17 @@ recent apps kept showing the screen the owner had just been on. Unit tests all p
 lock state was correct the whole time; only opening recents on a real phone showed it. An activity
 that covers something asks for that picture not to be taken at all, with
 `setRecentsScreenshotEnabled(false)` from API 33.
+
+## WPF UI's text box keeps its underline with BorderThickness 0
+
+2026-10-01, the chat UI polish. `ui:TextBox` draws its bottom line in a separate `AccentBorder` with a
+fixed thickness, so `BorderThickness="0"` and a clear background still left a line inside the
+composer's pill. Override its brush keys in the box's own resources instead
+(`TextControlElevationBorderBrush`, `TextControlFocusedBorderBrush`, `ControlStrokeColorDefaultBrush`
+and the `TextControlBackground*` brushes) and show focus on the container.
+
+## A page snapshot taken out of its window ignores a theme switch
+
+2026-10-01. `PageSnapshots` takes a window's content out to render it. Detached elements don't hear
+the application's resources change, so applying another theme and saving again wrote the first
+theme's picture under every name. Build the content again after each `ThemeApplier.Apply`.

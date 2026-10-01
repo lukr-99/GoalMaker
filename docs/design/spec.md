@@ -113,6 +113,10 @@ idea type, exactly as the item will be saved (the grammar is in the spec's "Comp
 shortcuts"). Enter or Send saves; Esc clears; tapping a chip edits or removes it. A line starting
 with `/` becomes a command instead.
 
+On Windows the switch to the quick chat sits at the pill's start: a round button with a sparkle,
+tonal when off and in the primary color when on. The chat's thread sits on a raised card above the
+pill, with its corners, the theme's surface, a soft shadow and a hairline edge.
+
 ### Today
 
 Top to bottom: the date and a one-line summary ("3 of 7 done, 2 habits left"), top priorities,
