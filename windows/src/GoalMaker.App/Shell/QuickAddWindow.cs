@@ -2,7 +2,9 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Effects;
 using GoalMaker.App.Localization;
 using GoalMaker.App.ViewModels;
 
@@ -17,6 +19,9 @@ namespace GoalMaker.App.Shell;
 public sealed class QuickAddWindow : Window
 {
     private const double BoxWidth = 560;
+
+    // The clear space around the box where its shadow falls.
+    private const double FrameMargin = 16;
     private IntPtr previous;
     private bool quitting;
 
@@ -29,14 +34,14 @@ public sealed class QuickAddWindow : Window
         Background = Brushes.Transparent;
         ShowInTaskbar = false;
         Topmost = true;
-        Width = BoxWidth;
+        Width = BoxWidth + (2 * FrameMargin);
         SizeToContent = SizeToContent.Height;
         WindowStartupLocation = WindowStartupLocation.Manual;
         SetResourceReference(FontFamilyProperty, "GM.BodyFont");
         SetResourceReference(ForegroundProperty, "GM.TextBrush");
 
         // The hint says what Enter does now, and how to flip the quick chat's switch (M7).
-        var hint = new TextBlock { FontSize = 12, Margin = new Thickness(4, 0, 0, 8), TextWrapping = TextWrapping.Wrap };
+        var hint = new TextBlock { FontSize = 12, Margin = new Thickness(6, 0, 6, 10), TextWrapping = TextWrapping.Wrap };
         hint.SetResourceReference(TextBlock.ForegroundProperty, "GM.TextMutedBrush");
         void ShowHint() => hint.Text = composer.IsChat
             ? strings.Get("QuickAdd.ChatHint")
@@ -51,16 +56,29 @@ public sealed class QuickAddWindow : Window
         };
         var composerHost = new ContentControl { Content = composer, Focusable = false };
         composerHost.SetResourceReference(ContentControl.ContentTemplateProperty, "ComposerTemplate");
+        // A floating card with a soft shadow in the window's clear margin (a sibling draws it, so the
+        // text stays crisp). Its corners follow the composer's pill inside it, and its font and text
+        // color are set here too, so the box looks the same wherever its content is shown.
         var frame = new Border
         {
-            Padding = new Thickness(14),
-            CornerRadius = new CornerRadius(14),
+            Margin = new Thickness(FrameMargin),
+            Padding = new Thickness(12, 12, 12, 14),
+            CornerRadius = new CornerRadius(28),
             BorderThickness = new Thickness(1),
             Child = new StackPanel { Children = { hint, composerHost } },
         };
+        var shadow = new Border
+        {
+            Margin = frame.Margin,
+            CornerRadius = frame.CornerRadius,
+            Effect = new DropShadowEffect { BlurRadius = 24, ShadowDepth = 6, Direction = 270, Opacity = 0.28, Color = Colors.Black },
+        };
+        shadow.SetResourceReference(Border.BackgroundProperty, "GM.BackgroundBrush");
         frame.SetResourceReference(Border.BackgroundProperty, "GM.BackgroundBrush");
-        frame.SetResourceReference(Border.BorderBrushProperty, "GM.OutlineBrush");
-        Content = frame;
+        frame.SetResourceReference(Border.BorderBrushProperty, "CardStrokeColorDefaultBrush");
+        frame.SetResourceReference(TextElement.FontFamilyProperty, "GM.BodyFont");
+        frame.SetResourceReference(TextElement.ForegroundProperty, "GM.TextBrush");
+        Content = new Grid { Children = { shadow, frame } };
 
         composer.Added += (_, _) => Dismiss();
         PreviewKeyDown += (_, e) =>
@@ -81,7 +99,7 @@ public sealed class QuickAddWindow : Window
         var front = ForegroundWindow.Current();
         previous = front == own ? previous : front;
         var area = SystemParameters.WorkArea;
-        Left = area.Left + ((area.Width - BoxWidth) / 2);
+        Left = area.Left + ((area.Width - Width) / 2);
         Top = area.Top + (area.Height / 5);
         Show();
         Activate();
