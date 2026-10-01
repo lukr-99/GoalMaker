@@ -55,7 +55,8 @@ The script refuses to replace an existing key. From the next build on, both apps
    Updates says when a check last got through.
    Once a check has found the update, the Settings item in the Windows sidebar and the gear in the
    phone's top bar wear an accent mark with a download arrow ("Update available") until it is
-   installed or a later check finds none. After a restart, a found update is checked again at once, so
+   installed or a later check that gets an answer finds none. A check that fails (offline, GitHub
+   down), quiet or asked for, leaves the mark as it is. After a restart, a found update is checked again at once, so
    the mark comes back without waiting a day.
 
 A failed workflow publishes no release unless it reached the last job. If a bad release went out,

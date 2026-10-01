@@ -173,7 +173,8 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   keeps the update the last check found (`waiting` / `Waiting` with `WaitingChanged`); while one
   waits, the way to Settings wears an accent mark with a download arrow (the Settings item in the
   Windows sidebar, the gear in the phone's top bar) and Settings shows it as an accent row with the
-  install button. A check that finds none clears it, and a new version starts without it.
+  install button. A check that gets an answer and finds none clears it, a check that fails (offline,
+  GitHub down) leaves it, and a new version starts without it.
   `AutoUpdateCheck` (application layer, a clock and a one-day interval injected) is the quiet
   check: the composition root starts it a little after launch (Windows: a `TimeProvider` timer, 30 s
   and then hourly; Android: a few seconds after each `ProcessLifecycleOwner` start) and it checks
