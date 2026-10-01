@@ -48,9 +48,9 @@ time; it is gone when the app closes.
 
 ## What it cannot do
 
-- **Delete.** The chat is offered the connector's tools minus every tool that deletes: all the
-  `delete_*` tools, and every tool marked destructive or named `remove_*` (`remove_step`,
-  `remove_reminder`, `undo_change`, which can delete what it undoes). A call for a tool it wasn't
+- **Delete.** The chat is offered only its everyday tools (see "Speed"), and never one that
+  deletes, even if it were listed: all the `delete_*` tools, and every tool marked destructive or
+  named `remove_*` (`remove_step`, `remove_reminder`, `undo_change`, which can delete what it undoes). A call for a tool it wasn't
   offered is refused before anything runs. Asked to delete, it says the owner can do it in the app.
 - **Say who made a task.** `made_by` isn't offered; a task added in the chat is the owner's.
 - Reach another owner's rows, or anything the owner's own session can't reach.
@@ -78,11 +78,27 @@ the log, but nothing breaks if they don't.
 ## The model
 
 `GeminiProvider` (`_shared/assistant/geminiProvider.ts`) calls the Gemini API's `generateContent`
-with function calling. The model is the constant `GEMINI_MODEL`, `gemini-flash-latest`: Google's
-alias for its current Flash model, the kind the free tier covers, so a retired version can't break
-the chat. Pin a named version there if the alias ever moves to one that behaves worse. Each tool's zod shape is turned into a function
+with function calling. The model is the constant `GEMINI_MODEL`, `gemini-flash-lite-latest`:
+Google's alias for its current light Flash model, which the free tier covers with more calls a
+minute and a day than Flash, so a retired version can't break the chat. Pin a named version there if
+the alias ever moves to one that behaves worse. Each tool's zod shape is turned into a function
 declaration (`_shared/assistant/chatTools.ts`). A model turn with tool calls is sent back exactly as
 Gemini gave it, thought signatures included, which newer models require.
+
+### Speed
+
+A message takes at least two model rounds (one picks the tools, one writes the answer), and every
+round sends the whole thread and every tool's declaration again. So the chat keeps each round small:
+
+- It offers only its everyday tools (`CHAT_TOOLS` in `chatTools.ts`, 27 of the connector's), each
+  with the first sentence of its description. The connector's longer notes are written for Claude.
+- The system prompt names the owner's areas, tags and active projects, so the model doesn't spend a
+  round looking them up.
+- Thinking is set to minimal: choosing a planner tool needs little of it, and it was most of a
+  round's wait.
+
+With these a round takes under a second on the free tier where it took two to five, and about
+4,000 prompt tokens where it took 11,000. A tool the chat should offer goes into `CHAT_TOOLS`.
 
 The loop only talks to the `ChatProvider` interface (`_shared/assistant/chatProvider.ts`), so
 another model (a local Ollama one on the PC, say) can be added without touching it.

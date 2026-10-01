@@ -4,7 +4,7 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@
 import { tools } from "../tools/tools.ts";
 import type { Schema, ToolCall, ToolResult, ToolSpec } from "./chatProvider.ts";
 import { ProviderError } from "./chatProvider.ts";
-import { chatDeclarations, chatTools, deletes } from "./chatTools.ts";
+import { CHAT_TOOLS, chatDeclarations, chatTools, deletes, firstSentence } from "./chatTools.ts";
 import { FakeProvider } from "./fakeProvider.ts";
 import { geminiBody, GeminiProvider, replyOf } from "./geminiProvider.ts";
 import { systemPrompt } from "./prompt.ts";
@@ -83,6 +83,21 @@ Deno.test("the chat offers no tool that deletes", () => {
   for (const name of ["get_today", "add_task", "move_task", "complete_task", "search_tasks"]) {
     assert(offered.includes(name), name);
   }
+});
+
+Deno.test("the chat offers only its everyday tools, each a real one, with short descriptions", () => {
+  const names = new Set(tools.map((tool) => tool.name));
+  assertEquals([...CHAT_TOOLS].filter((name) => !names.has(name)), []);
+  assertEquals(chatTools.length, CHAT_TOOLS.size);
+  assert(JSON.stringify(chatDeclarations).length < 16_000, "every round carries the declarations; keep them small");
+  assertEquals(firstSentence("Adds a task. It lands in the Inbox."), "Adds a task.");
+  assertEquals(firstSentence("No end"), "No end");
+  assertEquals(firstSentence("Plans for e.g. today. More."), "Plans for e.g.");
+});
+
+Deno.test("Gemini thinks as little as it can", () => {
+  const body = geminiBody({ system: "", tools: [], allowCalls: true, messages: [{ role: "user", text: "hi" }] });
+  assertEquals(body.generationConfig.thinkingConfig, { thinkingLevel: "minimal" });
 });
 
 Deno.test("a declaration keeps descriptions, bounds, enums and optional inputs apart", () => {
@@ -214,7 +229,11 @@ Deno.test("the prompt names the planning day, the time zone and GoalMaker's word
     today: "2026-09-29",
     timeZone: "Europe/Prague",
     dayStartHour: 4,
+    areas: ["Health", "Work"],
+    tags: [],
+    projects: ["GoalMaker"],
   });
+  assertStringIncludes(prompt, "Areas: Health, Work. Tags: none. Active projects: GoalMaker.");
   assertStringIncludes(prompt, "today is Tuesday 29 September 2026 (2026-09-29)");
   assertStringIncludes(prompt, "It is 2026-09-30 01:30 in Europe/Prague");
   assertStringIncludes(prompt, "planned day");

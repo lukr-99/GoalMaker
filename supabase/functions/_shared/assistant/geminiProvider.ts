@@ -9,8 +9,11 @@ import {
   type ToolCall,
 } from "./chatProvider.ts";
 
-/** The free-tier Flash model. `-latest` follows Google's current Flash, so a retired version can't break the chat. */
-export const GEMINI_MODEL = "gemini-flash-latest";
+/**
+ * The free tier's light Flash model: quicker than Flash and with more free calls a minute and a day.
+ * `-latest` follows Google's current one, so a retired version can't break the chat.
+ */
+export const GEMINI_MODEL = "gemini-flash-lite-latest";
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 /** How long one model call may take before the request fails. */
 const TIMEOUT_MS = 40_000;
@@ -54,6 +57,8 @@ export function geminiBody(request: ChatRequest): Json {
   const body: Json = {
     systemInstruction: { parts: [{ text: request.system }] },
     contents: request.messages.map(contentOf),
+    // Picking a planner tool needs little thought, and thinking is most of a round's wait.
+    generationConfig: { thinkingConfig: { thinkingLevel: "minimal" } },
   };
   if (request.tools.length > 0) {
     body.tools = [{ functionDeclarations: request.tools }];

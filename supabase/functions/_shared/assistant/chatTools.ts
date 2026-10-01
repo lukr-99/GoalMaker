@@ -18,8 +18,42 @@ export function deletes(tool: Tool): boolean {
  */
 export const HIDDEN_INPUTS = new Set(["made_by"]);
 
-/** The connector's tools the chat offers. */
-export const chatTools: Tool[] = tools.filter((tool) => !deletes(tool));
+/**
+ * The connector's tools the chat offers: the everyday ones only. Every model round carries all the
+ * declarations, so each tool offered costs time on every message (docs/assistant.md, "Speed").
+ */
+export const CHAT_TOOLS = new Set([
+  "get_today",
+  "get_tomorrow",
+  "get_inbox",
+  "get_calendar",
+  "get_task",
+  "search_tasks",
+  "get_completed_tasks",
+  "add_task",
+  "update_task",
+  "complete_task",
+  "reopen_task",
+  "drop_task",
+  "move_task",
+  "add_step",
+  "check_step",
+  "add_reminder",
+  "get_habits",
+  "check_in_habit",
+  "get_goals",
+  "log_goal_amount",
+  "get_projects",
+  "get_project_board",
+  "add_project_item",
+  "move_project_item",
+  "get_wants",
+  "add_want",
+  "get_activity",
+]);
+
+/** The connector's tools the chat offers; one that deletes never is, even if listed. */
+export const chatTools: Tool[] = tools.filter((tool) => CHAT_TOOLS.has(tool.name) && !deletes(tool));
 
 // deno-lint-ignore no-explicit-any
 type AnyZod = z.ZodTypeAny & { _def: any; description?: string };
@@ -77,10 +111,16 @@ function objectOf(shape: z.ZodRawShape): Schema {
 /** A tool as a function declaration; a tool without input gets no parameters at all. */
 export function declarationOf(tool: Tool): ToolSpec {
   const parameters = objectOf(tool.input);
-  const description = `${tool.title}. ${tool.description}`;
+  const description = `${tool.title}. ${firstSentence(tool.description)}`;
   return Object.keys(parameters.properties!).length === 0
     ? { name: tool.name, description }
     : { name: tool.name, description, parameters };
+}
+
+/** The first sentence of a connector description; the rest is written for Claude and costs tokens here. */
+export function firstSentence(text: string): string {
+  const end = text.search(/[.!?](\s|$)/);
+  return end === -1 ? text : text.slice(0, end + 1);
 }
 
 /** The declarations the chat hands the model on every round. */

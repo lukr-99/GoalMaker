@@ -10,6 +10,10 @@ export interface PromptFacts {
   today: string;
   timeZone: string;
   dayStartHour: number;
+  /** The owner's areas, tags and active projects, so the model needn't spend a round looking them up. */
+  areas?: string[];
+  tags?: string[];
+  projects?: string[];
 }
 
 export function systemPrompt(facts: PromptFacts): string {
@@ -23,6 +27,9 @@ export function systemPrompt(facts: PromptFacts): string {
     `${longDay(facts.today)} (${facts.today}); before ${hour} it is still the day before. Work out ` +
     '"tomorrow", "Friday" or "next week" from today and pass days to tools as dates like 2026-09-21, ' +
     'or as "today" and "tomorrow".',
+    "",
+    `Areas: ${listed(facts.areas)}. Tags: ${listed(facts.tags)}. Active projects: ${listed(facts.projects)}.`,
+    "Use these names as they are; a new tag is fine, but don't invent areas or projects.",
     "",
     "How GoalMaker words things:",
     "- A task has a planned day (the day it shows in Today), and maybe a time, a deadline, an area, tags, " +
@@ -47,11 +54,23 @@ export function systemPrompt(facts: PromptFacts): string {
   ].join("\n");
 }
 
+function listed(names: string[] | undefined): string {
+  return names === undefined || names.length === 0 ? "none" : names.join(", ");
+}
+
 /** The prompt for the owner a planner belongs to. */
 export async function promptFor(planner: Planner): Promise<string> {
-  const settings = await planner.settings();
-  const now = await planner.now();
+  const [settings, now, areas, tags, projects] = await Promise.all([
+    planner.settings(),
+    planner.now(),
+    planner.areas(),
+    planner.tags(),
+    planner.projects(),
+  ]);
   return systemPrompt({
+    areas: areas.filter((area) => !area.archived).map((area) => area.name),
+    tags: tags.map((tag) => tag.name),
+    projects: projects.filter((project) => project.status === "active").map((project) => project.name),
     displayName: settings.displayName,
     local: now.local,
     today: now.today,
