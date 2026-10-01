@@ -232,6 +232,91 @@ public static class HabitRules
         return Share(habit, todays?.Value ?? 0);
     }
 
+    /// <summary>The Habits page's group for <paramref name="habit"/>: limits, weekly (and monthly) ones, or the ones on days.</summary>
+    public static HabitGroup Group(HabitItem habit) => habit switch
+    {
+        _ when IsLimit(habit) => HabitGroup.Limits,
+        { Cadence: PerWeek or PerMonth } => HabitGroup.Weekly,
+        _ => HabitGroup.Days,
+    };
+
+    /// <summary>
+    /// Where <paramref name="habit"/> stands on <paramref name="today"/>: none, paused, skipped, a limit (never
+    /// done or left), done (the ring is full, or a weekly or monthly habit's check-in today meets its day) or left.
+    /// </summary>
+    public static HabitStanding Standing(HabitItem habit, DateOnly today, IReadOnlyList<HabitCheckin> checkins, IReadOnlyList<HabitPause> pauses)
+    {
+        if (habit.Archived || today < habit.StartsOn || !IsDue(habit, today))
+        {
+            return HabitStanding.None;
+        }
+
+        if (pauses.Any(pause => Covers(pause, today, today)))
+        {
+            return HabitStanding.Paused;
+        }
+
+        var start = PeriodStart(habit, today);
+        var end = PeriodEnd(habit, start);
+        if (checkins.Any(checkin => !checkin.Deleted && checkin.Skipped && checkin.Day >= start && checkin.Day <= end))
+        {
+            return HabitStanding.Skipped;
+        }
+
+        if (IsLimit(habit))
+        {
+            return HabitStanding.Limit;
+        }
+
+        if ((Ring(habit, today, checkins) ?? 0) >= 1)
+        {
+            return HabitStanding.Done;
+        }
+
+        var todays = checkins.FirstOrDefault(checkin => !checkin.Deleted && checkin.Day == today);
+        return habit.Cadence is PerWeek or PerMonth && todays is not null && DayMet(habit, todays) ? HabitStanding.Done : HabitStanding.Left;
+    }
+
+    /// <summary>One day of the week's dots: none, paused, skipped, over, open (today), met or missed.</summary>
+    public static HabitDot Dot(HabitItem habit, DateOnly day, DateOnly today, IReadOnlyList<HabitCheckin> checkins, IReadOnlyList<HabitPause> pauses)
+    {
+        if (day < habit.StartsOn || !IsDue(habit, day))
+        {
+            return HabitDot.None;
+        }
+
+        if (pauses.Any(pause => Covers(pause, day, day)))
+        {
+            return HabitDot.Paused;
+        }
+
+        var checkin = checkins.FirstOrDefault(checkin => !checkin.Deleted && checkin.Day == day);
+        if (checkin?.Skipped == true)
+        {
+            return HabitDot.Skipped;
+        }
+
+        if (IsLimit(habit))
+        {
+            return checkin is not null && IsOver(habit, checkin.Value) ? HabitDot.Over : day >= today ? HabitDot.Open : HabitDot.Met;
+        }
+
+        if (checkin is not null && DayMet(habit, checkin))
+        {
+            return HabitDot.Met;
+        }
+
+        // A weekly or monthly habit isn't due on any one day, so a day without one misses nothing.
+        return day >= today ? HabitDot.Open : habit.Cadence is PerWeek or PerMonth ? HabitDot.None : HabitDot.Missed;
+    }
+
+    /// <summary>Whether Today shows its "all done" card: none of its habits is left, and at least one is done.</summary>
+    public static bool AllDone(IEnumerable<HabitStanding> standings)
+    {
+        var all = standings.ToList();
+        return !all.Contains(HabitStanding.Left) && all.Contains(HabitStanding.Done);
+    }
+
     /// <summary>The id of a habit's one check-in on <paramref name="day"/>, the same on every device.</summary>
     public static string CheckinId(string habitId, DateOnly day) =>
         NameBasedUuid.Of(Namespace, $"checkin/{habitId.ToLowerInvariant()}/{day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");

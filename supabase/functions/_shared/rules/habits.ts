@@ -214,6 +214,60 @@ export function ring(habit: HabitItem, today: Day, checkins: HabitCheckin[]): nu
   return share(habit, checkin?.value ?? 0);
 }
 
+/** The Habits page's group: limits, weekly (and monthly) ones, or the ones on days. */
+export type HabitGroup = "days" | "weekly" | "limits";
+
+/** Where a habit stands today: a limit is never done or left, so it never reads as not done. */
+export type HabitStanding = "none" | "paused" | "skipped" | "limit" | "done" | "left";
+
+/** One day of the week's dots on a habit card. */
+export type HabitDot = "none" | "paused" | "skipped" | "over" | "open" | "met" | "missed";
+
+export function habitGroup(habit: HabitItem): HabitGroup {
+  if (isLimit(habit)) return "limits";
+  return habit.cadence === "per_week" || habit.cadence === "per_month" ? "weekly" : "days";
+}
+
+/**
+ * Where a habit stands on `today`: none, paused, skipped, a limit, done (the ring is full, or a weekly or
+ * monthly habit's check-in today meets its day) or left.
+ */
+export function standing(habit: HabitItem, today: Day, checkins: HabitCheckin[], pauses: HabitPause[]): HabitStanding {
+  if (habit.archived === true || today < habit.startsOn || !isDue(habit, today)) return "none";
+  if (pauses.some((pause) => covers(pause, today, today))) return "paused";
+  const start = habitPeriodStart(habit, today);
+  const end = habitPeriodEnd(habit, start);
+  if (checkins.some((checkin) => !checkin.deleted && checkin.skipped && checkin.day >= start && checkin.day <= end)) {
+    return "skipped";
+  }
+  if (isLimit(habit)) return "limit";
+  if ((ring(habit, today, checkins) ?? 0) >= 1) return "done";
+  const todays = checkins.find((checkin) => !checkin.deleted && checkin.day === today);
+  const weekly = habit.cadence === "per_week" || habit.cadence === "per_month";
+  return weekly && todays !== undefined && dayMet(habit, todays) ? "done" : "left";
+}
+
+/** One day of the week's dots: none, paused, skipped, over, open (today), met or missed. */
+export function dot(habit: HabitItem, day: Day, today: Day, checkins: HabitCheckin[], pauses: HabitPause[]): HabitDot {
+  if (day < habit.startsOn || !isDue(habit, day)) return "none";
+  if (pauses.some((pause) => covers(pause, day, day))) return "paused";
+  const checkin = checkins.find((checkin) => !checkin.deleted && checkin.day === day);
+  if (checkin?.skipped) return "skipped";
+  if (isLimit(habit)) {
+    if (checkin !== undefined && isOver(habit, checkin.value)) return "over";
+    return day >= today ? "open" : "met";
+  }
+  if (checkin !== undefined && dayMet(habit, checkin)) return "met";
+  if (day >= today) return "open";
+  // A weekly or monthly habit isn't due on any one day, so a day without one misses nothing.
+  return habit.cadence === "per_week" || habit.cadence === "per_month" ? "none" : "missed";
+}
+
+/** Whether Today shows its "all done" card: none of its habits is left, and at least one is done. */
+export function allDone(standings: HabitStanding[]): boolean {
+  return !standings.includes("left") && standings.includes("done");
+}
+
 /** The id of a habit's one check-in on `day`, the same on every device. */
 export function checkinId(habitId: string, day: Day): Promise<string> {
   return nameBasedUuid(NAMESPACE, `checkin/${habitId.toLowerCase()}/${day}`);

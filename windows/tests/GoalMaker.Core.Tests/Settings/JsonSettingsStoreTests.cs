@@ -108,6 +108,22 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void GoalsShowAsTheLadderUntilTheListIsChosenAndThenRememberIt()
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(SettingsFile, """{ "Version": 1 }""");
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Equal(GoalsView.Ladder, store.GoalsView);
+
+        store.GoalsView = GoalsView.List;
+
+        Assert.Equal(GoalsView.List, new JsonSettingsStore(SettingsFile).GoalsView);
+
+        File.WriteAllText(SettingsFile, """{ "Version": 1, "GoalsView": 7 }""");
+        Assert.Equal(GoalsView.Ladder, new JsonSettingsStore(SettingsFile).GoalsView);
+    }
+
+    [Fact]
     public void TallyIsOffUntilTurnedOn()
     {
         Directory.CreateDirectory(folder);

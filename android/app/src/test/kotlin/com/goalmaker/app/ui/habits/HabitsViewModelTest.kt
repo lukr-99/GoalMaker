@@ -6,10 +6,13 @@ import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.application.planning.HabitDot
 import com.goalmaker.app.application.planning.HabitDraft
+import com.goalmaker.app.application.planning.HabitGroup
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitPeriodState
 import com.goalmaker.app.application.planning.HabitRules
+import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.data.replica.TestReplica
 import java.time.Instant
@@ -253,6 +256,83 @@ class HabitsViewModelTest {
         val row = viewModel.uiState.first { it.loaded && it.active.none { row -> row.done } }.active.single()
         assertEquals(0.0, row.ring!!, 1e-9)
         assertNull(row.habit.goalId)
+    }
+
+    @Test
+    fun `habits sit in Every day, Weekly and Limits, so a limit never reads as not done`() = runTest {
+        habits.add(HabitDraft("Read", today))
+        habits.add(HabitDraft("Gym", today, HabitRules.WEEKDAYS, weekdays = 21))
+        habits.add(HabitDraft("Run", today, HabitRules.PER_WEEK, times = 3))
+        habits.add(HabitDraft("Snacks", today, measure = HabitRules.COUNT, target = 2.0, direction = HabitRules.AT_MOST))
+
+        val state = viewModel.uiState.first { it.loaded && it.active.size == 4 }
+        assertEquals(listOf(HabitGroup.DAYS, HabitGroup.WEEKLY, HabitGroup.LIMITS), state.sections.map { it.group })
+        assertEquals(listOf(listOf("Read", "Gym"), listOf("Run"), listOf("Snacks")), state.sections.map { section -> section.rows.map { it.habit.name } })
+        assertEquals(HabitStanding.LIMIT, state.sections.last().rows.single().standing)
+    }
+
+    @Test
+    fun `hide done takes the done habits out of their groups and keeps the counts`() = runTest {
+        val read = habits.add(HabitDraft("Read", today))!!
+        habits.add(HabitDraft("Stretch", today))
+        val run = habits.add(HabitDraft("Run", today, HabitRules.PER_WEEK, times = 3))!!
+        habits.checkIn(read.id, today)
+        // One run today is today's part of a weekly habit, though the week needs two more.
+        habits.checkIn(run.id, today)
+
+        viewModel.setHideDone(true)
+
+        val state = viewModel.uiState.first { it.loaded && it.hideDone && it.active.size == 3 }
+        assertEquals(listOf("Stretch"), state.sections.first { it.group == HabitGroup.DAYS }.rows.map { it.habit.name })
+        assertEquals(2, state.sections.first { it.group == HabitGroup.DAYS }.total)
+        val weekly = state.sections.first { it.group == HabitGroup.WEEKLY }
+        assertTrue(weekly.rows.isEmpty())
+        assertEquals(1, weekly.total)
+    }
+
+    @Test
+    fun `the summary counts what today asks for and names the longest streak`() = runTest {
+        val read = habits.add(HabitDraft("Read", today.minusDays(5), emoji = "📖"))!!
+        val water = habits.add(HabitDraft("Water", today, measure = HabitRules.COUNT, target = 8.0))!!
+        val stretch = habits.add(HabitDraft("Stretch", today))!!
+        habits.add(HabitDraft("Snacks", today, measure = HabitRules.COUNT, target = 2.0, direction = HabitRules.AT_MOST))
+        (0..4).forEach { back -> habits.checkIn(read.id, today.minusDays(back.toLong())) }
+        habits.checkIn(water.id, today, 4.0)
+        habits.skip(stretch.id, today)
+
+        val state = viewModel.uiState.first { it.loaded && it.active.size == 4 }
+        // Read and Water ask something of today; the limit and the skipped one don't.
+        assertEquals(1, state.summary.done)
+        assertEquals(2, state.summary.total)
+        assertEquals(0.75, state.summary.share, 1e-9)
+        assertEquals("Read", state.summary.best?.habit?.name)
+        assertEquals(5, state.summary.best?.streak)
+    }
+
+    @Test
+    fun `a skipped habit stays in place with Hide done on, and its week shows the skip`() = runTest {
+        val read = habits.add(HabitDraft("Read", today.minusDays(10)))!!
+        habits.checkIn(read.id, today.minusDays(1))
+        habits.skip(read.id, today)
+
+        viewModel.setHideDone(true)
+
+        val row = viewModel.uiState.first { it.loaded && it.hideDone && it.active.isNotEmpty() }.sections.single().rows.single()
+        assertEquals(HabitStanding.SKIPPED, row.standing)
+        assertEquals(7, row.dots.size)
+        assertEquals(listOf(HabitDot.MET, HabitDot.SKIPPED), row.dots.takeLast(2))
+        assertEquals(HabitDot.MISSED, row.dots.first())
+    }
+
+    @Test
+    fun `an archived habit leaves the groups and folds into Archived`() = runTest {
+        habits.add(HabitDraft("Read", today))
+        val old = habits.add(HabitDraft("Cold shower", today.minusDays(30)))!!
+        habits.setArchived(old.id, true)
+
+        val state = viewModel.uiState.first { it.loaded && it.archived.isNotEmpty() }
+        assertEquals(listOf("Read"), state.sections.flatMap { it.rows }.map { it.habit.name })
+        assertEquals(HabitStanding.NONE, state.archived.single().standing)
     }
 
     // The flows re-emit on the main looper while the state is collected.

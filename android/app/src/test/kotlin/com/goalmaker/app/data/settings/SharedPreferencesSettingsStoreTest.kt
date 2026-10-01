@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.settings.ComposerMode
+import com.goalmaker.app.domain.settings.GoalsView
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.domain.update.UpdatePostponement
@@ -88,6 +89,20 @@ class SharedPreferencesSettingsStoreTest {
 
         preferences.edit(commit = true) { putString("board_collapsed_columns", "todo,someday") }
         assertEquals(setOf("todo"), SharedPreferencesSettingsStore(preferences).collapsedColumns.value)
+    }
+
+    @Test
+    fun `goals show as the ladder until the list is picked, and the pick survives a restart`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(GoalsView.LADDER, store.goalsView.value)
+
+        store.setGoalsView(GoalsView.LIST)
+
+        assertEquals(GoalsView.LIST, store.goalsView.value)
+        assertEquals(GoalsView.LIST, SharedPreferencesSettingsStore(preferences).goalsView.value)
+
+        preferences.edit(commit = true) { putString("goals_view", "TREE") }
+        assertEquals(GoalsView.LADDER, SharedPreferencesSettingsStore(preferences).goalsView.value)
     }
 
     @Test

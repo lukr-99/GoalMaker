@@ -9,6 +9,7 @@ import com.goalmaker.app.domain.planning.PlanningDay
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -18,8 +19,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * The Habits screen (docs/habits.md, spec stories 36 to 42): each habit with today's ring, its streak
- * and heatmap; checking in, skipping, pausing, archiving and editing. Disk work runs on [io]; [clock]
+ * The Habits screen (docs/habits.md, spec stories 36 to 42): the summary card, each habit in its group
+ * with today's check-in, its streak, week and heatmap, Hide done; checking in, skipping, pausing,
+ * archiving and editing. Disk work runs on [io]; [clock]
  * and [dayStartHour] give the planning day every check-in lands on.
  */
 class HabitsViewModel(
@@ -29,13 +31,22 @@ class HabitsViewModel(
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
 ) : ViewModel() {
+    // Hide done is the screen's own, kept while the app runs (docs/habits.md).
+    private val hideDone = MutableStateFlow(false)
+
     val uiState: StateFlow<HabitsUiState> = combine(
         habits.watch().flowOn(io),
         goals.watch().flowOn(io),
         dayStartHour,
-    ) { data, (goalList, _), startHour ->
-        HabitBoard.build(data, goalList, PlanningDay.of(clock(), startHour))
+        hideDone,
+    ) { data, (goalList, _), startHour, hiding ->
+        HabitBoard.build(data, goalList, PlanningDay.of(clock(), startHour), hiding)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HabitsUiState())
+
+    /** Hides the habits done today, or shows them again; the rest stay where they are. */
+    fun setHideDone(hide: Boolean) {
+        hideDone.value = hide
+    }
 
     /** The planning day check-ins land on. */
     fun today(): LocalDate = PlanningDay.of(clock(), dayStartHour.value)

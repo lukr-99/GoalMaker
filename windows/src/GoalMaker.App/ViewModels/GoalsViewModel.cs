@@ -14,6 +14,8 @@ namespace GoalMaker.App.ViewModels;
 /// planning ahead. A ring shows only its horizon (the other columns fade); clicking a card lights what
 /// it feeds and what feeds it. Goals are added and edited in <see cref="Editor"/> and amounts are logged
 /// in the log panel. A shown goal that becomes a hit raises <see cref="Celebrate"/>, unless motion is reduced.
+/// The page header switches to the plain list (<see cref="View"/>): the same periods as groups of compact
+/// rows, where a click opens the goal; this PC remembers the choice.
 /// </summary>
 public sealed partial class GoalsViewModel : ObservableObject
 {
@@ -30,6 +32,10 @@ public sealed partial class GoalsViewModel : ObservableObject
 
     [ObservableProperty]
     private GoalHorizon? filter;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLadderView), nameof(IsListView))]
+    private GoalsView view;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPick), nameof(HintText))]
@@ -71,6 +77,7 @@ public sealed partial class GoalsViewModel : ObservableObject
         this.strings = strings;
         this.time = time;
         this.motionReduced = motionReduced;
+        View = settings.GoalsView;
         Editor = new GoalEditorViewModel(goals, strings, Today);
         Editor.PropertyChanged += (_, change) =>
         {
@@ -107,6 +114,32 @@ public sealed partial class GoalsViewModel : ObservableObject
     public GoalSectionViewModel? NextWeek => Sections.Count > 4 ? Sections[4] : null;
 
     public bool HasPick => Picked is not null;
+
+    /// <summary>The rings, the ladder's columns and next week show; the header's Ladder choice.</summary>
+    public bool IsLadderView
+    {
+        get => View == GoalsView.Ladder;
+        set
+        {
+            if (value)
+            {
+                View = GoalsView.Ladder;
+            }
+        }
+    }
+
+    /// <summary>The plain list shows: <see cref="Sections"/> as groups of compact rows; the header's List choice.</summary>
+    public bool IsListView
+    {
+        get => View == GoalsView.List;
+        set
+        {
+            if (value)
+            {
+                View = GoalsView.List;
+            }
+        }
+    }
 
     /// <summary>The line under the rings: how to light a chain and how many goals need you, or the lit chain.</summary>
     public string HintText => Picked is { } row
@@ -202,6 +235,8 @@ public sealed partial class GoalsViewModel : ObservableObject
                 section => Editor.OpenNew(section.Horizon, section.Start),
                 section => goals.CopyPrevious(section.Horizon, section.Start))
             {
+                AddName = strings.Get("Goals.AddTo", strings.Get("Goals.Section", name, PeriodText(horizon, start, strings))),
+                HitText = rows.Count == 0 ? string.Empty : strings.Get("Goals.RingHit", rows.Count(row => row.IsHit), rows.Count),
                 Badge = strings.Get("Goals.Badge" + horizon),
                 Title = horizon == GoalHorizon.Month ? start.ToString("MMMM", CultureInfo.CurrentCulture) : PeriodText(horizon, start, strings),
                 Line = strings.Get("Goals.LaneLine", strings.Get("Goals.RingHit", rows.Count(row => row.IsHit), rows.Count), Gone(horizon, start, today)),
@@ -246,6 +281,20 @@ public sealed partial class GoalsViewModel : ObservableObject
     }
 
     internal void Edit(GoalItem goal) => Editor.OpenEdit(goal);
+
+    // The list has no chain to light, so a lit one goes out; the choice is this PC's.
+    partial void OnViewChanged(GoalsView value)
+    {
+        if (value == GoalsView.List && Picked is not null)
+        {
+            ClearPick();
+        }
+
+        if (settings.GoalsView != value)
+        {
+            settings.GoalsView = value;
+        }
+    }
 
     internal void SetStatus(string id, string status) => goals.SetStatus(id, status);
 

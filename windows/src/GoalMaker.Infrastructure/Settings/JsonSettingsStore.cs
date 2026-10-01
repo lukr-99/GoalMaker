@@ -144,6 +144,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { FoldedBoardColumns = [.. Known(value)] });
     }
 
+    /// <summary>A value the file doesn't know reads as the ladder.</summary>
+    public GoalsView GoalsView
+    {
+        get => Enum.IsDefined(document.GoalsView) ? document.GoalsView : GoalsView.Ladder;
+        set => Save(document with { GoalsView = value });
+    }
+
     public IReadOnlyDictionary<string, MiniWindowState> MiniWindows
     {
         get => document.MiniWindows ?? [];

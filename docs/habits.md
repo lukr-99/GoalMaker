@@ -77,24 +77,63 @@ times a week" streak counts weeks, and a holiday pause or a sick day costs nothi
 **Pauses** are ranges of days (`from`, and `until` or open-ended while the pause lasts); they stay
 after the habit resumes, so old streaks still read right.
 
+## Where a habit stands today
+
+The cards on Today and the Habits page read one **standing** per habit, the first that applies
+(`standings` in the vectors):
+
+1. **none**: archived, not started yet, or not due today (a weekday outside its mask);
+2. **paused**: a pause covers today;
+3. **skipped**: a check-in in the period holding today says skipped;
+4. **limit**: a limit is never done and never left, so Snacks never reads as "not done";
+5. **done**: today's ring is full, or a weekly or monthly habit was checked in today (one run of
+   "3 times a week" is today's part, even while the week still needs more);
+6. **left**: otherwise.
+
+Today's "left" count counts the left ones, **Hide done** hides the done ones, and Today shows its
+short **all done** card when none is left and at least one is done (`allDone`). A skipped habit stays
+in place with a dashed button that undoes the skip.
+
+The Habits page groups habits into **Every day** (daily and chosen weekdays), **Weekly** (N times a
+week or a month) and **Limits** (`groups`). Each card shows **the week's dots**, the last seven days
+up to today (`dots`): met, missed, skipped, paused, over a limit, today still open, or nothing on a
+day the habit isn't due. A weekly habit's day without a check-in misses nothing, so it shows
+nothing; a limit's clean day is met.
+
 ## On screen
 
-- **Today's ring** fills with the day's value against the target for a daily or weekday habit, and
-  with the days met so far against N for a weekly or monthly one. A tap checks a check habit (and
-  takes it back), adds one to a count, and asks for the value of an amount. On the Windows Habits
-  page, where there is room, the row takes the amount itself: a plus for one more and a field for a
-  number, which is the whole act for a glass of water. Both write the day's one check-in, so three
-  then five is eight. The ring fills with a
-  spring and a small burst, and a streak reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods
-  gets confetti; both are skipped under reduce motion.
+- **A habit card** (the habits prototype, option B, chosen 2026-10-01) shows the emoji, the name
+  with its streak as a flame and a number, where today stands, pips for a small count or the days a
+  weekly habit needs (a limit's pips past the line turn to the danger colour) or a bar for an amount,
+  and the week's dots. Its **check-in button** checks a check habit (and takes it back), adds one to
+  a count ("+1"), and asks for the value of an amount; once today's part is done it fills with the
+  accent and turns round, and while the habit is skipped it is a dashed outline whose click undoes
+  the skip. Every check-in writes the day's one check-in, so three then five is eight. A streak
+  reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods gets confetti, skipped under reduce
+  motion.
+- **The menu** holds the rest: check in or add one, log an amount, skip today (this week, this
+  month) or undo the skip, clear today, pause or resume, edit, archive and delete; on Today also
+  Open Habits. On the phone a long press on the card or its menu button opens it as a sheet, and a
+  screen reader gets Skip and More as actions, so nothing needs the long press. On Windows the
+  card's menu button, a right click or the menu key open it.
 - **The heatmap** gives each day a value: nothing before the start or on a day that isn't due,
   paused, skipped, over a limit, or the day's value against its target from 0 to 1 (a check is 0 or
   1; a limit's day is what is left of the allowance). It runs by
   weeks, Monday at the top, from the habit's first week and at most 26 weeks back, and shows the last
   weeks that fit the width.
-- **Today** holds the habits due today as a row of rings above the rest of the tasks, with how many
-  are left in the day's line (design spec, Today). Both apps also have a Habits screen with every
-  habit, its streak and its map, and the archived ones folded at the end.
+- **Today** holds the habits on Today as cards (design spec, Today). On the phone they sit behind
+  a **Tasks / Habits** switch under the date (option C), each half with what is still open; the
+  habits half says how many are left, has **Hide done** and shows the short **all done** card, and
+  the tasks half points at the habits left with a line that switches over. The switch is kept while
+  the app runs and starts on the tasks. On Windows the cards sit in a **panel beside the tasks**, one
+  column, with the same count, Hide done and all done card; where the window is narrow, and in the
+  Today mini window, the panel sits under the tasks.
+- **The Habits screen** (option B) starts with a summary card on the hero colors: today's count of
+  done habits against the ones that ask something of today, a ring of how far the day has got (a
+  habit still to do counts its ring), and the longest streak. Then come the groups, **Every day**,
+  **Weekly** and **Limits**, of full cards that add how often, the goal served, the heatmap and the
+  Not on Today mark; Hide done (a group it empties says "All done."); and the archived habits folded
+  at the end. On Windows the cards sit two to a row where there is room.
 - A habit can be **archived**: it leaves Today and the list, keeping its history, and can come back.
 
 ## Keeping a habit off Today
@@ -102,10 +141,10 @@ after the habit resumes, so old streaks still read right.
 Some habits are worth tracking but not worth a ring on Today every day. The habit form's **Show on
 Today** switch (on by default) keeps one off Today when it is off:
 
-- It leaves Today's ring row, the Today mini window and the phone's Habits widget, and Today's "left"
-  count no longer waits for it.
-- It stays on the Habits screen and the Habits mini window, marked **Not on Today**, and is checked
-  in there as before.
+- It leaves Today's habits, the Today mini window and the phone's Habits widget, and Today's
+  "left" count no longer waits for it.
+- It stays on the Habits screen and the Habits mini window, its card marked **Not on Today**, and
+  is checked in there as before.
 - It keeps its streak and its map, and still counts wherever habits are counted: the Places hub's
   Habits tile, Stats, reviews and the Letter's digest, and the goal it serves.
 - It is not a pause. A pause stops the cadence, so its days neither count nor break the streak; a

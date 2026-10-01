@@ -160,6 +160,56 @@ object HabitRules {
         return share(habit, checkin?.value ?: 0.0)
     }
 
+    /** The Habits page's group for [habit]: limits, weekly (and monthly) ones, or the ones on days. */
+    fun group(habit: HabitItem): HabitGroup = when {
+        isLimit(habit) -> HabitGroup.LIMITS
+        habit.cadence == PER_WEEK || habit.cadence == PER_MONTH -> HabitGroup.WEEKLY
+        else -> HabitGroup.DAYS
+    }
+
+    /**
+     * Where [habit] stands on [today]: none, paused, skipped, a limit (never done or left), done (the ring is
+     * full, or a weekly or monthly habit's check-in today meets its day) or left.
+     */
+    fun standing(habit: HabitItem, today: LocalDate, checkins: List<HabitCheckin>, pauses: List<HabitPause>): HabitStanding {
+        if (habit.archived || today.isBefore(habit.startsOn) || !isDue(habit, today)) return HabitStanding.NONE
+        if (pauses.any { covers(it, today, today) }) return HabitStanding.PAUSED
+        val start = periodStart(habit, today)
+        val end = periodEnd(habit, start)
+        if (checkins.any { !it.deleted && it.skipped && !it.day.isBefore(start) && !it.day.isAfter(end) }) return HabitStanding.SKIPPED
+        if (isLimit(habit)) return HabitStanding.LIMIT
+        if ((ring(habit, today, checkins) ?: 0.0) >= 1.0) return HabitStanding.DONE
+        val todays = checkins.firstOrNull { !it.deleted && it.day == today }
+        if ((habit.cadence == PER_WEEK || habit.cadence == PER_MONTH) && todays != null && dayMet(habit, todays)) return HabitStanding.DONE
+        return HabitStanding.LEFT
+    }
+
+    /** One day of the week's dots: none, paused, skipped, over, open (today), met or missed. */
+    fun dot(habit: HabitItem, day: LocalDate, today: LocalDate, checkins: List<HabitCheckin>, pauses: List<HabitPause>): HabitDot {
+        if (day.isBefore(habit.startsOn) || !isDue(habit, day)) return HabitDot.NONE
+        if (pauses.any { covers(it, day, day) }) return HabitDot.PAUSED
+        val checkin = checkins.firstOrNull { !it.deleted && it.day == day }
+        if (checkin?.skipped == true) return HabitDot.SKIPPED
+        if (isLimit(habit)) {
+            return when {
+                checkin != null && isOver(habit, checkin.value) -> HabitDot.OVER
+                !day.isBefore(today) -> HabitDot.OPEN
+                else -> HabitDot.MET
+            }
+        }
+        return when {
+            checkin != null && dayMet(habit, checkin) -> HabitDot.MET
+            !day.isBefore(today) -> HabitDot.OPEN
+            // A weekly or monthly habit isn't due on any one day, so a day without one misses nothing.
+            habit.cadence == PER_WEEK || habit.cadence == PER_MONTH -> HabitDot.NONE
+            else -> HabitDot.MISSED
+        }
+    }
+
+    /** Whether Today shows its "all done" card: none of its habits is left, and at least one is done. */
+    fun allDone(standings: List<HabitStanding>): Boolean =
+        standings.none { it == HabitStanding.LEFT } && standings.any { it == HabitStanding.DONE }
+
     /** The id of [habitId]'s one check-in on [day], the same on every device. */
     fun checkinId(habitId: String, day: LocalDate): String =
         NameBasedUuid.of(NAMESPACE, "checkin/${habitId.lowercase(Locale.ROOT)}/$day")
@@ -179,6 +229,9 @@ object HabitRules {
             .filter { !it.deleted && !it.skipped && it.habitId in serving && !it.day.isBefore(goal.periodStart) && !it.day.isAfter(end) }
             .map(HabitCheckin::value)
     }
+
+    private fun covers(pause: HabitPause, start: LocalDate, end: LocalDate): Boolean =
+        !pause.deleted && !pause.from.isAfter(end) && (pause.until == null || !pause.until.isBefore(start))
 
     private fun share(habit: HabitItem, value: Double): Double =
         if (habit.measure == CHECK) (if (value >= 1.0) 1.0 else 0.0) else (value / (habit.target ?: 1.0)).coerceIn(0.0, 1.0)
