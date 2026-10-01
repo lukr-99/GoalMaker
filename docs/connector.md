@@ -21,7 +21,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 
 | Tool | What it does |
 |---|---|
-| `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules |
+| `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules; Today also lists its habits and counts the ones kept off it |
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat; a new task also says who made it |
@@ -37,8 +37,8 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_time_tally` | Where time went on the phone and the PC ([Tally](tally.md)), by category, project or device, this week by default; never by app, since apps never leave the device |
 | `get_goals`, `add_goal`, `update_goal` | The goals of a period with where each stands, and new or changed ones |
 | `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
-| `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak; check one in, or skip a period |
-| `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction and the goal it feeds |
+| `get_habits`, `check_in_habit`, `skip_habit` | Habits with today's state and streak, and "not on Today" for one kept off Today; check one in, or skip a period |
+| `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction, the goal it feeds and whether it shows on Today (`show_on_today`) |
 | `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
 | `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order, all of them or only the owner's or Claude's items |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |

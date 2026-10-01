@@ -336,7 +336,8 @@ Story numbers continue from 99 (the list above repeats 88 once; those numbers st
   subset), recurrence series id.
 - `task_steps`: checklist items.
 - `habits`: cadence (`daily | weekdays | per_week | per_month` with days or count), measure
-  (`check | count | amount`), target and unit, linked goal, paused ranges.
+  (`check | count | amount`), target and unit, linked goal, paused ranges, and whether it shows on
+  Today.
 - `habit_checkins`: date, value, skipped flag.
 - `projects`: name, description, area, status, repository URL, local folder, notes.
 - `project_milestones`.
