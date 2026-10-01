@@ -4,6 +4,138 @@
                     xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
                     xmlns:controls="clr-namespace:GoalMaker.App.Controls">
 
+    <!-- The quick chat's mark: a large four-point sparkle and a small one, drawn on a 24 px grid. -->
+    <Geometry x:Key="GM.SparkleGeometry">M10,4 Q11,12 18,13 Q11,14 10,22 Q9,14 2,13 Q9,12 10,4 Z M18.5,1.5 Q19,5 22.5,5.5 Q19,6 18.5,9.5 Q18,6 14.5,5.5 Q18,5 18.5,1.5 Z</Geometry>
+
+    <!-- A soft shadow under the composer and the thread, so they float a little above the page. -->
+    <DropShadowEffect x:Key="GM.FloatShadow" BlurRadius="18" ShadowDepth="3" Direction="270" Opacity="0.14" Color="Black" />
+
+    <!-- A ring around a round control that has the keyboard focus. -->
+    <Style x:Key="GM.RoundFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Ellipse Margin="-3" Stroke="{DynamicResource GM.TextBrush}" StrokeThickness="2" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- The same ring for a pill-shaped control. -->
+    <Style x:Key="GM.PillFocusVisual">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border Margin="-3" CornerRadius="17" BorderBrush="{DynamicResource GM.TextBrush}" BorderThickness="2" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!--
+        The switch between quick-add and chat: a round button the size of Send. Off, a quiet tonal
+        circle with a muted sparkle; on, the primary color with the sparkle in onPrimary.
+    -->
+    <Style x:Key="GM.ChatSwitch" TargetType="ToggleButton">
+        <Setter Property="Width" Value="34" />
+        <Setter Property="Height" Value="34" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GM.RoundFocusVisual}" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid Background="Transparent">
+                        <Ellipse x:Name="Tone" Fill="{DynamicResource GM.TextBrush}" Opacity="0.07" />
+                        <Ellipse x:Name="On" Fill="{DynamicResource GM.PrimaryBrush}" Visibility="Collapsed" />
+                        <Ellipse x:Name="Layer" Fill="{DynamicResource GM.TextBrush}" Opacity="0" />
+                        <Path Width="18"
+                              Height="18"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Stretch="Uniform"
+                              Fill="{TemplateBinding Foreground}"
+                              Data="{StaticResource GM.SparkleGeometry}" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Layer" Property="Opacity" Value="0.07" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Layer" Property="Opacity" Value="0.14" />
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="On" Property="Visibility" Value="Visible" />
+                            <Setter TargetName="Layer" Property="Fill" Value="{DynamicResource GM.OnPrimaryBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource GM.OnPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A quiet text button with an icon and no border: hover and press only tint it. -->
+    <Style x:Key="GM.SubtleButton" TargetType="Button">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Padding" Value="10,0,12,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GM.PillFocusVisual}" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Border x:Name="Layer" CornerRadius="14" Background="{DynamicResource GM.TextBrush}" Opacity="0" />
+                        <ContentPresenter Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Layer" Property="Opacity" Value="0.07" />
+                            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Layer" Property="Opacity" Value="0.14" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A small round icon button with no border, like the chips' remove button. -->
+    <Style x:Key="GM.SubtleRoundButton" TargetType="Button" BasedOn="{StaticResource GM.SubtleButton}">
+        <Setter Property="Width" Value="22" />
+        <Setter Property="Height" Value="22" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GM.RoundFocusVisual}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Ellipse x:Name="Layer" Fill="{DynamicResource GM.TextBrush}" Opacity="0" />
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Layer" Property="Opacity" Value="0.07" />
+                            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Layer" Property="Opacity" Value="0.14" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!--
         The composer (docs/composer.md): a pill that grows a preview of what the line will save. With the
         quick chat (M7) switched on, the short thread shows above it and Enter sends the line to the chat.
@@ -24,163 +156,221 @@
                        Visibility="{Binding Chat.HasNotice, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}"
                        AutomationProperties.LiveSetting="Polite" />
 
-            <!-- The short thread: the owner's lines on the right, the answers on the left. -->
-            <Border Margin="0,0,0,8"
-                    Padding="12,6,6,8"
-                    CornerRadius="14"
-                    Background="{DynamicResource GM.SurfaceVariantBrush}"
-                    Visibility="{Binding Chat.ShowsThread, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
-                <DockPanel>
-                    <DockPanel DockPanel.Dock="Top">
-                        <ui:Button DockPanel.Dock="Right"
-                                   Padding="8,4"
-                                   Appearance="Transparent"
-                                   Command="{Binding Chat.ClearCommand}"
-                                   ToolTip="{DynamicResource Chat.Clear}"
-                                   AutomationProperties.Name="{DynamicResource Chat.Clear}">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="Dismiss16" />
-                                <TextBlock FontSize="13" Text="{DynamicResource Chat.ClearShort}" />
+            <!-- The short thread: a raised card, the owner's lines on the right, the answers on the left. -->
+            <Grid Margin="0,0,0,10"
+                  Visibility="{Binding Chat.ShowsThread, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+                <Border CornerRadius="{StaticResource GM.ComposerCorner}"
+                        Background="{DynamicResource GM.SurfaceBrush}"
+                        Effect="{StaticResource GM.FloatShadow}" />
+                <Border Padding="16,10,4,14"
+                        CornerRadius="{StaticResource GM.ComposerCorner}"
+                        BorderThickness="1"
+                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                        Background="{DynamicResource GM.SurfaceBrush}">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,6,6">
+                            <Button DockPanel.Dock="Right"
+                                    Style="{StaticResource GM.SubtleButton}"
+                                    Command="{Binding Chat.ClearCommand}"
+                                    ToolTip="{DynamicResource Chat.Clear}"
+                                    AutomationProperties.Name="{DynamicResource Chat.Clear}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" Symbol="Broom16" />
+                                    <TextBlock VerticalAlignment="Center" FontSize="13" Text="{DynamicResource Chat.ClearShort}" />
+                                </StackPanel>
+                            </Button>
+                            <StackPanel VerticalAlignment="Center" Orientation="Horizontal">
+                                <Path Width="16"
+                                      Height="16"
+                                      Margin="0,0,8,0"
+                                      VerticalAlignment="Center"
+                                      Stretch="Uniform"
+                                      Fill="{DynamicResource GM.AccentBrush}"
+                                      Data="{StaticResource GM.SparkleGeometry}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           FontSize="14"
+                                           FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                           Foreground="{DynamicResource GM.TextBrush}"
+                                           Text="{DynamicResource Chat.Title}" />
                             </StackPanel>
-                        </ui:Button>
-                        <TextBlock VerticalAlignment="Center"
-                                   FontSize="12"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}"
-                                   Text="{DynamicResource Chat.Thread}" />
-                    </DockPanel>
-                    <StackPanel DockPanel.Dock="Bottom"
-                                Margin="0,6,0,0"
-                                Orientation="Horizontal"
-                                Visibility="{Binding Chat.IsBusy, Converter={StaticResource BoolToVisibility}}"
-                                AutomationProperties.LiveSetting="Polite"
-                                AutomationProperties.Name="{DynamicResource Chat.Thinking}">
-                        <ui:ProgressRing Width="16" Height="16" IsIndeterminate="True" />
-                        <TextBlock Margin="8,0,0,0"
-                                   VerticalAlignment="Center"
-                                   FontSize="13"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}"
-                                   Text="{DynamicResource Chat.Thinking}" />
-                    </StackPanel>
-                    <ScrollViewer MaxHeight="260"
-                                  Margin="0,4,0,0"
-                                  Focusable="False"
-                                  VerticalScrollBarVisibility="Auto"
-                                  controls:StickToEnd.IsEnabled="True">
-                        <ItemsControl Focusable="False"
-                                      ItemsSource="{Binding Chat.Lines}"
-                                      AutomationProperties.Name="{DynamicResource Chat.Thread}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:ChatLineViewModel}">
-                                    <Border x:Name="Bubble"
-                                            Margin="0,4,6,0"
-                                            Padding="10,6"
-                                            MaxWidth="440"
-                                            HorizontalAlignment="Left"
-                                            CornerRadius="12"
-                                            Background="{DynamicResource GM.SurfaceBrush}"
-                                            AutomationProperties.Name="{Binding AutomationName}">
-                                        <TextBlock x:Name="Words"
+                        </DockPanel>
+                        <ScrollViewer MaxHeight="232"
+                                      Focusable="False"
+                                      VerticalScrollBarVisibility="Auto"
+                                      controls:StickToEnd.IsEnabled="True">
+                            <StackPanel Margin="0,0,12,0">
+                                <ItemsControl Focusable="False"
+                                              ItemsSource="{Binding Chat.Lines}"
+                                              AutomationProperties.Name="{DynamicResource Chat.Thread}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ChatLineViewModel}">
+                                            <Border x:Name="Bubble"
+                                                    Margin="0,6,48,0"
+                                                    Padding="14,9"
+                                                    MaxWidth="460"
+                                                    HorizontalAlignment="Left"
+                                                    CornerRadius="16,16,16,4"
+                                                    Background="{DynamicResource GM.SurfaceVariantBrush}"
+                                                    AutomationProperties.Name="{Binding AutomationName}">
+                                                <TextBlock x:Name="Words"
+                                                           FontSize="14"
+                                                           LineHeight="20"
+                                                           TextWrapping="Wrap"
+                                                           Foreground="{DynamicResource GM.TextBrush}"
+                                                           Text="{Binding Text}" />
+                                            </Border>
+                                            <DataTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding IsOwner}" Value="True">
+                                                    <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
+                                                    <Setter TargetName="Bubble" Property="Margin" Value="48,6,0,0" />
+                                                    <Setter TargetName="Bubble" Property="CornerRadius" Value="16,16,4,16" />
+                                                    <Setter TargetName="Bubble" Property="Background" Value="{DynamicResource GM.PrimaryBrush}" />
+                                                    <Setter TargetName="Words" Property="Foreground" Value="{DynamicResource GM.OnPrimaryBrush}" />
+                                                </DataTrigger>
+                                            </DataTemplate.Triggers>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- The thinking line, as the start of the next answer. -->
+                                <Border Margin="0,6,0,0"
+                                        Padding="12,8,14,8"
+                                        HorizontalAlignment="Left"
+                                        CornerRadius="16,16,16,4"
+                                        Background="{DynamicResource GM.SurfaceVariantBrush}"
+                                        Visibility="{Binding Chat.IsBusy, Converter={StaticResource BoolToVisibility}}"
+                                        AutomationProperties.LiveSetting="Polite"
+                                        AutomationProperties.Name="{DynamicResource Chat.Thinking}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:ProgressRing Width="14" Height="14" IsIndeterminate="True" />
+                                        <TextBlock Margin="8,0,0,0"
+                                                   VerticalAlignment="Center"
                                                    FontSize="14"
-                                                   TextWrapping="Wrap"
-                                                   Foreground="{DynamicResource GM.TextBrush}"
-                                                   Text="{Binding Text}" />
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                                   Text="{DynamicResource Chat.Thinking}" />
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+            </Grid>
+
+            <!-- The pill: a ring in the primary color shows where the keyboard is instead of an underline. -->
+            <Grid>
+                <Border CornerRadius="{StaticResource GM.ComposerCorner}"
+                        Background="{DynamicResource GM.SurfaceVariantBrush}"
+                        Effect="{StaticResource GM.FloatShadow}" />
+                <Border x:Name="Pill"
+                        Padding="5"
+                        CornerRadius="{StaticResource GM.ComposerCorner}"
+                        BorderThickness="1.5"
+                        BorderBrush="Transparent"
+                        Background="{DynamicResource GM.SurfaceVariantBrush}">
+                    <DockPanel>
+                        <ItemsControl DockPanel.Dock="Top"
+                                      Margin="8,4,0,2"
+                                      Focusable="False"
+                                      ItemsSource="{Binding Chips}"
+                                      Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
+                                    <Border Margin="0,0,6,6"
+                                            Padding="10,2,2,2"
+                                            CornerRadius="12"
+                                            BorderThickness="1"
+                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                            Opacity="{Binding Opacity}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Ellipse Width="10"
+                                                     Height="10"
+                                                     Margin="0,0,6,0"
+                                                     VerticalAlignment="Center"
+                                                     Fill="{Binding AreaBrush}"
+                                                     Stroke="{DynamicResource GM.OutlineBrush}"
+                                                     Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
+                                            <ui:SymbolIcon Margin="0,0,6,0"
+                                                           FontSize="14"
+                                                           Symbol="{Binding Symbol}"
+                                                           Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
+                                            <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
+                                            <Button Margin="4,0,0,0"
+                                                    Style="{StaticResource GM.SubtleRoundButton}"
+                                                    Command="{Binding RemoveCommand}"
+                                                    ToolTip="{Binding RemoveName}"
+                                                    AutomationProperties.Name="{Binding RemoveName}">
+                                                <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
+                                            </Button>
+                                        </StackPanel>
                                     </Border>
-                                    <DataTemplate.Triggers>
-                                        <DataTrigger Binding="{Binding IsOwner}" Value="True">
-                                            <Setter TargetName="Bubble" Property="HorizontalAlignment" Value="Right" />
-                                            <Setter TargetName="Bubble" Property="Background" Value="{DynamicResource GM.PrimaryBrush}" />
-                                            <Setter TargetName="Words" Property="Foreground" Value="{DynamicResource GM.OnPrimaryBrush}" />
-                                        </DataTrigger>
-                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ScrollViewer>
-                </DockPanel>
-            </Border>
-
-            <Border Padding="12,4,6,4"
-                    CornerRadius="{StaticResource GM.ComposerCorner}"
-                    Background="{DynamicResource GM.SurfaceVariantBrush}">
-                <DockPanel>
-                    <ItemsControl DockPanel.Dock="Top"
-                                  Margin="0,6,0,2"
-                                  Focusable="False"
-                                  ItemsSource="{Binding Chips}"
-                                  Visibility="{Binding HasChips, Converter={StaticResource BoolToVisibility}}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:ComposerChipViewModel}">
-                                <Border Margin="0,0,6,6"
-                                        Padding="10,2,2,2"
-                                        CornerRadius="12"
-                                        BorderThickness="1"
-                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                        Opacity="{Binding Opacity}">
-                                    <StackPanel Orientation="Horizontal">
-                                        <Ellipse Width="10"
-                                                 Height="10"
-                                                 Margin="0,0,6,0"
-                                                 VerticalAlignment="Center"
-                                                 Fill="{Binding AreaBrush}"
-                                                 Stroke="{DynamicResource GM.OutlineBrush}"
-                                                 Visibility="{Binding IsArea, Converter={StaticResource BoolToVisibility}}" />
-                                        <ui:SymbolIcon Margin="0,0,6,0"
-                                                       FontSize="14"
-                                                       Symbol="{Binding Symbol}"
-                                                       Visibility="{Binding ShowsSymbol, Converter={StaticResource BoolToVisibility}}" />
-                                        <TextBlock VerticalAlignment="Center" FontSize="13" Text="{Binding Label}" />
-                                        <ui:Button Margin="2,0,0,0"
-                                                   Padding="4"
-                                                   Appearance="Transparent"
-                                                   Command="{Binding RemoveCommand}"
-                                                   ToolTip="{Binding RemoveName}"
-                                                   AutomationProperties.Name="{Binding RemoveName}">
-                                            <ui:SymbolIcon FontSize="12" Symbol="Dismiss16" />
-                                        </ui:Button>
-                                    </StackPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <ui:Button DockPanel.Dock="Right"
-                               Appearance="Primary"
-                               CornerRadius="{StaticResource GM.ComposerCorner}"
-                               Command="{Binding AddTaskCommand}"
-                               ToolTip="{Binding SendName}"
-                               AutomationProperties.Name="{Binding SendName}">
-                        <ui:SymbolIcon Symbol="Send24" />
-                    </ui:Button>
-                    <!-- The switch between quick-add and chat; it says why when chat can't be used. -->
-                    <ToggleButton DockPanel.Dock="Left"
-                                  Margin="-6,0,6,0"
-                                  Padding="8,6"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding Chat.IsChatChosen, Mode=TwoWay}"
-                                  IsEnabled="{Binding Chat.CanSwitch, FallbackValue=False}"
-                                  ToolTip="{Binding Chat.SwitchHelp}"
-                                  ToolTipService.ShowOnDisabled="True"
-                                  AutomationProperties.Name="{DynamicResource Chat.Switch}"
-                                  AutomationProperties.HelpText="{Binding Chat.SwitchHelp}"
-                                  Visibility="{Binding HasChat, Converter={StaticResource BoolToVisibility}}">
-                        <ui:SymbolIcon FontSize="18" Symbol="Chat24" />
-                    </ToggleButton>
-                    <ui:TextBox Margin="0,0,8,0"
-                                BorderThickness="0"
-                                Background="Transparent"
-                                PlaceholderText="{Binding Placeholder}"
-                                Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
-                                AutomationProperties.Name="{Binding Placeholder}">
-                        <ui:TextBox.InputBindings>
-                            <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
-                        </ui:TextBox.InputBindings>
-                    </ui:TextBox>
-                </DockPanel>
-            </Border>
+                        <ui:Button DockPanel.Dock="Right"
+                                   Width="34"
+                                   Height="34"
+                                   Padding="0"
+                                   VerticalAlignment="Center"
+                                   Appearance="Primary"
+                                   CornerRadius="17"
+                                   Command="{Binding AddTaskCommand}"
+                                   ToolTip="{Binding SendName}"
+                                   AutomationProperties.Name="{Binding SendName}">
+                            <ui:SymbolIcon FontSize="16" Symbol="Send24" Filled="True" />
+                        </ui:Button>
+                        <!-- The switch between quick-add and chat; it says why when chat can't be used. -->
+                        <ToggleButton x:Name="Switch"
+                                      DockPanel.Dock="Left"
+                                      Margin="0,0,2,0"
+                                      VerticalAlignment="Center"
+                                      Style="{StaticResource GM.ChatSwitch}"
+                                      IsChecked="{Binding Chat.IsChatChosen, Mode=TwoWay}"
+                                      IsEnabled="{Binding Chat.CanSwitch, FallbackValue=False}"
+                                      ToolTip="{Binding Chat.SwitchHelp}"
+                                      ToolTipService.ShowOnDisabled="True"
+                                      AutomationProperties.Name="{DynamicResource Chat.Switch}"
+                                      AutomationProperties.HelpText="{Binding Chat.SwitchHelp}"
+                                      Visibility="{Binding HasChat, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:TextBox x:Name="Entry"
+                                    Margin="2,0,6,0"
+                                    VerticalAlignment="Center"
+                                    BorderThickness="0"
+                                    BorderBrush="Transparent"
+                                    Background="Transparent"
+                                    FontSize="14"
+                                    PlaceholderText="{Binding Placeholder}"
+                                    Text="{Binding NewTaskTitle, UpdateSourceTrigger=PropertyChanged}"
+                                    AutomationProperties.Name="{Binding Placeholder}">
+                            <!-- No box or underline inside the pill: the pill is the text box. -->
+                            <ui:TextBox.Resources>
+                                <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+                                <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+                                <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+                                <SolidColorBrush x:Key="TextControlElevationBorderBrush" Color="Transparent" />
+                                <SolidColorBrush x:Key="TextControlFocusedBorderBrush" Color="Transparent" />
+                                <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="Transparent" />
+                            </ui:TextBox.Resources>
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding AddTaskCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                    </DockPanel>
+                </Border>
+            </Grid>
         </StackPanel>
+        <DataTemplate.Triggers>
+            <!-- Chosen but not available right now: the switch stays on, dimmed, while Enter quick-adds. -->
+            <DataTrigger Binding="{Binding Chat.IsAvailable, FallbackValue=True}" Value="False">
+                <Setter TargetName="Switch" Property="Opacity" Value="0.5" />
+            </DataTrigger>
+            <Trigger SourceName="Entry" Property="IsKeyboardFocusWithin" Value="True">
+                <Setter TargetName="Pill" Property="BorderBrush" Value="{DynamicResource GM.PrimaryBrush}" />
+            </Trigger>
+        </DataTemplate.Triggers>
     </DataTemplate>
 </ResourceDictionary>
