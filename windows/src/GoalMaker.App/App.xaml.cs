@@ -5,13 +5,15 @@ using GoalMaker.App.Diagnostics;
 using GoalMaker.App.Localization;
 using GoalMaker.App.Shell;
 using GoalMaker.App.Startup;
+using GoalMaker.App.Theming;
 using GoalMaker.Infrastructure.Storage;
 
 namespace GoalMaker.App;
 
 /// <summary>
 /// Process lifetime: one instance per user and build kind, the composition root, the tray icon and
-/// the main window. Closing the window hides it; only Quit ends the app.
+/// the main window. Closing the window hides it; only Quit ends the app. The instance lock comes
+/// first; only then are the resources merged (<see cref="AppResources"/>).
 /// </summary>
 public partial class App : Application
 {
@@ -35,6 +37,7 @@ public partial class App : Application
             return;
         }
 
+        AppResources.Merge(Resources);
         var strings = new ResourceStrings(this);
         var options = StartupOptions.Parse(e.Args);
         try
@@ -45,7 +48,7 @@ public partial class App : Application
         {
             // Usually the replica: a file that will not open leaves the owner with a message and a
             // place to look, rather than a window that never appears (M6-06).
-            StartupFailure.Show(error, strings, new AppDataPaths(build.IsDevBuild).Root);
+            StartupFailure.Show(error, strings, new AppDataPaths(build.IsDevBuild).Root, Resources);
             Shutdown();
             return;
         }
@@ -55,11 +58,21 @@ public partial class App : Application
         graph.Theme.Attach(window);
         graph.Theme.Apply(graph.Settings.Appearance);
         quickAdd = new QuickAddWindow(graph.QuickAdd, strings);
+        var menu = TrayMenu.Build(
+            strings,
+            () => FromTray(ShowMainWindow),
+            SummonQuickAdd,
+            page => FromTray(() => ShowMini(page)),
+            Quit);
         tray = new TrayIcon(
-            strings, build.IsDevBuild, new TrayFlyout(graph.TrayFlyout), graph.TrayFlyout.Refresh, ShowMainWindow, SummonQuickAdd, ShowMini, Quit);
+            build.IsDevBuild ? strings.Get("App.Name") + " (dev)" : strings.Get("App.Name"),
+            new TrayFlyout(graph.TrayFlyout),
+            graph.TrayFlyout.Refresh,
+            ShowMainWindow,
+            menu);
         // The tray shows the logo in the theme's colors, like the window and the taskbar (GM.LogoIcon).
-        tray.SetIcon(graph.Theme.LogoIconFile, graph.Paths.Root);
-        graph.Theme.Applied += (_, _) => tray.SetIcon(graph.Theme.LogoIconFile, graph.Paths.Root);
+        tray.SetIcon(graph.Theme.LogoIconFile);
+        graph.Theme.Applied += (_, _) => tray.SetIcon(graph.Theme.LogoIconFile);
         graph.WindowRequested += (_, page) =>
         {
             tray.CloseFlyout();
@@ -110,6 +123,13 @@ public partial class App : Application
     }
 
     private void ShowMainWindow() => ShowMainWindow(activate: true);
+
+    // A menu item closes the Today flyout before it opens anything over it.
+    private void FromTray(Action action)
+    {
+        tray?.CloseFlyout();
+        action();
+    }
 
     /// <summary>
     /// Opens a mini window, or brings the one already there to the front (spec, story 80). Each kind

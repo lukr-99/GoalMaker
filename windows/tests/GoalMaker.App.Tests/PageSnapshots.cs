@@ -22,8 +22,6 @@ using GoalMaker.Core.Planning;
 using GoalMaker.Core.Problems;
 using GoalMaker.Core.Settings;
 using GoalMaker.Infrastructure.Sync;
-using Wpf.Ui.Appearance;
-using Wpf.Ui.Markup;
 
 namespace GoalMaker.App.Tests;
 
@@ -1275,13 +1273,8 @@ public sealed class PageSnapshots
             try
             {
                 var app = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-                var resources = app.Resources.MergedDictionaries;
-                resources.Add(new ThemesDictionary { Theme = ApplicationTheme.Dark });
-                resources.Add(new ControlsDictionary());
-                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "HabitTemplates", "ListTemplate", "MiniTemplates", "NavigationMarks" })
-                {
-                    resources.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/GoalMaker;component/Resources/{name}.xaml") });
-                }
+                // The same dictionaries in the same order as App.xaml.cs.
+                AppResources.Merge(app.Resources);
 
                 render(folder);
             }

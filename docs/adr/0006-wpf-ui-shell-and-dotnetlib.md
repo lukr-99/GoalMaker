@@ -7,3 +7,6 @@ through a local folder feed, which GoalMaker's CI can't restore. GoalMaker there
 for the Fluent shell (navigation view, Mica, dialogs, snackbars) and CommunityToolkit.Mvvm, and keeps
 its own semantic tokens in one resource dictionary. When dotnetlib publishes a restorable feed, the
 tokens and any genuinely missing controls should move there instead of growing here.
+
+Update, 2026-10-02: dotnetlib now publishes to a GitHub Packages feed, and the tray app uses its
+`DotNetLib.Tray` kit (ADR 0017).
