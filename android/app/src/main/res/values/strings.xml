@@ -528,6 +528,11 @@
         <item quantity="other">This week\'s goals, %1$d of %2$d hit</item>
     </plurals>
     <string name="goals_all">All goals</string>
+    <string name="goals_view_list">Show as a list</string>
+    <string name="goals_view_ladder">Show as the ladder</string>
+    <string name="goals_open_action">Open the goal</string>
+    <string name="goals_add_to">Add a goal to %1$s</string>
+    <string name="goals_list_empty">No goals yet.</string>
 
     <!-- Habits (docs/habits.md) -->
     <string name="habits_title">Habits</string>

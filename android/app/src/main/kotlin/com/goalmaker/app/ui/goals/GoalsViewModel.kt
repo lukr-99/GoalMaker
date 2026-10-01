@@ -8,7 +8,9 @@ import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.domain.settings.GoalsView
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +26,15 @@ import kotlinx.coroutines.withContext
 /**
  * The Goals screen (docs/goals.md): rings for this year, month, week and today, then the ladder of their
  * goals and next week's for planning ahead. A ring filters to its horizon; picking a goal lights what it
- * feeds and what feeds it. [habits] serving a numeric goal add their check-ins. Disk work runs on [io];
- * [clock] and [dayStartHour] give the planning day.
+ * feeds and what feeds it. [habits] serving a numeric goal add their check-ins. The [settings] say which
+ * view this phone shows, the ladder or the plain list, and when the planning day starts. Disk work runs
+ * on [io]; [clock] gives the time.
  */
 class GoalsViewModel(
     private val goals: GoalList,
     tasks: TaskList,
     habits: HabitList,
-    private val dayStartHour: StateFlow<Int>,
+    private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
 ) : ViewModel() {
@@ -41,11 +44,18 @@ class GoalsViewModel(
         goals.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
         habits.watch().flowOn(io),
-        dayStartHour,
+        settings.dayStartHour,
         focus,
     ) { (all, entries), taskList, habitData, startHour, (filter, picked) ->
         GoalBoard.build(all, entries, taskList, PlanningDay.of(clock(), startHour), habitData, filter, picked)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GoalsUiState())
+    }.combine(settings.goalsView) { state, view -> state.copy(view = view) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), GoalsUiState())
+
+    /** Shows the ladder or the plain list; this phone remembers it. The list has no chain, so a lit one goes out. */
+    fun showView(view: GoalsView) {
+        if (view == GoalsView.LIST) clearPick()
+        settings.setGoalsView(view)
+    }
 
     /** Shows only [horizon]'s rung, or every rung again when it was already the one shown. */
     fun filter(horizon: GoalHorizon) = focus.update { it.copy(filter = if (it.filter == horizon) null else horizon) }
@@ -68,7 +78,7 @@ class GoalsViewModel(
 
     /** Logs an amount on a numeric goal for today's planning day; a negative one takes some off. */
     fun logAmount(id: String, amount: Double) {
-        val day = PlanningDay.of(clock(), dayStartHour.value)
+        val day = PlanningDay.of(clock(), settings.dayStartHour.value)
         write { goals.logAmount(id, day, amount) }
     }
 

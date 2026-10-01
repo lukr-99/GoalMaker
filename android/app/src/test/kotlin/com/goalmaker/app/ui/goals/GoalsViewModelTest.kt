@@ -1,7 +1,9 @@
 package com.goalmaker.app.ui.goals
 
 import android.app.Application
+import android.content.Context
 import android.os.Looper
+import androidx.core.content.edit
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
@@ -15,12 +17,13 @@ import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.data.replica.TestReplica
+import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.domain.composer.ComposerParser
+import com.goalmaker.app.domain.settings.GoalsView
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -31,10 +34,11 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The Goals screen over a real replica: periods, progress, the rings, filtering, the lit chain, the quick log and copying. */
+/** The Goals screen over a real replica: periods, progress, the rings, filtering, the lit chain, the quick log, copying and the list view. */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class GoalsViewModelTest {
@@ -42,6 +46,7 @@ class GoalsViewModelTest {
     private lateinit var goals: GoalList
     private lateinit var tasks: TaskList
     private lateinit var viewModel: GoalsViewModel
+    private val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("goals-view-test", Context.MODE_PRIVATE)
 
     // Saturday 19 September 2026, 01:30: with the day starting at 04:00 it is still Friday the 18th.
     private val now = LocalDateTime.parse("2026-09-19T01:30")
@@ -49,12 +54,13 @@ class GoalsViewModelTest {
     @Before
     fun setUp() {
         test = TestReplica()
+        preferences.edit(commit = true) { clear() }
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T12:00:00Z") })
         val areas = AreaList(test.replica, rows, listOf("violet"), {})
         val tags = TagList(test.replica, rows, {})
         goals = GoalList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
-        viewModel = GoalsViewModel(goals, tasks, HabitList(test.replica, rows, {}), MutableStateFlow(4), Dispatchers.Unconfined) { now }
+        viewModel = GoalsViewModel(goals, tasks, HabitList(test.replica, rows, {}), SharedPreferencesSettingsStore(preferences), Dispatchers.Unconfined) { now }
     }
 
     @After
@@ -278,5 +284,62 @@ class GoalsViewModelTest {
         val edited = goals.find(goal.id)!!
         assertEquals(listOf("Run 20 km", "🏃", "km"), listOf(edited.title, edited.emoji, edited.unit))
         assertEquals(20.0, edited.target!!, 0.0)
+    }
+
+    @Test
+    fun `the goals show as the ladder at first`() = runTest {
+        val state = viewModel.uiState.first { it.loaded }
+
+        assertEquals(GoalsView.LADDER, state.view)
+    }
+
+    @Test
+    fun `the list view is remembered on the device, and puts a lit chain out`() = runTest {
+        val goal = goals.add(GoalDraft("3 runs", GoalHorizon.WEEK, LocalDate.parse("2026-09-14")))!!
+        viewModel.pick(goal.id)
+
+        viewModel.showView(GoalsView.LIST)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val state = viewModel.uiState.first { it.view == GoalsView.LIST && it.sections.getOrNull(2)?.rows?.size == 1 }
+        assertEquals(null, state.picked)
+        assertEquals(emptySet<String>(), state.chain)
+        // What the next start of the app reads back.
+        assertEquals(GoalsView.LIST, SharedPreferencesSettingsStore(preferences).goalsView.value)
+    }
+
+    @Test
+    fun `the list groups every period in order, the goals that need you first, whatever the rings show`() = runTest {
+        val week = LocalDate.parse("2026-09-14")
+        goals.add(GoalDraft("Half marathon", GoalHorizon.YEAR, LocalDate.parse("2026-01-01")))!!
+        goals.add(GoalDraft("Read a book", GoalHorizon.MONTH, LocalDate.parse("2026-09-01")))!!
+        val book = goals.add(GoalDraft("Book the race", GoalHorizon.WEEK, week))!!
+        goals.setStatus(book.id, GoalRules.DONE)
+        goals.add(GoalDraft("Call grandma", GoalHorizon.WEEK, week))!!
+        val km = goals.add(GoalDraft("Run 20 km", GoalHorizon.WEEK, week, GoalRules.MODE_NUMBER, target = 20.0, unit = "km"))!!
+        goals.logAmount(km.id, LocalDate.parse("2026-09-15"), 5.0)
+        goals.add(GoalDraft("Inbox zero", GoalHorizon.DAY, LocalDate.parse("2026-09-18")))!!
+        goals.add(GoalDraft("Plan the trip", GoalHorizon.WEEK, LocalDate.parse("2026-09-21")))!!
+        viewModel.filter(GoalHorizon.DAY)
+        viewModel.showView(GoalsView.LIST)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val state = viewModel.uiState.first { it.view == GoalsView.LIST && it.sections.sumOf { section -> section.rows.size } == 7 }
+
+        assertEquals(
+            listOf(
+                GoalHorizon.YEAR to "2026-01-01",
+                GoalHorizon.MONTH to "2026-09-01",
+                GoalHorizon.WEEK to "2026-09-14",
+                GoalHorizon.DAY to "2026-09-18",
+                GoalHorizon.WEEK to "2026-09-21",
+            ),
+            state.groups.map { it.horizon to it.start.toString() },
+        )
+        assertEquals(
+            listOf(listOf("Half marathon"), listOf("Read a book"), listOf("Run 20 km", "Call grandma", "Book the race"), listOf("Inbox zero"), listOf("Plan the trip")),
+            state.groups.map { group -> group.rows.map { it.goal.title } },
+        )
+        assertEquals(GoalPace.BEHIND, state.groups[2].rows[0].standing.pace)
     }
 }

@@ -126,7 +126,7 @@ internal fun GoalCard(
                     }
                 }
             }
-            QuickLog(row, locale, onQuickLog)
+            QuickLog(row, locale, onQuickLog, Modifier.padding(top = 4.dp))
             GoalMenu(goal, onLog, onEdit, onStatus, onDelete)
         }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(end = 10.dp)) {
@@ -179,7 +179,7 @@ private fun Amount(row: GoalRow, locale: Locale) {
 
 // On track, Hit, Needs you or Behind by 6 km, in a small pill.
 @Composable
-private fun PaceChip(row: GoalRow, locale: Locale) {
+internal fun PaceChip(row: GoalRow, locale: Locale) {
     val standing = row.standing
     val colors = AppTheme.colors
     val (fill, ink) = when (standing.pace) {
@@ -199,7 +199,7 @@ private fun PaceChip(row: GoalRow, locale: Locale) {
 
 // "+5 km" repeats the latest amount; "Log" asks for one when nothing was logged yet.
 @Composable
-private fun QuickLog(row: GoalRow, locale: Locale, onQuickLog: () -> Unit) {
+internal fun QuickLog(row: GoalRow, locale: Locale, onQuickLog: () -> Unit, modifier: Modifier = Modifier) {
     val goal = row.goal
     if (goal.mode != GoalRules.MODE_NUMBER || goal.status != GoalRules.OPEN || row.progress.hit) return
     val text = row.quickAmount?.let { amount ->
@@ -211,7 +211,7 @@ private fun QuickLog(row: GoalRow, locale: Locale, onQuickLog: () -> Unit) {
         onClick = onQuickLog,
         contentPadding = PaddingValues(horizontal = 12.dp),
         colors = ButtonDefaults.filledTonalButtonColors(containerColor = AppTheme.colors.surfaceVariant, contentColor = AppTheme.colors.text),
-        modifier = Modifier.padding(top = 4.dp).semantics { contentDescription = description },
+        modifier = modifier.semantics { contentDescription = description },
     ) {
         if (text == null) {
             Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
