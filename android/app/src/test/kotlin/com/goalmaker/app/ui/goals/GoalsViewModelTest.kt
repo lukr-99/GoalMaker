@@ -6,6 +6,8 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalList
+import com.goalmaker.app.application.planning.GoalPace
+import com.goalmaker.app.application.planning.GoalProgress
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.NewRows
@@ -32,7 +34,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The Goals screen over a real replica: periods, progress, the cascade and copying (M4-02). */
+/** The Goals screen over a real replica: periods, progress, the rings, filtering, the lit chain, the quick log and copying. */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class GoalsViewModelTest {
@@ -110,20 +112,137 @@ class GoalsViewModelTest {
     }
 
     @Test
-    fun `the tree puts each goal under the one it serves`() = runTest {
+    fun `each goal names the goal it feeds`() = runTest {
         val year = goals.add(GoalDraft("Half marathon", GoalHorizon.YEAR, LocalDate.parse("2026-01-01")))!!
         val month = goals.add(GoalDraft("Run 80 km", GoalHorizon.MONTH, LocalDate.parse("2026-09-01"), GoalRules.MODE_NUMBER, parentId = year.id, target = 80.0))!!
         goals.add(GoalDraft("3 runs", GoalHorizon.WEEK, LocalDate.parse("2026-09-14"), parentId = month.id))!!
+
+        val state = viewModel.uiState.first { it.sections.getOrNull(2)?.rows?.size == 1 }
+
+        assertEquals("Run 80 km", state.sections[2].rows.single().parentTitle)
+        assertEquals("Half marathon", state.sections[1].rows.single().parentTitle)
+    }
+
+    @Test
+    fun `the rings count each horizon's goals, hits and how far along they are`() = runTest {
+        val week = LocalDate.parse("2026-09-14")
+        val km = goals.add(GoalDraft("Run 20 km", GoalHorizon.WEEK, week, GoalRules.MODE_NUMBER, target = 20.0, unit = "km"))!!
+        goals.logAmount(km.id, LocalDate.parse("2026-09-15"), 5.0)
+        val book = goals.add(GoalDraft("Book the race", GoalHorizon.WEEK, week))!!
+        goals.setStatus(book.id, GoalRules.DONE)
+        goals.add(GoalDraft("Call grandma", GoalHorizon.WEEK, week))!!
         goals.add(GoalDraft("Read a book", GoalHorizon.MONTH, LocalDate.parse("2026-09-01")))!!
 
-        viewModel.showTree(true)
-        val state = viewModel.uiState.first { it.showTree && it.tree.size == 4 }
+        val state = viewModel.uiState.first { it.rings.getOrNull(2)?.rows?.size == 3 }
 
-        assertEquals(
-            listOf("Half marathon" to 0, "Run 80 km" to 1, "3 runs" to 2, "Read a book" to 0),
-            state.tree.map { it.goal.title to it.depth },
-        )
-        assertEquals("Run 80 km", state.sections[2].rows.single().parentTitle)
+        assertEquals(listOf(GoalHorizon.YEAR, GoalHorizon.MONTH, GoalHorizon.WEEK, GoalHorizon.DAY), state.rings.map { it.horizon })
+        val ring = state.rings[2]
+        assertEquals(1 to 3, ring.hits to ring.rows.size)
+        assertEquals((0.25 + 1.0 + 0.0) / 3, ring.fraction, 1e-9)
+        assertEquals(0 to 1, state.rings[1].hits to state.rings[1].rows.size)
+        assertEquals(0.0, state.rings[0].fraction, 0.0)
+        // Friday: 5 of 20 km is behind with 4 of 7 days gone; Call grandma is still on track.
+        assertEquals(1, state.behind)
+        assertEquals(listOf("Run 20 km", "Call grandma", "Book the race"), ring.rows.map { it.goal.title })
+        assertEquals(GoalPace.BEHIND to 7.0, ring.rows[0].standing.pace to ring.rows[0].standing.behind)
+        assertEquals(5.0, ring.rows[0].quickAmount)
+    }
+
+    @Test
+    fun `a ring shows only its horizon's rung, and next week only with the week`() = runTest {
+        viewModel.filter(GoalHorizon.MONTH)
+        viewModel.filter(GoalHorizon.DAY)
+
+        val state = viewModel.uiState.first { it.filter == GoalHorizon.DAY }
+
+        assertEquals(listOf(GoalHorizon.DAY), state.rungs.map { it.horizon })
+        assertEquals(4, state.rings.size)
+        assertEquals(null, state.nextWeek)
+    }
+
+    @Test
+    fun `the week's ring keeps next week, and tapping it again shows every rung`() = runTest {
+        viewModel.filter(GoalHorizon.WEEK)
+        val week = viewModel.uiState.first { it.filter == GoalHorizon.WEEK }
+        assertEquals(listOf(GoalHorizon.WEEK), week.rungs.map { it.horizon })
+        assertEquals(LocalDate.parse("2026-09-21"), week.nextWeek?.start)
+
+        viewModel.filter(GoalHorizon.WEEK)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val all = viewModel.uiState.first { it.filter == null }
+        assertEquals(4, all.rungs.size)
+    }
+
+    @Test
+    fun `picking a goal lights what it feeds and what feeds it`() = runTest {
+        val year = goals.add(GoalDraft("Half marathon", GoalHorizon.YEAR, LocalDate.parse("2026-01-01")))!!
+        val month = goals.add(GoalDraft("Run 80 km", GoalHorizon.MONTH, LocalDate.parse("2026-09-01"), parentId = year.id))!!
+        val week = goals.add(GoalDraft("3 runs", GoalHorizon.WEEK, LocalDate.parse("2026-09-14"), parentId = month.id))!!
+        goals.add(GoalDraft("Read a book", GoalHorizon.MONTH, LocalDate.parse("2026-09-01")))!!
+        val day = goals.add(GoalDraft("Run 6 km", GoalHorizon.DAY, LocalDate.parse("2026-09-18"), parentId = week.id))!!
+
+        viewModel.pick(month.id)
+        val state = viewModel.uiState.first { it.picked != null }
+
+        assertEquals("Run 80 km", state.picked?.goal?.title)
+        assertEquals(setOf(year.id, month.id, week.id, day.id), state.chain)
+    }
+
+    @Test
+    fun `picking the same goal again, or Clear, puts the chain out`() = runTest {
+        val goal = goals.add(GoalDraft("3 runs", GoalHorizon.WEEK, LocalDate.parse("2026-09-14")))!!
+        val other = goals.add(GoalDraft("Read", GoalHorizon.WEEK, LocalDate.parse("2026-09-14")))!!
+        viewModel.pick(goal.id)
+        viewModel.pick(goal.id)
+        viewModel.pick(other.id)
+        viewModel.clearPick()
+        viewModel.pick("not-a-goal")
+
+        val state = viewModel.uiState.first { it.sections.getOrNull(2)?.rows?.size == 2 }
+
+        assertEquals(null, state.picked)
+        assertEquals(emptySet<String>(), state.chain)
+    }
+
+    @Test
+    fun `the quick log repeats the latest amount and ticks a done-or-not goal`() = runTest {
+        val week = LocalDate.parse("2026-09-14")
+        val km = goals.add(GoalDraft("Run 20 km", GoalHorizon.WEEK, week, GoalRules.MODE_NUMBER, target = 20.0, unit = "km"))!!
+        val fresh = goals.add(GoalDraft("Swim 2 km", GoalHorizon.WEEK, week, GoalRules.MODE_NUMBER, target = 2.0, unit = "km"))!!
+        val call = goals.add(GoalDraft("Call grandma", GoalHorizon.WEEK, week))!!
+        goals.logAmount(km.id, week, 7.5)
+
+        assertTrue(viewModel.quickLog(GoalRow(km, GoalProgress(7.5, 20.0, 0.375, false), quickAmount = 7.5)))
+        assertFalse(viewModel.quickLog(GoalRow(fresh, GoalProgress(0.0, 2.0, 0.0, false))))
+        assertTrue(viewModel.quickLog(GoalRow(call, GoalProgress(0.0, 1.0, 0.0, false))))
+
+        val state = viewModel.uiState.first { it.hits == setOf(call.id) }
+        val rows = state.sections[2].rows.associateBy { it.goal.title }
+        assertEquals(15.0, rows.getValue("Run 20 km").progress.value, 0.0)
+        assertEquals(0.0, rows.getValue("Swim 2 km").progress.value, 0.0)
+        assertEquals(setOf(week, LocalDate.parse("2026-09-18")), goals.entries().map { it.day }.toSet())
+    }
+
+    @Test
+    fun `next week offers this week's goals, and copying brings them over`() = runTest {
+        val week = LocalDate.parse("2026-09-14")
+        val month = goals.add(GoalDraft("Run 80 km", GoalHorizon.MONTH, LocalDate.parse("2026-09-01")))!!
+        goals.add(GoalDraft("3 runs", GoalHorizon.WEEK, week, parentId = month.id))!!
+        val before = viewModel.uiState.first { it.sections.getOrNull(2)?.rows?.size == 1 }
+        val next = before.nextWeek!!
+        assertTrue(next.canCopy)
+        assertTrue(next.rows.isEmpty())
+
+        viewModel.copyPrevious(next)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val after = viewModel.uiState.first { it.nextWeek?.rows?.isNotEmpty() == true }
+        val copied = after.nextWeek!!.rows.single()
+        assertEquals("3 runs" to LocalDate.parse("2026-09-21"), copied.goal.title to copied.goal.periodStart)
+        // Next week still overlaps September, so it keeps feeding the month.
+        assertEquals(month.id, copied.goal.parentId)
+        assertFalse(after.nextWeek!!.canCopy)
     }
 
     @Test

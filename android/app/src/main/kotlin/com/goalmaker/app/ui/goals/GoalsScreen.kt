@@ -15,24 +15,27 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.EventNote
 import androidx.compose.material.icons.outlined.AccountTree
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedTextField
@@ -51,16 +54,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
@@ -71,8 +79,6 @@ import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.EmojiField
-import com.goalmaker.app.ui.components.GoalMakerCheckbox
-import com.goalmaker.app.ui.components.ProgressRing
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
@@ -84,9 +90,10 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
- * The Goals screen (docs/goals.md, spec stories 27 to 35): this year's, month's, week's and today's
- * goals with their rings, next week's for planning ahead, or all of them as the cascade. A tap edits a
- * goal; a goal that becomes a hit gets confetti unless motion is reduced.
+ * The Goals screen (docs/goals.md, spec stories 27 to 35): the horizon rings on top, then the ladder from
+ * this year down to today with each goal as a card, then next week for planning ahead. A ring shows only
+ * its rung; a tap on a card lights what it feeds and what feeds it. A goal that becomes a hit gets
+ * confetti unless motion is reduced.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,16 +122,7 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(R.string.goals_title)) },
                     navigationIcon = { PlaceNavigationIcon(onBack) },
-                    actions = {
-                        IconButton(onClick = { viewModel.showTree(!state.showTree) }) {
-                            if (state.showTree) {
-                                Icon(Icons.Outlined.ViewAgenda, contentDescription = stringResource(R.string.goals_show_periods))
-                            } else {
-                                Icon(Icons.Outlined.AccountTree, contentDescription = stringResource(R.string.goals_show_tree))
-                            }
-                        }
-                        actions()
-                    },
+                    actions = { actions() },
                     scrollBehavior = scrollBehavior,
                 )
             },
@@ -135,38 +133,36 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                     verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
                     modifier = Modifier.fillMaxSize().padding(padding),
                 ) {
-                    @Composable
-                    fun Card(row: GoalRow, showParent: Boolean) = GoalCard(
-                        row = row,
-                        showParent = showParent,
-                        onEdit = { editing = row.goal },
-                        onLog = { logging = row.goal },
-                        onStatus = { status -> viewModel.setStatus(row.goal.id, status) },
-                        onDelete = { viewModel.delete(row.goal.id) },
-                    )
-                    if (state.showTree) {
-                        if (state.tree.isEmpty()) item(key = "empty") { Muted(stringResource(R.string.goals_tree_empty)) }
-                        items(state.tree, key = { "tree-" + it.goal.id }) { row -> Card(row, showParent = false) }
-                    } else {
-                        state.sections.forEach { section ->
-                            val id = "${section.horizon.id}-${section.start}"
-                            item(key = "h-$id") { SectionHeader(sectionTitle(section)) }
-                            items(section.rows, key = { it.goal.id }) { row -> Card(row, showParent = true) }
-                            if (section.canCopy) {
-                                item(key = "copy-$id") {
-                                    TextButton(onClick = { viewModel.copyPrevious(section) }) {
-                                        Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Text(stringResource(section.horizon.copyLabel()), modifier = Modifier.padding(start = 8.dp))
-                                    }
-                                }
-                            }
-                            item(key = "add-$id") {
-                                TextButton(onClick = { editing = GoalItem("", "", section.horizon, section.start) }) {
-                                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Text(stringResource(R.string.goals_add), modifier = Modifier.padding(start = 8.dp))
-                                }
-                            }
+                    item(key = "rings") { HorizonRings(state.rings, state.filter, onFilter = viewModel::filter) }
+                    item(key = "hint") { ChainHint(state, onClear = viewModel::clearPick) }
+                    state.rungs.forEach { section ->
+                        rung(
+                            section = section,
+                            state = state,
+                            card = { row ->
+                                GoalCard(
+                                    row = row,
+                                    lit = if (state.chain.isEmpty()) null else row.goal.id in state.chain,
+                                    picked = state.picked?.goal?.id == row.goal.id,
+                                    onPick = { viewModel.pick(row.goal.id) },
+                                    onQuickLog = { if (!viewModel.quickLog(row)) logging = row.goal },
+                                    onLog = { logging = row.goal },
+                                    onEdit = { editing = row.goal },
+                                    onStatus = { status -> viewModel.setStatus(row.goal.id, status) },
+                                    onDelete = { viewModel.delete(row.goal.id) },
+                                )
+                            },
+                            onAdd = { editing = GoalItem("", "", section.horizon, section.start) },
+                            onCopy = { viewModel.copyPrevious(section) },
+                        )
+                    }
+                    state.nextWeek?.let { next ->
+                        item(key = "h-next") { SectionHeader(sectionTitle(next)) }
+                        items(next.rows, key = { "next-" + it.goal.id }) { row -> GoalSummaryRow(row, onClick = { editing = row.goal }) }
+                        if (next.rows.isEmpty()) {
+                            item(key = "copy-next") { NextWeekEmpty(next.canCopy, onCopy = { viewModel.copyPrevious(next) }) }
                         }
+                        item(key = "add-next") { AddGoal(onClick = { editing = GoalItem("", "", next.horizon, next.start) }) }
                     }
                 }
             }
@@ -191,86 +187,143 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
     }
 }
 
-/** A goal with its ring, where it stands and, with [showParent], the goal it serves. Indented by its depth in the cascade. */
-@Composable
-private fun GoalCard(
-    row: GoalRow,
-    showParent: Boolean,
-    onEdit: () -> Unit,
-    onLog: () -> Unit,
-    onStatus: (String) -> Unit,
-    onDelete: () -> Unit,
+// One rung of the ladder: its badge, period and how it stands, its cards on the rail, then Add a goal
+// (and Copy last period's goals while it is empty).
+private fun LazyListScope.rung(
+    section: GoalSection,
+    state: GoalsUiState,
+    card: @Composable (GoalRow) -> Unit,
+    onAdd: () -> Unit,
+    onCopy: () -> Unit,
 ) {
-    val goal = row.goal
-    val done = goal.status == GoalRules.DONE
+    val id = "${section.horizon.id}-${section.start}"
+    item(key = "h-$id") { RungHeader(section, state.today) }
+    items(section.rows, key = { it.goal.id }) { row -> Box(Modifier.rail(tick = true)) { card(row) } }
+    item(key = "add-$id") {
+        Row(Modifier.rail(tick = false), verticalAlignment = Alignment.CenterVertically) {
+            AddGoal(onClick = onAdd)
+            if (section.canCopy) {
+                TextButton(onClick = onCopy) {
+                    Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(section.horizon.copyLabel()), modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
+    }
+}
+
+// The ladder's rail: a line down the left and a short tick to each card, indented past the badge.
+@Composable
+private fun Modifier.rail(tick: Boolean): Modifier {
+    val color = AppTheme.colors.outline.copy(alpha = 0.35f)
+    val gap = AppTheme.density.rowGap.dp
+    return drawBehind {
+        val x = RAIL_X.dp.toPx()
+        val width = 2.dp.toPx()
+        drawLine(color, Offset(x, -gap.toPx()), Offset(x, size.height), strokeWidth = width)
+        if (tick) drawLine(color, Offset(x, TICK_Y.dp.toPx()), Offset(RAIL_INDENT.dp.toPx() - 6.dp.toPx(), TICK_Y.dp.toPx()), strokeWidth = width)
+    }.padding(start = RAIL_INDENT.dp)
+}
+
+@Composable
+private fun RungHeader(section: GoalSection, today: LocalDate) {
     val locale = LocalConfiguration.current.locales[0]
+    val line = stringResource(R.string.goals_rung_line, stringResource(R.string.goals_ring_hit, section.hits, section.rows.size), goneText(section, today, locale))
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = (row.depth * 24).dp)
-            .heightIn(min = AppTheme.density.rowMinHeight.dp)
-            .background(AppTheme.colors.surface, AppTheme.shapes.row)
-            .clickable(onClick = onEdit)
-            .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            .padding(top = 12.dp)
+            .heightIn(min = 40.dp)
+            .semantics(mergeDescendants = true) { heading() },
     ) {
-        ProgressRing(row.progress.fraction.toFloat(), size = 40.dp) {
-            when {
-                goal.emoji != null -> Text(goal.emoji, style = MaterialTheme.typography.titleMedium)
-                row.progress.hit -> Icon(Icons.Outlined.Check, contentDescription = null, tint = AppTheme.colors.accent, modifier = Modifier.size(20.dp))
-                goal.mode != GoalRules.MODE_DONE -> Text(
-                    NumberFormat.getPercentInstance(locale).format(row.progress.fraction),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(24.dp).background(AppTheme.colors.accent, RoundedCornerShape(8.dp)),
+        ) {
+            Text(stringResource(section.horizon.badge()), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = AppTheme.colors.onAccent)
         }
-        Column(Modifier.weight(1f).padding(start = 12.dp)) {
-            Text(goal.title, style = MaterialTheme.typography.bodyLarge, textDecoration = if (done) TextDecoration.LineThrough else null)
-            Text(progressText(row, locale), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
-            if (showParent && row.parentTitle != null) {
-                Text(stringResource(R.string.goals_serves, row.parentTitle), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
-            }
+        Column(Modifier.padding(start = RAIL_INDENT.dp - 24.dp)) {
+            Text(rungTitle(section, locale), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(line, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
         }
-        if (goal.mode == GoalRules.MODE_NUMBER && goal.status == GoalRules.OPEN) {
-            IconButton(onClick = onLog) { Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.goals_log)) }
+    }
+}
+
+// Under the rings: how to light a chain and how many goals need you, or the lit chain with Clear.
+@Composable
+private fun ChainHint(state: GoalsUiState, onClear: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+        val picked = state.picked
+        Icon(
+            if (picked != null) Icons.Outlined.AccountTree else Icons.Outlined.TouchApp,
+            contentDescription = null,
+            tint = AppTheme.colors.textMuted,
+            modifier = Modifier.size(20.dp),
+        )
+        val text = if (picked != null) {
+            stringResource(R.string.goals_chain_of, picked.goal.title)
+        } else {
+            val hint = stringResource(R.string.goals_hint)
+            if (state.behind > 0) hint + " " + pluralStringResource(R.plurals.goals_need_you, state.behind, state.behind) else hint
         }
-        if (goal.mode == GoalRules.MODE_DONE) {
-            val label = stringResource(R.string.goals_done_box, goal.title)
-            GoalMakerCheckbox(
-                checked = done,
-                onCheckedChange = { checked -> onStatus(if (checked) GoalRules.DONE else GoalRules.OPEN) },
-                modifier = Modifier.semantics { contentDescription = label },
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (picked != null) AppTheme.colors.text else AppTheme.colors.textMuted,
+            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+        )
+        if (picked != null) {
+            AssistChip(
+                onClick = onClear,
+                label = { Text(stringResource(R.string.goals_chain_clear)) },
+                leadingIcon = { Icon(Icons.Outlined.Close, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
             )
         }
-        GoalMenu(goal, onLog, onStatus, onDelete)
+    }
+}
+
+// Next week has no goals yet: say so, and offer this week's when there are some to copy.
+@Composable
+private fun NextWeekEmpty(canCopy: Boolean, onCopy: () -> Unit) {
+    val outline = AppTheme.colors.outline.copy(alpha = 0.7f)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                drawRoundRect(
+                    outline,
+                    cornerRadius = CornerRadius(12.dp.toPx()),
+                    style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))),
+                )
+            }
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .heightIn(min = 48.dp),
+    ) {
+        Icon(Icons.AutoMirrored.Outlined.EventNote, contentDescription = null, tint = AppTheme.colors.textMuted, modifier = Modifier.size(20.dp))
+        Text(
+            stringResource(R.string.goals_next_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = AppTheme.colors.textMuted,
+            modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+        )
+        if (canCopy) {
+            AssistChip(
+                onClick = onCopy,
+                label = { Text(stringResource(R.string.goals_copy_this_week)) },
+                leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+                colors = AssistChipDefaults.assistChipColors(containerColor = AppTheme.colors.accent.copy(alpha = 0.18f)),
+            )
+        }
     }
 }
 
 @Composable
-private fun GoalMenu(goal: GoalItem, onLog: () -> Unit, onStatus: (String) -> Unit, onDelete: () -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.goals_more, goal.title))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            @Composable
-            fun Choice(label: String, danger: Boolean = false, action: () -> Unit) = DropdownMenuItem(
-                text = { Text(label, color = if (danger) AppTheme.colors.danger else MaterialTheme.colorScheme.onSurface) },
-                onClick = {
-                    open = false
-                    action()
-                },
-            )
-            if (goal.status == GoalRules.OPEN) {
-                if (goal.mode == GoalRules.MODE_NUMBER) Choice(stringResource(R.string.goals_log), action = onLog)
-                Choice(stringResource(R.string.goals_mark_done)) { onStatus(GoalRules.DONE) }
-                Choice(stringResource(R.string.goals_drop)) { onStatus(GoalRules.DROPPED) }
-            } else {
-                Choice(stringResource(R.string.goals_reopen)) { onStatus(GoalRules.OPEN) }
-            }
-            Choice(stringResource(R.string.goals_delete), danger = true, action = onDelete)
-        }
+private fun AddGoal(onClick: () -> Unit) {
+    TextButton(onClick = onClick) {
+        Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+        Text(stringResource(R.string.goals_add), modifier = Modifier.padding(start = 8.dp))
     }
 }
 
@@ -548,7 +601,7 @@ private fun periodText(horizon: GoalHorizon, start: LocalDate, locale: Locale): 
 
 private fun goalName(goal: GoalItem) = listOfNotNull(goal.emoji, goal.title).joinToString(" ")
 
-private fun amountText(value: Double, locale: Locale): String =
+internal fun amountText(value: Double, locale: Locale): String =
     NumberFormat.getNumberInstance(locale).apply { maximumFractionDigits = 2 }.format(value)
 
 // A target as it was typed: no ".0" on whole numbers.
@@ -583,3 +636,37 @@ private fun GoalHorizon.copyLabel() = when (this) {
     GoalHorizon.MONTH -> R.string.goals_copy_month
     else -> R.string.goals_copy_week
 }
+
+/** A rung's title: "2026", "October", "28 Sep to 4 Oct", "Thursday 1 October". */
+@Composable
+private fun rungTitle(section: GoalSection, locale: Locale): String = when (section.horizon) {
+    GoalHorizon.MONTH -> DateTimeFormatter.ofPattern("LLLL", locale).format(section.start)
+    else -> periodText(section.horizon, section.start, locale)
+}
+
+/** How much of a rung's period is gone: "75% of the year gone", "Day 4 of 7", "Today". */
+@Composable
+private fun goneText(section: GoalSection, today: LocalDate, locale: Locale): String {
+    val length = (GoalRules.periodEnd(section.horizon, section.start).toEpochDay() - section.start.toEpochDay() + 1).toInt()
+    val day = (today.toEpochDay() - section.start.toEpochDay() + 1).toInt().coerceIn(1, length)
+    return when (section.horizon) {
+        GoalHorizon.YEAR -> stringResource(
+            R.string.goals_year_gone,
+            NumberFormat.getPercentInstance(locale).format(GoalRules.elapsed(section.horizon, section.start, today)),
+        )
+        GoalHorizon.DAY -> stringResource(R.string.goals_today)
+        else -> stringResource(R.string.goals_day_of, day, length)
+    }
+}
+
+private fun GoalHorizon.badge() = when (this) {
+    GoalHorizon.YEAR -> R.string.goals_badge_year
+    GoalHorizon.MONTH -> R.string.goals_badge_month
+    GoalHorizon.WEEK -> R.string.goals_badge_week
+    GoalHorizon.DAY -> R.string.goals_badge_day
+}
+
+// Where the ladder's rail runs, where each card's tick meets it, and how far the cards sit in, in dp.
+private const val RAIL_X = 11
+private const val TICK_Y = 28
+private const val RAIL_INDENT = 32
