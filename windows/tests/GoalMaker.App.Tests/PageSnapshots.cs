@@ -571,6 +571,43 @@ public sealed class PageSnapshots
         Save(new ReviewPage(review), folder, "review-look-back-tally", new Size(900, 900));
     });
 
+    [Fact(Explicit = true)]
+    public void PlacesPage_() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        planner.Settings.PinnedPlaces = ["today", "tomorrow", "inbox", "projects"];
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Call the bank", Today);
+        Add(planner, "Stretch", Today);
+        planner.Tasks.SetDone(planner.Task("Stretch").Id, true);
+        Add(planner, "Pack gym bag", Today.AddDays(1));
+        Add(planner, "Read about sourdough", null);
+        Add(planner, "Book the dentist", null);
+        var read = planner.Habits.Add(new HabitDraft("Read", Today))!;
+        planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" });
+        planner.Habits.CheckIn(read.Id, Today);
+        planner.Goals.Add(new GoalDraft("Book the race", GoalHorizon.Week, new DateOnly(2026, 9, 14)));
+        planner.Wants.Add(new WantDraft("Kindle", "Reading at night", PickedDays: 0));
+        planner.TallyDay(Today, TallyRules.Pc, "coding", 150);
+        planner.TallyDay(Today, TallyRules.Phone, "video", 45);
+        planner.TallyDay(Today, TallyRules.Pc, "chat", 20);
+        var letter = planner.Reviews.Open(ReviewRules.Weekly, new DateOnly(2026, 9, 7))!;
+        planner.Reviews.SetSummary(letter.Id, "# Your week\nA steady one.");
+        using var theme = Theme(planner);
+        var defaults = ContractResources.TallyDefaults();
+        var places = new PlacesViewModel(planner.Settings, strings);
+        var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
+        var hub = new PlacesHubViewModel(
+            places, planner.Tasks, habits, planner.Habits, planner.Goals, planner.Reviews, planner.Wants, planner.Tally,
+            own => new TallyLabels(defaults, own, strings, theme.SwatchBrush), planner.Settings, strings, planner.Time, action => action());
+        Save(new PlacesPage(hub), folder, "places-wide", new Size(1100, 760));
+        Save(new PlacesPage(hub), folder, "places-narrow", new Size(520, 1100));
+
+        hub.ToggleEditingCommand.Execute(null);
+        hub.Tiles.First(tile => tile.Id == "stats").ActivateCommand.Execute(null);
+        Save(new PlacesPage(hub), folder, "places-edit", new Size(1100, 760));
+    });
+
     // Controls made under one theme take the next theme's accent (in a window, where resource changes
     // reach them): Electric's toggles once stayed Track's lime.
     [Fact(Explicit = true)]

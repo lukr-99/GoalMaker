@@ -1,0 +1,142 @@
+<Page x:Class="GoalMaker.App.Views.PlacesPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource Places.All}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <Page.Resources>
+        <!-- A tile: a card that is one button, so Tab reaches it and Enter or Space opens it (or pins it in Edit). -->
+        <Style x:Key="Tile" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card"
+                                MinHeight="118"
+                                Padding="16,14"
+                                CornerRadius="{DynamicResource GM.CardCorner}"
+                                Background="{DynamicResource GM.SurfaceBrush}"
+                                BorderBrush="{DynamicResource GM.OutlineBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsLetter}" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{DynamicResource GM.HeroBrush}" />
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.HeroBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource GM.OnHeroBrush}" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="Card" Property="BorderThickness" Value="2" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Card" Property="Opacity" Value="0.55" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="PlaceTile" DataType="{x:Type vm:PlaceTileViewModel}">
+            <Button Style="{StaticResource Tile}"
+                    Command="{Binding ActivateCommand}"
+                    IsEnabled="{Binding IsActionable}"
+                    AutomationProperties.Name="{Binding AutomationName}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel>
+                        <!-- Pinned: a small pin outside Edit, a pin toggle filled in the accent in Edit. -->
+                        <ui:SymbolIcon DockPanel.Dock="Right" Symbol="Pin20" Filled="True" FontSize="15" Opacity="0.7"
+                                       Visibility="{Binding ShowsPinMark, Converter={StaticResource BoolToVisibility}}" />
+                        <Border x:Name="PinToggle" DockPanel.Dock="Right" Width="28" Height="28" CornerRadius="14" BorderThickness="1"
+                                Background="{DynamicResource GM.SurfaceVariantBrush}" BorderBrush="{DynamicResource GM.OutlineBrush}"
+                                Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon x:Name="PinToggleIcon" Symbol="Pin20" Filled="True" FontSize="15" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </Border>
+                        <ui:SymbolIcon x:Name="PlaceIcon" Symbol="{Binding Icon}" FontSize="22" Margin="0,0,8,0" Foreground="{DynamicResource GM.AccentBrush}" />
+                        <TextBlock Text="{Binding Title}" FontSize="15" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+
+                    <!-- The live part: a ring, a big number, the Tally bar, the Letter or one line. -->
+                    <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsRing, Converter={StaticResource BoolToVisibility}}">
+                            <controls:GoalRing Width="40" Height="40" Thickness="6" Fraction="{Binding Fraction}" />
+                            <TextBlock Margin="10,0,4,0" VerticalAlignment="Center" FontSize="24" FontFamily="{DynamicResource GM.NumberFont}" Text="{Binding Number}" />
+                            <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding Detail}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Visibility="{Binding IsNumber, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock FontSize="28" FontFamily="{DynamicResource GM.NumberFont}" Text="{Binding Number}" />
+                            <TextBlock Margin="6,0,0,5" VerticalAlignment="Bottom" Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding Detail}" />
+                        </StackPanel>
+                        <StackPanel Visibility="{Binding IsTally, Converter={StaticResource BoolToVisibility}}">
+                            <controls:StackedBar Height="12" Flat="True" Parts="{Binding Parts}" />
+                            <TextBlock Margin="0,6,0,0" Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding Detail}" />
+                        </StackPanel>
+                        <DockPanel Visibility="{Binding IsLetter, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Symbol="Mail20" FontSize="18" Margin="0,0,8,0" VerticalAlignment="Top" Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                            <TextBlock FontSize="15" TextWrapping="Wrap" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding Detail}" />
+                        </DockPanel>
+                        <TextBlock TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding Detail}"
+                                   Visibility="{Binding IsLine, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
+            </Button>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                    <Setter TargetName="PinToggle" Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                    <Setter TargetName="PinToggle" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                    <Setter TargetName="PinToggleIcon" Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsLetter}" Value="True">
+                    <Setter TargetName="PlaceIcon" Property="Foreground" Value="{DynamicResource GM.HeroAccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+    </Page.Resources>
+
+    <!-- The Places page (ADR 0014): what is pinned with Edit beside it, then a live tile for every place. -->
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}">
+            <controls:HeadlineText Title="{DynamicResource Places.All}" FontSize="40" />
+            <DockPanel Margin="0,8,0,14">
+                <ui:Button DockPanel.Dock="Right" VerticalAlignment="Center" Appearance="Transparent"
+                           Command="{Binding ToggleEditingCommand}"
+                           Content="{Binding EditLabel}"
+                           AutomationProperties.Name="{DynamicResource Places.EditLabel}"
+                           Foreground="{DynamicResource GM.AccentBrush}">
+                    <ui:Button.Icon>
+                        <ui:SymbolIcon x:Name="EditIcon" Symbol="Pin20" Foreground="{DynamicResource GM.AccentBrush}" />
+                    </ui:Button.Icon>
+                </ui:Button>
+                <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding Hint}" />
+            </DockPanel>
+            <ItemsControl x:Name="TileList" ItemsSource="{Binding Tiles}" ItemTemplate="{StaticResource PlaceTile}" Focusable="False"
+                          KeyboardNavigation.TabNavigation="Continue">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid x:Name="TileGrid" Columns="3" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

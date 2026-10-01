@@ -17,6 +17,7 @@ namespace GoalMaker.App.Shell;
 /// The main window. Closing hides it to the tray unless the app is quitting. It reopens where it was
 /// last, when that spot is still on a connected screen, with the sidebar as it was left. The sidebar
 /// is the pinned places and All places, built from this PC's pins, with Go to on Ctrl+K (ADR 0014).
+/// All places opens the Places page; its arrow folds the list.
 /// </summary>
 public partial class MainWindow
 {
@@ -55,6 +56,7 @@ public partial class MainWindow
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
+            [typeof(PlacesPage)] = () => new PlacesPage(graph.PlacesHub),
         }));
         PlaceSidebar.Build(Navigation.MenuItems, Places, allOpen: true);
         Places.PinsChanged += (_, _) => RebuildSidebar();
