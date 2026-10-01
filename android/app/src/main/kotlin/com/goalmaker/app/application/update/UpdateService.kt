@@ -29,6 +29,13 @@ class UpdateService(
      */
     val waiting: StateFlow<UpdateCheckResult.Available?> = found.asStateFlow()
 
+    /**
+     * Whether a check can reach anything at all: the build has a channel and is a release. A dev
+     * build or one without the key answers every check without the network.
+     */
+    val canCheck: Boolean
+        get() = channelConfigured && SemanticVersion.parse(installedVersion)?.isDevelopmentBuild == false
+
     suspend fun check(): UpdateCheckResult = find().also { found.value = it as? UpdateCheckResult.Available }
 
     private suspend fun find(): UpdateCheckResult {

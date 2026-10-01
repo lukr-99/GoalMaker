@@ -178,6 +178,21 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         preferences.edit { if (instant == null) remove(TALLY_READ_UNTIL) else putLong(TALLY_READ_UNTIL, instant.toEpochMilli()) }
     }
 
+    private val checkedAt = MutableStateFlow(
+        preferences.getLong(UPDATES_CHECKED_AT, -1L).takeIf { it >= 0 }?.let(Instant::ofEpochMilli),
+    )
+    override val updatesCheckedAt: StateFlow<Instant?> = checkedAt.asStateFlow()
+
+    override fun updateFound(): String? = preferences.getString(UPDATE_FOUND, null)
+
+    override fun setUpdateCheck(checkedAt: Instant, found: String?) {
+        preferences.edit {
+            putLong(UPDATES_CHECKED_AT, checkedAt.toEpochMilli())
+            if (found == null) remove(UPDATE_FOUND) else putString(UPDATE_FOUND, found)
+        }
+        this.checkedAt.value = checkedAt
+    }
+
     override fun backendOverride(): BackendEnvironment? {
         val url = preferences.getString(BACKEND_URL, null) ?: return null
         val key = preferences.getString(BACKEND_KEY, null) ?: return null
@@ -267,6 +282,8 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val BACKEND_URL = "dev_backend_url"
         const val BACKEND_KEY = "dev_backend_key"
         const val DEV_SIGN_IN = "dev_sign_in"
+        const val UPDATES_CHECKED_AT = "updates_checked_at"
+        const val UPDATE_FOUND = "update_found"
 
         inline fun <reified T : Enum<T>> enumOrDefault(stored: String?, default: T): T =
             enumValues<T>().firstOrNull { it.name == stored } ?: default

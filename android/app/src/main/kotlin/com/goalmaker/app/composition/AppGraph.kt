@@ -2,6 +2,7 @@ package com.goalmaker.app.composition
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -47,8 +48,10 @@ import com.goalmaker.app.application.sync.RemoteTables
 import com.goalmaker.app.application.sync.RemoteUnavailableException
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.application.sync.SyncState
+import com.goalmaker.app.application.update.AutoUpdateCheck
 import com.goalmaker.app.application.update.ReleaseVerifier
 import com.goalmaker.app.application.update.SignatureVerifier
+import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.data.activity.PostgrestActivityLog
 import com.goalmaker.app.data.assistant.SupabaseAssistantClient
@@ -190,6 +193,12 @@ class AppGraph(context: Context) {
         verifier = ReleaseVerifier(signatureVerifier),
         installer = ApkInstallerLauncher(appContext),
     )
+
+    /**
+     * The quiet check (docs/setup/signing-and-releases.md): a few seconds after the app comes to the
+     * front, at most once a day. It never installs, and a failure is only logged.
+     */
+    val updateChecks = AutoUpdateCheck(updates, settings, Instant::now)
 
     // Sync (docs/sync.md, ADR 0007). The replica opens on first use, off the main thread.
     private val catalog = SyncedTableCatalog.parse(
@@ -401,6 +410,12 @@ class AppGraph(context: Context) {
                 override fun onStart(owner: LifecycleOwner) {
                     visible = true
                     appLock.cameBack()
+                    if (updates.canCheck) {
+                        scope.launch {
+                            val result = updateChecks.afterStart()
+                            if (result is UpdateCheckResult.Failed) Log.i(LOG_TAG, "The update check failed: ${result.detail}")
+                        }
+                    }
                     if (signedIn) {
                         if (!localOnly) changeFeed.start()
                         scope.launch(io) { if (replicaOpened()) tallyTracker.track() }
@@ -601,5 +616,6 @@ class AppGraph(context: Context) {
     private companion object {
         // A dev build's own replica, never mixed with one a release build synced.
         const val LOCAL_REPLICA = "replica-local.db"
+        const val LOG_TAG = "GoalMaker"
     }
 }

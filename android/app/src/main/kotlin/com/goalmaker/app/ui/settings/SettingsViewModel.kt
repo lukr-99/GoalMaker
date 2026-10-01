@@ -11,6 +11,7 @@ import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
+import com.goalmaker.app.application.update.AutoUpdateCheck
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.application.update.UpdateService
 import com.goalmaker.app.domain.backup.BackupProblem
@@ -39,6 +40,8 @@ class SettingsViewModel(
     private val io: CoroutineDispatcher,
     private val design: DesignTokens,
     private val updates: UpdateService,
+    /** Check for updates goes through the quiet check too, so the last time a check got through is kept. */
+    private val updateChecks: AutoUpdateCheck,
     /** Where a release can be downloaded by hand (spec, story 94); null when there is no channel. */
     val releasesPage: String? = null,
     private val appInfo: AppInfo,
@@ -78,6 +81,9 @@ class SettingsViewModel(
         // Kept by the update service, so the row is still there when Settings opens again.
         viewModelScope.launch {
             updates.waiting.collect { waiting -> state.update { it.copy(waitingUpdate = waiting) } }
+        }
+        viewModelScope.launch {
+            updateChecks.lastChecked.collect { at -> state.update { it.copy(updatesCheckedAt = at) } }
         }
         viewModelScope.launch {
             settings.dayStartHour.collect { hour -> state.update { it.copy(dayStartHour = hour) } }
@@ -201,7 +207,7 @@ class SettingsViewModel(
     fun checkForUpdates() {
         state.update { it.copy(update = UpdateUiState.Checking) }
         viewModelScope.launch {
-            val result = updates.check()
+            val result = updateChecks.checkNow()
             state.update { it.copy(update = UpdateUiState.Checked(result)) }
         }
     }

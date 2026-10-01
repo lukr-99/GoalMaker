@@ -397,6 +397,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 io = graph.io,
                                 design = graph.design,
                                 updates = graph.updates,
+                                updateChecks = graph.updateChecks,
                                 releasesPage = graph.releaseChannel?.releasesPage,
                                 appInfo = graph.appInfo,
                                 backup = graph.backup,
