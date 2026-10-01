@@ -113,6 +113,37 @@ public sealed class ThemeApplier : IDisposable
     /// </summary>
     public static FontFamily Face(string name) => new(new Uri("pack://application:,,,/GoalMaker;component/"), "./Assets/Fonts/#" + name);
 
+    /// <summary>Whether the app ships the face FontFaces names (tools/build_windows_fonts.py cuts only some italics).</summary>
+    public static bool Ships(string face) => ShippedFonts.Value.Contains("assets/fonts/" + face.Replace(' ', '-').ToLowerInvariant() + ".ttf");
+
+    /// <summary>The room after a slanted (not real) italic word: a thin space, which scales with the text.</summary>
+    public const string ItalicGap = " ";
+
+    // The font files in the assembly's resources, by the lowercased paths WPF stores them under.
+    private static readonly Lazy<HashSet<string>> ShippedFonts = new(() =>
+    {
+        var assembly = typeof(ThemeApplier).Assembly;
+        using var stream = assembly.GetManifestResourceStream(assembly.GetName().Name + ".g.resources");
+        if (stream is null)
+        {
+            return [];
+        }
+
+        using var reader = new System.Resources.ResourceReader(stream);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        var entries = reader.GetEnumerator();
+        while (entries.MoveNext())
+        {
+            // Only the key: reading Value would load every resource in the assembly.
+            if (entries.Key is string name && name.StartsWith("assets/fonts/", StringComparison.Ordinal))
+            {
+                names.Add(name);
+            }
+        }
+
+        return names;
+    });
+
     // The mark's colors (the logo control fades to them) and the icon rendered in them.
     private void SetLogo(LogoColors colors)
     {
@@ -248,6 +279,14 @@ public sealed class ThemeApplier : IDisposable
         var bodyFont = Face(FontFaces.Name(body.Family, body.Weight, body.Width, italic: false));
         resources["GM.BodyFont"] = bodyFont;
         resources["GM.BodyStrongFont"] = Face(FontFaces.Name(body.Family, body.StrongWeight, body.Width, italic: false));
+
+        // *Italic* in notes and letters: the family's real italic when one ships. Without it WPF slants
+        // the upright face, the slanted last letter leans over the space after it ("fourtimes"), and a
+        // thin space after the word (GM.ItalicGap) gives that room back.
+        var italicName = FontFaces.Name(body.Family, body.Weight, body.Width, italic: true);
+        var realItalic = Ships(italicName);
+        resources["GM.BodyItalicFont"] = realItalic ? Face(italicName) : bodyFont;
+        resources["GM.ItalicGap"] = realItalic ? string.Empty : ItalicGap;
         resources["GM.HeadingFont"] = Face(FontFaces.Name(typography.Heading));
         resources["GM.NumberFont"] = Face(FontFaces.Name(typography.Number));
         resources["ContentControlThemeFontFamily"] = bodyFont;

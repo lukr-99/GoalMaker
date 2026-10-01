@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -724,6 +725,28 @@ public sealed class PageSnapshots
         frame.SetResourceReference(Border.BorderBrushProperty, "GM.OutlineBrush");
         return frame;
     }
+
+    // Notes with italic words in each theme, at twice the size, to check the space after an italic word.
+    [Fact(Explicit = true)]
+    public void NotesWithItalicInEveryTheme() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        using var theme = Theme(planner);
+        foreach (var option in ContractResources.Themes().Themes)
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = option.Id, Mode = GoalMaker.Core.Settings.ThemeMode.Light });
+            var notes = new Controls.MarkdownView
+            {
+                Markdown = "The bank call moved *four* times.\nIt is **really** late, *really* late.\nEnds on *four*\n- Moved *four*, then (*four*) and *four*.",
+            };
+            notes.SetResourceReference(TextElement.FontFamilyProperty, "GM.BodyFont");
+            notes.SetResourceReference(TextElement.ForegroundProperty, "GM.TextBrush");
+            TextElement.SetFontSize(notes, 15);
+            var page = OnPage(notes);
+            page.LayoutTransform = new ScaleTransform(2, 2);
+            Save(page, folder, $"notes-italic-{option.Id}", new Size(760, 260));
+        }
+    });
 
     [Fact(Explicit = true)]
     public void LogoInEveryTheme() => OnUiThread(folder =>

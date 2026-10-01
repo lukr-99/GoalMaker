@@ -12,6 +12,9 @@ namespace GoalMaker.App.Controls;
 /// </summary>
 public sealed class MarkdownView : StackPanel
 {
+    // Punctuation that sits on the baseline, under the top of a slanted letter.
+    private const string LowMarks = ".,;:_";
+
     public static readonly DependencyProperty MarkdownProperty = DependencyProperty.Register(
         nameof(Markdown), typeof(string), typeof(MarkdownView), new PropertyMetadata(string.Empty, (view, _) => ((MarkdownView)view).Render()));
 
@@ -45,8 +48,9 @@ public sealed class MarkdownView : StackPanel
                 line.Inlines.Add(new Run("\u2022  "));
             }
 
-            foreach (var span in block.Spans)
+            for (var index = 0; index < block.Spans.Count; index++)
             {
+                var span = block.Spans[index];
                 Inline inline = new Run(span.Text);
                 if (span.Link is { } link && Uri.TryCreate(link, UriKind.Absolute, out var address))
                 {
@@ -62,10 +66,21 @@ public sealed class MarkdownView : StackPanel
 
                 if (span.Italic)
                 {
+                    // The theme's real italic face, or the upright one that WPF slants (ThemeApplier).
                     inline.FontStyle = FontStyles.Italic;
+                    inline.SetResourceReference(TextElement.FontFamilyProperty, "GM.BodyItalicFont");
                 }
 
                 line.Inlines.Add(inline);
+                if (span.Italic && index < block.Spans.Count - 1 && !LowMarks.Contains(block.Spans[index + 1].Text[0], StringComparison.Ordinal))
+                {
+                    // A slanted word's last letter leans over what follows ("fourtimes"); an upright thin
+                    // space gives the room back. Not before a low mark, which the lean passes over, and
+                    // empty when the theme has a real italic.
+                    var gap = new Run();
+                    gap.SetResourceReference(Run.TextProperty, "GM.ItalicGap");
+                    line.Inlines.Add(gap);
+                }
             }
 
             Children.Add(line);
