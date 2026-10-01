@@ -23,12 +23,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.EventNote
+import androidx.compose.material.icons.automirrored.outlined.ViewList
 import androidx.compose.material.icons.outlined.AccountTree
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.TouchApp
+import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -36,6 +38,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedTextField
@@ -76,6 +79,7 @@ import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.domain.settings.GoalsView
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.EmojiField
@@ -93,7 +97,8 @@ import kotlinx.coroutines.launch
  * The Goals screen (docs/goals.md, spec stories 27 to 35): the horizon rings on top, then the ladder from
  * this year down to today with each goal as a card, then next week for planning ahead. A ring shows only
  * its rung; a tap on a card lights what it feeds and what feeds it. A goal that becomes a hit gets
- * confetti unless motion is reduced.
+ * confetti unless motion is reduced. The top bar switches to the plain list, one compact row per goal
+ * grouped by period, where a tap opens the goal; this phone remembers the pick.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,12 +127,40 @@ fun GoalsScreen(viewModel: GoalsViewModel, onBack: (() -> Unit)?, actions: @Comp
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(R.string.goals_title)) },
                     navigationIcon = { PlaceNavigationIcon(onBack) },
-                    actions = { actions() },
+                    actions = {
+                        ViewSwitch(state.view, onPick = viewModel::showView)
+                        actions()
+                    },
                     scrollBehavior = scrollBehavior,
                 )
             },
         ) { padding ->
-            if (state.loaded) {
+            if (state.loaded && state.view == GoalsView.LIST) {
+                // The plain list: each period's goals as compact rows, no rings, rail or chain.
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                ) {
+                    state.groups.forEach { section ->
+                        val id = "${section.horizon.id}-${section.start}-${section.next}"
+                        item(key = "lh-$id") {
+                            ListGroupHeader(section, onAdd = { editing = GoalItem("", "", section.horizon, section.start) })
+                        }
+                        items(section.rows, key = { "l-" + it.goal.id }) { row ->
+                            GoalListRow(
+                                row = row,
+                                onOpen = { editing = row.goal },
+                                onQuickLog = { if (!viewModel.quickLog(row)) logging = row.goal },
+                                onStatus = { status -> viewModel.setStatus(row.goal.id, status) },
+                            )
+                        }
+                        if (section.rows.isEmpty()) {
+                            item(key = "le-$id") { Muted(stringResource(R.string.goals_list_empty)) }
+                        }
+                    }
+                }
+            } else if (state.loaded) {
                 LazyColumn(
                     contentPadding = PaddingValues(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
@@ -315,6 +348,48 @@ private fun NextWeekEmpty(canCopy: Boolean, onCopy: () -> Unit) {
                 leadingIcon = { Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
                 colors = AssistChipDefaults.assistChipColors(containerColor = AppTheme.colors.accent.copy(alpha = 0.18f)),
             )
+        }
+    }
+}
+
+/** Switches between the ladder and the plain list; the icon shows where it leads. */
+@Composable
+private fun ViewSwitch(view: GoalsView, onPick: (GoalsView) -> Unit) {
+    val toList = view == GoalsView.LADDER
+    IconButton(onClick = { onPick(if (toList) GoalsView.LIST else GoalsView.LADDER) }) {
+        Icon(
+            if (toList) Icons.AutoMirrored.Outlined.ViewList else Icons.Outlined.ViewAgenda,
+            contentDescription = stringResource(if (toList) R.string.goals_view_list else R.string.goals_view_ladder),
+        )
+    }
+}
+
+// A group of the plain list: the period's name and dates, how many of its goals are hit, and Add.
+@Composable
+private fun ListGroupHeader(section: GoalSection, onAdd: () -> Unit) {
+    val title = sectionTitle(section)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f).semantics(mergeDescendants = true) { heading() },
+        ) {
+            Text(
+                AppTheme.headline(title).uppercase(LocalConfiguration.current.locales[0]),
+                style = MaterialTheme.typography.labelMedium,
+                color = AppTheme.colors.accent,
+                modifier = Modifier.padding(start = 4.dp).weight(1f, fill = false),
+            )
+            if (section.rows.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.goals_ring_hit, section.hits, section.rows.size),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = AppTheme.colors.textMuted,
+                    modifier = Modifier.padding(start = 8.dp),
+                )
+            }
+        }
+        IconButton(onClick = onAdd) {
+            Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.goals_add_to, title), tint = AppTheme.colors.accent)
         }
     }
 }

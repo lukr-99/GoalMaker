@@ -325,6 +325,7 @@ public sealed class AppGraph : IDisposable
             Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
+        HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
         Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));

@@ -18,7 +18,8 @@ import com.goalmaker.app.ui.theme.AppTheme
 
 /**
  * A ring filled to [fraction] (0 to 1) in the theme's accent, over a faint track (design spec, color
- * roles: accent is for checks, progress and rings). Screen readers hear it as a progress bar.
+ * roles: accent is for checks, progress and rings), or [color] over [track] on a hero card. Screen
+ * readers hear it as a progress bar.
  */
 @Composable
 fun ProgressRing(
@@ -27,9 +28,9 @@ fun ProgressRing(
     size: Dp = 36.dp,
     stroke: Dp = 4.dp,
     color: Color = AppTheme.colors.accent,
+    track: Color = AppTheme.colors.outline.copy(alpha = 0.3f),
     content: @Composable () -> Unit = {},
 ) {
-    val track = AppTheme.colors.outline.copy(alpha = 0.3f)
     val filled = fraction.coerceIn(0f, 1f)
     Box(
         contentAlignment = Alignment.Center,

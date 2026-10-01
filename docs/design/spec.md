@@ -120,8 +120,11 @@ pill, with its corners, the theme's surface, a soft shadow and a hairline edge.
 ### Today
 
 Top to bottom: the date and a one-line summary ("3 of 7 done, 2 habits left"), top priorities,
-timed items (tasks with a time and reminders), habits for today as a compact row of rings, other
-tasks, then overdue items and this week's goals, both collapsed.
+timed items (tasks with a time and reminders), other tasks, then overdue items and this week's goals,
+both collapsed. Today's habits are cards (the habits redesign, [habits](../habits.md#on-screen)): on
+the phone behind a Tasks / Habits switch under the date, on Windows in a panel beside the tasks (under
+them where the window is narrow). A limit is never counted as left, and once every habit is done a
+short card on the hero colors says so.
 
 ### Goals
 

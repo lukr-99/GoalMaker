@@ -8,7 +8,7 @@ stories 80, 82 and 83). They are Windows only; the phone has widgets instead
 
 | Window | What is in it |
 |---|---|
-| Today | Today exactly as the page shows it: the sections, the overdue fold and the composer, so a task ticks off and a new one goes in without opening GoalMaker. |
+| Today | Today exactly as the page shows it: the sections, the overdue fold and the composer, so a task ticks off and a new one goes in without opening GoalMaker. The habits panel sits under the tasks, since the window is too narrow to have it beside them. |
 | Habits | The Habits page's habits as short rows, the ones kept off Today too: the ring, the name, where the day stands and the streak. Clicking a ring checks the habit in. |
 
 Both run the same view models as the main window, so a tick here is the tick there, and both follow

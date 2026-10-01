@@ -24,127 +24,48 @@
             <Setter Property="Background" Value="{DynamicResource GM.BackgroundBrush}" />
         </Style>
 
-        <!-- One habit: its ring (a click checks in), how often it runs, where today stands, and its heatmap. -->
-        <DataTemplate x:Key="HabitRow" DataType="{x:Type vm:HabitRowViewModel}">
-            <Border Margin="0,0,0,8"
-                    Padding="12,10,6,12"
-                    CornerRadius="{DynamicResource GM.CardCorner}"
-                    Background="{DynamicResource GM.SurfaceBrush}">
-                <!-- Right click, or the menu key on the focused row: the rest of what a habit can do. -->
-                <Border.ContextMenu>
-                    <ContextMenu>
-                        <MenuItem Header="{DynamicResource Habits.Log}" Command="{Binding LogCommand}" Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Clear}" Command="{Binding ClearCommand}" Visibility="{Binding CanClear, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{Binding SkipText}" Command="{Binding SkipCommand}" Visibility="{Binding CanSkip, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Unskip}" Command="{Binding UnskipCommand}" Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Pause}" Command="{Binding PauseCommand}" Visibility="{Binding CanPause, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Resume}" Command="{Binding ResumeCommand}" Visibility="{Binding IsPaused, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Archive}" Command="{Binding ArchiveCommand}" Visibility="{Binding CanPause, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Unarchive}" Command="{Binding UnarchiveCommand}" Visibility="{Binding IsArchived, Converter={StaticResource BoolToVisibility}}" />
-                        <MenuItem Header="{DynamicResource Habits.Edit}" Command="{Binding EditCommand}" />
-                        <MenuItem Header="{DynamicResource Habits.Delete}" Command="{Binding DeleteCommand}" />
-                    </ContextMenu>
-                </Border.ContextMenu>
-                <StackPanel>
-                    <DockPanel>
-                        <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
-                                   ToolTip="{DynamicResource Habits.Delete}" AutomationProperties.Name="{DynamicResource Habits.Delete}">
-                            <ui:SymbolIcon Symbol="Delete24" />
-                        </ui:Button>
-                        <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding EditCommand}"
-                                   ToolTip="{DynamicResource Habits.Edit}" AutomationProperties.Name="{DynamicResource Habits.Edit}">
-                            <ui:SymbolIcon Symbol="Edit24" />
-                        </ui:Button>
-                        <!-- Logging an amount from the row itself: one more, or exactly this many. -->
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center"
-                                    Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}">
-                            <ui:TextBox Width="76"
-                                        Margin="0,0,4,0"
-                                        VerticalAlignment="Center"
-                                        PlaceholderText="{Binding AmountHint}"
-                                        Text="{Binding AmountText, UpdateSourceTrigger=PropertyChanged}"
-                                        ToolTip="{Binding LogExactText}"
-                                        AutomationProperties.Name="{Binding LogExactText}">
-                                <ui:TextBox.InputBindings>
-                                    <KeyBinding Key="Enter" Command="{Binding LogAmountCommand}" />
-                                </ui:TextBox.InputBindings>
-                            </ui:TextBox>
-                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding LogAmountCommand}"
-                                       ToolTip="{Binding LogExactText}" AutomationProperties.Name="{Binding LogExactText}">
-                                <ui:SymbolIcon Symbol="Checkmark24" />
-                            </ui:Button>
-                            <ui:Button Padding="6" Appearance="Transparent" Command="{Binding LogOneCommand}"
-                                       ToolTip="{Binding LogOneText}" AutomationProperties.Name="{Binding LogOneText}">
-                                <ui:SymbolIcon Symbol="Add24" />
-                            </ui:Button>
-                        </StackPanel>
-                        <Button DockPanel.Dock="Left"
-                                Width="48" Height="48" Margin="0,0,12,0"
-                                Padding="0"
-                                VerticalAlignment="Center"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Cursor="Hand"
-                                Command="{Binding CheckInCommand}"
-                                IsEnabled="{Binding CanCheckIn}"
-                                ToolTip="{Binding CheckInText}"
-                                AutomationProperties.Name="{Binding CheckInText}">
-                            <Grid>
-                                <controls:GoalRing Width="44" Height="44" Fraction="{Binding Fraction}" Thickness="4">
-                                    <controls:GoalRing.Style>
-                                        <Style TargetType="{x:Type controls:GoalRing}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsOver}" Value="True">
-                                                    <Setter Property="RingBrush" Value="{DynamicResource GM.DangerBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </controls:GoalRing.Style>
-                                </controls:GoalRing>
-                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RingText}" FontSize="15" />
-                                <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18" Symbol="Checkmark20"
-                                               Foreground="{DynamicResource GM.AccentBrush}"
-                                               Visibility="{Binding ShowsCheck, Converter={StaticResource BoolToVisibility}}" />
-                            </Grid>
-                        </Button>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Name}" FontSize="14" TextTrimming="CharacterEllipsis" />
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding CadenceText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                                <TextBlock Margin="6,0" Text="·" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                                <TextBlock Text="{Binding StatusText}" FontSize="12">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsOver}" Value="True">
-                                                    <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </StackPanel>
-                            <TextBlock Text="{Binding StreakText}" FontSize="12"
-                                       FontFamily="{DynamicResource GM.BodyStrongFont}"
-                                       Foreground="{DynamicResource GM.AccentBrush}"
-                                       Visibility="{Binding HasStreak, Converter={StaticResource BoolToVisibility}}" />
-                            <TextBlock Text="{Binding Serves}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
-                                       Visibility="{Binding HasServes, Converter={StaticResource BoolToVisibility}}" />
-                            <TextBlock Text="{DynamicResource Habits.NotOnToday}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
-                                       Visibility="{Binding IsOffToday, Converter={StaticResource BoolToVisibility}}" />
-                        </StackPanel>
-                    </DockPanel>
-                    <controls:HabitHeatmap Margin="0,10,8,0" HorizontalAlignment="Left" Heat="{Binding Heat}" />
-                </StackPanel>
-            </Border>
-        </DataTemplate>
+        <!-- The page's groups lay their cards out in two columns where there is room. -->
+        <Style x:Key="HabitCards" TargetType="ItemsControl">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="ItemTemplate" Value="{StaticResource HabitCard}" />
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <StackPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource WidthAtLeast}, ConverterParameter=760}" Value="True">
+                    <Setter Property="ItemsPanel">
+                        <Setter.Value>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2" />
+                            </ItemsPanelTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="ItemContainerStyle">
+                        <Setter.Value>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Margin" Value="0,0,8,0" />
+                            </Style>
+                        </Setter.Value>
+                    </Setter>
+                    <Setter Property="Margin" Value="0,0,-8,0" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
     </Page.Resources>
 
-    <!-- Habits (docs/habits.md): today's rings, streaks and heatmaps; the editor and the log panel take the page. -->
+    <!--
+        Habits (docs/habits.md; the habits prototype, option B): a summary card, then the habits in their groups
+        (Every day, Weekly, Limits) as full cards, Hide done, and the archived ones folded at the end. The editor
+        and the log panel take the page.
+    -->
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
+            <!-- Stretched up to the wide measure, so the groups know when there is room for two columns. -->
+            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Stretch">
                 <DockPanel Margin="0,0,0,12">
                     <ui:Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Appearance="Primary"
                                Command="{Binding NewHabitCommand}" Content="{DynamicResource Habits.Add}">
@@ -167,14 +88,69 @@
                     </ui:Button>
                     <controls:HeadlineText Title="{DynamicResource Habits.Title}" FontSize="40" />
                 </DockPanel>
-                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Habits.Hint}" />
                 <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Habits.Empty}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
-                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource HabitRow}" Focusable="False" />
+
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <!-- Today in one card: how many are done, the longest streak, and a ring of how far the day has got. -->
+                    <Border Padding="18,14" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}"
+                            AutomationProperties.Name="{Binding SummaryName}">
+                        <DockPanel>
+                            <Grid DockPanel.Dock="Right" Width="76" Height="76" Margin="16,0,0,0" VerticalAlignment="Center">
+                                <controls:GoalRing Fraction="{Binding SummaryShare}" Thickness="9"
+                                                   RingBrush="{DynamicResource GM.HeroAccentBrush}" TrackBrush="{DynamicResource GM.OnHeroBrush}" />
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding SummaryPercent}" FontSize="16"
+                                           FontFamily="{DynamicResource GM.NumberFont}" Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                            </Grid>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Text="{Binding SummaryDate}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                           Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                <StackPanel Margin="0,2,0,0" Orientation="Horizontal">
+                                    <TextBlock Text="{Binding SummaryDone}" FontSize="42" FontFamily="{DynamicResource GM.NumberFont}"
+                                               Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                                    <TextBlock Margin="8,0,0,8" VerticalAlignment="Bottom" Text="{Binding SummaryOf}" FontSize="18"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding SummaryBest}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <DockPanel Margin="0,12,0,0">
+                        <ToggleButton DockPanel.Dock="Right" Margin="12,0,0,0" Style="{StaticResource HideDoneChip}"
+                                      Content="{Binding HideDoneText}" IsChecked="{Binding HideDone}" />
+                        <TextBlock VerticalAlignment="Center" Text="{DynamicResource Habits.Hint}" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    </DockPanel>
+
+                    <ItemsControl ItemsSource="{Binding Groups}" Focusable="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:HabitGroupViewModel}">
+                                <StackPanel>
+                                    <TextBlock Margin="4,16,0,8" Text="{Binding Header}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                               Foreground="{DynamicResource GM.AccentBrush}" />
+                                    <TextBlock Margin="4,0,0,8" Text="{DynamicResource Habits.GroupAllDone}" FontSize="13"
+                                               Foreground="{DynamicResource GM.TextMutedBrush}"
+                                               Visibility="{Binding IsAllDone, Converter={StaticResource BoolToVisibility}}" />
+                                    <ItemsControl ItemsSource="{Binding Rows}" Style="{StaticResource HabitCards}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
 
                 <StackPanel Margin="0,8,0,0" Visibility="{Binding HasArchived, Converter={StaticResource BoolToVisibility}}">
                     <ui:Button Appearance="Transparent" Command="{Binding ToggleArchivedCommand}" Content="{Binding ArchivedHeader}" />
-                    <ItemsControl ItemsSource="{Binding Archived}" ItemTemplate="{StaticResource HabitRow}" Focusable="False"
+                    <ItemsControl ItemsSource="{Binding Archived}" Style="{StaticResource HabitCards}"
                                   Visibility="{Binding IsArchivedExpanded, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </StackPanel>

@@ -63,14 +63,28 @@ public sealed partial class ListViewModel : ObservableObject
     [ObservableProperty]
     private bool isWeekGoalsExpanded;
 
+    /// <summary>The habits on Today (contracts/vectors/habits.json, onToday), for the panel beside the tasks.</summary>
     [ObservableProperty]
     private IReadOnlyList<HabitRowViewModel> habits = [];
+
+    /// <summary>The panel's cards: the habits on Today, without the done ones while Hide done is on.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<HabitRowViewModel> shownHabits = [];
 
     [ObservableProperty]
     private string habitsHeader = string.Empty;
 
     [ObservableProperty]
     private bool hasHabits;
+
+    /// <summary>Every habit on Today is done: the panel shows its short all done card.</summary>
+    [ObservableProperty]
+    private bool habitsAllDone;
+
+    /// <summary>Hides the habits done today from the panel; Today's own, kept while the app runs.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HideDoneText))]
+    private bool hideDoneHabits;
 
     [ObservableProperty]
     private string undoText = string.Empty;
@@ -310,7 +324,7 @@ public sealed partial class ListViewModel : ObservableObject
 
                 var date = today.ToString("dddd d MMMM", CultureInfo.CurrentCulture);
                 var summary = lists.Summary.Total == 0 ? date : strings.Get("Lists.TodaySummary", date, lists.Summary.Done, lists.Summary.Total);
-                var habitsLeft = Habits.Count(row => !row.IsDone);
+                var habitsLeft = Habits.Count(row => row.IsLeft);
                 Subtitle = habitsLeft == 0 ? summary : strings.Get("Habits.Summary", summary, strings.Get("Habits.Left", habitsLeft));
                 break;
             case ListKind.Tomorrow:
@@ -342,7 +356,12 @@ public sealed partial class ListViewModel : ObservableObject
     [RelayCommand]
     private void OpenHabits() => openHabits?.Invoke();
 
-    // Today's habits as a row of rings, with how many are left (design spec, Today).
+    public string HideDoneText => strings.Get(HideDoneHabits ? "Habits.ShowDone" : "Habits.HideDone");
+
+    partial void OnHideDoneHabitsChanged(bool value) => ShowHabits();
+
+    // Today's habits in the panel beside the tasks (the habits prototype's PC view), with how many are
+    // left, Hide done and the all done card (contracts/vectors/habits.json, standings and allDone).
     private void ShowHabits()
     {
         if (habitsPage is null || Kind != ListKind.Today)
@@ -352,7 +371,9 @@ public sealed partial class ListViewModel : ObservableObject
 
         Habits = habitsPage.TodayRows();
         HasHabits = Habits.Count > 0;
-        var left = Habits.Count(row => !row.IsDone);
+        ShownHabits = HideDoneHabits ? [.. Habits.Where(row => !row.IsDone)] : Habits;
+        HabitsAllDone = HabitRules.AllDone(Habits.Select(row => row.Standing));
+        var left = Habits.Count(row => row.IsLeft);
         HabitsHeader = Upper(left == 0 ? strings.Get("Habits.TodayDone") : strings.Get("Habits.TodayLeft", left));
     }
 

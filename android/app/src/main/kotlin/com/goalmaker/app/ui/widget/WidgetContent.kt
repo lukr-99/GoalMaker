@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitData
 import com.goalmaker.app.application.planning.HabitRules
+import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.goals.GoalBoard
@@ -46,12 +47,15 @@ object WidgetContent {
                 val checkins = data.checkinsOf(habit.id)
                 val ring = HabitRules.ring(habit, today, checkins) ?: 0.0
                 val target = habit.target ?: 1.0
+                // Done and left as Today reads them (contracts/vectors/habits.json, standings): a limit is neither.
+                val standing = HabitRules.standing(habit, today, checkins, data.pausesOf(habit.id))
                 WidgetHabit(
                     id = habit.id,
                     name = habit.name,
                     emoji = habit.emoji.orEmpty(),
                     ring = ring,
-                    done = ring >= 1.0,
+                    done = standing == HabitStanding.DONE,
+                    left = standing == HabitStanding.LEFT,
                     count = if (habit.measure == HabitRules.CHECK) "" else amount(ring * target, target, habit.unit),
                     // A check or a count moves with one tap; an amount asks for its value in the app.
                     tappable = habit.measure != HabitRules.AMOUNT,
@@ -59,7 +63,7 @@ object WidgetContent {
             }
 
     /** How many of today's habits are still open, for the header. */
-    fun habitsLeft(habits: List<WidgetHabit>): Int = habits.count { !it.done }
+    fun habitsLeft(habits: List<WidgetHabit>): Int = habits.count(WidgetHabit::left)
 
     /**
      * The Motivation widget's goals: the goals of this [horizon]'s current period as plain written

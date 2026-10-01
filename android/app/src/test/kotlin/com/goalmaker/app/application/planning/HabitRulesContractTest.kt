@@ -68,6 +68,37 @@ class HabitRulesContractTest {
     }
 
     @Test
+    fun `every group of the Habits page`() {
+        vectors.cases("groups").forEach { case ->
+            assertEquals(case.text("name"), case.text("expect"), HabitRules.group(case.habit()).id)
+        }
+    }
+
+    @Test
+    fun `every standing today`() {
+        vectors.cases("standings").forEach { case ->
+            val standing = HabitRules.standing(case.habit(), case.day("today"), case.checkins(), case.pauses())
+            assertEquals(case.text("name"), case.text("expect"), standing.id)
+        }
+    }
+
+    @Test
+    fun `every day of the week's dots`() {
+        vectors.cases("dots").forEach { case ->
+            val dot = HabitRules.dot(case.habit(), case.day("day"), case.day("today"), case.checkins(), case.pauses())
+            assertEquals(case.text("name"), case.text("expect"), dot.id)
+        }
+    }
+
+    @Test
+    fun `every all done card`() {
+        vectors.cases("allDone").forEach { case ->
+            val standings = case.getValue("standings").jsonArray.map { id -> HabitStanding.entries.single { it.id == id.jsonPrimitive.content } }
+            assertEquals(case.text("name"), case.getValue("expect").jsonPrimitive.boolean, HabitRules.allDone(standings))
+        }
+    }
+
+    @Test
     fun `every due day`() {
         vectors.cases("due").forEach { case ->
             assertEquals(case.text("name"), case.getValue("expect").jsonPrimitive.boolean, HabitRules.isDue(case.habit(), case.day("day")))

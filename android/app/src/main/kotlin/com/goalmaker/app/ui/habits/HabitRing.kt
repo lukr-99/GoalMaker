@@ -37,6 +37,7 @@ fun HabitRing(
     size: Dp = 44.dp,
     stroke: Dp = 4.dp,
     color: Color = AppTheme.colors.accent,
+    track: Color = AppTheme.colors.outline.copy(alpha = 0.3f),
     content: @Composable () -> Unit = {},
 ) {
     val reduceMotion = AppTheme.reduceMotion
@@ -72,6 +73,7 @@ fun HabitRing(
         size = size,
         stroke = stroke,
         color = color,
+        track = track,
         modifier = modifier
             .graphicsLayer {
                 scaleX = pop.value

@@ -8,6 +8,7 @@ namespace GoalMaker.App.ViewModels;
 /// One period on the Goals page, a column of the ladder: its badge, title and how it stands, its goals
 /// with the ones that need you first, Add a goal, and Copy last week's goals when it has none yet but
 /// the period before had some (docs/goals.md). <see cref="IsDimmed"/> fades it while a ring shows another.
+/// In the list view it is a group of compact rows.
 /// </summary>
 public sealed partial class GoalSectionViewModel : ObservableObject
 {
@@ -47,6 +48,12 @@ public sealed partial class GoalSectionViewModel : ObservableObject
 
     /// <summary>The column's title: "2026", "September", "14 to 20 Sep", "Friday 18 September".</summary>
     public string Title { get; init; } = string.Empty;
+
+    /// <summary>"1 of 3 hit", beside the list view's group header.</summary>
+    public string HitText { get; init; } = string.Empty;
+
+    /// <summary>What a screen reader says for the list view's Add button: "Add a goal to This week · 14 to 20 Sep".</summary>
+    public string AddName { get; init; } = string.Empty;
 
     /// <summary>"1 of 3 hit · Day 5 of 7".</summary>
     public string Line { get; init; } = string.Empty;

@@ -187,6 +187,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];
 
+        public GoalsView GoalsView { get; set; }
+
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =
             new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);
 
