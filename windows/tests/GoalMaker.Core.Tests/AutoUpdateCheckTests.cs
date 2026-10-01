@@ -114,27 +114,27 @@ public sealed class AutoUpdateCheckTests : IDisposable
     }
 
     [Fact]
-    public void AFailureClearsTheMarkLikeAManualCheckAndTheNextCheckBringsItBack()
+    public void AQuietFailureKeepsTheMark()
     {
         var (updates, auto) = Start();
         time.Advance(Delay);
-        Assert.NotNull(updates.Waiting);
+        var waiting = updates.Waiting;
+        Assert.NotNull(waiting);
         var found = auto.LastChecked;
+        var results = new List<UpdateCheckResult>();
+        auto.Checked += (_, result) => results.Add(result);
 
         channel.Reachable = false;
         time.Advance(TimeSpan.FromDays(1));
 
-        // The same rule as Check for updates: a check that finds none clears the mark.
-        Assert.Null(updates.Waiting);
+        // Only a check that gets an answer replaces the waiting update.
+        Assert.NotEmpty(results);
+        Assert.All(results, result => Assert.IsType<UpdateCheckResult.Failed>(result));
+        Assert.Same(waiting, updates.Waiting);
         Assert.Equal(found, auto.LastChecked);
         Assert.Equal("0.3.0", settings.UpdateFound);
-
-        channel.Reachable = true;
-        time.Advance(Look);
-
-        Assert.NotNull(updates.Waiting);
+        Assert.Empty(installer.Launched);
     }
-
     [Fact]
     public void AnUpdateFoundBeforeARestartIsCheckedAgainToShowTheMark()
     {

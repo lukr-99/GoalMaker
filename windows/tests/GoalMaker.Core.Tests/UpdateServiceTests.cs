@@ -84,7 +84,7 @@ public sealed class UpdateServiceTests
     }
 
     [Fact]
-    public async Task AFoundUpdateWaitsUntilACheckFindsNone()
+    public async Task AFoundUpdateWaitsThroughAFailedCheckUntilACheckAnswersWithoutOne()
     {
         var channel = new FakeChannel(new ChannelSnapshot(Manifest, "good"));
         var service = Service(channel: channel);
@@ -98,6 +98,12 @@ public sealed class UpdateServiceTests
         Assert.Equal(1, changes);
 
         channel.Snapshot = null;
+        Assert.IsType<UpdateCheckResult.Failed>(await service.CheckAsync(TestContext.Current.CancellationToken));
+
+        Assert.Same(available, service.Waiting);
+        Assert.Equal(1, changes);
+
+        channel.Snapshot = new ChannelSnapshot(Manifest, "forged");
         await service.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Null(service.Waiting);

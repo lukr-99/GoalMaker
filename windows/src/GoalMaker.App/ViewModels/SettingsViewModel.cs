@@ -754,7 +754,8 @@ public sealed partial class SettingsViewModel : ObservableObject
         try
         {
             var result = await updateChecks.CheckNowAsync(CancellationToken.None);
-            AvailableUpdate = result as UpdateCheckResult.Available;
+            // A failed check says why below and leaves an update an earlier check found.
+            AvailableUpdate = updates.Waiting;
             UpdateStatus = result switch
             {
                 UpdateCheckResult.NotConfigured => strings.Get("Settings.Update.NotConfigured"),

@@ -76,13 +76,30 @@ public sealed class SettingsViewModelTests : IDisposable
         var settings = Settings(ReleasesPage, channel.Service);
         await settings.CheckForUpdatesCommand.ExecuteAsync(null);
 
-        channel.Reachable = false;
+        channel.Latest = "1.0.0";
         await settings.CheckForUpdatesCommand.ExecuteAsync(null);
 
         Assert.False(shell.HasUpdate);
         Assert.False(shell.HasSettingsMark);
         Assert.False(settings.CanInstall);
         Assert.Equal(string.Empty, settings.AvailableText);
+    }
+
+    [Fact]
+    public async Task AFailedCheckSaysWhyAndKeepsTheMark()
+    {
+        var channel = new TestUpdates();
+        var shell = Shell(channel.Service);
+        var settings = Settings(ReleasesPage, channel.Service);
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        channel.Reachable = false;
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.StartsWith("Settings.Update.Failed", settings.UpdateStatus, StringComparison.Ordinal);
+        Assert.True(shell.HasUpdate);
+        Assert.True(settings.CanInstall);
+        Assert.Equal("Settings.Update.Available(1.1.0)", settings.AvailableText);
     }
 
     [Fact]

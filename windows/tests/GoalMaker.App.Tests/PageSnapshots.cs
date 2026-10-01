@@ -753,7 +753,7 @@ public sealed class PageSnapshots
         var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
         Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action())), folder, "update-mark-settings-page", new Size(852, 4200));
 
-        updates.Reachable = false;
+        updates.Latest = "1.0.0";
         updates.Service.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
         problems.Report(ProblemRules.Sync, null);
         Sidebar("update-mark-problem-only-track-dark");
