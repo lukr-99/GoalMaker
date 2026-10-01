@@ -8,5 +8,7 @@ object Widgets {
     suspend fun refresh(context: Context) {
         TodayWidget().updateAll(context)
         HabitsWidget().updateAll(context)
+        GoalsWidget().updateAll(context)
+        MotivationWidget().updateAll(context)
     }
 }

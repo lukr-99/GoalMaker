@@ -117,6 +117,40 @@
                 android:resource="@xml/habits_widget_info" />
         </receiver>
 
+        <!-- The Goals and Motivation widgets (docs/widgets.md). -->
+        <receiver
+            android:name=".ui.widget.GoalsWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/goals_widget_info" />
+        </receiver>
+        <receiver
+            android:name=".ui.widget.MotivationWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/motivation_widget_info" />
+        </receiver>
+
+        <!-- The Motivation widget's setup: the launcher opens it when the widget is placed. -->
+        <activity
+            android:name=".MotivationConfigureActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/widget_motivation_setup_title"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <!-- The quick-add box the widget opens; it sits over whatever app is in front. -->
         <activity
             android:name=".QuickAddActivity"

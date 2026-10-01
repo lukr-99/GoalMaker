@@ -733,6 +733,29 @@
     <string name="widget_habits_header">Habits · %1$d left</string>
     <string name="widget_habits_empty">No habits due today.</string>
     <string name="widget_habits_description">The habits for today, one tap to check one in.</string>
+    <string name="widget_motivation_description">Your own words, or your goals for this week, month or year.</string>
+    <string name="widget_motivation_week">This week\'s goals</string>
+    <string name="widget_motivation_month">This month\'s goals</string>
+    <string name="widget_motivation_year">This year\'s goals</string>
+    <string name="widget_motivation_no_goals">No goals here yet. Tap to open Goals.</string>
+    <string name="widget_motivation_no_text">Tap to write your own words.</string>
+    <string name="widget_motivation_setup_title">Motivation widget</string>
+    <string name="widget_motivation_setup_cancel">Close without saving</string>
+    <string name="widget_motivation_setup_show">Show</string>
+    <string name="widget_motivation_mode_text">My own words</string>
+    <string name="widget_motivation_mode_goals">My goals</string>
+    <string name="widget_motivation_text_label">Your words</string>
+    <string name="widget_motivation_text_placeholder">Free time is not wasted time.</string>
+    <string name="widget_motivation_text_hint">Kept on this phone only. Tap the widget to change them.</string>
+    <string name="widget_motivation_setup_which">Which goals</string>
+    <string name="widget_motivation_pick_week">This week</string>
+    <string name="widget_motivation_pick_month">This month</string>
+    <string name="widget_motivation_pick_year">This year</string>
+    <string name="widget_motivation_goals_hint">The widget keeps up as your goals change. Tap it to open Goals.</string>
+    <string name="widget_motivation_setup_save">Save</string>
+    <string name="widget_goals_title">Goals</string>
+    <string name="widget_goals_preview_hit">1 of 2 hit</string>
+    <string name="widget_goals_description">Rings for your year, month, week and today, with how many goals are hit.</string>
 
     <!-- Calendar (docs/calendar.md) -->
     <string name="calendar_title">Calendar</string>
