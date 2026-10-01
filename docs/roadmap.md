@@ -133,8 +133,8 @@ From M6's close-out (2026-09-28):
 - Habit reminders with check-in from the notification
 - A yearly review you can start, and the January nudge to set yearly goals (story 66)
 - UI tests: Maestro flows, Compose UI tests, a Windows start-up smoke test
-- Small spec gaps: the 1-hour snooze on Android, filters on Projects, Calendar and Archive,
-  important reminders through Do Not Disturb
+- Small spec gaps: filters on Projects, Calendar and Archive, important reminders through Do Not
+  Disturb
 
 From the spec:
 
