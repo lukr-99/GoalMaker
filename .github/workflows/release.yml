@@ -2,8 +2,7 @@ name: Release
 
 # Push a tag vX.Y.Z that matches version.properties. The workflow builds the signed APK and the
 # Windows installer and publishes both with a signed manifest as the GitHub Release, which is the
-# update channel (ADR 0010). The same files still go to the old releases bucket (ADR 0004) until
-# every installed copy reads GitHub. Setup: docs/setup/signing-and-releases.md.
+# update channel (ADR 0010). Setup: docs/setup/signing-and-releases.md.
 
 on:
   push:
@@ -50,7 +49,6 @@ jobs:
         env:
           GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
           GOALMAKER_SUPABASE_KEY: ${{ secrets.GOALMAKER_SUPABASE_KEY }}
-          GOALMAKER_SUPABASE_SECRET_KEY: ${{ secrets.GOALMAKER_SUPABASE_SECRET_KEY }}
           GOALMAKER_MANIFEST_SIGNING_KEY: ${{ secrets.GOALMAKER_MANIFEST_SIGNING_KEY }}
           GOALMAKER_KEYSTORE_BASE64: ${{ secrets.GOALMAKER_KEYSTORE_BASE64 }}
           GOALMAKER_KEYSTORE_PASSWORD: ${{ secrets.GOALMAKER_KEYSTORE_PASSWORD }}
@@ -58,7 +56,7 @@ jobs:
           GOALMAKER_KEY_PASSWORD: ${{ secrets.GOALMAKER_KEY_PASSWORD }}
         run: |
           missing=""
-          for name in GOALMAKER_SUPABASE_URL GOALMAKER_SUPABASE_KEY GOALMAKER_SUPABASE_SECRET_KEY \
+          for name in GOALMAKER_SUPABASE_URL GOALMAKER_SUPABASE_KEY \
                       GOALMAKER_MANIFEST_SIGNING_KEY GOALMAKER_KEYSTORE_BASE64 GOALMAKER_KEYSTORE_PASSWORD \
                       GOALMAKER_KEY_ALIAS GOALMAKER_KEY_PASSWORD; do
             if [ -z "${!name}" ]; then missing="$missing $name"; fi
@@ -184,11 +182,9 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Sign the manifest and upload everything to the old releases bucket
+      - name: Write and sign the manifest
         env:
           GOALMAKER_MANIFEST_SIGNING_KEY: ${{ secrets.GOALMAKER_MANIFEST_SIGNING_KEY }}
-          GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
-          GOALMAKER_SUPABASE_SECRET_KEY: ${{ secrets.GOALMAKER_SUPABASE_SECRET_KEY }}
         run: |
           umask 077
           printf '%s\n' "$GOALMAKER_MANIFEST_SIGNING_KEY" > "$RUNNER_TEMP/manifest-key.pem"
@@ -199,8 +195,6 @@ jobs:
             --windows-installer "artifacts/GoalMaker-$VERSION-setup.exe" \
             --notes "GoalMaker $VERSION" \
             --signing-key "$RUNNER_TEMP/manifest-key.pem" \
-            --supabase-url "$GOALMAKER_SUPABASE_URL" \
-            --secret-key "$GOALMAKER_SUPABASE_SECRET_KEY" \
             --output release-out
           rm -f "$RUNNER_TEMP/manifest-key.pem"
 

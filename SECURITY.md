@@ -36,11 +36,11 @@ issue.
 
 - **Leaked session or lost device:** sign out everywhere from the Supabase dashboard (Authentication →
   Users → the owner → sign out), then sign in again.
-- **Leaked secret key:** roll it in the Supabase dashboard (Settings → API Keys) and update the
-  `GOALMAKER_SUPABASE_SECRET_KEY` secret.
+- **Leaked secret key:** roll it in the Supabase dashboard (Settings → API Keys). Nothing in the
+  repository or its workflows uses it.
 - **Leaked or lost manifest signing key:** create a new one with `tools/setup-update-signing.ps1`,
   commit the new public key, and install the next release of each app by hand once.
 - **Lost Android release key:** the app can no longer update in place; uninstall and install a build
   signed with a new key (data lives in Supabase, so nothing is lost).
-- **Bad release:** delete that GitHub Release (and `releases/latest/` in the old Storage bucket while
-  it is still fed) to stop the offer, publish a fixed version, and install it by hand if needed.
+- **Bad release:** delete that GitHub Release to stop the offer, publish a fixed version, and install
+  it by hand if needed.

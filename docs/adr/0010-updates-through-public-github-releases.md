@@ -14,3 +14,6 @@ repository it runs in (`GOALMAKER_UPDATE_URL`). Releases are published, not draf
 invisible to the apps. The workflow keeps uploading to the old bucket until every installed copy
 runs a version that reads GitHub; then the bucket upload, the Storage secret and migration 0002's
 bucket can go. Supersedes the "where" of ADR 0004; its manifest and signing still stand.
+
+2026-10-01: every copy runs 1.2.0 or later, so the workflow no longer uploads to the bucket or needs
+the Storage secret. The bucket and its files are removed from the cloud project separately.
