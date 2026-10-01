@@ -366,12 +366,39 @@
                                  Maximum="1"
                                  Value="{Binding DownloadProgress}"
                                  Visibility="{Binding IsUpdating, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- An update the check found: the accent row, as the mark on the Settings item promised. -->
+                    <Grid Margin="0,0,0,12"
+                          AutomationProperties.Name="{Binding AvailableText}"
+                          Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}">
+                        <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.AccentBrush}" Opacity="0.12" />
+                        <Border CornerRadius="{DynamicResource GM.RowCorner}" BorderBrush="{DynamicResource GM.AccentBrush}" BorderThickness="1" Padding="12,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Width="32" Height="32" CornerRadius="16" Background="{DynamicResource GM.AccentBrush}" VerticalAlignment="Center">
+                                    <ui:SymbolIcon Symbol="ArrowDownload20" Filled="True" FontSize="18" Foreground="{DynamicResource GM.OnAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Grid.Column="1"
+                                           Margin="12,0,12,0"
+                                           VerticalAlignment="Center"
+                                           Text="{Binding AvailableText}"
+                                           TextWrapping="Wrap"
+                                           FontSize="15"
+                                           FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                           Foreground="{DynamicResource GM.TextBrush}" />
+                                <ui:Button Grid.Column="2"
+                                           Appearance="Primary"
+                                           VerticalAlignment="Center"
+                                           Content="{Binding InstallText}"
+                                           Command="{Binding InstallUpdateCommand}" />
+                            </Grid>
+                        </Border>
+                    </Grid>
                     <StackPanel Orientation="Horizontal">
                         <ui:Button Margin="0,0,8,0" Content="{DynamicResource Settings.CheckUpdates}" Command="{Binding CheckForUpdatesCommand}" />
-                        <ui:Button Appearance="Primary"
-                                   Content="{Binding InstallText}"
-                                   Command="{Binding InstallUpdateCommand}"
-                                   Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                     <ui:Button Margin="0,12,0,0"
                                Content="{DynamicResource Settings.Update.DownloadYourself}"
