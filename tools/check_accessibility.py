@@ -5,6 +5,10 @@ Windows: an interactive element in XAML is named by AutomationProperties.Name, b
 Header, by a PlaceholderText, or by the text inside it. Android: an IconButton says what it does
 through its icon's contentDescription, its own semantics, or the tooltip it sits in.
 
+And every Android control can be reached: a Scaffold's bottomBar slot adds no window insets, so a
+bar built from a Row or a Column has to keep clear of the system navigation bar itself. Material's
+NavigationBar and BottomAppBar already do.
+
 Run from anywhere: python tools/check_accessibility.py
 """
 
@@ -95,14 +99,49 @@ def android() -> list[str]:
     return found
 
 
+# What keeps a bottom bar above the system navigation bar.
+CLEAR = ("navigationBarsPadding", "systemBarsPadding", "safeDrawing", "windowInsetsPadding", "NavigationBar(", "BottomAppBar(")
+
+
+def lambda_body(text: str, brace: int) -> str:
+    """The lambda that opens at [brace], braces and all."""
+    depth, end = 0, brace
+    while end < len(text):
+        if text[end] == "{":
+            depth += 1
+        elif text[end] == "}":
+            depth -= 1
+            if depth == 0:
+                break
+        end += 1
+    return text[brace : end + 1]
+
+
+def bottom_bars() -> list[str]:
+    found = []
+    for path in sorted(glob.glob(str(ROOT / "android/app/src/main/kotlin/**/*.kt"), recursive=True)):
+        text = io.open(path, encoding="utf-8").read()
+        for match in re.finditer(r"\bbottomBar\s*=\s*\{", text):
+            body = lambda_body(text, match.end() - 1)
+            if any(clear in body for clear in CLEAR):
+                continue
+            line = text.count("\n", 0, match.start()) + 1
+            found.append(f"{Path(path).relative_to(ROOT).as_posix()}:{line} bottomBar can sit under the navigation bar")
+    return found
+
+
 def main() -> int:
-    problems = windows() + android()
-    for problem in problems:
+    unnamed = windows() + android()
+    hidden = bottom_bars()
+    for problem in unnamed + hidden:
         print(problem)
-    if problems:
-        print(f"{len(problems)} control(s) a screen reader cannot name")
+    if unnamed:
+        print(f"{len(unnamed)} control(s) a screen reader cannot name")
+    if hidden:
+        print(f"{len(hidden)} bottom bar(s) the system navigation bar can cover")
+    if unnamed or hidden:
         return 1
-    print("every control has something to read")
+    print("every control has something to read and keeps clear of the system bars")
     return 0
 
 

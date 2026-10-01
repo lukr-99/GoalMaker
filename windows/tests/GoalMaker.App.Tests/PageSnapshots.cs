@@ -19,6 +19,7 @@ using GoalMaker.Core.Auth;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Connector;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Problems;
 using GoalMaker.Core.Settings;
 using GoalMaker.Infrastructure.Sync;
 using Wpf.Ui.Appearance;
@@ -691,6 +692,102 @@ public sealed class PageSnapshots
         window.Close();
     });
 
+    // The mark on the Settings item when the last check found an update, in each theme and mode,
+    // then a problem alone and no mark for comparison, and the accent row in the updates card.
+    [Fact(Explicit = true)]
+    public void UpdateMarkInEveryTheme() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var updates = new TestUpdates();
+        var problems = new ProblemLog(planner.Time);
+        var auth = new SnapshotAuth();
+        var watch = new SignInWatch(auth, planner.Settings, () => DateTimeOffset.Now);
+        var shell = new ShellViewModel(
+            auth, new SignInViewModel(auth, watch, strings, devBackend: null), problems, updates.Service, action => action());
+
+        void Sidebar(string name)
+        {
+            var navigation = new Wpf.Ui.Controls.NavigationView
+            {
+                PaneDisplayMode = Wpf.Ui.Controls.NavigationViewPaneDisplayMode.Left,
+                OpenPaneLength = 240,
+                IsBackButtonVisible = Wpf.Ui.Controls.NavigationViewBackButtonVisible.Collapsed,
+                IsPaneToggleVisible = false,
+            };
+            Wpf.Ui.Controls.NavigationViewItem Item(string key, Wpf.Ui.Controls.SymbolRegular symbol) => new()
+            {
+                Content = Application.Current.FindResource(key),
+                Icon = new Wpf.Ui.Controls.SymbolIcon { Symbol = symbol },
+            };
+            navigation.MenuItems.Add(Item("Nav.Today", Wpf.Ui.Controls.SymbolRegular.CalendarToday24));
+            navigation.MenuItems.Add(Item("Nav.Inbox", Wpf.Ui.Controls.SymbolRegular.MailInbox24));
+            var settings = Item("Nav.Settings", Wpf.Ui.Controls.SymbolRegular.Settings24);
+            settings.InfoBadge = new Wpf.Ui.Controls.InfoBadge { Style = (Style)Application.Current.FindResource("GM.SettingsMark") };
+            navigation.FooterMenuItems.Add(settings);
+            var root = new Grid { Children = { navigation } };
+            root.SetResourceReference(Panel.BackgroundProperty, "GM.BackgroundBrush");
+            var window = new Window
+            {
+                Content = root,
+                DataContext = shell,
+                Width = 900,
+                Height = 240,
+                Left = -4000,
+                Top = 100,
+                ShowActivated = false,
+                ShowInTaskbar = false,
+                WindowStyle = WindowStyle.None,
+            };
+            window.Show();
+            navigation.IsPaneOpen = true;
+            // The pane slides open; let it finish before the picture is taken.
+            for (var tick = 0; tick < 40; tick++)
+            {
+                Settle();
+                Thread.Sleep(15);
+            }
+
+            root.UpdateLayout();
+            Settle();
+            var bitmap = new RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(root);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using (var file = File.Create(Path.Combine(folder, name + ".png")))
+            {
+                encoder.Save(file);
+            }
+
+            window.Close();
+        }
+
+        updates.Service.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
+        Assert.True(shell.HasUpdate);
+        foreach (var option in ContractResources.Themes().Themes)
+        {
+            foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Dark, GoalMaker.Core.Settings.ThemeMode.Light })
+            {
+                theme.Apply(planner.Settings.Appearance with { ThemeId = option.Id, Mode = mode });
+                Sidebar($"update-mark-{option.Id}-{mode.ToString().ToLowerInvariant()}");
+            }
+        }
+
+        theme.Apply(planner.Settings.Appearance with { ThemeId = "track", Mode = GoalMaker.Core.Settings.ThemeMode.Dark });
+        var page = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
+        page.CheckForUpdatesCommand.ExecuteAsync(null).GetAwaiter().GetResult();
+        var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
+        Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action())), folder, "update-mark-settings-page", new Size(852, 4200));
+
+        updates.Reachable = false;
+        updates.Service.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
+        problems.Report(ProblemRules.Sync, null);
+        Sidebar("update-mark-problem-only-track-dark");
+        problems.Clear(ProblemRules.Sync);
+        Sidebar("update-mark-none-track-dark");
+    });
+
     [Fact(Explicit = true)]
     public void MiniWindowsInEveryTheme() => OnUiThread(folder =>
     {
@@ -935,7 +1032,7 @@ public sealed class PageSnapshots
                 var resources = app.Resources.MergedDictionaries;
                 resources.Add(new ThemesDictionary { Theme = ApplicationTheme.Dark });
                 resources.Add(new ControlsDictionary());
-                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "ListTemplate", "MiniTemplates" })
+                foreach (var name in new[] { "Strings", "Tokens", "Converters", "ComposerTemplate", "ListTemplate", "MiniTemplates", "NavigationMarks" })
                 {
                     resources.Add(new ResourceDictionary { Source = new Uri($"pack://application:,,,/GoalMaker;component/Resources/{name}.xaml") });
                 }

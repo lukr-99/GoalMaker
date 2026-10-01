@@ -1,0 +1,42 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+
+    <!--
+      The mark on the sidebar's Settings item, bound to the window's ShellViewModel. A problem nobody
+      has read is WPF UI's quiet attention dot (docs/problems.md). An update the last check found is a
+      round accent badge with a down arrow, and it shows over the dot when both wait: Settings shows
+      both. Screen readers hear "Update available" or "Something needs a look".
+    -->
+    <Style x:Key="GM.SettingsMark" TargetType="ui:InfoBadge" BasedOn="{StaticResource {x:Type ui:InfoBadge}}">
+        <Setter Property="Severity" Value="Attention" />
+        <Setter Property="Visibility" Value="{Binding DataContext.HasSettingsMark, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BoolToVisibility}}" />
+        <Setter Property="AutomationProperties.Name" Value="{DynamicResource Nav.ProblemsWaiting}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding DataContext.HasUpdate, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="True">
+                <Setter Property="AutomationProperties.Name" Value="{DynamicResource Nav.UpdateAvailable}" />
+                <Setter Property="ToolTip" Value="{DynamicResource Nav.UpdateAvailable}" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ui:InfoBadge">
+                            <Border Width="18"
+                                    Height="18"
+                                    CornerRadius="9"
+                                    Background="{DynamicResource GM.AccentBrush}"
+                                    BorderBrush="{DynamicResource GM.BackgroundBrush}"
+                                    BorderThickness="1.5"
+                                    VerticalAlignment="Center">
+                                <ui:SymbolIcon Symbol="ArrowDownload16"
+                                               Filled="True"
+                                               FontSize="11"
+                                               Foreground="{DynamicResource GM.OnAccentBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+</ResourceDictionary>

@@ -29,7 +29,7 @@ public sealed class SessionEndedTests : IDisposable
         var sessionSync = new SessionSync(catalog, planner.Replica, sync);
         auth.SessionChanged += (_, session) => sessionSync.Apply(session);
         var signIn = new SignInViewModel(auth, new SignInWatch(auth, planner.Settings, () => planner.Time.GetUtcNow()), planner.Strings, devBackend: null);
-        shell = new ShellViewModel(auth, signIn, new ProblemLog(planner.Time), action => action());
+        shell = new ShellViewModel(auth, signIn, new ProblemLog(planner.Time), new TestUpdates().Service, action => action());
     }
 
     private CancellationToken Token => TestContext.Current.CancellationToken;

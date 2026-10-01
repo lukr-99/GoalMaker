@@ -12,7 +12,9 @@ run by both apps.
 - **Settings** holds them, newest first, each one saying what happened in plain words, what to do
   about it, and when. The technical line is folded away behind **What happened**, for a bug report.
 - **The way in is quiet**: a small mark on the Settings item in the Windows sidebar, and on the gear
-  in Today's top bar on Android. Opening Settings reads them, and the mark goes.
+  in Today's top bar on Android. Opening Settings reads them, and the mark goes. An update waiting
+  wears its own accent mark with a download arrow in the same place (ARCHITECTURE.md, updating); on
+  Windows it shows over the problem dot, and on the phone the two sit side by side.
 - **They stay until they come right.** A problem that fixes itself, a sync that gets through on the
   next run, takes itself off the list with nobody doing anything. Something that fixes itself should
   never have interrupted anything in the first place.

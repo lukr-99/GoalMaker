@@ -168,7 +168,11 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
 
 - **updating:** `ReleaseChannel` / `IReleaseChannel`, `SignatureVerifier` / `ISignatureVerifier`,
   `UpdateInstaller` / `IUpdateInstaller`, coordinated by `UpdateService`. Health shows in Settings →
-  Updates (not configured, dev build, up to date, available, untrusted, failed).
+  Updates (not configured, dev build, up to date, available, untrusted, failed). `UpdateService`
+  keeps the update the last check found (`waiting` / `Waiting` with `WaitingChanged`); while one
+  waits, the way to Settings wears an accent mark with a download arrow (the Settings item in the
+  Windows sidebar, the gear in the phone's top bar) and Settings shows it as an accent row with the
+  install button. A check that finds none clears it, and a new version starts without it.
 - **syncing:** `Replica` / `IReplica` and `RemoteTables` / `IRemoteTables`, run by `SyncEngine` and
   scheduled by `SyncCoordinator`. Health shows under Today's title (synced at, syncing, offline
   with the number of waiting changes, or changes the server refused).

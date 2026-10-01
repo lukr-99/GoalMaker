@@ -75,7 +75,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private double downloadProgress;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanInstall), nameof(InstallText))]
+    [NotifyPropertyChangedFor(nameof(CanInstall), nameof(InstallText), nameof(AvailableText))]
     [NotifyCanExecuteChangedFor(nameof(InstallUpdateCommand))]
     private UpdateCheckResult.Available? availableUpdate;
 
@@ -675,6 +675,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// </summary>
     public bool HasReleasesPage => releasesPage is not null;
 
+    /// <summary>The accent row's words, "Version X is available.", shown while an update waits.</summary>
+    public string AvailableText =>
+        AvailableUpdate is null ? string.Empty : strings.Get("Settings.Update.Available", AvailableUpdate.Manifest.Version);
+
     public string InstallText =>
         AvailableUpdate is null ? string.Empty : strings.Get("Settings.InstallUpdate", AvailableUpdate.Manifest.Version);
 
@@ -732,7 +736,8 @@ public sealed partial class SettingsViewModel : ObservableObject
                 UpdateCheckResult.NotConfigured => strings.Get("Settings.Update.NotConfigured"),
                 UpdateCheckResult.DevelopmentBuild => strings.Get("Settings.Update.DevBuild"),
                 UpdateCheckResult.UpToDate upToDate => strings.Get("Settings.Update.UpToDate", upToDate.Latest),
-                UpdateCheckResult.Available available => strings.Get("Settings.Update.Available", available.Manifest.Version),
+                // The accent row says it, with the install button beside it.
+                UpdateCheckResult.Available => string.Empty,
                 UpdateCheckResult.Untrusted => strings.Get("Settings.Update.Untrusted"),
                 UpdateCheckResult.Failed failed => strings.Get("Settings.Update.Failed", failed.Detail),
                 _ => string.Empty,
@@ -770,7 +775,11 @@ public sealed partial class SettingsViewModel : ObservableObject
                 InstallResult.Failed failed => strings.Get("Settings.Update.Failed", failed.Detail),
                 _ => string.Empty,
             };
-            AvailableUpdate = null;
+            // A failed install leaves the update waiting, so Install can be tried again.
+            if (result is InstallResult.InstallerStarted)
+            {
+                AvailableUpdate = null;
+            }
         }
         finally
         {

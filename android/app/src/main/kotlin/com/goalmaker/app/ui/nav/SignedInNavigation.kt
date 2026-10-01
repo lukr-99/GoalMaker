@@ -102,6 +102,8 @@ fun SignedInNavigation(graph: AppGraph) {
     var wantTitle by rememberSaveable { mutableStateOf<String?>(null) }
     // What went wrong while nobody was watching: the mark on the gear, and the card in Settings.
     val problems by graph.problems.problems.collectAsStateWithLifecycle()
+    // An update the last check found: the accent mark on the gear, and the row in Settings.
+    val updateWaiting by graph.updates.waiting.collectAsStateWithLifecycle()
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
     val planRequested by graph.planRequested.collectAsState()
     LaunchedEffect(planRequested) {
@@ -197,7 +199,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             MainActions(
                                 sync = syncStatus,
                                 onSyncNow = listsViewModel::refresh,
-                                hasProblems = problems.any { it.unread },
+                                mark = SettingsMark.of(updateWaiting, problems),
                                 onOpenPlan = { backStack.add(PlanKey) },
                                 onOpenSettings = { backStack.add(SettingsKey) },
                             )

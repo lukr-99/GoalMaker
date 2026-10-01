@@ -46,7 +46,9 @@ The script refuses to replace an existing key. From the next build on, both apps
 3. The **Release** workflow checks the tag and the secrets, builds and tests the signed APK and the
    installer, and publishes them with the signed manifest and `SHA256SUMS` as the GitHub Release
    (ADR 0010).
-4. The apps see the update at once: Settings → Check for updates.
+4. The apps see the update at once: Settings → Check for updates. Once a check has found it, the
+   Settings item in the Windows sidebar and the gear in the phone's top bar wear an accent mark with
+   a download arrow ("Update available") until it is installed or a later check finds none.
 
 A failed workflow publishes no release unless it reached the last job. If a bad release went out,
 see [SECURITY.md](../../SECURITY.md) → Recovery.
