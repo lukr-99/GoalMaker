@@ -75,6 +75,10 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = state.asStateFlow()
 
     init {
+        // Kept by the update service, so the row is still there when Settings opens again.
+        viewModelScope.launch {
+            updates.waiting.collect { waiting -> state.update { it.copy(waitingUpdate = waiting) } }
+        }
         viewModelScope.launch {
             settings.dayStartHour.collect { hour -> state.update { it.copy(dayStartHour = hour) } }
         }
