@@ -77,8 +77,8 @@ only while its day falls inside the goal's period ([repeating](repeating.md)).
 
 ## On screen
 
-The Goals page has three parts, top to bottom (the owner's pick from the habits, goals and add
-prototypes, 2026-10-01):
+In the ladder view, the default, the Goals page has three parts, top to bottom (the owner's pick
+from the habits, goals and add prototypes, 2026-10-01):
 
 1. **Horizon rings.** One ring each for this year, month, week and today: the mean fraction of its
    goals, and how many are hit ("1 of 3 hit"). Under them, a line says how to light a chain and how
@@ -101,6 +101,23 @@ prototypes, 2026-10-01):
   (Enter lights its chain); a right click or the menu key has the rest. The editor and the log
   panel open over the page, and a hit throws a lighter confetti burst. Today ends with this week's
   goals folded, and a task's details pick the goal it serves.
+
+### List view
+
+The header switches between the **Ladder** (above, the default) and a plain **List** (the owner's
+ask for a very simple view, 2026-10-01). The list groups the goals by period in the same order: this
+year, month, week and today, then next week. Each group has its name and dates, how many of its
+goals are hit, and a button to add a goal to it. Each goal is one compact row: its box when it is
+done or not, its name with where it stands ("12 of 50 km", "Not done yet") and a thin bar, its pace,
+and the quick log. Within a group the goals that need you come first, as on the ladder. A tap on a
+row opens the goal's editor. There are no rings, rails, chains or big cards: the rings are left out
+because each group already says how many of its goals are hit, and the list is meant to be the
+quiet view. Picking the list puts out a lit chain, and the list shows every period whatever ring
+was picked. Each device remembers its own choice in its settings store, not synced.
+
+- **Android:** an icon button in the top bar (a list icon in the ladder, a cards icon in the list).
+- **Windows:** a small Ladder and List segment in the page header. The rows sit in one column up to
+  820 pixels wide, with the pace and the quick log lined up on the right.
 
 The tree view that used to show the cascade is gone: the feeds line on each card and the lit chain
 show how goals connect (story 34).
