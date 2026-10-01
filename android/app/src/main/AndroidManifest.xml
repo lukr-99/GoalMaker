@@ -139,6 +139,11 @@
                 android:resource="@xml/quick_add_widget_info" />
         </receiver>
 
+        <!-- Later on the update notification (docs/setup/signing-and-releases.md). -->
+        <receiver
+            android:name=".data.update.UpdateActionReceiver"
+            android:exported="false" />
+
         <!-- Hands downloaded update APKs to the system installer (M0-06). -->
         <provider
             android:name="androidx.core.content.FileProvider"
