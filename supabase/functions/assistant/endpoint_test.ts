@@ -153,6 +153,33 @@ Deno.test({
         assertEquals(log, { actor: "owner", via: "chat" });
       });
 
+      await t.step("a habit, a goal and a want are added from the owner's short lines", async () => {
+        const answer = await chat(owner, ask("add swim 2 times a week, read 3 books this month, and a kindle"), [
+          {
+            calls: [
+              { name: "add_habit", args: { line: "Swim 2 times a week 40 min" } },
+              { name: "add_goal", args: { line: "Read 3 books this month" } },
+              // The script travels in a header, which holds only Latin-1, so CZK rather than Kč.
+              { name: "add_want", args: { line: "Kindle 3290 CZK because I read on the train" } },
+            ],
+          },
+          { text: "{{results}}" },
+        ]);
+        assertEquals(answer.status, 200, JSON.stringify(answer.body));
+        assertStringIncludes(answer.body.text, "Swim · 2 times a week · left · 0 of 2 this week");
+        assertStringIncludes(answer.body.text, "Read 3 books · month of");
+        assertStringIncludes(answer.body.text, "Kindle · 3290 CZK · cooling");
+        const [habit] = await sql`
+          select cadence, times, measure, target, unit from public.habits where owner_id = ${OWNER} and name = 'Swim'`;
+        assertEquals(habit, { cadence: "per_week", times: 2, measure: "amount", target: 40, unit: "min" });
+        const [goal] = await sql`
+          select horizon, target, unit from public.goals where owner_id = ${OWNER} and title = 'Read 3 books'`;
+        assertEquals(goal, { horizon: "month", target: 3, unit: "books" });
+        const [want] = await sql`
+          select price, currency, reason from public.wants where owner_id = ${OWNER} and title = 'Kindle'`;
+        assertEquals(want, { price: 3290, currency: "CZK", reason: "I read on the train" });
+      });
+
       await t.step("a request that reads Today answers from the owner's list", async () => {
         const answer = await chat(owner, {
           messages: [

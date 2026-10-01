@@ -4,7 +4,7 @@ import { assert, assertEquals, assertRejects, assertStringIncludes } from "jsr:@
 import { tools } from "../tools/tools.ts";
 import type { Schema, ToolCall, ToolResult, ToolSpec } from "./chatProvider.ts";
 import { ProviderError } from "./chatProvider.ts";
-import { CHAT_TOOLS, chatDeclarations, chatTools, deletes, firstSentence } from "./chatTools.ts";
+import { CHAT_INPUTS, CHAT_TOOLS, chatDeclarations, chatTools, deletes, firstSentence } from "./chatTools.ts";
 import { FakeProvider } from "./fakeProvider.ts";
 import { geminiBody, GeminiProvider, replyOf } from "./geminiProvider.ts";
 import { systemPrompt } from "./prompt.ts";
@@ -238,6 +238,22 @@ Deno.test("the prompt names the planning day, the time zone and GoalMaker's word
   assertStringIncludes(prompt, "It is 2026-09-30 01:30 in Europe/Prague");
   assertStringIncludes(prompt, "planned day");
   assertStringIncludes(prompt, "You cannot delete anything");
+  assertStringIncludes(prompt, "pass the owner's own words as line");
+});
+
+Deno.test("the chat adds wants, habits and goals from the owner's line, with few inputs", () => {
+  const declared = new Map(chatDeclarations.map((declaration) => [declaration.name, declaration]));
+  for (const name of ["add_want", "add_habit", "add_goal"]) {
+    const properties = declared.get(name)?.parameters?.properties ?? {};
+    assert("line" in properties, `${name} takes a line`);
+    assertEquals(declared.get(name)?.parameters?.required, undefined, `${name} needs nothing but the line`);
+  }
+  for (const [name, offered] of Object.entries(CHAT_INPUTS)) {
+    const tool = tools.find((one) => one.name === name)!;
+    assert(CHAT_TOOLS.has(name), `${name} is offered`);
+    assertEquals([...offered].filter((input) => !(input in tool.input)), [], `${name} offers only its own inputs`);
+    assertEquals(Object.keys(declared.get(name)!.parameters!.properties!).sort(), [...offered].sort());
+  }
 });
 
 Deno.test("the fake provider is picked only on the local stack, and no key means unavailable", () => {
