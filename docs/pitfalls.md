@@ -3,6 +3,21 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## WPF UI fills its accent keys from Windows, or from shades of its own
+
+2026-10-01. The owner saw a violet Plan tomorrow button and Send button next to a red title and red
+checks. WPF UI colors primary buttons, toggles, checks and selections from dozens of accent keys.
+On its first look at the application's resources it writes Windows' accent into them, and
+`ApplicationAccentColorManager.Apply` turns any color into darker shades (light mode) or lighter,
+greyer ones (dark mode), with black or white text by a brightness guess. Its theme dictionaries also
+bake some of them into brushes once. None of those are GoalMaker colors. `ThemeApplier` now sets
+every one of these keys itself on each Apply: the theme's primary, and onPrimary for text on it
+(`ThemeApplierTests` seeds Windows' accent first and checks each key in every theme and mode). In
+this case the violet was the theme's own primary, though: Electric pairs a violet primary
+(buttons, send) with a coral accent (title, checks, section labels), by design. Before chasing a
+color that "doesn't change", compare it with the theme's `primary` and `accent` in
+`contracts/design/themes.json`, and with Windows' accent color.
+
 ## An italic word swallows the space after it on Windows
 
 2026-10-01. "The bank call moved *four* times" read "fourtimes" in notes and letters. The parser and
