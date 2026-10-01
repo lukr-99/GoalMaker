@@ -129,7 +129,9 @@ writes the Letter.
 The hour (04:00 by default) at which "today" becomes the next day.
 
 **Composer**:
-The input bar at the bottom of the app for quick-add shortcuts and `/` commands.
+The input bar at the bottom of Today, Tomorrow, the Inbox, Wants, Habits and Goals for quick-add
+shortcuts and `/` commands. Its round button is a plus that opens the page's full form while the line
+is empty, and the send arrow once something is typed. Also called the bottom bar.
 _Avoid_: Search bar, command palette
 
 **Quick chat**:

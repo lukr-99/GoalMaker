@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.wants
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.composer.QuickAddLines
 import com.goalmaker.app.application.planning.WantCooldowns
 import com.goalmaker.app.application.planning.WantDraft
 import com.goalmaker.app.application.planning.WantItem
@@ -9,6 +10,7 @@ import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.WantState
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.ui.composer.LineOutcome
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import kotlinx.coroutines.CoroutineDispatcher
@@ -92,6 +94,32 @@ class WantsViewModel(
         WantRules.cooldownDays(price, currency, uiState.value.cooldowns, picked)
 
     suspend fun add(draft: WantDraft): WantItem? = withContext(io) { wants.add(draft) }
+
+    /**
+     * What the bottom bar's line says as a want (docs/composer.md, "Adding on Wants, Habits and
+     * Goals"): a picked wait is the want's picked cooldown, and without a price the currency is the
+     * owner's, as in the form. Pure and fast, so it runs on every keystroke.
+     */
+    fun preview(line: String): WantDraft {
+        val read = QuickAddLines.readWant(line)
+        return WantDraft(
+            title = read.title,
+            reason = read.reason.orEmpty(),
+            price = read.price,
+            currency = read.currency ?: uiState.value.cooldowns.currency,
+            pickedDays = read.waitDays,
+        )
+    }
+
+    /**
+     * Adds the want the line says when it has a title and a reason; otherwise, or when it can't be
+     * saved, the want form opens with what was read.
+     */
+    suspend fun addLine(line: String): LineOutcome<WantDraft> {
+        val draft = preview(line)
+        if (draft.title.isBlank() || draft.reason.isBlank()) return LineOutcome.OpenForm(draft)
+        return if (add(draft) != null) LineOutcome.Added else LineOutcome.OpenForm(draft)
+    }
 
     suspend fun update(id: String, draft: WantDraft): Boolean = withContext(io) { wants.update(id, draft) }
 

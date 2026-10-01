@@ -134,6 +134,10 @@ nothing; a limit's clean day is met.
   **Weekly** and **Limits**, of full cards that add how often, the goal served, the heatmap and the
   Not on Today mark; Hide done (a group it empties says "All done."); and the archived habits folded
   at the end. On Windows the cards sit two to a row where there is room.
+- **Adding** is the bottom bar's job ([composer](composer.md#the-bottom-bar-on-every-list)): type
+  `Swim 2 times a week 40 min` and send, with how often and how much previewed as chips; with nothing
+  typed its plus opens the habit form, and a line that leaves no name opens the form filled in. A
+  limit, an emoji and the goal it serves are set in the form.
 - A habit can be **archived**: it leaves Today and the list, keeping its history, and can come back.
 
 ## Keeping a habit off Today

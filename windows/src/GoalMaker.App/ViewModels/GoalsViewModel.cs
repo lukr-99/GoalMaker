@@ -68,7 +68,8 @@ public sealed partial class GoalsViewModel : ObservableObject
         TimeProvider time,
         Func<bool> motionReduced,
         Action<Action> runOnUi,
-        HabitList? habits = null)
+        HabitList? habits = null,
+        ChatViewModel? chat = null)
     {
         this.goals = goals;
         this.tasks = tasks;
@@ -79,6 +80,7 @@ public sealed partial class GoalsViewModel : ObservableObject
         this.motionReduced = motionReduced;
         View = settings.GoalsView;
         Editor = new GoalEditorViewModel(goals, strings, Today);
+        Bar = new GoalBarViewModel(goals, strings, Today, Editor.OpenFrom, chat);
         Editor.PropertyChanged += (_, change) =>
         {
             if (change.PropertyName == nameof(GoalEditorViewModel.IsOpen))
@@ -100,6 +102,9 @@ public sealed partial class GoalsViewModel : ObservableObject
     public event EventHandler? Celebrate;
 
     public GoalEditorViewModel Editor { get; }
+
+    /// <summary>The bottom bar: type a goal to add it, or open the editor with its plus.</summary>
+    public GoalBarViewModel Bar { get; }
 
     /// <summary>This year, month, week and today, then next week.</summary>
     public ObservableCollection<GoalSectionViewModel> Sections { get; } = [];

@@ -4,6 +4,13 @@
                     xmlns:controls="clr-namespace:GoalMaker.App.Controls"
                     xmlns:vm="clr-namespace:GoalMaker.App.ViewModels">
 
+    <!-- A field's name in the new task form, as in the goal and habit editors. -->
+    <Style x:Key="GM.FieldLabel" TargetType="TextBlock">
+        <Setter Property="Margin" Value="0,10,0,4" />
+        <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+    </Style>
+
     <!-- An area (with its color) or a tag in the pickers above the lists. -->
     <DataTemplate x:Key="FilterChoice" DataType="{x:Type vm:FilterChoiceViewModel}">
         <StackPanel Orientation="Horizontal">
@@ -20,6 +27,10 @@
     -->
     <DataTemplate x:Key="ListTemplate" DataType="{x:Type vm:ListViewModel}">
         <Grid x:Name="ListRoot" Margin="{DynamicResource GM.PagePadding}">
+            <Grid.InputBindings>
+                <!-- The new task form, from anywhere on the list (docs/composer.md). -->
+                <KeyBinding Key="N" Modifiers="Control" Command="{Binding Composer.OpenFormCommand}" />
+            </Grid.InputBindings>
             <Grid.Style>
                 <Style TargetType="Grid">
                     <Setter Property="Tag" Value="stacked" />
@@ -373,7 +384,91 @@
                             Margin="0,12,0,0"
                             Focusable="False"
                             Content="{Binding Composer}"
-                            ContentTemplate="{StaticResource ComposerTemplate}" />
+                            ContentTemplate="{StaticResource ComposerTemplate}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Style.Triggers>
+                            <!-- The new task form takes the list and its bar while it is open. -->
+                            <DataTrigger Binding="{Binding NewTask.IsOpen}" Value="True">
+                                <Setter Property="Visibility" Value="Hidden" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+
+            <!-- The new task form the bar's plus opens: it takes the list while it is open. -->
+            <Border Grid.Row="0"
+                    Grid.RowSpan="4"
+                    Background="{DynamicResource GM.BackgroundBrush}"
+                    Visibility="{Binding NewTask.IsOpen, Converter={StaticResource BoolToVisibility}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ui:Card Margin="0,8"
+                             Padding="24"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             DataContext="{Binding NewTask}">
+                        <ui:Card.InputBindings>
+                            <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+                        </ui:Card.InputBindings>
+                        <StackPanel MaxWidth="432">
+                            <TextBlock Margin="0,0,0,8"
+                                       FontSize="20"
+                                       FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                       Text="{DynamicResource Composer.NewTask}" />
+                            <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource NewTask.What}" />
+                            <ui:TextBox MaxLength="500"
+                                        controls:FocusWhen.Open="{Binding IsOpen}"
+                                        Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                                        AutomationProperties.Name="{DynamicResource NewTask.What}">
+                                <ui:TextBox.InputBindings>
+                                    <KeyBinding Key="Enter" Command="{Binding SaveCommand}" />
+                                </ui:TextBox.InputBindings>
+                            </ui:TextBox>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource NewTask.Day}" />
+                                    <ComboBox ItemsSource="{Binding Days}"
+                                              SelectedItem="{Binding Day}"
+                                              DisplayMemberPath="Label"
+                                              AutomationProperties.Name="{DynamicResource NewTask.Day}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource NewTask.Area}" />
+                                    <ComboBox ItemsSource="{Binding AreaChoices}"
+                                              SelectedItem="{Binding Area}"
+                                              DisplayMemberPath="Label"
+                                              AutomationProperties.Name="{DynamicResource NewTask.Area}" />
+                                </StackPanel>
+                            </Grid>
+                            <CheckBox Margin="0,12,0,0"
+                                      Content="{DynamicResource Composer.Priority}"
+                                      IsChecked="{Binding TopPriority}" />
+                            <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource NewTask.Notes}" />
+                            <ui:TextBox MinHeight="76"
+                                        MaxLength="20000"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                                        AutomationProperties.Name="{DynamicResource NewTask.Notes}" />
+                            <TextBlock Margin="0,8,0,0"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                                       Text="{DynamicResource NewTask.Hint}" />
+                            <StackPanel Margin="0,20,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+                                <ui:Button Command="{Binding CancelCommand}" Content="{DynamicResource NewTask.Cancel}" />
+                                <ui:Button Margin="8,0,0,0" Appearance="Primary" Command="{Binding SaveCommand}" Content="{DynamicResource NewTask.Save}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ui:Card>
+                </ScrollViewer>
+            </Border>
         </Grid>
     </DataTemplate>
 </ResourceDictionary>

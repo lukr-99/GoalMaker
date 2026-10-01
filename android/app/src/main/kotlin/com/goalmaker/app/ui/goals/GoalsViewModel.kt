@@ -11,6 +11,9 @@ import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.settings.GoalsView
+import com.goalmaker.app.application.composer.QuickAddLines
+import com.goalmaker.app.ui.composer.LineOutcome
+import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -69,6 +72,36 @@ class GoalsViewModel(
     /** Adds a goal when [id] is null, otherwise changes it. False when the goal isn't valid. */
     suspend fun save(id: String?, draft: GoalDraft): Boolean = withContext(io) {
         if (id == null) goals.add(draft) != null else goals.update(id, draft)
+    }
+
+    /** The planning day "this week" and "today" count from. */
+    fun today(): LocalDate = PlanningDay.of(clock(), settings.dayStartHour.value)
+
+    /**
+     * What the bottom bar's line says as a goal (docs/composer.md, "Adding on Wants, Habits and
+     * Goals"): its period, this week unless the line names another, and a target when it names a
+     * number with a unit. Pure and fast, so it runs on every keystroke.
+     */
+    fun preview(line: String): GoalDraft {
+        val read = QuickAddLines.readGoal(line, today())
+        return GoalDraft(
+            title = read.title,
+            horizon = read.horizon,
+            periodStart = read.periodStart,
+            mode = read.mode,
+            target = read.target,
+            unit = read.unit,
+        )
+    }
+
+    /**
+     * Adds the goal the line says when a title is left; otherwise, or when it isn't valid, the goal
+     * form opens with what was read.
+     */
+    suspend fun addLine(line: String): LineOutcome<GoalDraft> {
+        val draft = preview(line)
+        if (draft.title.isBlank()) return LineOutcome.OpenForm(draft)
+        return if (save(null, draft)) LineOutcome.Added else LineOutcome.OpenForm(draft)
     }
 
     /** Open, done or dropped (GoalRules). */

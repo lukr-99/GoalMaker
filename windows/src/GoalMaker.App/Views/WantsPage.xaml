@@ -135,24 +135,22 @@
         </DataTemplate>
     </Page.Resources>
 
+    <Page.InputBindings>
+        <!-- The full form, from anywhere on the page (docs/composer.md). -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding Bar.OpenFormCommand}" />
+    </Page.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Wants (docs/wants.md): the thresholds, the filters, the wants, and the panels to add and to change the thresholds. -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
-                <DockPanel>
-                    <ui:Button DockPanel.Dock="Right" VerticalAlignment="Center" Appearance="Primary" Command="{Binding AddCommand}"
-                               Content="{DynamicResource Wants.Add}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="Add24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <controls:HeadlineText Title="{DynamicResource Wants.Title}" FontSize="40" />
-                </DockPanel>
+                <controls:HeadlineText Title="{DynamicResource Wants.Title}" FontSize="40" />
 
                 <DockPanel Margin="0,8,0,10">
                     <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding EditCooldownsCommand}"
@@ -284,5 +282,13 @@
                 <TextBlock VerticalAlignment="Center" Text="{Binding UndoText}" Foreground="{DynamicResource GM.OnHeroBrush}" TextTrimming="CharacterEllipsis" />
             </DockPanel>
         </Border>
+
+        <!-- The bottom bar (docs/composer.md): type a want to add it; the plus opens the add panel. -->
+        <ContentControl Grid.Row="2"
+                        Margin="{DynamicResource GM.BarMargin}"
+                        MaxWidth="{DynamicResource GM.PageWidth}"
+                        Focusable="False"
+                        Content="{Binding Bar}"
+                        ContentTemplate="{StaticResource ComposerTemplate}" />
     </Grid>
 </Page>

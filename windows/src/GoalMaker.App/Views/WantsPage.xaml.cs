@@ -12,12 +12,14 @@ public partial class WantsPage
         InitializeComponent();
         DataContext = viewModel;
         Loaded += (_, _) => viewModel.Refresh();
-        // The add panel takes the keyboard when it opens, so a title can be typed straight away.
+        // The add panel sits at the top and takes the keyboard when it opens, so a title can be typed
+        // straight away; from the bottom bar the title is there already and the reason is what is missing.
         viewModel.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(WantsViewModel.IsEditing) && viewModel.IsEditing)
             {
-                Dispatcher.BeginInvoke(() => DraftTitle.Focus());
+                Scroller.ScrollToTop();
+                Dispatcher.BeginInvoke(() => (viewModel.DraftTitle.Length > 0 && viewModel.DraftReason.Length == 0 ? DraftReason : DraftTitle).Focus());
             }
         };
     }

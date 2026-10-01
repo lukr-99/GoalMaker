@@ -163,9 +163,9 @@
     <string name="chat_line_owner">You: %1$s</string>
     <string name="chat_line_answer">GoalMaker: %1$s</string>
     <string name="chat_forgotten">This chat is kept only until you close the app.</string>
-    <string name="chat_unavailable_offline">Chat needs a connection, so the composer adds tasks for now.</string>
-    <string name="chat_unavailable_signed_out">Chat needs you signed in, so the composer adds tasks for now.</string>
-    <string name="chat_unavailable_not_set_up">Chat isn\'t set up on the server yet, so the composer adds tasks for now.</string>
+    <string name="chat_unavailable_offline">Chat needs a connection, so the bar adds what you type for now.</string>
+    <string name="chat_unavailable_signed_out">Chat needs you signed in, so the bar adds what you type for now.</string>
+    <string name="chat_unavailable_not_set_up">Chat isn\'t set up on the server yet, so the bar adds what you type for now.</string>
     <string name="chat_problem_offline">Couldn\'t reach the server. Try again when you\'re online.</string>
     <string name="chat_problem_signed_out">You\'re signed out. Sign in to use chat.</string>
     <string name="chat_problem_not_set_up">Chat isn\'t set up on the server yet.</string>
@@ -1110,4 +1110,45 @@
     <string name="reviews_tally">Where the time went</string>
     <string name="places_tally">%1$s today</string>
     <string name="places_tally_none">Nothing counted today</string>
+    <!-- The bottom bar on every list (docs/composer.md): the round button and what each page reads. -->
+    <string name="bar_new_task">New task</string>
+    <string name="bar_new_want">New want</string>
+    <string name="bar_new_habit">New habit</string>
+    <string name="bar_new_goal">New goal</string>
+    <string name="bar_add_want">Add want</string>
+    <string name="bar_add_habit">Add habit</string>
+    <string name="bar_add_goal">Add goal</string>
+    <string name="bar_want_placeholder">Add a want: Kindle 3290 Kč because …</string>
+    <string name="bar_habit_placeholder">Add a habit: Swim 2 times a week</string>
+    <string name="bar_goal_placeholder">Add a goal: Run 30 km this week</string>
+    <plurals name="bar_want_waits">
+        <item quantity="one">Waits %1$d day</item>
+        <item quantity="other">Waits %1$d days</item>
+    </plurals>
+    <string name="bar_want_why">Why: %1$s</string>
+    <string name="bar_want_no_why">Add the why: because …</string>
+    <string name="bar_habit_check">A simple check</string>
+    <string name="bar_habit_amount">%1$s %2$s</string>
+    <string name="bar_habit_amount_day">%1$s %2$s a day</string>
+    <plurals name="bar_habit_times">
+        <item quantity="one">%1$d time</item>
+        <item quantity="other">%1$d times</item>
+    </plurals>
+    <plurals name="bar_habit_times_day">
+        <item quantity="one">%1$d time a day</item>
+        <item quantity="other">%1$d times a day</item>
+    </plurals>
+    <string name="bar_goal_target">Target %1$s</string>
+    <string name="bar_goal_target_unit">Target %1$s %2$s</string>
+    <string name="task_form_title">Title</string>
+    <string name="task_form_when">When</string>
+    <string name="task_form_today">Today</string>
+    <string name="task_form_tomorrow">Tomorrow</string>
+    <string name="task_form_no_day">No day</string>
+    <string name="task_form_area">Area</string>
+    <string name="task_form_priority">Top priority</string>
+    <string name="task_form_priority_hint">It leads Today, above the rest.</string>
+    <string name="task_form_notes">Notes</string>
+    <string name="task_form_save">Add task</string>
+    <string name="task_form_cancel">Cancel</string>
 </resources>

@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
+using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.ViewModels;
@@ -19,6 +20,7 @@ public sealed partial class GoalEditorViewModel : ObservableObject
     private string? goalId;
     private DateOnly? ownStart;
     private bool loading;
+    private Action? onAdded;
 
     [ObservableProperty]
     private bool isOpen;
@@ -100,6 +102,17 @@ public sealed partial class GoalEditorViewModel : ObservableObject
 
     public void OpenEdit(GoalItem goal) => Open(goal.Id, goal);
 
+    /// <summary>
+    /// A new goal filled in with what the bottom bar read (null: blank, this week); <paramref name="added"/>
+    /// runs once it is saved, so the bar can let go of its line.
+    /// </summary>
+    public void OpenFrom(GoalLine? line, Action? added)
+    {
+        var day = today();
+        Open(null, line is null ? new GoalItem(string.Empty, string.Empty, GoalHorizon.Week, GoalRules.PeriodStart(GoalHorizon.Week, day)) : GoalBarViewModel.Item(line));
+        onAdded = added;
+    }
+
     partial void OnHorizonChanged(ChoiceViewModel? value)
     {
         if (!loading)
@@ -137,6 +150,12 @@ public sealed partial class GoalEditorViewModel : ObservableObject
         if (saved)
         {
             IsOpen = false;
+            if (goalId is null)
+            {
+                onAdded?.Invoke();
+            }
+
+            onAdded = null;
         }
         else
         {
@@ -145,7 +164,11 @@ public sealed partial class GoalEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Cancel() => IsOpen = false;
+    private void Cancel()
+    {
+        onAdded = null;
+        IsOpen = false;
+    }
 
     [RelayCommand]
     private void Delete()
@@ -168,7 +191,9 @@ public sealed partial class GoalEditorViewModel : ObservableObject
         try
         {
             goalId = id;
-            ownStart = id is null ? null : goal.PeriodStart;
+            onAdded = null;
+            // A new goal's own period shows too, so one the bar read further out ("in February") can be picked.
+            ownStart = goal.PeriodStart;
             Heading = strings.Get(id is null ? "Goals.New" : "Goals.Edit");
             Title = goal.Title;
             Emoji = goal.Emoji ?? string.Empty;

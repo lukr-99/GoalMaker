@@ -66,8 +66,12 @@ notification channel, so it can be silenced apart from task reminders.
 
 A Wants place with filter chips in the main area (Cooling, Ready, Decided), each row with an accent
 ring counting the cooldown down and the price, the reason one tap away. The cooldown thresholds sit
-at the top of the place. `/want` in the composer opens the add sheet with the title filled in and the reason required
-(`composer.json`); on Windows the add panel opens at the top of the page. The activity log says
+at the top of the place. Wants are added from the bottom bar ([composer](composer.md#the-bottom-bar-on-every-list)):
+type `Kindle 3290 Kč wait 2 weeks because I read on the train` and send, with the price, the wait and
+the reason previewed as chips; with nothing typed its plus opens the add sheet (on Windows the add
+panel at the top of the page). A line without `because` opens the sheet filled in, waiting for the
+reason, which is required. `/want` in Today's composer opens the add sheet with the title filled in
+(`composer.json`). The activity log says
 when a want was added, bought, dropped, reopened or renamed (`activity.json`). Stats gains a Wants block: bought against dropped, and the money not spent (the
 total of dropped prices in the owner's currency).
 

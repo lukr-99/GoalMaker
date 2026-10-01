@@ -55,6 +55,8 @@ import org.robolectric.annotation.Config
 class ListsViewModelTest {
     private lateinit var test: TestReplica
     private lateinit var habits: HabitList
+    private lateinit var tasks: TaskList
+    private lateinit var areas: AreaList
     private lateinit var viewModel: ListsViewModel
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
@@ -66,10 +68,10 @@ class ListsViewModelTest {
     fun setUp() {
         test = TestReplica()
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T10:00:00Z") })
-        val areas = AreaList(test.replica, rows, listOf("violet"), {})
+        areas = AreaList(test.replica, rows, listOf("violet"), {})
         val tags = TagList(test.replica, rows, {})
         val projects = ProjectList(test.replica, rows, {})
-        val tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
+        tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         habits = HabitList(test.replica, rows, {})
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("lists-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
@@ -207,5 +209,47 @@ class ListsViewModelTest {
     private suspend fun loaded(until: (ListsUiState) -> Boolean): ListsUiState = viewModel.uiState.first { it.lists != null && until(it) }
 
     // The flows re-emit on the main looper while the state is collected.
+    @Test
+    fun `the new task form saves the title, day, area, top priority and notes`() {
+        val home = areas.create("Home")!!
+
+        assertTrue(viewModel.addTask("  Fix the tap ", NewTaskDay.TOMORROW, home, topPriority = true, notes = "Washer size 3/4\n"))
+
+        val task = tasks.all().single()
+        assertEquals("Fix the tap", task.title)
+        assertEquals(today.plusDays(1), task.plannedDate)
+        assertEquals(home.id, task.areaId)
+        assertTrue(task.topPriority)
+        assertEquals("Washer size 3/4", task.notes)
+    }
+
+    @Test
+    fun `the new task form reads no shortcuts, and No day leaves the task in the Inbox`() {
+        assertTrue(viewModel.addTask("Call mum tomorrow #family", NewTaskDay.NO_DAY, null, topPriority = false, notes = ""))
+
+        val task = tasks.all().single()
+        assertEquals("Call mum tomorrow #family", task.title)
+        assertEquals(null, task.plannedDate)
+        assertEquals(null, task.areaId)
+        assertFalse(task.topPriority)
+    }
+
+    @Test
+    fun `the new task form keeps nothing without a title, and starts on the list's day`() {
+        assertFalse(viewModel.addTask("   ", NewTaskDay.TODAY, null, topPriority = false, notes = "Notes alone"))
+        assertTrue(tasks.all().isEmpty())
+
+        assertEquals(NewTaskDay.TODAY, NewTaskDay.of(ListTab.TODAY))
+        assertEquals(NewTaskDay.TOMORROW, NewTaskDay.of(ListTab.TOMORROW))
+        assertEquals(NewTaskDay.NO_DAY, NewTaskDay.of(ListTab.INBOX))
+    }
+
+    @Test
+    fun `today on the form is the planning day`() {
+        assertTrue(viewModel.addTask("Water the plants", NewTaskDay.TODAY, null, topPriority = false, notes = ""))
+
+        assertEquals(today, tasks.all().single().plannedDate)
+    }
+
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 }

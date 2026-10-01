@@ -274,7 +274,16 @@
       Goals (docs/goals.md): the rings, the ladder of four columns, then next week; or, in the list view, every
       period as a group of compact rows. The editor and the log panel take the page.
     -->
+    <Page.InputBindings>
+        <!-- The full form, from anywhere on the page (docs/composer.md). -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding Bar.OpenFormCommand}" />
+    </Page.InputBindings>
+
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
             <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Stretch">
                 <DockPanel Margin="0,0,0,8">
@@ -446,8 +455,16 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!-- The bottom bar (docs/composer.md): type a goal to add it; the plus opens the goal editor. -->
+        <ContentControl Grid.Row="1"
+                        Margin="{DynamicResource GM.BarMargin}"
+                        MaxWidth="{DynamicResource GM.PageWidth}"
+                        Focusable="False"
+                        Content="{Binding Bar}"
+                        ContentTemplate="{StaticResource ComposerTemplate}" />
+
         <!-- Adding or editing a goal. -->
-        <Border Style="{StaticResource Overlay}" Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}}">
+        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}" Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}}">
             <ui:Card Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" DataContext="{Binding Editor}">
                 <ui:Card.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding SaveCommand}" />
@@ -533,7 +550,7 @@
         </Border>
 
         <!-- Logging an amount on a numeric goal. -->
-        <Border Style="{StaticResource Overlay}" Visibility="{Binding IsLogging, Converter={StaticResource BoolToVisibility}}">
+        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}" Visibility="{Binding IsLogging, Converter={StaticResource BoolToVisibility}}">
             <ui:Card Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ui:Card.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding AddAmountCommand}" />
@@ -557,6 +574,6 @@
             </ui:Card>
         </Border>
 
-        <controls:ConfettiBurst x:Name="Confetti" />
+        <controls:ConfettiBurst x:Name="Confetti" Grid.RowSpan="2" />
     </Grid>
 </Page>

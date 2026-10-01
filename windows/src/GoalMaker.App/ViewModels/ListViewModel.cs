@@ -149,6 +149,9 @@ public sealed partial class ListViewModel : ObservableObject
         this.tick = tick;
         this.runOnUi = runOnUi;
         Composer = composer;
+        // The empty bar's plus opens the new task form, its day the list's own (docs/composer.md).
+        NewTask = new NewTaskViewModel(tasks, areas, strings, () => PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour));
+        composer.AttachForm((draft, added) => NewTask.Open(draft, composer.DefaultDay(), added));
         Title = strings.Get(kind switch
         {
             ListKind.Today => "Lists.Today",
@@ -200,6 +203,9 @@ public sealed partial class ListViewModel : ObservableObject
     public string EmptyText { get; }
 
     public ComposerViewModel Composer { get; }
+
+    /// <summary>The new task form the empty bar's plus (or Ctrl+N) opens over the list.</summary>
+    public NewTaskViewModel NewTask { get; }
 
     /// <summary>The area and tag pickers above the list, shared by every list; null where there are none.</summary>
     public ListFiltersViewModel? Filters { get; }

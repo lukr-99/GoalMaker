@@ -2,10 +2,12 @@ package com.goalmaker.app.ui.habits
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.composer.QuickAddLines
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.ui.composer.LineOutcome
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -54,6 +56,36 @@ class HabitsViewModel(
     /** Adds a habit starting today when [id] is null, otherwise changes it. False when it isn't valid. */
     suspend fun save(id: String?, draft: HabitDraft): Boolean = withContext(io) {
         if (id == null) habits.add(draft.copy(startsOn = today())) != null else habits.update(id, draft)
+    }
+
+    /**
+     * What the bottom bar's line says as a habit (docs/composer.md, "Adding on Wants, Habits and
+     * Goals"): how often and how much from the line, starting today and showing on Today, everything
+     * else as a new habit has it. Pure and fast, so it runs on every keystroke.
+     */
+    fun preview(line: String): HabitDraft {
+        val read = QuickAddLines.readHabit(line)
+        return HabitDraft(
+            name = read.name,
+            startsOn = today(),
+            cadence = read.cadence,
+            weekdays = read.weekdays,
+            times = read.times,
+            measure = read.measure,
+            target = read.target,
+            unit = read.unit,
+            showOnToday = true,
+        )
+    }
+
+    /**
+     * Adds the habit the line says when a name is left; otherwise, or when it isn't valid, the habit
+     * form opens with what was read.
+     */
+    suspend fun addLine(line: String): LineOutcome<HabitDraft> {
+        val draft = preview(line)
+        if (draft.name.isBlank()) return LineOutcome.OpenForm(draft)
+        return if (save(null, draft)) LineOutcome.Added else LineOutcome.OpenForm(draft)
     }
 
     /** A tap on the ring: a check toggles, a count adds one. False for an amount, which asks for the value. */
