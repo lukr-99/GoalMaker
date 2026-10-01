@@ -451,7 +451,7 @@ public sealed partial class ReviewViewModel : ObservableObject
         foreach (var goal in own)
         {
             var progress = GoalRules.Progress(goal.Mode, goal.Status, goal.Target, taskList[goal.Id], entries[goal.Id]);
-            Goals.Add(new GoalRowViewModel(goal, progress, null, 0, strings));
+            Goals.Add(new GoalRowViewModel(goal, progress, null, strings));
         }
 
         CanCopyGoals = own.Count == 0 && all.Any(goal => goal.Horizon == horizon && goal.PeriodStart == PeriodStart && goal.Status != GoalRules.Dropped);

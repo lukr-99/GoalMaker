@@ -4,6 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:controls="clr-namespace:GoalMaker.App.Controls"
       xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      xmlns:planning="clr-namespace:GoalMaker.Core.Planning;assembly=GoalMaker.Core"
       Title="{DynamicResource Goals.Title}"
       Background="{DynamicResource GM.BackgroundBrush}"
       FontFamily="{DynamicResource GM.BodyFont}"
@@ -24,121 +25,276 @@
             <Setter Property="Background" Value="{DynamicResource GM.BackgroundBrush}" />
         </Style>
 
-        <!-- One goal: its ring, where it stands, the goal it serves, and its actions. Indented in the tree. -->
-        <DataTemplate x:Key="GoalRow" DataType="{x:Type vm:GoalRowViewModel}">
-            <DockPanel Margin="0,0,0,4">
-                <Border DockPanel.Dock="Left" Width="{Binding Indent}" />
-                <Border Padding="12,6,6,6"
-                        MinHeight="{DynamicResource GM.RowMinHeight}"
-                        CornerRadius="{DynamicResource GM.RowCorner}"
-                        Background="{DynamicResource GM.SurfaceBrush}">
-                    <!-- Right click, or the menu key on the focused row: the rest of what a goal can do. -->
-                    <Border.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="{DynamicResource Goals.Log}" Command="{Binding LogCommand}" Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}" />
-                            <MenuItem Header="{DynamicResource Goals.MarkDone}" Command="{Binding MarkDoneCommand}" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
-                            <MenuItem Header="{DynamicResource Goals.Drop}" Command="{Binding DropCommand}" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
-                            <MenuItem Header="{DynamicResource Goals.Reopen}" Command="{Binding ReopenCommand}" Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibility}}" />
-                            <MenuItem Header="{DynamicResource Goals.Edit}" Command="{Binding EditCommand}" />
-                            <MenuItem Header="{DynamicResource Goals.Delete}" Command="{Binding DeleteCommand}" />
-                        </ContextMenu>
-                    </Border.ContextMenu>
-                    <DockPanel>
-                        <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
-                                   ToolTip="{DynamicResource Goals.Delete}" AutomationProperties.Name="{DynamicResource Goals.Delete}">
-                            <ui:SymbolIcon Symbol="Delete24" />
-                        </ui:Button>
-                        <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding EditCommand}"
-                                   ToolTip="{DynamicResource Goals.Edit}" AutomationProperties.Name="{DynamicResource Goals.Edit}">
-                            <ui:SymbolIcon Symbol="Edit24" />
-                        </ui:Button>
-                        <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding LogCommand}"
-                                   Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}"
-                                   ToolTip="{DynamicResource Goals.Log}" AutomationProperties.Name="{DynamicResource Goals.Log}">
-                            <ui:SymbolIcon Symbol="Add24" />
-                        </ui:Button>
-                        <CheckBox DockPanel.Dock="Right"
-                                  Margin="8,0"
-                                  VerticalAlignment="Center"
-                                  IsChecked="{Binding IsDone, Mode=TwoWay}"
-                                  Visibility="{Binding IsDoneOrNot, Converter={StaticResource BoolToVisibility}}"
-                                  ToolTip="{DynamicResource Goals.DoneBox}"
-                                  AutomationProperties.Name="{Binding Title}"
-                                  AutomationProperties.HelpText="{DynamicResource Goals.DoneBox}" />
-                        <Grid DockPanel.Dock="Left" Width="38" Height="38" Margin="0,0,12,0" VerticalAlignment="Center">
-                            <controls:GoalRing Fraction="{Binding Fraction}" Thickness="4" />
-                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding RingText}" FontSize="11" />
-                            <ui:SymbolIcon HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Symbol="Checkmark20"
-                                           Foreground="{DynamicResource GM.AccentBrush}"
-                                           Visibility="{Binding ShowsCheck, Converter={StaticResource BoolToVisibility}}" />
-                        </Grid>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{Binding Title}" FontSize="14" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding ProgressText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                            <TextBlock Text="{Binding Serves}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
-                                       Visibility="{Binding HasServes, Converter={StaticResource BoolToVisibility}}" />
+        <!-- A whole card that is one button: Enter or Space (or a click) does its one thing; the dashed focus frame shows where the keyboard is. -->
+        <Style x:Key="CardButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <ContentPresenter />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A horizon's ring on the dashboard: framed in the accent while it is the only column shown. -->
+        <Style x:Key="RingButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Box" Padding="6,10,6,8" Background="Transparent" BorderBrush="Transparent" BorderThickness="2"
+                                CornerRadius="{DynamicResource GM.CardCorner}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsShown}" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The pace pill's fill: neutral on track, a faint danger when behind, the full accent on a hit. -->
+        <Style x:Key="PaceFill" TargetType="Border">
+            <Setter Property="CornerRadius" Value="99" />
+            <Setter Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
+            <Setter Property="Opacity" Value="1" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Pace}" Value="{x:Static planning:GoalPace.Behind}">
+                    <Setter Property="Background" Value="{DynamicResource GM.DangerBrush}" />
+                    <Setter Property="Opacity" Value="0.2" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Pace}" Value="{x:Static planning:GoalPace.Hit}">
+                    <Setter Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="PaceText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="7,2" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Pace}" Value="{x:Static planning:GoalPace.Hit}">
+                    <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!--
+          One goal as a compact card (design prototype v2: option A's card in the four columns): its box or
+          ring, name and the goal it feeds, the big number with its bar, its pace and the quick log. A click
+          lights its chain; right click, or the menu key on the focused card, has the rest.
+        -->
+        <DataTemplate x:Key="GoalCard" DataType="{x:Type vm:GoalRowViewModel}">
+            <Button Style="{StaticResource CardButton}" Margin="0,0,0,8" Command="{Binding PickCommand}" Opacity="{Binding CardOpacity}"
+                    AutomationProperties.Name="{Binding CardName}" AutomationProperties.ItemStatus="{Binding Status}">
+                <Button.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="{DynamicResource Goals.Edit}" Command="{Binding EditCommand}" />
+                        <MenuItem Header="{DynamicResource Goals.Log}" Command="{Binding LogCommand}" Visibility="{Binding CanLog, Converter={StaticResource BoolToVisibility}}" />
+                        <MenuItem Header="{DynamicResource Goals.MarkDone}" Command="{Binding MarkDoneCommand}" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
+                        <MenuItem Header="{DynamicResource Goals.Drop}" Command="{Binding DropCommand}" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}" />
+                        <MenuItem Header="{DynamicResource Goals.Reopen}" Command="{Binding ReopenCommand}" Visibility="{Binding IsClosed, Converter={StaticResource BoolToVisibility}}" />
+                        <MenuItem Header="{DynamicResource Goals.Delete}" Command="{Binding DeleteCommand}" />
+                    </ContextMenu>
+                </Button.ContextMenu>
+                <Border Padding="10,9,8,10"
+                        CornerRadius="{DynamicResource GM.CardCorner}"
+                        Background="{DynamicResource GM.SurfaceBrush}"
+                        BorderBrush="{DynamicResource GM.AccentBrush}"
+                        BorderThickness="{Binding ChainBorder}">
+                    <StackPanel>
+                        <DockPanel>
+                            <CheckBox DockPanel.Dock="Left"
+                                      MinWidth="0"
+                                      Margin="0,0,6,0"
+                                      VerticalAlignment="Top"
+                                      IsChecked="{Binding IsDone, Mode=TwoWay}"
+                                      Visibility="{Binding IsDoneOrNot, Converter={StaticResource BoolToVisibility}}"
+                                      ToolTip="{DynamicResource Goals.DoneBox}"
+                                      AutomationProperties.Name="{Binding Title}"
+                                      AutomationProperties.HelpText="{DynamicResource Goals.DoneBox}" />
+                            <controls:GoalRing DockPanel.Dock="Left" Width="22" Height="22" Margin="0,1,8,0" VerticalAlignment="Top"
+                                               Fraction="{Binding Fraction}" Thickness="3"
+                                               Visibility="{Binding ShowsRing, Converter={StaticResource BoolToVisibility}}" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding DisplayTitle}" FontSize="13.5" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                           TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxHeight="38" />
+                                <TextBlock Margin="0,1,0,0" Text="{Binding Feeds}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                           Foreground="{DynamicResource GM.TextMutedBrush}"
+                                           Visibility="{Binding HasFeeds, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </DockPanel>
+                        <StackPanel Margin="0,8,0,0" Visibility="{Binding Counts, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding ValueText}" FontSize="20" FontFamily="{DynamicResource GM.NumberFont}"
+                                           Foreground="{DynamicResource GM.AccentBrush}" VerticalAlignment="Bottom" />
+                                <TextBlock Margin="5,0,0,2" Text="{Binding OfText}" FontSize="12" VerticalAlignment="Bottom"
+                                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            </StackPanel>
+                            <Grid Height="6" Margin="0,5,0,0">
+                                <Border CornerRadius="3" Background="{DynamicResource GM.OutlineBrush}" Opacity="0.3" />
+                                <ProgressBar Height="6" MinHeight="0" Minimum="0" Maximum="1" Value="{Binding Fraction, Mode=OneWay}" BorderThickness="0"
+                                             Background="Transparent" Foreground="{DynamicResource GM.AccentBrush}" IsTabStop="False"
+                                             AutomationProperties.Name="{Binding ProgressText}" />
+                            </Grid>
                         </StackPanel>
+                        <TextBlock Margin="0,6,0,0" Text="{Binding ProgressText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding ShowsWords, Converter={StaticResource BoolToVisibility}}" />
+                        <DockPanel Margin="0,8,0,0">
+                            <ui:Button DockPanel.Dock="Right" Padding="8,2" MinHeight="26" FontSize="12"
+                                       Command="{Binding QuickLogCommand}"
+                                       Content="{Binding QuickText}"
+                                       ToolTip="{Binding QuickName}"
+                                       AutomationProperties.Name="{Binding QuickName}"
+                                       Visibility="{Binding CanQuickLog, Converter={StaticResource BoolToVisibility}}" />
+                            <Grid HorizontalAlignment="Left" VerticalAlignment="Center">
+                                <Border Style="{StaticResource PaceFill}" />
+                                <TextBlock Style="{StaticResource PaceText}" Text="{Binding PaceText}" />
+                            </Grid>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+            </Button>
+        </DataTemplate>
+
+        <!-- One of next week's goals on a line: its ring, name and where it stands; a click edits it. -->
+        <DataTemplate x:Key="NextRow" DataType="{x:Type vm:GoalRowViewModel}">
+            <Button Style="{StaticResource CardButton}" Margin="0,0,0,4" Command="{Binding EditCommand}" AutomationProperties.Name="{Binding CardName}">
+                <Border Padding="12,6" MinHeight="{DynamicResource GM.RowMinHeight}" CornerRadius="{DynamicResource GM.RowCorner}"
+                        Background="{DynamicResource GM.SurfaceBrush}">
+                    <DockPanel>
+                        <controls:GoalRing DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,10,0" Fraction="{Binding Fraction}" Thickness="3" />
+                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Text="{Binding ProgressText}" FontSize="12"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <TextBlock VerticalAlignment="Center" Text="{Binding DisplayTitle}" TextTrimming="CharacterEllipsis" />
                     </DockPanel>
                 </Border>
-            </DockPanel>
+            </Button>
         </DataTemplate>
     </Page.Resources>
 
-    <!-- Goals (docs/goals.md): by period, or the cascade; the editor and the log panel take the page. -->
+    <!-- Goals (docs/goals.md): the rings, the ladder of four columns, then next week; the editor and the log panel take the page. -->
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
-                <DockPanel Margin="0,0,0,12">
-                    <ui:Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Command="{Binding ToggleTreeCommand}"
-                               Content="{DynamicResource Goals.ShowTree}"
-                               Visibility="{Binding ShowPeriods, Converter={StaticResource BoolToVisibility}}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="Organization24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <ui:Button DockPanel.Dock="Right" VerticalAlignment="Bottom" Command="{Binding ToggleTreeCommand}"
-                               Content="{DynamicResource Goals.ShowPeriods}"
-                               Visibility="{Binding ShowTree, Converter={StaticResource BoolToVisibility}}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="CalendarLtr24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <controls:HeadlineText Title="{DynamicResource Goals.Title}" FontSize="40" />
-                </DockPanel>
-                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Goals.Hint}" />
+            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Stretch">
+                <controls:HeadlineText Margin="0,0,0,8" Title="{DynamicResource Goals.Title}" FontSize="40" />
 
-                <ItemsControl ItemsSource="{Binding Sections}" Focusable="False" Visibility="{Binding ShowPeriods, Converter={StaticResource BoolToVisibility}}">
+                <!-- The dashboard: a ring per horizon; a click shows only that column. -->
+                <ItemsControl ItemsSource="{Binding Rings}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:HorizonRingViewModel}">
+                            <Button Style="{StaticResource RingButton}" Width="116" Margin="0,0,10,0" Command="{Binding FilterCommand}"
+                                    AutomationProperties.Name="{Binding Name}" AutomationProperties.ItemStatus="{Binding Status}">
+                                <StackPanel HorizontalAlignment="Center">
+                                    <Grid Width="76" Height="76" HorizontalAlignment="Center">
+                                        <controls:GoalRing Fraction="{Binding Fraction}" Thickness="8" />
+                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding PercentText}" FontSize="17"
+                                                   FontFamily="{DynamicResource GM.NumberFont}" />
+                                    </Grid>
+                                    <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" Text="{Binding Label}" FontSize="12"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                    <TextBlock HorizontalAlignment="Center" Text="{Binding HitText}" FontSize="11"
+                                               Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                </StackPanel>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- How to light a chain and how many goals need you, or the lit chain and Clear. -->
+                <DockPanel Margin="0,10,0,8" MinHeight="32">
+                    <ui:Button DockPanel.Dock="Right" Command="{Binding ClearPickCommand}" Content="{DynamicResource Goals.ChainClear}"
+                               AutomationProperties.Name="{DynamicResource Goals.ChainClearName}"
+                               Visibility="{Binding HasPick, Converter={StaticResource BoolToVisibility}}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Dismiss24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                    <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,8,0" VerticalAlignment="Center" Symbol="Organization24"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding HintText}" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </DockPanel>
+
+                <!-- The ladder: this year, month, week and today side by side, each column a rung. -->
+                <ItemsControl ItemsSource="{Binding Lanes}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="1" Columns="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:GoalSectionViewModel}">
-                            <StackPanel Margin="0,8,0,4">
-                                <TextBlock Margin="4,8,0,6"
-                                           Text="{Binding Header}"
-                                           FontSize="11"
-                                           FontFamily="{DynamicResource GM.BodyStrongFont}"
-                                           Foreground="{DynamicResource GM.AccentBrush}" />
-                                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource GoalRow}" Focusable="False" />
-                                <StackPanel Orientation="Horizontal">
-                                    <ui:Button Appearance="Transparent" Command="{Binding AddCommand}" Content="{DynamicResource Goals.Add}">
-                                        <ui:Button.Icon>
-                                            <ui:SymbolIcon Symbol="Add24" />
-                                        </ui:Button.Icon>
-                                    </ui:Button>
-                                    <ui:Button Margin="8,0,0,0" Appearance="Transparent" Command="{Binding CopyCommand}" Content="{Binding CopyLabel}"
-                                               Visibility="{Binding CanCopy, Converter={StaticResource BoolToVisibility}}">
-                                        <ui:Button.Icon>
-                                            <ui:SymbolIcon Symbol="Copy24" />
-                                        </ui:Button.Icon>
-                                    </ui:Button>
-                                </StackPanel>
+                            <StackPanel Margin="0,0,10,0" Opacity="{Binding LaneOpacity}">
+                                <DockPanel Margin="0,0,0,10">
+                                    <Border DockPanel.Dock="Left" Width="24" Height="24" Margin="0,0,8,0" VerticalAlignment="Top" CornerRadius="8"
+                                            Background="{DynamicResource GM.AccentBrush}">
+                                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Badge}" FontSize="11"
+                                                   FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.OnAccentBrush}" />
+                                    </Border>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" FontFamily="{DynamicResource GM.BodyStrongFont}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Line}" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    </StackPanel>
+                                </DockPanel>
+                                <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource GoalCard}" Focusable="False" />
+                                <ui:Button HorizontalAlignment="Left" Appearance="Transparent" Command="{Binding AddCommand}" Content="{DynamicResource Goals.Add}">
+                                    <ui:Button.Icon>
+                                        <ui:SymbolIcon Symbol="Add24" />
+                                    </ui:Button.Icon>
+                                </ui:Button>
+                                <ui:Button HorizontalAlignment="Left" Appearance="Transparent" Command="{Binding CopyCommand}" Content="{Binding CopyLabel}"
+                                           Visibility="{Binding CanCopy, Converter={StaticResource BoolToVisibility}}">
+                                    <ui:Button.Icon>
+                                        <ui:SymbolIcon Symbol="Copy24" />
+                                    </ui:Button.Icon>
+                                </ui:Button>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <StackPanel Visibility="{Binding ShowTree, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Goals.TreeEmpty}"
-                               Visibility="{Binding IsTreeEmpty, Converter={StaticResource BoolToVisibility}}" />
-                    <ItemsControl ItemsSource="{Binding Tree}" ItemTemplate="{StaticResource GoalRow}" Focusable="False" />
+                <!-- Next week, for planning ahead: its goals, or this week's to copy. -->
+                <StackPanel Margin="0,16,0,0" DataContext="{Binding NextWeek}" Opacity="{Binding LaneOpacity}">
+                    <TextBlock Margin="4,0,0,6" Text="{Binding Header}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                               Foreground="{DynamicResource GM.AccentBrush}" />
+                    <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource NextRow}" Focusable="False" />
+                    <Grid Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+                        <Rectangle RadiusX="10" RadiusY="10" StrokeDashArray="4 3" StrokeThickness="1" Stroke="{DynamicResource GM.OutlineBrush}" />
+                        <DockPanel Margin="12,6">
+                            <ui:Button DockPanel.Dock="Right" Command="{Binding CopyCommand}" Content="{Binding CopyLabel}"
+                                       Visibility="{Binding CanCopy, Converter={StaticResource BoolToVisibility}}">
+                                <ui:Button.Icon>
+                                    <ui:SymbolIcon Symbol="Copy24" />
+                                </ui:Button.Icon>
+                            </ui:Button>
+                            <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,10,0" VerticalAlignment="Center" Symbol="CalendarLtr24"
+                                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            <TextBlock VerticalAlignment="Center" Text="{DynamicResource Goals.NextEmpty}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </DockPanel>
+                    </Grid>
+                    <ui:Button HorizontalAlignment="Left" Appearance="Transparent" Command="{Binding AddCommand}" Content="{DynamicResource Goals.Add}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Add24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
