@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.FilterChip
@@ -31,6 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.domain.composer.SpanKind
+import com.goalmaker.app.domain.settings.ComposerMode
+import com.goalmaker.app.ui.chat.ChatThread
+import com.goalmaker.app.ui.chat.ChatUnavailableNote
+import com.goalmaker.app.ui.chat.ChatViewModel
+import com.goalmaker.app.ui.chat.ComposerModeSwitch
 import com.goalmaker.app.ui.composer.ComposerBar
 import com.goalmaker.app.ui.composer.composerChips
 import com.goalmaker.app.ui.composer.removeParts
@@ -40,15 +46,21 @@ import kotlinx.coroutines.launch
  * The quick-add sheet the widget opens: the composer on its own over whatever the owner was doing,
  * with the keyboard already up. A line with no day lands in the Inbox to be sorted later; the Today
  * chip plans it for today. Saving or tapping outside closes it.
+ *
+ * The composer's switch turns it into the quick chat ([chat]), as in the app: the thread shows above
+ * the bar, and the sheet stays open for the answers until a tap outside closes it.
  */
 @Composable
 fun QuickAddSheet(
     viewModel: CaptureViewModel,
+    chat: ChatViewModel,
     forToday: Boolean,
     onSaved: () -> Unit,
     onCancel: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val chatState by chat.uiState.collectAsStateWithLifecycle()
+    val chatting = chatState.chatting
     val line = rememberTextFieldState(if (forToday) TODAY_TOKEN else "")
     val scope = rememberCoroutineScope()
     val focus = remember { FocusRequester() }
@@ -86,26 +98,58 @@ fun QuickAddSheet(
                     )
                 }
             }
-            // One tap for the day the widget is most often used for; the line keeps saying what happens.
-            FilterChip(
-                selected = draft.plannedDate == viewModel.today(),
-                onClick = { line.toggleToday(viewModel) },
-                label = { Text(stringResource(R.string.composer_date_today)) },
-                modifier = Modifier.padding(start = 24.dp),
-            )
+            // Picked chat but it can't run: say why, on a surface of its own over the home screen.
+            if (chatState.chatBlocked) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                ) {
+                    ChatUnavailableNote(chatState.availability, Modifier.padding(bottom = 8.dp))
+                }
+            }
+            if (chatState.chosen == ComposerMode.CHAT && (chatState.lines.isNotEmpty() || chatState.thinking)) {
+                ChatThread(chatState, onClear = chat::clear, onRetry = chat::retry)
+            }
+            if (!chatting) {
+                // One tap for the day the widget is most often used for; the line keeps saying what happens.
+                FilterChip(
+                    selected = draft.plannedDate == viewModel.today(),
+                    onClick = { line.toggleToday(viewModel) },
+                    label = { Text(stringResource(R.string.composer_date_today)) },
+                    modifier = Modifier.padding(start = 24.dp),
+                )
+            }
             ComposerBar(
                 state = line,
-                chips = composerChips(
-                    line.text.toString(),
-                    draft,
-                    viewModel.today(),
-                    state.areas,
-                    state.tagNames,
-                    state.projects,
-                ),
-                canSend = state.signedIn && draft.title.isNotBlank(),
-                onSubmit = { scope.launch { if (viewModel.save(draft, notes = "")) onSaved() } },
+                chips = if (chatting) {
+                    emptyList()
+                } else {
+                    composerChips(
+                        line.text.toString(),
+                        draft,
+                        viewModel.today(),
+                        state.areas,
+                        state.tagNames,
+                        state.projects,
+                    )
+                },
+                canSend = if (chatting) {
+                    line.text.isNotBlank() && !chatState.thinking
+                } else {
+                    state.signedIn && draft.title.isNotBlank()
+                },
+                onSubmit = {
+                    if (chatting) {
+                        if (chat.send(line.text.toString())) line.clearText()
+                    } else {
+                        scope.launch { if (viewModel.save(draft, notes = "")) onSaved() }
+                    }
+                },
                 onRemove = { chip -> line.setTextAndPlaceCursorAtEnd(removeParts(line.text.toString(), chip.spans)) },
+                placeholder = stringResource(if (chatting) R.string.chat_placeholder else R.string.today_composer_placeholder),
+                sendLabel = stringResource(if (chatting) R.string.chat_send else R.string.today_add),
+                leading = { ComposerModeSwitch(chatState, chat::choose) },
                 modifier = Modifier.focusRequester(focus),
             )
         }

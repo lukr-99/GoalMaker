@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The quick-add widget: a wide pill that opens the composer over whatever is on screen. -->
+<!-- The quick-add widget: a wide bar that opens the composer over whatever is on screen, its
+     sparkle the same box in chat mode. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_quick_add_description"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/widget_quick_add_preview"
     android:minWidth="180dp"
     android:minHeight="40dp"
     android:targetCellWidth="4"
