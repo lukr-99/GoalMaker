@@ -34,6 +34,8 @@
     <sys:String x:Key="Nav.Tomorrow">Tomorrow</sys:String>
     <sys:String x:Key="Nav.Inbox">Inbox</sys:String>
     <sys:String x:Key="Nav.Settings">Settings</sys:String>
+    <sys:String x:Key="Nav.UpdateAvailable">Update available</sys:String>
+    <sys:String x:Key="Nav.ProblemsWaiting">Something needs a look in Settings</sys:String>
 
     <sys:String x:Key="SignIn.Title">Plan tomorrow.&#10;Keep your goals alive.</sys:String>
     <sys:String x:Key="SignIn.EmailLabel">Email</sys:String>

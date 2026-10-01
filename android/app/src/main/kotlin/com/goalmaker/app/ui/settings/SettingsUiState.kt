@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.settings
 
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.UnlockAvailability
+import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.design.ThemeDefinition
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
@@ -33,6 +34,8 @@ data class SettingsUiState(
     val signingOut: Boolean,
     val unsyncedAtSignOut: Int?,
     val update: UpdateUiState,
+    /** The update the last check found and nothing has installed yet: the accent row in Updates. */
+    val waitingUpdate: UpdateCheckResult.Available? = null,
     val appInfo: AppInfo,
     val backendUrlDraft: String,
     val backendKeyDraft: String,

@@ -5,6 +5,7 @@ using GoalMaker.Core.Account;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
 using GoalMaker.Core.Backup;
+using GoalMaker.Core.Problems;
 using GoalMaker.Core.Startup;
 using GoalMaker.Core.Updates;
 using GoalMaker.Infrastructure.Sync;
@@ -12,7 +13,10 @@ using GoalMaker.Infrastructure.Updates;
 
 namespace GoalMaker.App.Tests;
 
-/// <summary>The updates card: the owner can always download a release themselves (ADR 0010).</summary>
+/// <summary>
+/// The updates card: the owner can always download a release themselves (ADR 0010), and an update
+/// the check found marks the Settings item and stands out in the card until it is installed.
+/// </summary>
 public sealed class SettingsViewModelTests : IDisposable
 {
     private const string ReleasesPage = "https://github.com/lukr-99/GoalMaker/releases/latest";
@@ -43,12 +47,110 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.Empty(opened);
     }
 
+    [Fact]
+    public async Task AFoundUpdateMarksSettingsAndStandsOutInTheCard()
+    {
+        var channel = new TestUpdates();
+        var shell = Shell(channel.Service);
+        var settings = Settings(ReleasesPage, channel.Service);
+        Assert.False(shell.HasUpdate);
+        Assert.False(shell.HasSettingsMark);
+        Assert.False(settings.CanInstall);
+
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.True(shell.HasUpdate);
+        Assert.True(shell.HasSettingsMark);
+        Assert.True(settings.CanInstall);
+        Assert.Equal("Settings.Update.Available(1.1.0)", settings.AvailableText);
+        Assert.Equal("Settings.InstallUpdate(1.1.0)", settings.InstallText);
+        // The accent row says it once; the status line stays empty.
+        Assert.False(settings.HasUpdateStatus);
+    }
+
+    [Fact]
+    public async Task TheMarkGoesWhenACheckFindsNoUpdate()
+    {
+        var channel = new TestUpdates();
+        var shell = Shell(channel.Service);
+        var settings = Settings(ReleasesPage, channel.Service);
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        channel.Reachable = false;
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.False(shell.HasUpdate);
+        Assert.False(shell.HasSettingsMark);
+        Assert.False(settings.CanInstall);
+        Assert.Equal(string.Empty, settings.AvailableText);
+    }
+
+    [Fact]
+    public async Task NoMarkWhenTheLatestIsInstalled()
+    {
+        var channel = new TestUpdates(installed: "1.1.0");
+        var shell = Shell(channel.Service);
+        var settings = Settings(ReleasesPage, channel.Service);
+
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        Assert.False(shell.HasUpdate);
+        Assert.False(settings.CanInstall);
+        Assert.StartsWith("Settings.Update.UpToDate", settings.UpdateStatus, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AFailedInstallKeepsTheUpdateToTryAgain()
+    {
+        var channel = new TestUpdates { Corrupt = true };
+        var shell = Shell(channel.Service);
+        var settings = Settings(ReleasesPage, channel.Service);
+        await settings.CheckForUpdatesCommand.ExecuteAsync(null);
+
+        await settings.InstallUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal("Settings.Update.Corrupted", settings.UpdateStatus);
+        Assert.True(settings.CanInstall);
+        Assert.True(shell.HasUpdate);
+        Assert.Empty(channel.Launched);
+    }
+
+    [Fact]
+    public async Task AnUpdateShowsOverAProblemAndBothCountAsAMark()
+    {
+        var channel = new TestUpdates();
+        var log = new ProblemLog(planner.Time);
+        var shell = Shell(channel.Service, log);
+        log.Report(ProblemRules.Sync, null);
+        Assert.True(shell.HasSettingsMark);
+        Assert.False(shell.HasUpdate);
+
+        await channel.Service.CheckAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(shell.HasProblems);
+        Assert.True(shell.HasUpdate);
+        Assert.True(shell.HasSettingsMark);
+    }
+
     public void Dispose() => planner.Dispose();
 
-    private SettingsViewModel Settings(string? releasesPage)
+    private ShellViewModel Shell(UpdateService updates, ProblemLog? problems = null)
+    {
+        var auth = new SignedOutAuth();
+        var watch = new SignInWatch(auth, planner.Settings, () => DateTimeOffset.Now);
+        return new ShellViewModel(
+            auth, new SignInViewModel(auth, watch, planner.Strings, devBackend: null), problems ?? new ProblemLog(planner.Time), updates, action => action());
+    }
+
+    private SettingsViewModel Settings(string? releasesPage, UpdateService? service = null) =>
+        Build(planner, planner.Strings, service, releasesPage, opened.Add);
+
+    /// <summary>A Settings view model over the test planner, with nothing on the PC behind it.</summary>
+    internal static SettingsViewModel Build(
+        TestPlanner planner, GoalMaker.App.Localization.IStrings strings, UpdateService? service, string? releasesPage, Action<string> open)
     {
         var backend = new BackendEnvironment("http://127.0.0.1:55321", "key");
-        var updates = new UpdateService(
+        var updates = service ?? new UpdateService(
             "1.0.0",
             ReleasePlatform.Windows,
             channelConfigured: true,
@@ -64,7 +166,7 @@ public sealed class SettingsViewModelTests : IDisposable
             planner.Settings,
             updates,
             new AppInfo("1.0.0", false, backend, backend),
-            planner.Strings,
+            strings,
             ContractResources.Themes(),
             () => false,
             _ => { },
@@ -84,7 +186,7 @@ public sealed class SettingsViewModelTests : IDisposable
             new StartupProfilesRequest("com.goalmaker.app", "GoalMaker", "GoalMaker.exe"),
             () => { },
             releasesPage,
-            opened.Add,
+            open,
             action => action());
     }
 

@@ -83,6 +83,53 @@ public sealed class UpdateServiceTests
         Assert.Empty(installer.Launched);
     }
 
+    [Fact]
+    public async Task AFoundUpdateWaitsUntilACheckFindsNone()
+    {
+        var channel = new FakeChannel(new ChannelSnapshot(Manifest, "good"));
+        var service = Service(channel: channel);
+        var changes = 0;
+        service.WaitingChanged += (_, _) => changes++;
+        Assert.Null(service.Waiting);
+
+        var available = await service.CheckAsync(TestContext.Current.CancellationToken);
+
+        Assert.Same(available, service.Waiting);
+        Assert.Equal(1, changes);
+
+        channel.Snapshot = null;
+        await service.CheckAsync(TestContext.Current.CancellationToken);
+
+        Assert.Null(service.Waiting);
+        Assert.Equal(2, changes);
+    }
+
+    [Fact]
+    public async Task NothingWaitsWhenUpToDateOrUntrusted()
+    {
+        var current = Service(installed: "0.3.0");
+        await current.CheckAsync(TestContext.Current.CancellationToken);
+        Assert.Null(current.Waiting);
+
+        var forged = Service(channel: new FakeChannel(new ChannelSnapshot(Manifest, "forged")));
+        await forged.CheckAsync(TestContext.Current.CancellationToken);
+        Assert.Null(forged.Waiting);
+    }
+
+    [Fact]
+    public async Task AnInstallThatFailsLeavesTheUpdateWaiting()
+    {
+        var channel = new FakeChannel(
+            new ChannelSnapshot(Manifest, "good"),
+            new DownloadedArtifact(@"C:\updates\setup.exe", 100, new string('b', 64)));
+        var service = Service(channel: channel);
+        var available = Assert.IsType<UpdateCheckResult.Available>(await service.CheckAsync(TestContext.Current.CancellationToken));
+
+        await service.InstallAsync(available, null, TestContext.Current.CancellationToken);
+
+        Assert.Same(available, service.Waiting);
+    }
+
     private sealed class FakeSignatures : ISignatureVerifier
     {
         public bool Verify(ReadOnlySpan<byte> data, string signatureBase64) => signatureBase64 == "good";
@@ -92,10 +139,13 @@ public sealed class UpdateServiceTests
     {
         public int Fetches { get; private set; }
 
+        /// <summary>What the channel holds now; null means it can't be reached.</summary>
+        public ChannelSnapshot? Snapshot { get; set; } = snapshot;
+
         public Task<ChannelSnapshot> FetchLatestAsync(CancellationToken cancellationToken)
         {
             Fetches++;
-            return snapshot is null ? throw new HttpRequestException("offline") : Task.FromResult(snapshot);
+            return Snapshot is null ? throw new HttpRequestException("offline") : Task.FromResult(Snapshot);
         }
 
         public Task<DownloadedArtifact> DownloadAsync(string path, IProgress<long>? progress, CancellationToken cancellationToken) =>

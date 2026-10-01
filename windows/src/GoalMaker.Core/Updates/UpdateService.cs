@@ -14,7 +14,29 @@ public sealed class UpdateService(
     ReleaseVerifier verifier,
     IUpdateInstaller installer)
 {
+    /// <summary>
+    /// The update the last check found, or null: the mark on the way to Settings. Every check
+    /// replaces it, so it goes when a check finds none; a new version starts without it.
+    /// </summary>
+    public UpdateCheckResult.Available? Waiting { get; private set; }
+
+    /// <summary><see cref="Waiting"/> changed. May be raised off the UI thread.</summary>
+    public event EventHandler? WaitingChanged;
+
     public async Task<UpdateCheckResult> CheckAsync(CancellationToken cancellationToken)
+    {
+        var result = await FindAsync(cancellationToken).ConfigureAwait(false);
+        var waiting = result as UpdateCheckResult.Available;
+        if (waiting != Waiting)
+        {
+            Waiting = waiting;
+            WaitingChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        return result;
+    }
+
+    private async Task<UpdateCheckResult> FindAsync(CancellationToken cancellationToken)
     {
         if (!channelConfigured)
         {

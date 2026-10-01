@@ -219,7 +219,7 @@ public sealed class AppGraph : IDisposable
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
         SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode);
-        Shell = new ShellViewModel(Auth, SignIn, Problems, runOnUi);
+        Shell = new ShellViewModel(Auth, SignIn, Problems, Updates, runOnUi);
         Places = new PlacesViewModel(Settings, strings);
 
         // The quick chat every composer shares (M7): the assistant function as the signed-in owner. An
