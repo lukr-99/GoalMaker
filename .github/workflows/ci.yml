@@ -1,7 +1,10 @@
 name: CI
 
-# Every part of GoalMaker, on every push to main and every pull request. Make the four jobs
-# required checks on main (docs/setup/signing-and-releases.md).
+# Every part of GoalMaker, on every push to main and every pull request. The required checks on main
+# are the three job names below that end in a check ("Supabase migrations, row security and the
+# connector", "Android build, unit tests and lint", "Windows format, build and tests") and
+# "validate" from codeprint.yml (docs/setup/signing-and-releases.md). How the jobs are split and
+# why: docs/setup/ci.md.
 
 on:
   push:
@@ -11,15 +14,74 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels its older run. Pushes to main each get their own group, so a
+# merge is never cancelled by the next one and every commit on main keeps its checks.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  supabase:
-    name: Supabase migrations, row security and the connector
+  changes:
+    name: What changed
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      # On a push to main everything runs. On a pull request a part runs unless every changed file
+      # is one it can't read: the other app, the docs, or tooling that the baseline job checks.
+      supabase: ${{ github.event_name != 'pull_request' || steps.paths.outputs.supabase == 'true' || steps.tools.outputs.supabase == 'true' }}
+      android: ${{ github.event_name != 'pull_request' || steps.paths.outputs.android == 'true' }}
+      windows: ${{ github.event_name != 'pull_request' || steps.paths.outputs.windows == 'true' }}
+    steps:
+      - name: Files outside what each part ignores
+        id: paths
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: every
+          filters: |
+            supabase:
+              - '!android/**'
+              - '!windows/**'
+              - '!docs/**'
+              - '!*.md'
+              - '!fonts/**'
+              - '!tools/**'
+            android:
+              - '!windows/**'
+              - '!supabase/**'
+              - '!docs/**'
+              - '!*.md'
+              - '!tools/**'
+              - '!package.json'
+              - '!package-lock.json'
+            windows:
+              - '!android/**'
+              - '!supabase/**'
+              - '!docs/**'
+              - '!*.md'
+              - '!tools/**'
+              - '!package.json'
+              - '!package-lock.json'
+
+      - name: The tools the Supabase jobs run
+        id: tools
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            supabase:
+              - tools/supabase_migrations.py
+              - tools/check_synced_tables.py
+
+  supabase-stack:
+    name: Supabase stack, pgTAP, the connector and quick chat
+    needs: changes
+    if: needs.changes.outputs.supabase == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -36,11 +98,14 @@ jobs:
         run: npm ci
 
       - name: Start the local stack
-        # The database, auth, storage, the gateway and the Edge Functions runtime are needed for the tests.
-        run: npx supabase start -x studio,imgproxy,vector,logflare,supavisor
+        # The tests need the database, auth, the gateway, PostgREST and the Edge Functions runtime.
+        # Realtime, storage, the mail viewer and the dashboard's helpers are left out: nothing here
+        # calls them, and their schemas are set up by the database start either way.
+        run: npx supabase start -x studio,imgproxy,vector,logflare,supavisor,realtime,storage-api,postgres-meta,mailpit
 
-      - name: Full chain, isolated steps and pgTAP
-        run: python tools/supabase_migrations.py test
+      - name: Full chain from 0001 and pgTAP
+        # supabase start just applied the chain and the seed the way a reset does.
+        run: python tools/supabase_migrations.py test --part chain --skip-reset
 
       - name: The synced-tables contract matches the replica and the server
         run: python tools/check_synced_tables.py --server
@@ -72,40 +137,119 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/functions.log" || true
 
-      - name: Stop the local stack
-        if: always()
-        run: npx supabase stop --no-backup
+      # No "supabase stop": the runner is thrown away with everything on it.
+
+  supabase-steps:
+    name: Supabase isolated migration steps ${{ matrix.shard }}
+    needs: changes
+    if: needs.changes.outputs.supabase == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Each job takes every Nth N-1 -> N step (tools/supabase_migrations.py --shard), so adding
+        # a value here spreads the same steps over more jobs. Each step is a database reset, ~25 s.
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install the pinned Supabase CLI
+        run: npm ci
+
+      - name: Start Postgres only
+        # The isolated steps only talk to the database container.
+        run: npx supabase db start
+
+      - name: Isolated N-1 -> N steps with their fixtures
+        run: python tools/supabase_migrations.py test --part steps --shard "$(( ${{ strategy.job-index }} + 1 ))/${{ strategy.job-total }}"
+
+  supabase:
+    # The required check. It passes when both Supabase jobs passed, or when the pull request
+    # changed nothing they read, so branch protection keeps one stable name.
+    name: Supabase migrations, row security and the connector
+    needs: [changes, supabase-stack, supabase-steps]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every Supabase job passed, or had nothing to check
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          NEEDED: ${{ needs.changes.outputs.supabase }}
+          STACK: ${{ needs.supabase-stack.result }}
+          STEPS: ${{ needs.supabase-steps.result }}
+        run: |
+          echo "changes: $CHANGES, needed: $NEEDED, stack: $STACK, isolated steps: $STEPS"
+          if [ "$CHANGES" != "success" ]; then
+            echo "::error::The changes job did not finish, so nothing was checked"
+            exit 1
+          fi
+          if [ "$NEEDED" != "true" ]; then
+            echo "Nothing the Supabase jobs read changed in this pull request."
+            exit 0
+          fi
+          if [ "$STACK" != "success" ] || [ "$STEPS" != "success" ]; then
+            echo "::error::A Supabase job did not pass"
+            exit 1
+          fi
 
   android:
     name: Android build, unit tests and lint
+    needs: changes
+    # Runs even when the changes job failed, and then checks everything.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      # The job always runs and reports, because it is a required check. Its work runs only when the
+      # pull request changed something the app reads (see the changes job).
+      NEEDED: ${{ needs.changes.result != 'success' || needs.changes.outputs.android == 'true' }}
     defaults:
       run:
         working-directory: android
     steps:
+      - name: Nothing to check
+        if: env.NEEDED != 'true'
+        working-directory: .
+        run: echo "Nothing the Android app reads changed in this pull request."
+
       - uses: actions/checkout@v7
+        if: env.NEEDED == 'true'
 
       - uses: actions/setup-java@v6
+        if: env.NEEDED == 'true'
         with:
           distribution: temurin
           java-version: "21"
 
       - uses: gradle/actions/setup-gradle@v6
+        if: env.NEEDED == 'true'
 
       - uses: android-actions/setup-android@v4
+        if: env.NEEDED == 'true'
         with:
           # The action's default also asks for the retired "tools" package (Tarot2Go, 2026-09-14).
           packages: platform-tools
 
       - name: Build, unit test and lint
+        if: env.NEEDED == 'true'
         # AGP downloads the compile SDK and build tools it needs; setup-android accepted the licenses.
         run: |
           chmod +x gradlew
           ./gradlew testDebugUnitTest assembleDebug lintDebug --stacktrace
 
       - name: Upload reports
-        if: always()
+        if: always() && env.NEEDED == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: android-reports
@@ -116,9 +260,14 @@ jobs:
 
   windows:
     name: Windows format, build and tests
+    needs: changes
+    # Runs even when the changes job failed, and then checks everything.
+    if: ${{ !cancelled() }}
     runs-on: windows-latest
     timeout-minutes: 25
     env:
+      # Always runs and reports, like the Android job; the work runs only when needed.
+      NEEDED: ${{ needs.changes.result != 'success' || needs.changes.outputs.windows == 'true' }}
       # DotNetLib.Tray comes from dotnetlib's private GitHub Packages feed, the "dotnetlib" source in
       # windows/nuget.config. NuGet reads its credentials from this variable. The secret is a classic
       # PAT with read:packages only. Pull requests from forks get no secrets, so their restore fails.
@@ -127,22 +276,33 @@ jobs:
       run:
         working-directory: windows
     steps:
+      - name: Nothing to check
+        if: env.NEEDED != 'true'
+        working-directory: .
+        run: echo "Nothing the Windows app reads changed in this pull request."
+
       - uses: actions/checkout@v7
+        if: env.NEEDED == 'true'
 
       - uses: actions/setup-dotnet@v6
+        if: env.NEEDED == 'true'
         with:
           global-json-file: windows/global.json
           cache: true
           cache-dependency-path: windows/**/*.csproj
 
       - name: Restore
+        if: env.NEEDED == 'true'
         run: dotnet restore GoalMaker.slnx
 
       - name: Check formatting
+        if: env.NEEDED == 'true'
         run: dotnet format GoalMaker.slnx --verify-no-changes --no-restore
 
       - name: Build
+        if: env.NEEDED == 'true'
         run: dotnet build GoalMaker.slnx -c Release --no-restore
 
       - name: Test
+        if: env.NEEDED == 'true'
         run: dotnet test --solution GoalMaker.slnx -c Release --no-build

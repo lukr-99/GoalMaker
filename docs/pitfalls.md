@@ -3,6 +3,17 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## A merge to main cancelled the one before it
+
+2026-10-02, the CI review. CI's concurrency group was `ci-${{ github.ref }}` with
+`cancel-in-progress: true`, so on `main` every merge cancelled the run of the merge before it. 9 of
+the last 30 CI runs on `main` ended as cancelled, and those commits never got checked. It looked
+like ordinary noise in the run list. The group is now the pull request number, or the commit for a
+push, and only pull request runs cancel (docs/setup/ci.md). Related: a required check that is
+skipped at the job level counts as passed, so a required job must not depend on a job that can fail
+and leave it skipped; the Android and Windows jobs run with `!cancelled()` and check everything when
+the changes job failed.
+
 ## R8 folds Glance widget classes together, and updateAll draws into the wrong widgets
 
 2026-10-02. On the 1.9.0 release APK the owner saw the Today and Habits widgets not showing what they
