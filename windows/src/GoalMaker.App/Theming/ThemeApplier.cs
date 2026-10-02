@@ -129,6 +129,7 @@ public sealed class ThemeApplier : IDisposable
         };
         resources["GM.ReduceMotion"] = MotionReduced;
         SetMotion(Tokens.Motion);
+        SetHighlight(IsDark ? theme.Highlight.Dark : theme.Highlight.Light, palette);
         SetLogo(theme.Logo);
         Applied?.Invoke(this, EventArgs.Empty);
     }
@@ -416,6 +417,31 @@ public sealed class ThemeApplier : IDisposable
         resources["GM.QuickDuration"] = new Duration(TimeSpan.FromMilliseconds(motion.Quick));
         resources["GM.StandardDuration"] = new Duration(TimeSpan.FromMilliseconds(motion.Standard));
     }
+
+    /// <summary>
+    /// The Settings highlight (the kit's Tray.Highlight* brushes) from the theme's own tokens in
+    /// themes.json, which tools/check_design_tokens.py holds to 4.5 to 1 for text and the title on the
+    /// tinted card. The kit derives the same brushes from the spot in the palette, but its title rule
+    /// asks only 3 to 1 (Electric's dark title would be the spot at 4.0 to 1), so GoalMaker sets its
+    /// tokens over them. In a Windows high contrast theme the kit's system colors stay.
+    /// </summary>
+    private void SetHighlight(HighlightTokens highlight, Palette palette)
+    {
+        if (SystemParameters.HighContrast)
+        {
+            return;
+        }
+
+        var spot = ToColor(highlight.Spot);
+        resources[TrayThemeTokens.HighlightSpot] = Frozen(spot);
+        resources[TrayThemeTokens.HighlightTint] = Frozen(Blend(ToColor(palette.Surface), spot, highlight.Tint));
+        resources[TrayThemeTokens.HighlightRing] = Frozen(WithAlpha(ToColor(highlight.Ring), Alpha(highlight.RingAlpha)));
+        resources[TrayThemeTokens.HighlightGlow] = Frozen(WithAlpha(spot, Alpha(highlight.GlowAlpha)));
+        resources[TrayThemeTokens.HighlightEdge] = ToBrush(highlight.Edge);
+        resources[TrayThemeTokens.HighlightTitle] = ToBrush(highlight.Title);
+    }
+
+    private static byte Alpha(double amount) => (byte)Math.Round(Math.Clamp(amount, 0, 1) * 255);
 
     private static SolidColorBrush Frozen(Color color)
     {

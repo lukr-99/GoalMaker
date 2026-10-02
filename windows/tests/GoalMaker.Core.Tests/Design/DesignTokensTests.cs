@@ -34,6 +34,21 @@ public sealed class DesignTokensTests
     }
 
     [Fact]
+    public void EveryThemeLightsUpASettingsCardInLightAndDark()
+    {
+        var track = tokens.Theme("track").Highlight;
+        Assert.Equal(new HighlightTokens(0xFFD6FF3Au, 0.30, 0xFF0A0A0Au, 1.00, 0.55, 0xFF0A0A0Au, 0xFF0A0A0Au), track.Light);
+        Assert.Equal(0xFFD6FF3Au, track.Dark.Spot);
+        Assert.Equal(0.12, track.Dark.Tint);
+        Assert.Equal(0xFF67E8F9u, tokens.Theme("night").Highlight.Dark.Title);
+        foreach (var theme in tokens.Themes)
+        {
+            Assert.InRange(theme.Highlight.Light.Tint, 0.09, 0.30);
+            Assert.InRange(theme.Highlight.Dark.Tint, 0.09, 0.30);
+        }
+    }
+
+    [Fact]
     public void PureBlackKeepsTheDarkPaletteOnBlackSurfaces()
     {
         foreach (var theme in tokens.Themes)

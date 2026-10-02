@@ -1,6 +1,9 @@
 namespace GoalMaker.Core.Design;
 
-/// <summary>One of the switchable themes (ADR 0008), with its palettes for light, dark and pure black and the colors of its logo.</summary>
+/// <summary>
+/// One of the switchable themes (ADR 0008), with its palettes for light, dark and pure black, the colors
+/// of its logo, and how a Settings card lights up after a jump.
+/// </summary>
 public sealed record ThemeDefinition(
     string Id,
     string Name,
@@ -10,4 +13,5 @@ public sealed record ThemeDefinition(
     Palette Light,
     Palette Dark,
     Palette Black,
-    LogoColors Logo);
+    LogoColors Logo,
+    ThemeHighlight Highlight);

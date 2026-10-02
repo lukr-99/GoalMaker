@@ -85,6 +85,7 @@ public sealed class DesignTokens
         var black = theme.GetProperty("black");
         var body = typography.GetProperty("body");
         var logo = theme.GetProperty("logo");
+        var highlight = theme.GetProperty("highlight");
         return new ThemeDefinition(
             id,
             theme.GetProperty("name").GetString()!,
@@ -108,8 +109,18 @@ public sealed class DesignTokens
             new LogoColors(
                 ParseColor(logo.GetProperty("tile").GetString()!),
                 ParseColor(logo.GetProperty("letter").GetString()!),
-                ParseColor(logo.GetProperty("arrow").GetString()!)));
+                ParseColor(logo.GetProperty("arrow").GetString()!)),
+            new ThemeHighlight(Highlight(highlight.GetProperty("light")), Highlight(highlight.GetProperty("dark"))));
     }
+
+    private static HighlightTokens Highlight(JsonElement mode) => new(
+        ParseColor(mode.GetProperty("spot").GetString()!),
+        mode.GetProperty("tint").GetDouble(),
+        ParseColor(mode.GetProperty("ring").GetString()!),
+        mode.GetProperty("ringAlpha").GetDouble(),
+        mode.GetProperty("glowAlpha").GetDouble(),
+        ParseColor(mode.GetProperty("edge").GetString()!),
+        ParseColor(mode.GetProperty("title").GetString()!));
 
     private static TypeStyle Style(JsonElement style) => new(
         style.GetProperty("family").GetString()!,
