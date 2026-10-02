@@ -33,15 +33,24 @@ public static class TrayPalettes
 
     /// <summary>
     /// The light palette and the dark one (pure black when asked) of <paramref name="theme"/>, each with
-    /// the theme's highlight spot (themes.json, "highlight"), so the kit lights a Settings card in the
-    /// theme's brightest accent: volt for Track, whose primary is black in light mode.
+    /// the theme's highlight spot and title (themes.json, "highlight"), so the kit lights a Settings card
+    /// in the theme's brightest accent (volt for Track, whose primary is black in light mode) and colors
+    /// its title with the theme's own token, which tools/check_design_tokens.py holds to 4.5 to 1.
     /// </summary>
     public static (TrayPalette Light, TrayPalette Dark) For(ThemeDefinition theme, bool pureBlack)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
         return (
-            From(theme.Light) with { Spot = ThemeApplier.ToColor(theme.Highlight.Light.Spot) },
-            From(pureBlack ? theme.Black : theme.Dark) with { Spot = ThemeApplier.ToColor(theme.Highlight.Dark.Spot) });
+            From(theme.Light) with
+            {
+                Spot = ThemeApplier.ToColor(theme.Highlight.Light.Spot),
+                HighlightTitle = ThemeApplier.ToColor(theme.Highlight.Light.Title),
+            },
+            From(pureBlack ? theme.Black : theme.Dark) with
+            {
+                Spot = ThemeApplier.ToColor(theme.Highlight.Dark.Spot),
+                HighlightTitle = ThemeApplier.ToColor(theme.Highlight.Dark.Title),
+            });
     }
 }
