@@ -798,7 +798,9 @@
     <string name="widget_quick_add_label">Quick add</string>
     <string name="widget_unavailable">Open GoalMaker to see this.</string>
     <string name="widget_today_header">Today · %1$d of %2$d done</string>
-    <string name="widget_today_empty">Nothing planned for today.</string>
+    <string name="widget_today_title">Today</string>
+    <string name="widget_today_empty">Nothing planned today.</string>
+    <string name="widget_today_all_done">All done for today.</string>
     <string name="widget_today_description">The tasks for today, with a tick on each.</string>
     <string name="widget_habits_title">Habits</string>
     <string name="widget_habits_header">Habits · %1$d left</string>

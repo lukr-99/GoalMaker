@@ -56,7 +56,17 @@ class WidgetLayoutTest {
     fun `the Today widget says so when nothing is left`() = runTest {
         val root = layOut { TodayWidget().Content(context, skin, emptyList(), done = 0, total = 0) }
 
-        assertVisible(root, context.getString(com.goalmaker.app.R.string.widget_today_empty))
+        assertVisible(root, "Today")
+        assertVisible(root, "Nothing planned today.")
+        assertTrue("an empty day has no count", texts(root).none { it.text.contains(" of ") })
+    }
+
+    @Test
+    fun `the Today widget says the day is done when every task is`() = runTest {
+        val root = layOut { TodayWidget().Content(context, skin, emptyList(), done = 3, total = 3) }
+
+        assertVisible(root, "Today · 3 of 3 done")
+        assertVisible(root, "All done for today.")
     }
 
     @Test
