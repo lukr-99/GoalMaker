@@ -8,6 +8,8 @@ Commands:
           0001 has an isolated-test fixture pair in supabase/migration-tests/.
   test    verify, then on the running local stack: full chain from 0001 plus pgTAP, and for every
           migration N >= 2 an isolated N-1 -> N run with its fixtures. Ends on a fresh full chain.
+          CI splits the work: --part chain (full chain and pgTAP, --skip-reset right after
+          supabase start) and --part steps --shard K/N (every Nth isolated step, Postgres only).
 
 The local stack must be running (npx supabase start). The Supabase CLI applies every migration in
 one transaction; the isolated step does the same with psql --single-transaction.
@@ -134,27 +136,61 @@ def psql_file(container: str, path: Path, label: str) -> None:
     )
 
 
-def test() -> None:
+def parse_shard(text: str) -> tuple[int, int]:
+    match = re.fullmatch(r"(\d+)/(\d+)", text)
+    if not match or not 1 <= int(match.group(1)) <= int(match.group(2)):
+        raise HarnessError(f"--shard wants K/N with 1 <= K <= N, got {text}")
+    return int(match.group(1)), int(match.group(2))
+
+
+def shard_steps(files: list[Path], shard: tuple[int, int]) -> list[tuple[Path, Path]]:
+    """The isolated N-1 -> N steps this shard runs: every Nth step, so each shard gets old and new ones."""
+    index, count = shard
+    steps = list(zip(files, files[1:]))
+    return [step for position, step in enumerate(steps) if position % count == index - 1]
+
+
+def test(part: str = "all", shard: tuple[int, int] = (1, 1), skip_reset: bool = False) -> None:
     files = verify()
     container = f"supabase_db_{project_id()}"
-    supabase("db", "reset", "--local", label="full chain from 0001")
-    supabase("test", "db", label="pgTAP tests")
-    for previous, current in zip(files, files[1:]):
-        number = current.name[:4]
-        supabase("db", "reset", "--local", "--no-seed", "--version", previous.name[:4], label=f"reset to {previous.name}")
-        psql_file(container, FIXTURES / f"{number}_before.sql", f"{number} fixture before")
-        psql_file(container, current, f"isolated {previous.name[:4]} -> {current.name}")
-        psql_file(container, FIXTURES / f"{number}_after.sql", f"{number} checks after")
-    supabase("db", "reset", "--local", label="restore the full chain")
+    if part in ("all", "chain"):
+        if skip_reset:
+            # supabase start applied the chain from 0001 and the seed, the same way a reset does.
+            print("==> full chain from 0001 (applied by supabase start)", flush=True)
+        else:
+            supabase("db", "reset", "--local", label="full chain from 0001")
+        supabase("test", "db", label="pgTAP tests")
+    if part in ("all", "steps"):
+        for previous, current in shard_steps(files, shard):
+            number = current.name[:4]
+            supabase("db", "reset", "--local", "--no-seed", "--version", previous.name[:4], label=f"reset to {previous.name}")
+            psql_file(container, FIXTURES / f"{number}_before.sql", f"{number} fixture before")
+            psql_file(container, current, f"isolated {previous.name[:4]} -> {current.name}")
+            psql_file(container, FIXTURES / f"{number}_after.sql", f"{number} checks after")
+        if part == "all":
+            supabase("db", "reset", "--local", label="restore the full chain")
     print("migration harness passed")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=("lock", "verify", "test"))
+    parser.add_argument("--part", choices=("all", "chain", "steps"), default="all",
+                        help="test only: chain = full chain and pgTAP, steps = the isolated steps (CI splits them)")
+    parser.add_argument("--shard", default="1/1", help="test --part steps only: run share K of N, as K/N")
+    parser.add_argument("--skip-reset", action="store_true",
+                        help="test --part chain only: the stack was just started, so the chain is already fresh")
     args = parser.parse_args(argv)
     try:
-        {"lock": lock, "verify": verify, "test": test}[args.command]()
+        shard = parse_shard(args.shard)
+        if shard != (1, 1) and args.part != "steps":
+            raise HarnessError("--shard only applies to --part steps")
+        if args.skip_reset and args.part != "chain":
+            raise HarnessError("--skip-reset only applies to --part chain")
+        if args.command == "test":
+            test(args.part, shard, args.skip_reset)
+        else:
+            {"lock": lock, "verify": verify}[args.command]()
     except HarnessError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
