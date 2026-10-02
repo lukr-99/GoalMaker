@@ -292,10 +292,10 @@ public sealed class PageSnapshots
         var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
         connector.CreateCommand.ExecuteAsync(null).GetAwaiter().GetResult();
         connector.CopyCommand.Execute(null);
-        Save(OnPage(new Controls.ConnectorCard { DataContext = connector }), folder, "connector-card", new Size(760, 480));
+        Save(OnPage(new Controls.ConnectorPanel { DataContext = connector }), folder, "connector-card", new Size(760, 480));
         connector.HideNewUrlCommand.Execute(null);
         connector.RevokeCommand.Execute(null);
-        Save(OnPage(new Controls.ConnectorCard { DataContext = connector }), folder, "connector-card-revoking", new Size(760, 400));
+        Save(OnPage(new Controls.ConnectorPanel { DataContext = connector }), folder, "connector-card-revoking", new Size(760, 400));
     });
 
     private static void Add(TestPlanner planner, string line, DateOnly? day)
@@ -1022,7 +1022,7 @@ public sealed class PageSnapshots
         var page = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
         page.CheckForUpdatesCommand.ExecuteAsync(null).GetAwaiter().GetResult();
         var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
-        var sections = new SettingsSectionsViewModel(strings, devBuild: false, () => { });
+        var sections = new SettingsSectionsViewModel(() => { });
         var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
         Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action()), sections, areas), folder, "update-mark-settings-page", new Size(852, 4200));
 
@@ -1034,10 +1034,12 @@ public sealed class PageSnapshots
         Sidebar("update-mark-none-track-dark");
     });
 
-    // Settings with its section list on the left, in dark and light: the top of the page, the page
-    // after a jump to Areas and tags, and the whole page, with a few areas and tags to show.
+    // Settings on the settings kit, in Track and Electric, dark and light: the top of the page, the
+    // middle of the jump hint after opening with an update waiting (the mark lands on Updates), and
+    // the whole page; then Track dark on a narrow window, where the section list becomes chips. The
+    // page sits in a window far off the screen that never takes focus, so it loads and animates.
     [Fact(Explicit = true)]
-    public void SettingsSections() => OnUiThread(folder =>
+    public void SettingsOnTheKit() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
@@ -1056,36 +1058,126 @@ public sealed class PageSnapshots
             planner.Tags.FindOrCreate(tag);
         }
 
+        // The hints play whatever Windows' animation setting is.
+        planner.Settings.Appearance = planner.Settings.Appearance with { ReduceMotion = GoalMaker.Core.Settings.ReduceMotion.Off };
+        planner.Settings.PlanTomorrowReminder = new TimeOnly(20, 30);
         using var theme = Theme(planner);
-        var updates = new TestUpdates();
         var problems = new ProblemLog(planner.Time);
         var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
-        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Dark, GoalMaker.Core.Settings.ThemeMode.Light })
-        {
-            theme.Apply(planner.Settings.Appearance with { ThemeId = "track", Mode = mode });
-            var suffix = mode.ToString().ToLowerInvariant();
 
-            // Built again after each theme switch: a page taken out of its window misses the change.
-            SettingsPage Page(out SettingsSectionsViewModel sections)
+        SettingsPage Page(bool updateWaiting)
+        {
+            var updates = new TestUpdates();
+            if (updateWaiting)
             {
-                sections = new SettingsSectionsViewModel(strings, devBuild: false, () => { });
-                var settings = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
-                var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
-                return new SettingsPage(settings, connector, new ProblemsViewModel(problems, strings, action => action()), sections, areas);
+                updates.Service.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
             }
 
-            var size = new Size(1100, 760);
-            Save(Page(out _), folder, $"settings-sections-{suffix}", size);
-
-            var jumped = Page(out var list);
-            Save(jumped, folder, $"settings-sections-areas-{suffix}", size);
-            list.JumpTo(SettingsSectionsViewModel.Areas);
-            Save(jumped, folder, $"settings-sections-areas-{suffix}", size);
-            Assert.Equal(SettingsSectionsViewModel.Areas, list.Current);
-
-            Save(Page(out _), folder, $"settings-sections-full-{suffix}", new Size(1100, 4600));
+            var settings = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
+            var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
+            return new SettingsPage(settings, connector, new ProblemsViewModel(problems, strings, action => action()), new SettingsSectionsViewModel(() => { }), areas);
         }
+
+        foreach (var (id, mode) in new[]
+        {
+            ("track", GoalMaker.Core.Settings.ThemeMode.Dark),
+            ("track", GoalMaker.Core.Settings.ThemeMode.Light),
+            ("electric", GoalMaker.Core.Settings.ThemeMode.Dark),
+            ("electric", GoalMaker.Core.Settings.ThemeMode.Light),
+        })
+        {
+            planner.Settings.Appearance = planner.Settings.Appearance with { ThemeId = id, Mode = mode };
+            theme.Apply(planner.Settings.Appearance);
+            var name = $"settings-kit-{id}-{mode.ToString().ToLowerInvariant()}";
+            var top = Page(updateWaiting: false);
+            Hosted(top, folder, $"{name}-top", new Size(1100, 760), TimeSpan.FromMilliseconds(300));
+            // The section being read is marked in the list.
+            Assert.Equal([SettingsSectionsViewModel.Account], top.KitPage.NavItems.Where(item => item.IsCurrent).Select(item => item.Id));
+
+            // The jump lands within 450 ms, then the card rises for 150 ms and holds for 350 ms.
+            var jumped = Page(updateWaiting: true);
+            Hosted(jumped, folder, $"{name}-jump-updates", new Size(1100, 760), TimeSpan.FromMilliseconds(720));
+            Assert.Equal(SettingsSectionsViewModel.Updates, jumped.KitPage.CurrentSectionId);
+
+            // Scrolled by hand to the middle and the end: the scroll hint rises 150 ms after the page stops.
+            Hosted(Page(updateWaiting: false), folder, $"{name}-middle", new Size(1100, 760), TimeSpan.FromMilliseconds(330), page => Scroll(page, 1450));
+            Hosted(Page(updateWaiting: false), folder, $"{name}-lower", new Size(1100, 760), TimeSpan.FromMilliseconds(330), page => Scroll(page, 2350));
+        }
+
+        planner.Settings.Appearance = planner.Settings.Appearance with { ThemeId = "track", Mode = GoalMaker.Core.Settings.ThemeMode.Dark };
+        theme.Apply(planner.Settings.Appearance);
+        var narrow = Page(updateWaiting: false);
+        Hosted(narrow, folder, "settings-kit-track-dark-narrow", new Size(640, 760), TimeSpan.FromMilliseconds(300));
+        Assert.Equal(DotNetLib.Tray.SettingsNavMode.Chips, narrow.KitPage.NavigationMode);
     });
+
+    // Scrolls the kit page's content, as the wheel does.
+    private static void Scroll(SettingsPage page, double offset)
+    {
+        static IEnumerable<DependencyObject> Below(DependencyObject parent)
+        {
+            for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, index);
+                yield return child;
+                foreach (var deeper in Below(child))
+                {
+                    yield return deeper;
+                }
+            }
+        }
+
+        Below(page.KitPage).OfType<ScrollViewer>().First(viewer => viewer.Name == "PART_ScrollViewer").ScrollToVerticalOffset(offset);
+    }
+
+    // Shows the page in a window far off the screen that never takes focus or a taskbar button, lets
+    // it load, does what <paramref name="start"/> asks, lets it animate for a while, and writes what it shows.
+    private static void Hosted(SettingsPage page, string folder, string name, Size size, TimeSpan wait, Action<SettingsPage>? start = null)
+    {
+        // A Page only lives in a Window or a Frame.
+        var root = page;
+        var window = new Window
+        {
+            Content = page,
+            Width = size.Width,
+            Height = size.Height,
+            Left = -6000,
+            Top = 100,
+            ShowActivated = false,
+            ShowInTaskbar = false,
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+        };
+        window.Show();
+        void Run(TimeSpan time)
+        {
+            var until = DateTime.UtcNow + time;
+            while (DateTime.UtcNow < until)
+            {
+                Settle();
+                Thread.Sleep(10);
+            }
+        }
+
+        if (start is not null)
+        {
+            Run(TimeSpan.FromMilliseconds(250));
+            start(page);
+        }
+
+        Run(wait);
+        root.UpdateLayout();
+        var bitmap = new RenderTargetBitmap((int)root.ActualWidth, (int)root.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(root);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using (var file = File.Create(Path.Combine(folder, name + ".png")))
+        {
+            encoder.Save(file);
+        }
+
+        window.Close();
+    }
 
     [Fact(Explicit = true)]
     public void MiniWindowsInEveryTheme() => OnUiThread(folder =>
