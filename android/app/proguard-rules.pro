@@ -6,3 +6,7 @@
 # Without this R8 folds the widget classes into one and each widget draws into the others' places,
 # and a renamed class loses its places after an update (docs/pitfalls.md).
 -keep,allowshrinking class * extends androidx.glance.appwidget.GlanceAppWidget
+# Glance makes a widget's tap callback from its class name with the no-argument constructor
+# (actionRunCallback). Nothing else calls that constructor, so R8 removed it and every tap on a
+# Today or Habits row failed with NoSuchMethodException (docs/pitfalls.md).
+-keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }

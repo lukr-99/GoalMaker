@@ -14,6 +14,30 @@ skipped at the job level counts as passed, so a required job must not depend on 
 and leave it skipped; the Android and Windows jobs run with `!cancelled()` and check everything when
 the changes job failed.
 
+## The widgets showed a header over an empty card, and taps did nothing
+
+2026-10-02, the first look at the widgets on an emulator (`android/tools/check-widgets.ps1`). Three
+bugs, none of which unit tests or the 1.9.1 R8 fix could see:
+
+- **A Spacer with only padding fills the widget.** Today and Habits had
+  `Spacer(GlanceModifier.padding(top = 6.dp))` under the header. Glance gave that Spacer all the room
+  left, so every row was laid out below the bottom edge. Debug builds too. The uiautomator dump told
+  it: a `FrameLayout` with bounds over the whole card right under the header. Give a Spacer a
+  `height` or a `width`; `WidgetLayoutTest` applies the RemoteViews at a widget's size and checks
+  each row is inside.
+- **R8 drops the constructor Glance makes a tap callback with.** `actionRunCallback<T>()` keeps the
+  class name, and Glance builds the callback by reflection, which R8 cannot see. Every tap on a row
+  logged `NoSuchMethodException: CompleteTaskAction.<init> []` under the tag `GlanceAppWidget`, in
+  release builds only. Fixed with `-keep class * implements ...ActionCallback { <init>(); }`.
+- **A redraw within about 45 seconds kept the old rows.** Glance keeps a widget's session running
+  after it draws, and `update()` on a running session only recomposes: `provideGlance` does not run
+  again, so whatever it read before `provideContent` stays. The second of two quick taps changed the
+  task but not the widget, and a sync right after placing a widget left it empty. Each redraw now
+  bumps a value in the widget's Glance state and `Widgets.fresh` reads the rows again on it.
+
+Also: widgets were only drawn again after a background sync, not after a change in the app or a
+sync in the front. `AppGraph` now watches the tables they read.
+
 ## R8 folds Glance widget classes together, and updateAll draws into the wrong widgets
 
 2026-10-02. On the 1.9.0 release APK the owner saw the Today and Habits widgets not showing what they

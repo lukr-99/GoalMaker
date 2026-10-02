@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.widget
 
 import android.content.Context
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,20 +44,27 @@ class MotivationWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val shown = WidgetFallback.load(context) {
-            val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
-            val choice = MotivationStore.of(context).read(widgetId)
-            val lines = if (choice.mode == MotivationMode.GOALS) {
-                WidgetData.goalLines(context, choice.horizon)
-            } else {
-                choice.text.lines().map(String::trim).filter(String::isNotEmpty)
+        val read = suspend {
+            WidgetFallback.load(context) {
+                val widgetId = GlanceAppWidgetManager(context).getAppWidgetId(id)
+                val choice = MotivationStore.of(context).read(widgetId)
+                val lines = if (choice.mode == MotivationMode.GOALS) {
+                    WidgetData.goalLines(context, choice.horizon)
+                } else {
+                    choice.text.lines().map(String::trim).filter(String::isNotEmpty)
+                }
+                Shown(WidgetSkin.of(context), widgetId, choice, lines)
             }
-            Shown(WidgetSkin.of(context), widgetId, choice, lines)
         }
-        if (shown == null) {
-            provideContent { WidgetFallback.Content(context) }
-            return
+        val first = read()
+        provideContent {
+            val shown = Widgets.fresh(first, read)
+            if (shown == null) WidgetFallback.Content(context) else Content(context, shown)
         }
+    }
+
+    @Composable
+    private fun Content(context: Context, shown: Shown) {
         val (skin, widgetId, choice, lines) = shown
         val goals = choice.mode == MotivationMode.GOALS
         val header = if (goals) context.getString(headerOf(choice.horizon)) else null
@@ -70,45 +78,43 @@ class MotivationWidget : GlanceAppWidget() {
         } else {
             actionStartActivity(MotivationConfigureActivity.intent(context, widgetId))
         }
-        provideContent {
-            val size = LocalSize.current
-            val headerSpace = if (header != null) HEADER_DP else 0f
-            val shown = if (empty != null) listOf(empty) else lines
-            val fontSize = MotivationFit.size(
-                shown,
-                widthDp = size.width.value - 2 * PADDING_DP,
-                heightDp = size.height.value - 2 * PADDING_DP - headerSpace,
-            )
-            Column(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalAlignment = if (goals) Alignment.Start else Alignment.CenterHorizontally,
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(Color(skin.background))
-                    .cornerRadius(20.dp)
-                    .padding(PADDING_DP.dp)
-                    .clickable(tap),
-            ) {
-                if (header != null) {
-                    Text(
-                        header,
-                        maxLines = 1,
-                        style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
-                    )
-                    Spacer(GlanceModifier.height(6.dp))
-                }
+        val size = LocalSize.current
+        val headerSpace = if (header != null) HEADER_DP else 0f
+        val words = if (empty != null) listOf(empty) else lines
+        val fontSize = MotivationFit.size(
+            words,
+            widthDp = size.width.value - 2 * PADDING_DP,
+            heightDp = size.height.value - 2 * PADDING_DP - headerSpace,
+        )
+        Column(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalAlignment = if (goals) Alignment.Start else Alignment.CenterHorizontally,
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(Color(skin.background))
+                .cornerRadius(20.dp)
+                .padding(PADDING_DP.dp)
+                .clickable(tap),
+        ) {
+            if (header != null) {
                 Text(
-                    shown.joinToString("\n"),
-                    modifier = GlanceModifier.fillMaxWidth(),
-                    style = TextStyle(
-                        color = ColorProvider(Color(if (empty != null) skin.textMuted else skin.text)),
-                        fontSize = (if (empty != null) MotivationFit.MIN + 2f else fontSize).sp,
-                        fontWeight = if (empty != null) FontWeight.Normal else FontWeight.Medium,
-                        fontStyle = if (skin.italicHeadings && empty == null) FontStyle.Italic else FontStyle.Normal,
-                        textAlign = if (goals) TextAlign.Start else TextAlign.Center,
-                    ),
+                    header,
+                    maxLines = 1,
+                    style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
                 )
+                Spacer(GlanceModifier.height(6.dp))
             }
+            Text(
+                words.joinToString("\n"),
+                modifier = GlanceModifier.fillMaxWidth(),
+                style = TextStyle(
+                    color = ColorProvider(Color(if (empty != null) skin.textMuted else skin.text)),
+                    fontSize = (if (empty != null) MotivationFit.MIN + 2f else fontSize).sp,
+                    fontWeight = if (empty != null) FontWeight.Normal else FontWeight.Medium,
+                    fontStyle = if (skin.italicHeadings && empty == null) FontStyle.Italic else FontStyle.Normal,
+                    textAlign = if (goals) TextAlign.Start else TextAlign.Center,
+                ),
+            )
         }
     }
 

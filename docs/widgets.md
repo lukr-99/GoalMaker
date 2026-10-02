@@ -74,12 +74,24 @@ The widget picker shows a preview of the Goals, Motivation and quick-add widgets
 later (`res/layout/widget_*_preview.xml`). A preview is a fixed layout, drawn before any theme is
 known, so it uses the default theme's colors, light or dark with the system.
 
-A widget is drawn again after a tap on one, after a background sync brings changes in, and every half
-hour by the launcher; a Motivation widget also as soon as its configure screen saves. `Widgets`
-draws them again by the ids the launcher keeps for each receiver (`WidgetKind`), not with Glance's
-`updateAll`, which goes by the drawing class: R8 once folded those classes together and each widget
-was drawn over with another's rows ([pitfalls](pitfalls.md)). `proguard-rules.pro` keeps the widget
-classes apart as well.
+A widget is drawn again after a tap on one, a second after the replica changes (a change made in the
+app, or what a sync brings in, in the front or in the background), when the theme changes, and every
+half hour by the launcher; a Motivation widget also as soon as its configure screen saves. `AppGraph`
+watches the tables the widgets read (`WidgetData.TABLES`). `Widgets` draws them again by the ids the
+launcher keeps for each receiver (`WidgetKind`), not with Glance's `updateAll`, which goes by the
+drawing class: R8 once folded those classes together and each widget was drawn over with another's
+rows ([pitfalls](pitfalls.md)). `proguard-rules.pro` keeps the widget classes apart, and keeps the
+constructor Glance makes a tap callback with.
+
+Glance keeps a widget's session running for about 45 seconds after it draws, and an update in that
+time only composes again: `provideGlance` does not run, so rows it read would stay as they were. So
+each redraw also leaves a new mark in the widget's Glance state (`Widgets.DRAWN`), and
+`Widgets.fresh` reads the rows again when the mark changes. Without it, a second tap within those
+seconds changed the task but not the widget.
+
+A Spacer in a widget needs a width or a height. With only padding, Glance stretches it over the rest
+of the widget and the rows under it go out of sight; `WidgetLayoutTest` lays Today and Habits out the
+way a launcher does to catch that.
 
 When a widget's rows cannot be read (the replica would not open, or a rule throws), it shows a plain
 card with "Open GoalMaker to see this." instead of Android's "Can't load widget" box, and the error
@@ -88,3 +100,36 @@ while Glance draws is written there too.
 
 A debug build installs next to the release app as "GoalMaker Dev", with its own rows, and its
 widgets are labelled "(Dev)" in the picker.
+
+## Checking them on an emulator
+
+Some widget bugs only show after R8, which a debug build skips. The `minified` build type is the dev
+app (same id, local stack, the machine's debug key) shrunk by R8 with the release rules. It is not
+debuggable, because R8 leaves most optimizations out of a debuggable build, so `run-as` cannot read
+its `files/crash.log`; widget errors are in logcat too (tags `GoalMakerWidget` and
+`GlanceAppWidget`). It is never published. `android/tools/check-widgets.ps1` builds it, installs it,
+places every widget and saves what it sees:
+
+```powershell
+npx supabase start
+& "$env:ANDROID_HOME\emulator\emulator.exe" -avd <your AVD> -no-snapshot-save -no-boot-anim
+powershell -ExecutionPolicy Bypass -File android\tools\check-widgets.ps1 -Serial emulator-5554
+```
+
+Before the first run, sign the app in and give it rows: Settings > Developer > Sign in and sync,
+then "Sign in as dev@goalmaker.test", and add tasks, habits (a check, a count, a limit and an
+amount) and goals in the app or on the local stack. The app keeps its data between runs.
+
+The script places each widget through `WidgetPinActivity`, a dev-build-only activity that asks the
+launcher to place one (`adb shell am start -n com.goalmaker.app.debug/com.goalmaker.app.ui.widget.WidgetPinActivity --es kind TODAY`),
+and confirms the launcher's sheet. It leaves in `.scratch/widgets/<time>/` (or `-Output`): a
+screenshot per widget, the text and descriptions of the app's views on that screen (`<kind>.txt`,
+which also lists other widgets on the same page), `logcat.txt`, and `dex-check.txt`, which reads the
+APK with `dexdump` and fails the run when R8 merged widget classes or dropped a tap callback's
+constructor. `-BuildType debug` checks the plain debug build and pulls its crash log, `-Apk` installs
+a given APK, and `-Kinds TODAY,HABITS` places only some. Every run places new copies; uninstall the
+app to clear them (and sign in again).
+
+Then check by hand, with `phone.ps1 tap` or `adb shell input`: a tap on a row finishes the task or
+checks the habit in, twice within a few seconds too; a change in the app and a sync from the PC show
+up a second later; a long press resizes; a tap elsewhere opens the app, Goals or the quick-add box.

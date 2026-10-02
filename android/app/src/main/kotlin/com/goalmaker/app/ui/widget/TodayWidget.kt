@@ -19,6 +19,7 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
@@ -34,37 +35,48 @@ import com.goalmaker.app.R
  */
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val shown = WidgetFallback.load(context) {
-            Triple(WidgetSkin.of(context), WidgetData.today(context), WidgetData.doneToday(context))
-        }
-        if (shown == null) {
-            provideContent { WidgetFallback.Content(context) }
-            return
-        }
-        val (skin, tasks, counts) = shown
-        val (done, total) = counts
-        provideContent {
-            Column(
-                GlanceModifier
-                    .fillMaxSize()
-                    .background(Color(skin.background))
-                    .cornerRadius(20.dp)
-                    .padding(12.dp)
-                    .clickable(WidgetOpen.app(context)),
-            ) {
-                Text(
-                    context.getString(R.string.widget_today_header, done, total),
-                    style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
-                )
-                Spacer(GlanceModifier.padding(top = 6.dp))
-                if (tasks.isEmpty()) {
-                    Text(
-                        context.getString(R.string.widget_today_empty),
-                        style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
-                    )
-                }
-                tasks.forEach { task -> TaskRow(task, skin) }
+        val read = suspend {
+            WidgetFallback.load(context) {
+                Triple(WidgetSkin.of(context), WidgetData.today(context), WidgetData.doneToday(context))
             }
+        }
+        val first = read()
+        provideContent {
+            val shown = Widgets.fresh(first, read)
+            if (shown == null) {
+                WidgetFallback.Content(context)
+            } else {
+                val (skin, tasks, counts) = shown
+                Content(context, skin, tasks, counts.first, counts.second)
+            }
+        }
+    }
+
+    /** What the widget draws, apart from reading it, so a test can lay it out. */
+    @Composable
+    internal fun Content(context: Context, skin: WidgetSkin, tasks: List<WidgetTask>, done: Int, total: Int) {
+        Column(
+            GlanceModifier
+                .fillMaxSize()
+                .background(Color(skin.background))
+                .cornerRadius(20.dp)
+                .padding(12.dp)
+                .clickable(WidgetOpen.app(context)),
+        ) {
+            Text(
+                context.getString(R.string.widget_today_header, done, total),
+                style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
+            )
+            // A Spacer needs a size: with only padding, Glance stretches it over the rest of the
+            // widget and the rows below go out of sight (docs/pitfalls.md).
+            Spacer(GlanceModifier.height(6.dp))
+            if (tasks.isEmpty()) {
+                Text(
+                    context.getString(R.string.widget_today_empty),
+                    style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
+                )
+            }
+            tasks.forEach { task -> TaskRow(task, skin) }
         }
     }
 

@@ -48,39 +48,41 @@ class GoalsWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val shown = WidgetFallback.load(context) { WidgetSkin.of(context) to WidgetData.rings(context) }
-        if (shown == null) {
-            provideContent { WidgetFallback.Content(context) }
-            return
+        val read = suspend { WidgetFallback.load(context) { WidgetSkin.of(context) to WidgetData.rings(context) } }
+        val first = read()
+        provideContent {
+            val shown = Widgets.fresh(first, read)
+            if (shown == null) WidgetFallback.Content(context) else Content(context, shown.first, shown.second)
         }
-        val (skin, rings) = shown
+    }
+
+    @Composable
+    private fun Content(context: Context, skin: WidgetSkin, rings: List<WidgetRing>) {
         val density = context.resources.displayMetrics.density
         val percent = NumberFormat.getPercentInstance(context.resources.configuration.locales[0])
         val track = Color(skin.textMuted).copy(alpha = 0.25f).toArgb()
-        provideContent {
-            val size = LocalSize.current
-            val ringDp = ringSize(size.width.value, size.height.value)
-            Column(
-                GlanceModifier
-                    .fillMaxSize()
-                    .background(Color(skin.background))
-                    .cornerRadius(20.dp)
-                    .padding(PADDING_DP.dp)
-                    .clickable(WidgetOpen.goals(context)),
+        val size = LocalSize.current
+        val ringDp = ringSize(size.width.value, size.height.value)
+        Column(
+            GlanceModifier
+                .fillMaxSize()
+                .background(Color(skin.background))
+                .cornerRadius(20.dp)
+                .padding(PADDING_DP.dp)
+                .clickable(WidgetOpen.goals(context)),
+        ) {
+            Text(
+                context.getString(R.string.widget_goals_title),
+                maxLines = 1,
+                style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
+            )
+            Spacer(GlanceModifier.height(6.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
             ) {
-                Text(
-                    context.getString(R.string.widget_goals_title),
-                    maxLines = 1,
-                    style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
-                )
-                Spacer(GlanceModifier.height(6.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
-                ) {
-                    rings.forEach { ring ->
-                        Ring(ring, ringDp, density, track, skin, percent, context)
-                    }
+                rings.forEach { ring ->
+                    Ring(ring, ringDp, density, track, skin, percent, context)
                 }
             }
         }

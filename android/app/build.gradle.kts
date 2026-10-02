@@ -183,6 +183,24 @@ android {
             buildConfigField("boolean", "IS_DEV_BUILD", "false")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        // A dev build shrunk by R8 with the release rules, for checks on an emulator: some bugs only
+        // show after R8 (docs/pitfalls.md). It is the dev app (same id, local stack, debug key), and
+        // not debuggable, because R8 skips most optimizations in a debuggable build. Never published;
+        // android/tools/check-widgets.ps1 builds it (docs/widgets.md).
+        create("minified") {
+            initWith(getByName("debug"))
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    // The minified dev build shares the debug build's code, labels, manifest and plain-HTTP config.
+    sourceSets.getByName("minified") {
+        manifest.srcFile("src/debug/AndroidManifest.xml")
+        res.srcDir("src/debug/res")
+        kotlin.srcDir("src/debug/kotlin")
     }
 
     compileOptions {

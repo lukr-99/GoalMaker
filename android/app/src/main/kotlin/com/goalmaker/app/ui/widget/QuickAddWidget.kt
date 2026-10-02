@@ -40,32 +40,35 @@ import com.goalmaker.app.R
  */
 class QuickAddWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val skin = WidgetFallback.load(context) { WidgetSkin.of(context) }
-        if (skin == null) {
-            provideContent { WidgetFallback.Content(context) }
-            return
-        }
+        val read = suspend { WidgetFallback.load(context) { WidgetSkin.of(context) } }
+        val first = read()
         provideContent {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(Color(skin.background))
-                    .cornerRadius(24.dp)
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                    .clickable(actionStartActivity(QuickAddActivity.intent(context, forToday = false))),
-            ) {
-                Sparkle(skin, context)
-                Spacer(GlanceModifier.width(10.dp))
-                Text(
-                    context.getString(R.string.widget_quick_add_hint),
-                    style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
-                    maxLines = 1,
-                    modifier = GlanceModifier.defaultWeight(),
-                )
-                Spacer(GlanceModifier.width(8.dp))
-                Today(skin, context)
-            }
+            val skin = Widgets.fresh(first, read)
+            if (skin == null) WidgetFallback.Content(context) else Bar(context, skin)
+        }
+    }
+
+    @Composable
+    private fun Bar(context: Context, skin: WidgetSkin) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(Color(skin.background))
+                .cornerRadius(24.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .clickable(actionStartActivity(QuickAddActivity.intent(context, forToday = false))),
+        ) {
+            Sparkle(skin, context)
+            Spacer(GlanceModifier.width(10.dp))
+            Text(
+                context.getString(R.string.widget_quick_add_hint),
+                style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
+                maxLines = 1,
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            Spacer(GlanceModifier.width(8.dp))
+            Today(skin, context)
         }
     }
 
