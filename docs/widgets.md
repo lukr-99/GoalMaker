@@ -8,7 +8,9 @@ write through the outbox, so a tap syncs like any other change and turns up on t
 
 The tasks still open today, in the order Today lists them: top priorities first, then the ones with a
 time, then the rest. The header counts what is behind ("Today · 1 of 3 done"). A tap on a row finishes
-that task, so the row leaves the widget and the header moves; a tap anywhere else opens the app.
+that task, so the row leaves the widget and the header moves; a tap anywhere else opens the app. A day
+with nothing planned has nothing to count: the header says only "Today", over "Nothing planned
+today." Once every task is done, the count stays and the line says "All done for today."
 
 ## Habits
 
@@ -30,7 +32,9 @@ rings take the size the widget is given. A tap opens the Goals place.
 ## Motivation
 
 The owner's own words ("Free time is not wasted time"), or their goals for this week, this month or
-this year as plain written lines, in large calm type. The type follows the theme's headings (Track
+this year as plain written lines, in large calm type. Only open goals are listed: a goal marked done
+or dropped leaves the widget, so it shows what is still to reach. When every goal of that period is
+done, it says so instead of "No goals here yet". The type follows the theme's headings (Track
 slants it) and shrinks to fit however the widget is sized (`MotivationFit`): a short phrase fills
 it and a long list still shows.
 
@@ -70,8 +74,7 @@ draw the widgets again. `WidgetSkin` takes the owner's theme and mode, so a widg
 rather than the launcher. `WidgetOpen` opens the app, or the Goals place through the same kind of
 request the wants notification uses.
 
-The widget picker shows a preview of the Goals, Motivation and quick-add widgets on Android 12 and
-later (`res/layout/widget_*_preview.xml`). A preview is a fixed layout, drawn before any theme is
+The widget picker shows a preview of every widget on Android 12 and later (`res/layout/widget_*_preview.xml`). A preview is a fixed layout, drawn before any theme is
 known, so it uses the default theme's colors, light or dark with the system.
 
 A widget is drawn again after a tap on one, a second after the replica changes (a change made in the

@@ -27,8 +27,9 @@
 ## Project specifics
 
 - Android: Kotlin + Compose (Material 3 Expressive pinned alpha, Navigation 3), supabase-kt, min SDK
-  26, compile 37, target 36, package root `com.goalmaker.app`. Device scripts in `android/tools/`; after a widget change, run
-  `android/tools/check-widgets.ps1` on an emulator (an R8-shrunk dev build, see `docs/widgets.md`).
+  26, compile 37, target 36, package root `com.goalmaker.app`. Device scripts in `android/tools/`;
+  after a widget change, run `android/tools/check-widgets.ps1` on an emulator (an R8-shrunk dev
+  build, see `docs/widgets.md`).
 - Windows: .NET 10 WPF with `DotNetLib.Tray` 0.2.0 (the tray kit, which brings WPF UI and H.NotifyIcon;
   private `dotnetlib` feed, see `docs/setup/local-development.md`), CommunityToolkit.Mvvm, NHotkey,
   Supabase C# client.
