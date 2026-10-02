@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
 import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import kotlinx.coroutines.test.runTest
@@ -83,4 +84,14 @@ class WidgetsTest {
         assertTrue(rules.contains("-keep,allowshrinking class * extends androidx.glance.appwidget.GlanceAppWidget"))
     }
 
+    @Test
+    fun `the release build keeps the constructor Glance makes a tap callback with`() {
+        // Without it every tap on a Today or Habits row failed with NoSuchMethodException in 1.9.1.
+        val rules = listOf(File("proguard-rules.pro"), File("app/proguard-rules.pro")).first(File::exists).readText()
+        assertTrue(rules.contains("-keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }"))
+        listOf(CompleteTaskAction::class.java, CheckInHabitAction::class.java).forEach { action ->
+            assertTrue(action.name, ActionCallback::class.java.isAssignableFrom(action))
+            action.getDeclaredConstructor().newInstance()
+        }
+    }
 }
