@@ -2,10 +2,12 @@ package com.goalmaker.app.ui.settings
 
 import com.goalmaker.app.application.update.UpdateRequest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The Settings jump list: its sections, where the update deep link lands, and the section in view. */
+/** The Settings jump list: its sections, when it shows, where the update deep link lands, and the section in view. */
 class SettingsSectionsTest {
     private val everyday = listOf(
         SettingsSection.ACCOUNT,
@@ -13,10 +15,14 @@ class SettingsSectionsTest {
         SettingsSection.PLANNING,
         SettingsSection.AREAS,
         SettingsSection.CLAUDE,
-        SettingsSection.BACKUP,
+        SettingsSection.DATA,
         SettingsSection.UPDATES,
         SettingsSection.ABOUT,
     )
+
+    // Cards 500 px apart, and the 80 dp line at 200 px (2.5x).
+    private val tops = everyday.mapIndexed { index, section -> section to index * 500 }.toMap()
+    private val line = 200
 
     @Test
     fun `a release build lists the everyday sections in screen order`() {
@@ -36,6 +42,13 @@ class SettingsSectionsTest {
     }
 
     @Test
+    fun `the chips show with four sections or more`() {
+        assertTrue(SettingsSections.showChips(everyday))
+        assertTrue(SettingsSections.showChips(everyday.take(4)))
+        assertFalse(SettingsSections.showChips(everyday.take(3)))
+    }
+
+    @Test
     fun `the update notification lands on Updates, for show and for install`() {
         assertEquals(SettingsSection.UPDATES, SettingsSections.target(UpdateRequest.SHOW))
         assertEquals(SettingsSection.UPDATES, SettingsSections.target(UpdateRequest.INSTALL))
@@ -46,40 +59,35 @@ class SettingsSectionsTest {
     fun `Updates is always in the jump list, so the deep link has somewhere to land`() {
         for (problems in listOf(false, true)) {
             for (dev in listOf(false, true)) {
-                val sections = SettingsSections.visible(problems, dev)
-                assertEquals(true, SettingsSection.UPDATES in sections)
+                assertTrue(SettingsSection.UPDATES in SettingsSections.visible(problems, dev))
             }
         }
     }
 
     @Test
-    fun `the section in view is the last one whose top has scrolled up`() {
-        val tops = everyday.mapIndexed { index, section -> section to index * 500 }.toMap()
-        assertEquals(SettingsSection.ACCOUNT, SettingsSections.current(everyday, tops, scroll = 0, maxScroll = 5_000))
-        assertEquals(SettingsSection.ACCOUNT, SettingsSections.current(everyday, tops, scroll = 499, maxScroll = 5_000))
-        assertEquals(SettingsSection.APPEARANCE, SettingsSections.current(everyday, tops, scroll = 500, maxScroll = 5_000))
-        assertEquals(SettingsSection.AREAS, SettingsSections.current(everyday, tops, scroll = 1_480, maxScroll = 5_000, slack = 24))
+    fun `the section in view is the last one whose top passed the line below the top`() {
+        assertEquals(SettingsSection.ACCOUNT, SettingsSections.current(everyday, tops, scroll = 0, maxScroll = 5_000, line = line))
+        assertEquals(SettingsSection.ACCOUNT, SettingsSections.current(everyday, tops, scroll = 299, maxScroll = 5_000, line = line))
+        assertEquals(SettingsSection.APPEARANCE, SettingsSections.current(everyday, tops, scroll = 300, maxScroll = 5_000, line = line))
+        assertEquals(SettingsSection.AREAS, SettingsSections.current(everyday, tops, scroll = 1_300, maxScroll = 5_000, line = line))
     }
 
     @Test
-    fun `at the bottom the last section is current even if its top never reached the top`() {
-        val tops = everyday.mapIndexed { index, section -> section to index * 500 }.toMap()
-        assertEquals(SettingsSection.ABOUT, SettingsSections.current(everyday, tops, scroll = 3_000, maxScroll = 3_000))
+    fun `at the bottom the last section is current even if its top never reached the line`() {
+        assertEquals(SettingsSection.ABOUT, SettingsSections.current(everyday, tops, scroll = 3_000, maxScroll = 3_000, line = line))
     }
 
     @Test
-    fun `a jump to a section near the bottom keeps that section marked`() {
-        val tops = everyday.mapIndexed { index, section -> section to index * 500 }.toMap()
-        val updates = SettingsSections.current(everyday, tops, scroll = 3_000, maxScroll = 3_000, jumped = SettingsSection.UPDATES)
+    fun `the jump target stays current, at the bottom too`() {
+        val updates = SettingsSections.current(everyday, tops, scroll = 3_000, maxScroll = 3_000, line = line, pinned = SettingsSection.UPDATES)
         assertEquals(SettingsSection.UPDATES, updates)
-        // Once the page has moved past it, the jump no longer counts.
-        val past = SettingsSections.current(everyday, tops, scroll = 3_000, maxScroll = 3_000, jumped = SettingsSection.APPEARANCE)
-        assertEquals(SettingsSection.ABOUT, past)
+        val midway = SettingsSections.current(everyday, tops, scroll = 600, maxScroll = 3_000, line = line, pinned = SettingsSection.CLAUDE)
+        assertEquals(SettingsSection.CLAUDE, midway)
     }
 
     @Test
     fun `before anything is measured the first section is current`() {
-        assertEquals(SettingsSection.ACCOUNT, SettingsSections.current(everyday, emptyMap(), scroll = 0, maxScroll = 0))
-        assertNull(SettingsSections.current(emptyList(), emptyMap(), scroll = 0, maxScroll = 0))
+        assertEquals(SettingsSection.ACCOUNT, SettingsSections.current(everyday, emptyMap(), scroll = 0, maxScroll = 0, line = line))
+        assertNull(SettingsSections.current(emptyList(), emptyMap(), scroll = 0, maxScroll = 0, line = line))
     }
 }

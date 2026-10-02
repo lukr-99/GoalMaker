@@ -81,6 +81,9 @@ class SettingsViewModel(
     )
     val uiState: StateFlow<SettingsUiState> = state.asStateFlow()
 
+    /** Which controls just saved, for the Saved mark next to each (docs/design/spec.md, Settings). */
+    val saved = SavedMarks()
+
     init {
         // Kept by the update service, so the row is still there when Settings opens again.
         viewModelScope.launch {
@@ -143,57 +146,89 @@ class SettingsViewModel(
         if (on && unlockAvailability() != UnlockAvailability.READY) return
         settings.setAppLock(on)
         appLockTurned(on)
+        saved.mark(SettingKey.APP_LOCK)
     }
 
     /** Asks the phone again what it can do, in case the owner has just set a fingerprint up. */
     fun checkUnlock() = state.update { it.copy(unlock = unlockAvailability()) }
 
-    fun setTheme(id: String) = settings.updateAppearance { it.copy(themeId = id) }
+    fun setTheme(id: String) {
+        settings.updateAppearance { it.copy(themeId = id) }
+        saved.mark(SettingKey.THEME)
+    }
 
-    fun setDayStartHour(hour: Int) = settings.setDayStartHour(hour)
+    fun setDayStartHour(hour: Int) {
+        settings.setDayStartHour(hour)
+        saved.mark(SettingKey.DAY_START)
+    }
 
     /** Quiet hours hold ordinary reminders back (docs/reminders.md); the alarm is armed again. */
     fun setQuietHours(window: QuietHours) {
+        val before = state.value.quietHours
         settings.setQuietHours(window)
         viewModelScope.launch(io) { reminders.rearm() }
+        // Switching quiet hours off says so in its own row; a time typed in marks its own field.
+        if (!window.off && window.start != before.start) saved.mark(SettingKey.QUIET_START)
+        if (!window.off && window.end != before.end) saved.mark(SettingKey.QUIET_END)
     }
 
     /** When the weekly review reminder rings, and on which weekday (docs/reviews.md). */
     fun setWeeklyReviewReminder(time: LocalTime?) {
+        val before = state.value.weeklyReviewReminder
         settings.setWeeklyReviewReminder(time)
         rearm()
+        markReminder(before, time, SettingKey.WEEKLY_REVIEW, SettingKey.WEEKLY_REVIEW_TIME)
     }
 
     fun setWeeklyReviewWeekday(weekday: Int) {
         settings.setWeeklyReviewWeekday(weekday)
         rearm()
+        saved.mark(SettingKey.WEEKLY_REVIEW_DAY)
     }
 
     /** When the notification for wants that became ready rings; the alarm is armed again. */
     fun setWantsReadyReminder(time: LocalTime?) {
+        val before = state.value.wantsReadyReminder
         settings.setWantsReadyReminder(time)
         rearm()
+        markReminder(before, time, SettingKey.WANTS_READY, SettingKey.WANTS_READY_TIME)
     }
 
     /** When the monthly review reminder rings, on the first day of a month. */
     fun setMonthlyReviewReminder(time: LocalTime?) {
+        val before = state.value.monthlyReviewReminder
         settings.setMonthlyReviewReminder(time)
         rearm()
+        markReminder(before, time, SettingKey.MONTHLY_REVIEW, SettingKey.MONTHLY_REVIEW_TIME)
     }
 
     /** Moves or switches off the evening Plan tomorrow reminder; the alarm is armed again. */
     fun setPlanTomorrowReminder(time: LocalTime?) {
+        val before = state.value.planTomorrowReminder
         settings.setPlanTomorrowReminder(time)
         viewModelScope.launch(io) { reminders.rearm() }
+        markReminder(before, time, SettingKey.PLAN_REMINDER, SettingKey.PLAN_REMINDER_TIME)
     }
 
-    fun setThemeMode(mode: ThemeMode) = settings.updateAppearance { it.copy(mode = mode) }
+    fun setThemeMode(mode: ThemeMode) {
+        settings.updateAppearance { it.copy(mode = mode) }
+        saved.mark(SettingKey.MODE)
+    }
 
-    fun setPureBlack(enabled: Boolean) = settings.updateAppearance { it.copy(pureBlack = enabled) }
+    fun setPureBlack(enabled: Boolean) {
+        settings.updateAppearance { it.copy(pureBlack = enabled) }
+        saved.mark(SettingKey.PURE_BLACK)
+    }
 
-    fun setReduceMotion(choice: ReduceMotion) = settings.updateAppearance { it.copy(reduceMotion = choice) }
+    fun setReduceMotion(choice: ReduceMotion) {
+        settings.updateAppearance { it.copy(reduceMotion = choice) }
+        saved.mark(SettingKey.REDUCE_MOTION)
+    }
 
-    fun setCompletionSound(enabled: Boolean) = settings.updateAppearance { it.copy(completionSound = enabled) }
+    fun setCompletionSound(enabled: Boolean) {
+        settings.updateAppearance { it.copy(completionSound = enabled) }
+        saved.mark(SettingKey.COMPLETION_SOUND)
+    }
 
     /**
      * Pushes what is still local, empties this device's copy, then signs out (docs/sync.md). When
@@ -325,6 +360,11 @@ class SettingsViewModel(
         if (!appInfo.isDevBuild) return
         settings.setDevSignIn(on)
         restartApp()
+    }
+
+    // A reminder turned on or off marks its switch; a new time marks its slider.
+    private fun markReminder(before: LocalTime?, after: LocalTime?, toggle: SettingKey, time: SettingKey) {
+        saved.mark(if ((before == null) != (after == null)) toggle else time)
     }
 
     // Every reminder setting ends the same way: the one alarm is armed for whatever comes first.
