@@ -32,9 +32,10 @@ run wants, the review digest, Tally and the bottom bar's lines.
 | `vectors/wants.json` | Want cooldowns, states, the ready notification, the stats block and the thresholds id ([wants](../docs/wants.md)) | `WantRulesContractTest` | `WantRulesContractTests` |
 | `vectors/tally.json` | Tally: which category and project time goes to, editor folders, idle, daily totals and their ids, and the twelve-week stats ([tally](../docs/tally.md)) | `TallyRulesContractTest` | `TallyRulesContractTests` |
 | `vectors/navigation.json` | Pinned places, the phone's limit of four, stored pins and the Places count (ADR 0014) | `PlaceRulesContractTest` | `PlaceRulesContractTests` |
+| `vectors/settings.json` | The Settings page: section order, the chips or list only with 4+ sections, the current section (80 line, the bottom, a jump's target), the jump scroll's time, the jump and scroll hints with reduce motion, the Saved mark's timing, the update deep link ([design](../docs/design/spec.md#settings)) | `SettingsPageRulesContractTest` | `SettingsPageRulesContractTests` (to come with the Windows settings kit) |
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |
 | `schemas/synced-tables.json` | Every synced column once, for both replicas and the JSON mapping | (`tools/check_synced_tables.py`) | (`tools/check_synced_tables.py`) |
-| `design/themes.json` | The four themes' tokens ([design](../docs/design/spec.md)) | `DesignTokensTest` | `DesignTokensTests` |
+| `design/themes.json` | The four themes' tokens, and each theme's Settings highlight ([design](../docs/design/spec.md)) | `DesignTokensTest` | `DesignTokensTests` |
 | `design/logo.json` | The mark's shape, written by `tools/generate_app_icon.py`; each theme colors it | `DesignTokensTest` | `DesignTokensTests` |
 
 `content/prompts.json` is not a vector file but shipped content: the review prompt library both
