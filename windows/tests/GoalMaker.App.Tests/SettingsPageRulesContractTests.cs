@@ -97,10 +97,9 @@ public sealed class SettingsPageRulesContractTests
             Assert.Equal(expect.GetProperty("tint").GetBoolean(), hint.ShowsTint);
             Assert.Equal(expect.GetProperty("ring").GetBoolean(), hint.ShowsRing);
             Assert.Equal(expect.GetProperty("glow").GetBoolean(), hint.ShowsGlow);
-            // The kit holds the edge bar at this much at the peak; the contract calls it how far the bar grows.
+            // The edge bar's height at the peak, as a fraction of the bar.
             Assert.Equal(expect.GetProperty("edge").GetDouble(), hint.EdgePeak);
-            // The kit colors the title in every hint it plays.
-            Assert.True(expect.GetProperty("title").GetBoolean(), Name(check));
+            Assert.True(expect.GetProperty("title").GetBoolean() == hint.ShowsTitle, Name(check));
         }
     }
 
