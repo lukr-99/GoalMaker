@@ -3,6 +3,10 @@
 
 Each theme's logo colors are checked too: the G and the arrow need 3:1 against the tile.
 
+Each theme's Settings highlight (docs/design/spec.md, Settings) is checked in light, dark and pure
+black (which uses the dark highlight): the card at the peak is the spot mixed into the surface at
+'tint' (9 to 30%), and body text, secondary text and the title need 4.5:1 on it.
+
 Text needs 4.5:1 against what it sits on; large text (the big numbers) and controls that must be
 seen (checkbox borders, filled checks, buttons, the check mark) need 3:1. The pure-black option is
 checked as the dark palette with the theme's 'black' surfaces. Run in CI (codeprint.yml):
@@ -61,6 +65,56 @@ def contrast(first: str, second: str) -> float:
     return (a + 0.05) / (b + 0.05)
 
 
+def mix(spot: str, surface: str, amount: float) -> str:
+    """The spot mixed into the surface at amount (0 to 1), as both apps tint a lit Settings card."""
+    channels = []
+    for i in (1, 3, 5):
+        under, over = int(surface[i:i + 2], 16), int(spot[i:i + 2], 16)
+        channels.append(round(under + (over - under) * amount))
+    return "#" + "".join(f"{value:02X}" for value in channels)
+
+
+HIGHLIGHT_COLORS = ("spot", "ring", "edge", "title")
+HIGHLIGHT_AMOUNTS = ("tint", "ringAlpha", "glowAlpha")
+
+
+def check_highlight(key: str, theme: dict, palettes: dict) -> list[str]:
+    """Text and the title keep 4.5:1 on the tinted card, in every palette."""
+    problems: list[str] = []
+    highlight = theme.get("highlight", {})
+    if set(highlight) != {"light", "dark"}:
+        return [f"{key}.highlight: needs light and dark"]
+    for mode in ("light", "dark"):
+        tokens = highlight[mode]
+        expected = set(HIGHLIGHT_COLORS) | set(HIGHLIGHT_AMOUNTS)
+        if set(tokens) != expected:
+            problems.append(f"{key}.highlight.{mode}: needs exactly {', '.join(sorted(expected))}")
+            continue
+        if not all(HEX.fullmatch(tokens[name]) for name in HIGHLIGHT_COLORS):
+            problems.append(f"{key}.highlight.{mode}: colors must be #RRGGBB (uppercase)")
+            continue
+        if not all(isinstance(tokens[name], (int, float)) and 0 <= tokens[name] <= 1 for name in HIGHLIGHT_AMOUNTS):
+            problems.append(f"{key}.highlight.{mode}: tint, ringAlpha and glowAlpha must be 0 to 1")
+            continue
+        if not 0.09 <= tokens["tint"] <= 0.30:
+            problems.append(f"{key}.highlight.{mode}: tint {tokens['tint']} is outside 0.09 to 0.30")
+    if problems:
+        return problems
+
+    for mode, palette in palettes.items():
+        tokens = highlight["light" if mode == "light" else "dark"]
+        if "surface" not in palette:
+            continue
+        card = mix(tokens["spot"], palette["surface"], tokens["tint"])
+        for name, color in (("text", palette.get("text")), ("textMuted", palette.get("textMuted")), ("title", tokens["title"])):
+            if color is None:
+                continue
+            ratio = contrast(color, card)
+            if ratio < 4.5:
+                problems.append(f"{key}.{mode}: highlight {name} on the tinted card {card} is {ratio:.2f}:1, needs 4.5:1")
+    return problems
+
+
 def check(data: dict) -> list[str]:
     problems: list[str] = []
     roles = set(data["roles"])
@@ -104,6 +158,7 @@ def check(data: dict) -> list[str]:
         if set(black) != BLACK_ROLES:
             problems.append(f"{key}.black: must override exactly {', '.join(sorted(BLACK_ROLES))}")
         palettes["black"] = {**palettes["dark"], **black}
+        problems.extend(check_highlight(key, theme, palettes))
 
         for mode, palette in palettes.items():
             for role, color in palette.items():
@@ -139,7 +194,7 @@ def main() -> int:
         for problem in problems:
             print(f"  - {problem}")
         return 1
-    print(f"{TOKENS.relative_to(ROOT)}: {len(data['themes'])} themes x light, dark, black pass WCAG AA")
+    print(f"{TOKENS.relative_to(ROOT)}: {len(data['themes'])} themes x light, dark, black pass WCAG AA, Settings highlight included")
     return 0
 
 

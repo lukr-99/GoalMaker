@@ -6,18 +6,13 @@ using GoalMaker.Core.Design;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// One theme card in Settings, drawn in that theme's colors and fonts for the current mode. Checking
-/// the card (click, keyboard or a screen reader's select) chooses the theme.
+/// One theme card in Settings, drawn in that theme's colors and fonts for the current mode. The
+/// Theme row's choice cards pick one; the name is what a screen reader and the search use.
 /// </summary>
 public sealed class ThemeOptionViewModel
 {
-    private readonly Action<string> select;
-    private readonly bool selected;
-
-    public ThemeOptionViewModel(ThemeDefinition theme, bool dark, bool selected, Action<string> select)
+    public ThemeOptionViewModel(ThemeDefinition theme, bool dark)
     {
-        this.select = select;
-        this.selected = selected;
         var palette = dark ? theme.Dark : theme.Light;
         Id = theme.Id;
         Name = theme.Typography.Heading.Uppercase ? theme.Name.ToUpper(CultureInfo.CurrentUICulture) : theme.Name;
@@ -41,18 +36,6 @@ public sealed class ThemeOptionViewModel
 
     public string Summary { get; }
 
-    public bool IsSelected
-    {
-        get => selected;
-        set
-        {
-            if (value && !selected)
-            {
-                select(Id);
-            }
-        }
-    }
-
     public Brush Background { get; }
 
     public Brush Text { get; }
@@ -68,4 +51,6 @@ public sealed class ThemeOptionViewModel
     public FontFamily HeadingFont { get; }
 
     public FontFamily NumberFont { get; }
+
+    public override string ToString() => AccessibleName;
 }

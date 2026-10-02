@@ -76,9 +76,27 @@ public sealed class TrayPalettesTests
         var (sameLight, dark) = TrayPalettes.For(theme, pureBlack: false);
 
         Assert.Equal(sameLight, light);
-        Assert.Equal(TrayPalettes.From(theme.Black), black);
-        Assert.Equal(TrayPalettes.From(theme.Dark), dark);
+        Assert.Equal(TrayPalettes.From(theme.Black) with { Spot = black.Spot }, black);
+        Assert.Equal(TrayPalettes.From(theme.Dark) with { Spot = dark.Spot }, dark);
     }
+
+    [Fact]
+    public void TheKitLightsSettingsCardsInEachThemesHighlightSpot()
+    {
+        foreach (var theme in ContractResources.Themes().Themes)
+        {
+            var (light, dark) = TrayPalettes.For(theme, pureBlack: false);
+
+            Assert.Equal(ThemeApplier.ToColor(theme.Highlight.Light.Spot), light.Spot);
+            Assert.Equal(ThemeApplier.ToColor(theme.Highlight.Dark.Spot), dark.Spot);
+        }
+
+        // Track's primary is black in light mode; its highlight is volt.
+        var (trackLight, _) = TrayPalettes.For(ContractResources.Themes().Theme("track"), pureBlack: false);
+        Assert.Equal(Color.FromRgb(0xD6, 0xFF, 0x3A), trackLight.Spot);
+        Assert.Equal(Color.FromRgb(0x0A, 0x0A, 0x0A), trackLight.Primary);
+    }
+
 
     private static Palette PaletteOf(string id, string mode)
     {

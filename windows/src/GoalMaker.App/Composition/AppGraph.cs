@@ -385,12 +385,13 @@ public sealed class AppGraph : IDisposable
             restartApp,
             releases?.ReleasesPage,
             OpenInBrowser,
+            question => DangerDialog.Ask(question, strings),
             runOnUi);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
 
-        // The section list on the left of Settings, and its way to the full Areas page.
-        SettingsSections = new SettingsSectionsViewModel(strings, AppInfo.IsDevBuild, () => Places.Open(PlacesViewModel.Areas));
+        // Where opening Settings lands, and its way from Areas and tags to the full Areas page.
+        SettingsSections = new SettingsSectionsViewModel(() => Places.Open(PlacesViewModel.Areas));
 
         // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));

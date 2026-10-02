@@ -31,11 +31,17 @@ public static class TrayPalettes
             Focus: ThemeApplier.ToColor(palette.Primary));
     }
 
-    /// <summary>The light palette and the dark one (pure black when asked) of <paramref name="theme"/>.</summary>
+    /// <summary>
+    /// The light palette and the dark one (pure black when asked) of <paramref name="theme"/>, each with
+    /// the theme's highlight spot (themes.json, "highlight"), so the kit lights a Settings card in the
+    /// theme's brightest accent: volt for Track, whose primary is black in light mode.
+    /// </summary>
     public static (TrayPalette Light, TrayPalette Dark) For(ThemeDefinition theme, bool pureBlack)
     {
         ArgumentNullException.ThrowIfNull(theme);
 
-        return (From(theme.Light), From(pureBlack ? theme.Black : theme.Dark));
+        return (
+            From(theme.Light) with { Spot = ThemeApplier.ToColor(theme.Highlight.Light.Spot) },
+            From(pureBlack ? theme.Black : theme.Dark) with { Spot = ThemeApplier.ToColor(theme.Highlight.Dark.Spot) });
     }
 }

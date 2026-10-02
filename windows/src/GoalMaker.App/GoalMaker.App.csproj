@@ -71,6 +71,6 @@
       H.NotifyIcon along, which the shell also uses directly. From dotnetlib's GitHub Packages feed,
       see windows/nuget.config.
     -->
-    <PackageReference Include="DotNetLib.Tray" Version="0.2.0" />
+    <PackageReference Include="DotNetLib.Tray" Version="0.3.0" />
   </ItemGroup>
 </Project>

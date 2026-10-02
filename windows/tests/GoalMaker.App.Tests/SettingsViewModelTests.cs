@@ -1,11 +1,15 @@
+using System.IO;
 using System.Net.Http;
+using DotNetLib.Tray;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.About;
 using GoalMaker.Core.Account;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
 using GoalMaker.Core.Backup;
+using GoalMaker.Core.Planning;
 using GoalMaker.Core.Problems;
+using GoalMaker.Core.Settings;
 using GoalMaker.Core.Startup;
 using GoalMaker.Core.Updates;
 using GoalMaker.Infrastructure.Sync;
@@ -64,8 +68,8 @@ public sealed class SettingsViewModelTests : IDisposable
         Assert.True(settings.CanInstall);
         Assert.Equal("Settings.Update.Available(1.1.0)", settings.AvailableText);
         Assert.Equal("Settings.InstallUpdate(1.1.0)", settings.InstallText);
-        // The accent row says it once; the status line stays empty.
-        Assert.False(settings.HasUpdateStatus);
+        // The accent row says it once; the Check row keeps its hint.
+        Assert.Null(settings.UpdateResult);
     }
 
     [Fact]
@@ -97,6 +101,7 @@ public sealed class SettingsViewModelTests : IDisposable
         await settings.CheckForUpdatesCommand.ExecuteAsync(null);
 
         Assert.StartsWith("Settings.Update.Failed", settings.UpdateStatus, StringComparison.Ordinal);
+        Assert.Equal(SettingsRowResult.Error, settings.UpdateStatusKind);
         Assert.True(shell.HasUpdate);
         Assert.True(settings.CanInstall);
         Assert.Equal("Settings.Update.Available(1.1.0)", settings.AvailableText);
@@ -175,7 +180,183 @@ public sealed class SettingsViewModelTests : IDisposable
 
         Assert.True(settings.HasLastChecked);
         Assert.StartsWith("Settings.Update.LastChecked", settings.LastCheckedText, StringComparison.Ordinal);
+        Assert.Equal(settings.LastCheckedText, settings.UpdateCheckHint);
         Assert.Equal(planner.Time.GetUtcNow(), planner.Settings.UpdatesCheckedAt);
+    }
+
+    [Fact]
+    public void BeforeAnyCheckTheCheckRowSaysGoalMakerChecksDaily()
+    {
+        Assert.Equal("Settings.UpdateCheckHint", Settings(ReleasesPage).UpdateCheckHint);
+    }
+
+    [Fact]
+    public void PureBlackIsOnlyAvailableOutsideLightMode()
+    {
+        var settings = Settings(ReleasesPage);
+
+        settings.SelectedMode = settings.ModeOptions.Single(option => (ThemeMode)option.Value == ThemeMode.Light);
+        Assert.False(settings.IsPureBlackAvailable);
+        Assert.Equal(ThemeMode.Light, planner.Settings.Appearance.Mode);
+
+        settings.SelectedMode = settings.ModeOptions.Single(option => (ThemeMode)option.Value == ThemeMode.Dark);
+        Assert.True(settings.IsPureBlackAvailable);
+        Assert.Equal(["Settings.ThemeSystem", "Settings.ThemeLight", "Settings.ThemeDark"], settings.ModeOptions.Select(option => option.Text));
+    }
+
+    [Fact]
+    public void ReduceMotionReachesThePageAsTheKitReadsIt()
+    {
+        var settings = Settings(ReleasesPage);
+        Assert.Null(settings.PageReduceMotion);
+
+        settings.SelectedMotion = settings.MotionOptions.Single(option => (ReduceMotion)option.Value == ReduceMotion.On);
+        Assert.True(settings.PageReduceMotion);
+        Assert.Equal(ReduceMotion.On, planner.Settings.Appearance.ReduceMotion);
+
+        settings.SelectedMotion = settings.MotionOptions.Single(option => (ReduceMotion)option.Value == ReduceMotion.Off);
+        Assert.False(settings.PageReduceMotion);
+    }
+
+    [Fact]
+    public void PickingAThemeCardSwitchesTheTheme()
+    {
+        var settings = Settings(ReleasesPage);
+        Assert.Equal("track", settings.SelectedTheme!.Id);
+
+        settings.SelectedTheme = settings.Themes.Single(theme => theme.Id == "night");
+
+        Assert.Equal("night", planner.Settings.Appearance.ThemeId);
+        Assert.Equal("night", settings.SelectedTheme!.Id);
+        Assert.Equal(4, settings.Themes.Count);
+    }
+
+    [Fact]
+    public void TheDayStartAndTheReviewDayArePickedFromALists()
+    {
+        var settings = Settings(ReleasesPage);
+        Assert.Equal(7, settings.DayStartOptions.Count);
+        Assert.Equal(7, settings.WeekdayOptions.Count);
+        Assert.Equal(1, (int)settings.WeekdayOptions[0].Value);
+
+        settings.SelectedDayStart = settings.DayStartOptions[3];
+        settings.SelectedWeeklyReviewDay = settings.WeekdayOptions[6];
+
+        Assert.Equal(3, planner.Settings.DayStartHour);
+        Assert.Equal(7, planner.Settings.WeeklyReviewWeekday);
+        Assert.Same(settings.DayStartOptions[3], settings.SelectedDayStart);
+    }
+
+    [Fact]
+    public void QuietHoursAreTypedTimesAndABadOneIsNeverSaved()
+    {
+        var settings = Settings(ReleasesPage);
+
+        settings.QuietHoursStartText = "22:30";
+        settings.QuietHoursEndText = "7:15";
+        Assert.Equal(new QuietHours(new TimeOnly(22, 30), new TimeOnly(7, 15)), planner.Settings.QuietHours);
+        Assert.Equal("07:15", settings.QuietHoursEndText);
+        Assert.True(settings.IsQuietHoursOn);
+
+        Assert.Equal("Settings.TimeInvalid", settings.ValidateTime("25:00"));
+        Assert.Null(settings.ValidateTime("06:00"));
+        settings.QuietHoursEndText = "later";
+        Assert.Equal(new TimeOnly(7, 15), planner.Settings.QuietHours.End);
+
+        settings.TurnOffQuietHoursCommand.Execute(null);
+        Assert.True(planner.Settings.QuietHours.IsOff);
+        Assert.False(settings.TurnOffQuietHoursCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void AReminderTimeIsSavedInHalfHours()
+    {
+        var settings = Settings(ReleasesPage);
+        settings.PlanReminderOn = true;
+        Assert.Equal(40, settings.PlanReminderHalf);
+
+        settings.PlanReminderHalf = 43;
+
+        Assert.Equal(new TimeOnly(21, 30), planner.Settings.PlanTomorrowReminder);
+        Assert.Equal(new TimeOnly(21, 30).ToString("t", System.Globalization.CultureInfo.CurrentCulture), SettingsViewModel.HalfHourText(43));
+    }
+
+    [Fact]
+    public void TheBackendMustBeAnHttpOrHttpsAddress()
+    {
+        var settings = Settings(ReleasesPage);
+
+        Assert.Equal("Settings.BackendUrlInvalid", settings.ValidateBackendUrl("127.0.0.1:55321"));
+        Assert.Null(settings.ValidateBackendUrl("http://127.0.0.1:55321"));
+        Assert.Equal("Settings.BackendKeyInvalid", settings.ValidateBackendKey("  "));
+    }
+
+    [Fact]
+    public async Task SigningOutAnywayAsksFirst()
+    {
+        var questions = new List<DangerQuestion>();
+        var settings = Build(planner, planner.Strings, null, ReleasesPage, opened.Add, question =>
+        {
+            questions.Add(question);
+            return false;
+        });
+
+        await settings.SignOutAnywayCommand.ExecuteAsync(null);
+
+        var asked = Assert.Single(questions);
+        Assert.Equal("Settings.SignOutAnywayAsk", asked.Title);
+        Assert.StartsWith("Settings.SignOutAnywayLost", asked.Message, StringComparison.Ordinal);
+        Assert.False(settings.IsSigningOut);
+    }
+
+    [Fact]
+    public void RestoringAsksFirstAndNoRestoresNothing()
+    {
+        var questions = new List<DangerQuestion>();
+        var file = Path.Combine(Path.GetTempPath(), $"goalmaker-restore-{Guid.NewGuid():N}.json");
+        var settings = Build(planner, planner.Strings, null, ReleasesPage, opened.Add, question =>
+        {
+            questions.Add(question);
+            return false;
+        }, pickImport: () => file);
+        var backup = new BackupService(
+            ContractResources.SyncedTables(), planner.Replica, () => TestPlanner.Owner, "1.0.0", "windows", planner.Time);
+        File.WriteAllText(file, backup.Export());
+        try
+        {
+            settings.RestoreFromFileCommand.Execute(null);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+
+        var asked = Assert.Single(questions);
+        Assert.Equal("Settings.BackupRestoreAsk", asked.Title);
+        Assert.StartsWith("Settings.BackupPreview", asked.Message, StringComparison.Ordinal);
+        Assert.Equal("Settings.BackupRestoreGo", asked.Confirm);
+        Assert.Null(settings.RestoreResult);
+    }
+
+    [Fact]
+    public void AFileThatIsNotAnExportSaysWhyWithoutAsking()
+    {
+        var asked = 0;
+        var file = Path.Combine(Path.GetTempPath(), $"goalmaker-restore-{Guid.NewGuid():N}.json");
+        File.WriteAllText(file, "not json");
+        var settings = Build(planner, planner.Strings, null, ReleasesPage, opened.Add, _ => ++asked > 0, pickImport: () => file);
+        try
+        {
+            settings.RestoreFromFileCommand.Execute(null);
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+
+        Assert.Equal(0, asked);
+        Assert.Equal("Settings.BackupNotABackup", settings.RestoreResult);
+        Assert.Equal(SettingsRowResult.Error, settings.RestoreResultKind);
     }
 
     public void Dispose() => planner.Dispose();
@@ -193,7 +374,13 @@ public sealed class SettingsViewModelTests : IDisposable
 
     /// <summary>A Settings view model over the test planner, with nothing on the PC behind it.</summary>
     internal static SettingsViewModel Build(
-        TestPlanner planner, GoalMaker.App.Localization.IStrings strings, UpdateService? service, string? releasesPage, Action<string> open)
+        TestPlanner planner,
+        GoalMaker.App.Localization.IStrings strings,
+        UpdateService? service,
+        string? releasesPage,
+        Action<string> open,
+        Func<DangerQuestion, bool>? confirm = null,
+        Func<string?>? pickImport = null)
     {
         var backend = new BackendEnvironment("http://127.0.0.1:55321", "key");
         var updates = service ?? new UpdateService(
@@ -226,7 +413,7 @@ public sealed class SettingsViewModelTests : IDisposable
             folder,
             () => { },
             () => null,
-            () => null,
+            pickImport ?? (() => null),
             () => null,
             new NoSignInStartup(),
             new NoStartupProfiles(),
@@ -234,6 +421,7 @@ public sealed class SettingsViewModelTests : IDisposable
             () => { },
             releasesPage,
             open,
+            confirm ?? (_ => false),
             action => action());
     }
 

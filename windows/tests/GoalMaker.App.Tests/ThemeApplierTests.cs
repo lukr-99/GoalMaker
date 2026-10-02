@@ -92,6 +92,29 @@ public sealed class ThemeApplierTests
         Assert.Equal(BrushColor(resources, "GM.BackgroundBrush"), BrushColor(resources, TrayThemeTokens.Background));
     });
 
+    // The Settings highlight is the theme's own tokens (themes.json, "highlight"), not the kit's
+    // derivation, so text and the title keep 4.5 to 1 on the lit card as tools/check_design_tokens.py checks.
+    [Theory]
+    [MemberData(nameof(Looks))]
+    public void TheSettingsHighlightIsTheThemesOwnTokens(string id, ThemeMode mode, bool pureBlack) => OnStaThread(() =>
+    {
+        var resources = WpfUiResources();
+        using var theme = new ThemeApplier(ContractResources.Themes(), resources);
+
+        theme.Apply(Appearance.Default with { ThemeId = id, Mode = mode, PureBlack = pureBlack });
+
+        var definition = theme.Tokens.Theme(id);
+        var palette = mode == ThemeMode.Light ? definition.Light : pureBlack ? definition.Black : definition.Dark;
+        var tokens = mode == ThemeMode.Light ? definition.Highlight.Light : definition.Highlight.Dark;
+        var tint = BrushColor(resources, TrayThemeTokens.HighlightTint);
+        Assert.Equal(ThemeApplier.ToColor(tokens.Spot), BrushColor(resources, TrayThemeTokens.HighlightSpot));
+        Assert.Equal(ThemeApplier.ToColor(tokens.Title), BrushColor(resources, TrayThemeTokens.HighlightTitle));
+        Assert.Equal(ThemeApplier.ToColor(tokens.Edge), BrushColor(resources, TrayThemeTokens.HighlightEdge));
+        Assert.Equal((byte)Math.Round(tokens.GlowAlpha * 255), BrushColor(resources, TrayThemeTokens.HighlightGlow).A);
+        Assert.True(Contrast(ThemeApplier.ToColor(tokens.Title), tint) >= 4.5, $"{id} {mode}: the title on the tint {tint}");
+        Assert.True(Contrast(ThemeApplier.ToColor(palette.Text), tint) >= 4.5, $"{id} {mode}: text on the tint {tint}");
+    });
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -179,6 +202,23 @@ public sealed class ThemeApplierTests
     private static Color BrushColor(ResourceDictionary resources, string key) => ((SolidColorBrush)resources[key]).Color;
 
     private static Color ColorOf(object value) => value is SolidColorBrush brush ? brush.Color : (Color)value;
+
+    private static double Contrast(Color a, Color b)
+    {
+        static double Luminance(Color color)
+        {
+            static double Channel(byte value)
+            {
+                var c = value / 255.0;
+                return c <= 0.03928 ? c / 12.92 : Math.Pow((c + 0.055) / 1.055, 2.4);
+            }
+
+            return (0.2126 * Channel(color.R)) + (0.7152 * Channel(color.G)) + (0.0722 * Channel(color.B));
+        }
+
+        var (x, y) = (Luminance(a), Luminance(b));
+        return (Math.Max(x, y) + 0.05) / (Math.Min(x, y) + 0.05);
+    }
 
     private static void Lay(FrameworkElement element)
     {
