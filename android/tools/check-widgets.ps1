@@ -183,7 +183,7 @@ else {
 
 # A debug build is not shrunk, and its receivers' fields keep the declared type, so only a
 # minified build (or a given APK) is checked.
-$dexProblems = if ($BuildType -eq 'minified' -or $Apk) { @(Test-WidgetDex -ApkPath $apkPath) } else { @() }
+$dexProblems = @(if ($BuildType -eq 'minified' -or $Apk) { Test-WidgetDex -ApkPath $apkPath })
 $dexProblems | ForEach-Object { Write-Warning $_ }
 $dexReport = if ($dexProblems.Count -gt 0) {
     $dexProblems
