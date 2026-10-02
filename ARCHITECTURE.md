@@ -41,8 +41,10 @@ composition root creates everything
 - `domain/`: `version/SemanticVersion`, `update/` (manifest, parser, update policy),
   `navigation/PlaceRules` (pinned places, ADR 0014),
   `notes/LightMarkdown`, `share/SharedCapture` (what another app shared, as a composer line and
-  notes), `account/` (email, sign-in code), `settings/ThemeMode`, `sync/` (`SyncRules`, the
-  synced-table catalog, outbox entries, cursors). Pure Kotlin.
+  notes), `account/` (email, sign-in code), `settings/` (`ThemeMode`, `SettingsFieldRules` for the
+  typed times and the backend address, and `SettingsPageRules`: the Settings page's current
+  section, 4+ rule, jump timing and hints, held to `contracts/vectors/settings.json`), `sync/`
+  (`SyncRules`, the synced-table catalog, outbox entries, cursors). Pure Kotlin.
 - `application/`: ports and use cases: `auth/AuthGateway`, `update/UpdateService` with the
   `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
   `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
@@ -90,7 +92,11 @@ composition root creates everything
   `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm; the
   Places page is `PlacesPage` over `PlacesHubViewModel`, whose tiles reuse the places' own rules),
   `Startup/` (launch switches, single instance), `Theming/` (the themes over WPF UI and the tray kit), `Localization/`
-  (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`.
+  (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`. Settings is the tray kit's settings
+  page (`Views/SettingsPage` over `SettingsViewModel`): section cards, the section list, the jump and
+  scroll hints and the rows are the kit's; `ViewModels/SettingsPageRules` asks the kit's rules the
+  questions `contracts/vectors/settings.json` asks, and `Shell/DangerDialog` asks before a danger row
+  acts. The typed-time and backend-address rules are `GoalMaker.Core` `Settings/SettingsFieldRules`.
 - The tray kit is the shared `DotNetLib.Tray` package from `dotnetlib` (ADR 0017; the feed is in
   [docs/setup/local-development.md](docs/setup/local-development.md#windows)). It brings WPF UI and
   H.NotifyIcon. `App.xaml.cs` takes the single-instance lock, then `Theming/AppResources` merges
@@ -110,7 +116,9 @@ Rules that must match across Kotlin and C# live as vector files, one per rule, l
 verification, the sync rules, the composer grammar, the lists and their filter, Plan tomorrow,
 repeating tasks, reminder times, the archive, the light Markdown in notes, the bottom bar's want,
 habit and goal lines, goals, habits, reviews and
-their prompts, the activity log, the stats numbers, project boards and the calendar. The connector's
+their prompts, the activity log, the stats numbers, project boards, the calendar, and the Settings
+page's jump navigation and hints (`settings.json`: section order, the 4+ rule, the current section,
+jump timing, the hints and the Saved mark). The connector's
 TypeScript rules run the planning ones too, so Claude and the apps agree.
 `contracts/content/prompts.json` is shipped content rather than a vector file: the review prompt
 library, validated by `tools/check_prompts.py`. Both test suites read the same files. `contracts/schemas/synced-tables.json`
@@ -121,7 +129,8 @@ describes every synced column once; both apps build their replica SQL and JSON m
 
 The four switchable themes (ADR 0008, [docs/design/spec.md](docs/design/spec.md)) live once in
 `themes.json`; both apps load it at run time and `tools/check_design_tokens.py` holds every theme to
-WCAG AA. Android maps the roles onto Material 3 (`ui/theme/GoalMakerTheme`, `AppTheme`) and uses
+WCAG AA, the Settings highlight included (text and the title 4.5:1 on the tinted card). Windows sets
+the tray kit's `Tray.Highlight*` brushes from each theme's `highlight` tokens. Android maps the roles onto Material 3 (`ui/theme/GoalMakerTheme`, `AppTheme`) and uses
 the variable fonts from `fonts/`; Windows fills `GM.*` resources and WPF UI's keys
 (`Theming/ThemeApplier`) and uses static faces cut by `tools/build_windows_fonts.py`.
 
