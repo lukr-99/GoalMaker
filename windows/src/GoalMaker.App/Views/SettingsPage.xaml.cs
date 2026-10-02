@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Input;
 using GoalMaker.App.ViewModels;
 
@@ -19,7 +20,8 @@ public partial class SettingsPage
         ConnectorViewModel connector,
         ProblemsViewModel problems,
         SettingsSectionsViewModel sections,
-        AreasViewModel areas)
+        AreasViewModel areas,
+        Action<Window>? prepareConfirm = null)
     {
         InitializeComponent();
         this.viewModel = viewModel;
@@ -29,10 +31,8 @@ public partial class SettingsPage
         AreasSection.DataContext = areas;
         OpenAreasRow.DataContext = sections;
 
-        // The kit marks the current section before it makes the list's entries, and an entry made
-        // later starts unmarked, so the first section would never look current until the page
-        // scrolled. Marked again whenever the entries change.
-        Kit.NavItems.CollectionChanged += (_, _) => MarkCurrentEntry();
+        // The danger row's confirmation wears the app's body font, as its other windows do.
+        SignOutAnywayRow.PrepareConfirm = prepareConfirm;
 
         // Opening Settings is reading them, so the mark on the item goes (docs/problems.md). When the
         // mark stood for an update, the page lands on Updates with the jump hint.
@@ -53,14 +53,6 @@ public partial class SettingsPage
 
     /// <summary>Scrolls to a section and plays the jump hint; false for an unknown or hidden one.</summary>
     public bool JumpTo(string sectionId) => Kit.JumpTo(sectionId);
-
-    private void MarkCurrentEntry()
-    {
-        foreach (var entry in Kit.NavItems)
-        {
-            entry.IsCurrent = entry.Id == Kit.CurrentSectionId;
-        }
-    }
 
     // Keys pressed together in the shortcut box become the shortcut; Tab still moves on.
     private void OnQuickAddShortcutKeyDown(object sender, KeyEventArgs e)

@@ -1,5 +1,6 @@
 using System.IO;
 using System.Net.Http;
+using System.Xml.Linq;
 using DotNetLib.Tray;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.About;
@@ -279,6 +280,8 @@ public sealed class SettingsViewModelTests : IDisposable
 
         Assert.Equal(new TimeOnly(21, 30), planner.Settings.PlanTomorrowReminder);
         Assert.Equal(new TimeOnly(21, 30).ToString("t", System.Globalization.CultureInfo.CurrentCulture), SettingsViewModel.HalfHourText(43));
+        // The reminder sliders show the time next to the thumb through the kit's ValueFormatter.
+        Assert.Equal(SettingsViewModel.HalfHourText(43), SettingsViewModel.HalfHourFormatter(43));
     }
 
     [Fact]
@@ -292,7 +295,7 @@ public sealed class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task SigningOutAnywayAsksFirst()
+    public async Task SigningOutAnywayIsAskedByItsRowNotTheViewModel()
     {
         var questions = new List<DangerQuestion>();
         var settings = Build(planner, planner.Strings, null, ReleasesPage, opened.Add, question =>
@@ -301,12 +304,40 @@ public sealed class SettingsViewModelTests : IDisposable
             return false;
         });
 
+        // The kit's danger row asks with this message before it runs the command.
+        Assert.StartsWith("Settings.SignOutAnywayLost", settings.SignOutAnywayLost, StringComparison.Ordinal);
+
         await settings.SignOutAnywayCommand.ExecuteAsync(null);
 
-        var asked = Assert.Single(questions);
-        Assert.Equal("Settings.SignOutAnywayAsk", asked.Title);
-        Assert.StartsWith("Settings.SignOutAnywayLost", asked.Message, StringComparison.Ordinal);
+        Assert.Empty(questions);
         Assert.False(settings.IsSigningOut);
+        Assert.False(settings.HasSignOutWarning);
+    }
+
+    // The row in SettingsPage.xaml carries the confirmation in GoalMaker's words, Cancel included.
+    [Fact]
+    public void TheSignOutAnywayRowAsksInTheAppsWords()
+    {
+        var page = XDocument.Load(Path.Combine(RepositoryRoot(), "windows", "src", "GoalMaker.App", "Views", "SettingsPage.xaml"));
+
+        var row = page.Descendants().Single(element => element.Name.LocalName == "DangerRow"
+            && (string?)element.Attribute("Command") == "{Binding SignOutAnywayCommand}");
+
+        Assert.Equal("{Binding SignOutAnywayLost}", (string?)row.Attribute("ConfirmMessage"));
+        Assert.Equal("{DynamicResource Settings.SignOutAnywayAsk}", (string?)row.Attribute("ConfirmTitle"));
+        Assert.Equal("{DynamicResource Settings.SignOutAnyway}", (string?)row.Attribute("ConfirmText"));
+        Assert.Equal("{DynamicResource Settings.Cancel}", (string?)row.Attribute("CancelText"));
+    }
+
+    private static string RepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "contracts")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new DirectoryNotFoundException("contracts/ not found above " + AppContext.BaseDirectory);
     }
 
     [Fact]
