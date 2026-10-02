@@ -115,6 +115,25 @@ public sealed class ThemeApplierTests
         Assert.True(Contrast(ThemeApplier.ToColor(palette.Text), tint) >= 4.5, $"{id} {mode}: text on the tint {tint}");
     });
 
+    // The Settings page title and its cards follow the theme: its heading face and its card corner
+    // (Electric 24, Track 12), which the kit's tint, ring and glow follow too.
+    [Theory]
+    [InlineData("track", 12)]
+    [InlineData("electric", 24)]
+    [InlineData("night", 10)]
+    [InlineData("sunrise", 28)]
+    public void TheSettingsPageTakesTheThemesHeadingFontAndCardCorner(string id, double corner) => OnStaThread(() =>
+    {
+        var resources = WpfUiResources();
+        using var theme = new ThemeApplier(ContractResources.Themes(), resources);
+
+        theme.Apply(Appearance.Default with { ThemeId = id, Mode = ThemeMode.Light });
+
+        Assert.Same(resources["GM.HeadingFont"], resources[SettingsStyles.HeadingFontKey]);
+        Assert.Equal(new CornerRadius(corner), resources[SettingsStyles.CardCornerRadiusKey]);
+        Assert.Equal(new CornerRadius(theme.Tokens.Theme(id).Shapes.Card), resources[SettingsStyles.CardCornerRadiusKey]);
+    });
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

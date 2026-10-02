@@ -385,7 +385,10 @@ public sealed class AppGraph : IDisposable
             restartApp,
             releases?.ReleasesPage,
             OpenInBrowser,
-            question => DangerDialog.Ask(question, strings),
+            question => DotNetLib.Tray.TrayConfirmWindow.Ask(
+                new DotNetLib.Tray.TrayConfirmation(question.Title, question.Message, question.Confirm, strings.Get("Settings.Cancel")),
+                System.Windows.Application.Current?.MainWindow,
+                Theme.Attach),
             runOnUi);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);

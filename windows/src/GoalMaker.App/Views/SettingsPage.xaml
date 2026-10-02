@@ -4,6 +4,7 @@
       xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
       xmlns:tray="https://github.com/lukr-99/dotnetlib/tray"
       xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
       Title="{DynamicResource Settings.Title}"
       Background="{DynamicResource GM.BackgroundBrush}"
       FontFamily="{DynamicResource GM.BodyFont}"
@@ -13,7 +14,6 @@
          section list on the left (chips on a narrow window), the jump and scroll hints, and "Saved"
          next to each control. The order is SettingsSectionsViewModel.Order. -->
     <Page.Resources>
-        <controls:HalfHourTextConverter x:Key="HalfHourText" />
         <Style x:Key="Hint" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,2,0,0" />
             <Setter Property="FontSize" Value="13" />
@@ -97,9 +97,10 @@
             <!-- Only while changes haven't reached the server, as on the phone. -->
             <tray:SettingsDangerZone Label="{DynamicResource Settings.DangerZone}"
                                      Visibility="{Binding HasSignOutWarning, Converter={StaticResource BoolToVisibility}}">
-                <tray:DangerRow Label="{DynamicResource Settings.SignOutAnyway}" Hint="{DynamicResource Settings.SignOutAnywayHint}"
+                <tray:DangerRow x:Name="SignOutAnywayRow" Label="{DynamicResource Settings.SignOutAnyway}" Hint="{DynamicResource Settings.SignOutAnywayHint}"
                                 ButtonText="{DynamicResource Settings.SignOutAnyway}" Command="{Binding SignOutAnywayCommand}"
-                                Visibility="{Binding HasSignOutWarning, Converter={StaticResource BoolToVisibility}}" />
+                                ConfirmTitle="{DynamicResource Settings.SignOutAnywayAsk}" ConfirmMessage="{Binding SignOutAnywayLost}"
+                                ConfirmText="{DynamicResource Settings.SignOutAnyway}" CancelText="{DynamicResource Settings.Cancel}" />
             </tray:SettingsDangerZone>
         </tray:SettingsSection>
 
@@ -127,30 +128,30 @@
 
             <!-- Each reminder: a switch, and while it is on its time in half hours, saved when the slider is let go. -->
             <tray:ToggleRow Label="{DynamicResource Settings.PlanReminder}" Hint="{Binding PlanReminderSummary}" IsOn="{Binding PlanReminderOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1" ValueFormat=""
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
                             Value="{Binding PlanReminderHalf}"
-                            Hint="{Binding LiveValue, RelativeSource={RelativeSource Self}, Converter={StaticResource HalfHourText}}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
                             Visibility="{Binding PlanReminderOn, Converter={StaticResource BoolToVisibility}}" />
 
             <tray:ToggleRow Label="{DynamicResource Settings.WeeklyReview}" Hint="{Binding WeeklyReviewSummary}" IsOn="{Binding WeeklyReviewOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1" ValueFormat=""
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
                             Value="{Binding WeeklyReviewHalf}"
-                            Hint="{Binding LiveValue, RelativeSource={RelativeSource Self}, Converter={StaticResource HalfHourText}}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
                             Visibility="{Binding WeeklyReviewOn, Converter={StaticResource BoolToVisibility}}" />
             <tray:DropdownRow Label="{DynamicResource Settings.WeeklyReviewDay}" Options="{Binding WeekdayOptions}"
                               SelectedItem="{Binding SelectedWeeklyReviewDay}" DisplayMemberPath="Text"
                               Visibility="{Binding WeeklyReviewOn, Converter={StaticResource BoolToVisibility}}" />
 
             <tray:ToggleRow Label="{DynamicResource Settings.MonthlyReview}" Hint="{Binding MonthlyReviewSummary}" IsOn="{Binding MonthlyReviewOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1" ValueFormat=""
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
                             Value="{Binding MonthlyReviewHalf}"
-                            Hint="{Binding LiveValue, RelativeSource={RelativeSource Self}, Converter={StaticResource HalfHourText}}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
                             Visibility="{Binding MonthlyReviewOn, Converter={StaticResource BoolToVisibility}}" />
 
             <tray:ToggleRow Label="{DynamicResource Settings.WantsReady}" Hint="{Binding WantsReadySummary}" IsOn="{Binding WantsReadyOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1" ValueFormat=""
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
                             Value="{Binding WantsReadyHalf}"
-                            Hint="{Binding LiveValue, RelativeSource={RelativeSource Self}, Converter={StaticResource HalfHourText}}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
                             Visibility="{Binding WantsReadyOn, Converter={StaticResource BoolToVisibility}}" />
 
             <!-- Quiet hours (docs/reminders.md): typed times, saved on Enter or when the field is left. -->

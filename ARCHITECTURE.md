@@ -95,15 +95,17 @@ composition root creates everything
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`. Settings is the tray kit's settings
   page (`Views/SettingsPage` over `SettingsViewModel`): section cards, the section list, the jump and
   scroll hints and the rows are the kit's; `ViewModels/SettingsPageRules` asks the kit's rules the
-  questions `contracts/vectors/settings.json` asks, and `Shell/DangerDialog` asks before a danger row
-  acts. The typed-time and backend-address rules are `GoalMaker.Core` `Settings/SettingsFieldRules`.
+  questions `contracts/vectors/settings.json` asks. A danger row asks before it acts with the kit's
+  `TrayConfirmWindow` (Cancel focused): "Sign out anyway" through its `DangerRow`, Restore from
+  `AppGraph` once the file is read. The page title and the cards take the theme's heading font and
+  card corner (`SettingsStyles` keys, set by `Theming/ThemeApplier`). The typed-time and backend-address rules are `GoalMaker.Core` `Settings/SettingsFieldRules`.
 - The tray kit is the shared `DotNetLib.Tray` package from `dotnetlib` (ADR 0017; the feed is in
   [docs/setup/local-development.md](docs/setup/local-development.md#windows)). It brings WPF UI and
   H.NotifyIcon. `App.xaml.cs` takes the single-instance lock, then `Theming/AppResources` merges
   the kit's dictionaries (WPF UI's themes and controls, the kit's Window style) and then GoalMaker's
   own. `Theming/ThemeApplier` lets the kit's `TrayThemeApplier` switch WPF UI's theme, follow
   Windows in System mode and set the `Tray.*` brushes from the theme's palettes
-  (`Theming/TrayPalettes`), then sets everything of GoalMaker's own. `Shell/TrayMenu` builds the
+  (`Theming/TrayPalettes`, with the theme's highlight spot and title), then sets everything of GoalMaker's own. `Shell/TrayMenu` builds the
   menu with `TrayMenuBuilder`, the tray icon is the logo made into an `.ico` by the kit's
   `IconFile`, and `Shell/StartupFailure` uses the kit's `TrayMessageWindow`. `Shell/TrayIcon` (the
   Today flyout and the double click) and `Startup/SingleInstance` (a second launch hands over its

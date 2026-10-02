@@ -23,8 +23,8 @@ namespace GoalMaker.App.ViewModels;
 /// Everything the Settings page's rows read and write (docs/design/spec.md, Settings): account,
 /// appearance, planning and reminders, quick add, startup, mini windows, your data, updates, about and
 /// (dev builds) the backend switch. Every change saves at once. A row's result (an export, a check, a
-/// restore) is a text and a kind the row shows in place of its hint. The danger rows ask first through
-/// <c>confirm</c>, which opens a dialog with Cancel focused.
+/// restore) is a text and a kind the row shows in place of its hint. The danger rows ask first, Cancel
+/// focused: "Sign out anyway" through its row, Restore through <c>confirm</c> once the file is read.
 /// </summary>
 public sealed partial class SettingsViewModel : ObservableObject
 {
@@ -70,7 +70,7 @@ public sealed partial class SettingsViewModel : ObservableObject
     private string email = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSignOutWarning))]
+    [NotifyPropertyChangedFor(nameof(HasSignOutWarning), nameof(SignOutAnywayLost))]
     private string signOutWarning = string.Empty;
 
     [ObservableProperty]
@@ -456,6 +456,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>A reminder time in half hours as the slider shows it.</summary>
     public static string HalfHourText(double half) => FromHalf(half).ToString("t", CultureInfo.CurrentCulture);
 
+    /// <summary><see cref="HalfHourText"/> as the reminder sliders' value: "20:30" next to the thumb, also while it moves.</summary>
+    public static Func<double, string> HalfHourFormatter { get; } = HalfHourText;
+
     [RelayCommand(CanExecute = nameof(IsQuietHoursOn))]
     private void TurnOffQuietHours() => SetQuietHours(QuietHours.Off);
 
@@ -712,6 +715,9 @@ public sealed partial class SettingsViewModel : ObservableObject
     /// <summary>While changes haven't reached the server, "Sign out anyway" shows in the danger zone.</summary>
     public bool HasSignOutWarning => SignOutWarning.Length > 0;
 
+    /// <summary>What "Sign out anyway" says in its confirmation before it acts: how many changes go.</summary>
+    public string SignOutAnywayLost => strings.Get("Settings.SignOutAnywayLost", sync.Status.PendingChanges);
+
     private bool CanSignOut() => !IsSigningOut;
 
     /// <summary>Pushes what's waiting, empties the replica, then signs out (docs/sync.md: Sign-out).</summary>
@@ -736,19 +742,13 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Asks first (Cancel focused), then signs out and drops the changes that never reached the server.</summary>
+    /// <summary>
+    /// Signs out and drops the changes that never reached the server. Its danger row asks first
+    /// (<see cref="SignOutAnywayLost"/>, Cancel focused), so this runs only after the owner chose it.
+    /// </summary>
     [RelayCommand(CanExecute = nameof(CanSignOut))]
     private async Task SignOutAnywayAsync()
     {
-        var question = new DangerQuestion(
-            strings.Get("Settings.SignOutAnywayAsk"),
-            strings.Get("Settings.SignOutAnywayLost", sync.Status.PendingChanges),
-            strings.Get("Settings.SignOutAnyway"));
-        if (!confirm(question))
-        {
-            return;
-        }
-
         IsSigningOut = true;
         try
         {

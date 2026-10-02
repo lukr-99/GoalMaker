@@ -379,6 +379,8 @@ public sealed class ThemeApplier : IDisposable
         resources["GM.BodyItalicFont"] = realItalic ? Face(italicName) : bodyFont;
         resources["GM.ItalicGap"] = realItalic ? string.Empty : ItalicGap;
         resources["GM.HeadingFont"] = Face(FontFaces.Name(typography.Heading));
+        // The Settings page title, in the kit's page.
+        resources[SettingsStyles.HeadingFontKey] = resources["GM.HeadingFont"];
         resources["GM.NumberFont"] = Face(FontFaces.Name(typography.Number));
         resources["ContentControlThemeFontFamily"] = bodyFont;
     }
@@ -386,6 +388,8 @@ public sealed class ThemeApplier : IDisposable
     private void SetShapes(ThemeShapes shapes)
     {
         resources["GM.CardCorner"] = new CornerRadius(shapes.Card);
+        // The Settings section cards; the kit's tint, ring and glow follow it.
+        resources[SettingsStyles.CardCornerRadiusKey] = new CornerRadius(shapes.Card);
         resources["GM.RowCorner"] = new CornerRadius(shapes.Row);
         resources["GM.CheckboxCorner"] = new CornerRadius(shapes.Checkbox);
         resources["GM.ButtonCorner"] = new CornerRadius(shapes.Button);
@@ -421,9 +425,10 @@ public sealed class ThemeApplier : IDisposable
     /// <summary>
     /// The Settings highlight (the kit's Tray.Highlight* brushes) from the theme's own tokens in
     /// themes.json, which tools/check_design_tokens.py holds to 4.5 to 1 for text and the title on the
-    /// tinted card. The kit derives the same brushes from the spot in the palette, but its title rule
-    /// asks only 3 to 1 (Electric's dark title would be the spot at 4.0 to 1), so GoalMaker sets its
-    /// tokens over them. In a Windows high contrast theme the kit's system colors stay.
+    /// tinted card. The kit derives the brushes from the spot in the palette; GoalMaker sets its own
+    /// tint, ring, glow and edge over them. The title is the kit's, from the theme's title token that
+    /// <see cref="TrayPalettes.For"/> passes as the palette's HighlightTitle. In a Windows high
+    /// contrast theme the kit's system colors stay.
     /// </summary>
     private void SetHighlight(HighlightTokens highlight, Palette palette)
     {
@@ -438,7 +443,6 @@ public sealed class ThemeApplier : IDisposable
         resources[TrayThemeTokens.HighlightRing] = Frozen(WithAlpha(ToColor(highlight.Ring), Alpha(highlight.RingAlpha)));
         resources[TrayThemeTokens.HighlightGlow] = Frozen(WithAlpha(spot, Alpha(highlight.GlowAlpha)));
         resources[TrayThemeTokens.HighlightEdge] = ToBrush(highlight.Edge);
-        resources[TrayThemeTokens.HighlightTitle] = ToBrush(highlight.Title);
     }
 
     private static byte Alpha(double amount) => (byte)Math.Round(Math.Clamp(amount, 0, 1) * 255);
