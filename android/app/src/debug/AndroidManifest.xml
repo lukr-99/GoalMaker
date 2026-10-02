@@ -12,6 +12,15 @@
             android:name=".QuickAddActivity"
             android:exported="true"
             tools:replace="android:exported" />
+
+        <!-- Debug builds only: android/tools/check-widgets.ps1 places the widgets through it. -->
+        <activity
+            android:name=".ui.widget.WidgetPinActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.GoalMaker.QuickAdd" />
     </application>
 
 </manifest>

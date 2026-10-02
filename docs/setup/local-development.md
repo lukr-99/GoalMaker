@@ -62,7 +62,9 @@ A debug build is its own app, `com.goalmaker.app.debug`, so it installs next to 
 keeps its own rows. Its launcher name is "GoalMaker Dev" and its widgets say "(Dev)", so the widget
 picker shows two groups when both are installed. The home screen widgets ([widgets](../widgets.md))
 turn up there under GoalMaker, or GoalMaker Dev. A debug build is not shrunk by R8, so a widget bug
-that only R8 causes shows up only in a release build. A widget keeps its own state per id, so after changing one, reinstall the app and add the
+that only R8 causes shows up only in a release build, or in the `minified` build type: the dev app
+shrunk with the release rules (`assembleMinified`). `android/tools/check-widgets.ps1` builds it and
+puts every widget on an emulator's home screen ([widgets](../widgets.md#checking-them-on-an-emulator)). A widget keeps its own state per id, so after changing one, reinstall the app and add the
 widget again rather than waiting for the old one to redraw.
 
 ## Windows
