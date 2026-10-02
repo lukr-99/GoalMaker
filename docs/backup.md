@@ -53,7 +53,9 @@ Both apps put this under Settings, **Your data**. **Export** writes the file whe
 picks, under the name `goalmaker-<day>.json`; on Android that is the system file picker, so no
 storage permission is asked for. **Restore** picks a file, says what it would do, and waits for the
 owner to agree. A file that cannot be written or read says so on its own terms; a file that is
-refused says which check failed.
+refused says which check failed. On Android, Restore sits in the danger zone at the end of the
+section, since it can overwrite rows here with newer ones from the file; its dialog has Cancel
+focused, and each result replaces the hint of its own row (docs/design/spec.md, Settings).
 
 ## The weekly backup on Windows
 

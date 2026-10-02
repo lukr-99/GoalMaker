@@ -207,10 +207,63 @@ widgets.
 Appearance holds: theme (four cards with a small preview), mode (system, light, dark), pure black,
 reduce motion (default: follow the system), completion sound.
 
-Settings is grouped into sections, each one card: Problems (only while there are some), Account,
-Appearance, Planning day and reminders, Areas and tags, then the rest (Claude, Your data, Updates,
-About; on the PC also Quick add, Startup and Mini windows), and Developer in a dev build. Areas and
-tags shows the areas in use with their colors and the tags, and opens the full manager. A jump list
-reaches each section: on the phone a row of chips under the title that stays put while the page
-scrolls, on the PC a list on the left (hidden on a narrow window). Both mark the section being read.
-The update notification and the mark on the gear land on Updates.
+Settings is one page that scrolls, with no Save button: every change saves at once. It is grouped
+into sections, each one card with a title, a one-line description, then rows split by thin
+dividers. The order: Problems (only while there are some), Account, Appearance, Planning day and
+reminders, Areas and tags, Claude, Your data (ending with its danger zone), Updates, About, and
+Developer in a dev build. On the PC Quick add, Startup and Mini windows sit before Your data. Areas
+and tags shows the areas in use with their colors and the tags, and opens the full manager.
+
+**Jump navigation.** Only with 4 or more visible sections; with 3 or fewer the page is short enough.
+On the phone a row of chips under the app bar that stays put (chips 32 dp, 8 dp apart, the current
+one filled with primary and scrolled into view); on the PC a list on the left, which becomes the
+chip row on a narrow window. The current section is the last one whose top passed a line 80 dp
+(px on the PC) below the top of the scroll area, or the last section at the very bottom; a jump's
+target stays current while the page scrolls there and after it lands, until the owner scrolls.
+
+**Jump hint.** A chip, a list item or a deep link (the update notification and the mark on the gear
+land on Updates) scrolls the page in 250 to 450 ms by distance, decelerating. If the owner scrolls
+during it, the jump stops and no hint plays. Once it lands the card lights up: a tint of the
+theme's brightest accent, a 2 dp inner ring, a 4 dp soft glow, a 3 dp bar growing on its left
+edge and the title in the highlight color; 150 ms rise, 350 ms hold, 700 ms fade. Focus, and
+TalkBack, move to the section title.
+
+**Scroll hint.** Scrolling into a new section by hand grows only the edge bar (to 85%) and colors
+the title, 120 ms rise and 580 ms fade, once the page has been still for 150 ms. A fast fling never
+flashes the sections it passed.
+
+**Reduce motion** (the system's animator scale at 0, or the app's switch): the jump scrolls at
+once, then a static tint and ring show for 900 ms with no glow and no fade; scrolling plays no hint.
+
+The highlight colors are theme tokens (`highlight` in `contracts/design/themes.json`): the spot is
+the theme's brightest accent, mixed into the card at 9 to 12% (30% for Track's volt on light); the
+ring is the spot at 60 to 70% (black for Track on light, where volt is too pale to see); the glow is
+the spot at about 20% (55% for volt on light); text and the title keep 4.5:1 on the tinted card.
+The rules that can be checked live in `contracts/vectors/settings.json`, which both apps' tests read.
+
+**Rows.** Each row is at least 56 dp high on the phone (48 px on the PC), with touch targets of
+48 dp, a title and one line of hint in the muted color.
+
+| Row | Use |
+| --- | --- |
+| Toggle | On or off; the whole row is the switch, named by its title |
+| Segmented | 2 to 4 short options (System, Light, Dark) |
+| Choice cards | A visual pick, like the theme cards |
+| Dropdown | 5 options or more, like the hour the day starts or the review day |
+| Text field | A free value, like the quiet hours' times; saves on Enter or when focus leaves |
+| Slider | A range where the feel matters, like a reminder's time; shows its value, saves on release |
+| Button row | An action with a result, like Export or Check now; the result replaces the hint |
+| Link row | Opens a page in the app (›) or outside it (↗); the whole row is the target |
+| Info row | A read-only value, selectable |
+| Danger row | An action that can't be taken back, inside the danger zone of its section |
+
+A text field checks its value on Enter and when focus leaves, not on every key: a bad value turns
+the border red, says why under it with an icon, and is never saved, so the last good value stays in
+effect. Each saved change shows "✓ Saved" next to its control (120 ms in, 1.5 s, 250 ms out), and a
+screen reader hears "Saved" once. A disabled row fades to 45% and its hint says why (pure black:
+"Only in dark mode"). An empty list is one muted line that says how to fill it.
+
+**Danger zone.** Actions that can't be taken back sit at the end of the section they affect, in a
+block outlined in the danger color and labelled "Danger zone": Restore from a file at the end of
+Your data, and Sign out anyway in Account while changes haven't reached the server. Each asks first
+in a dialog with Cancel focused.
