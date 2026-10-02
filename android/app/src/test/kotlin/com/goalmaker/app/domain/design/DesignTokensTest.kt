@@ -35,6 +35,22 @@ class DesignTokensTest {
     }
 
     @Test
+    fun `every theme lights a Settings card from its brightest accent`() {
+        val track = tokens.theme("track")
+        assertEquals(HighlightTokens(0xFFD6FF3A.toInt(), 0.30f, 0xFF0A0A0A.toInt(), 1f, 0.55f, 0xFF0A0A0A.toInt(), 0xFF0A0A0A.toInt()), track.highlightLight)
+        assertEquals(0.12f, track.highlightDark.tint, 0f)
+        assertEquals(0xFFD6FF3A.toInt(), track.highlightDark.ring)
+        assertEquals(0.70f, track.highlightDark.ringAlpha, 0f)
+        tokens.themes.forEach { theme ->
+            listOf(theme.highlightLight, theme.highlightDark).forEach { highlight ->
+                assertTrue(theme.id, highlight.tint in 0.09f..0.30f)
+                assertTrue(theme.id, highlight.ringAlpha in 0.60f..1f)
+                assertTrue(theme.id, highlight.glowAlpha in 0.18f..0.55f)
+            }
+        }
+    }
+
+    @Test
     fun `pure black keeps the dark palette on black surfaces`() {
         tokens.themes.forEach { theme ->
             assertEquals(0xFF000000.toInt(), theme.black.background)

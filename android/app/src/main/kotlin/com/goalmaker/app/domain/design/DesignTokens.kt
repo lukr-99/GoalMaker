@@ -71,6 +71,8 @@ class DesignTokens(
                 dark = palette(dark),
                 black = palette(JsonObject(dark + theme.obj("black"))),
                 logo = theme.obj("logo").let { logo -> LogoColors(logo.color("tile"), logo.color("letter"), logo.color("arrow")) },
+                highlightLight = highlight(theme.obj("highlight").obj("light")),
+                highlightDark = highlight(theme.obj("highlight").obj("dark")),
             )
         }
 
@@ -98,6 +100,16 @@ class DesignTokens(
             onHero = roles.color("onHero"),
             heroAccent = roles.color("heroAccent"),
             danger = roles.color("danger"),
+        )
+
+        private fun highlight(tokens: JsonObject) = HighlightTokens(
+            spot = tokens.color("spot"),
+            tint = tokens.float("tint"),
+            ring = tokens.color("ring"),
+            ringAlpha = tokens.float("ringAlpha"),
+            glowAlpha = tokens.float("glowAlpha"),
+            edge = tokens.color("edge"),
+            title = tokens.color("title"),
         )
 
         private fun chip(pair: JsonObject) = ChipColors(pair.color("container"), pair.color("content"))

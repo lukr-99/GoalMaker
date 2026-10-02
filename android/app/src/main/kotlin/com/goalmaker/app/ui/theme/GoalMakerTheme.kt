@@ -51,7 +51,8 @@ fun GoalMakerTheme(tokens: DesignTokens, appearance: Appearance, logo: LogoMark?
         else -> theme.dark
     }
     val context = LocalContext.current
-    val colors = remember(palette, dark) { GoalMakerColors.from(palette, dark) }
+    val highlight = if (dark) theme.highlightDark else theme.highlightLight
+    val colors = remember(palette, dark, highlight) { GoalMakerColors.from(palette, dark, highlight) }
     val fonts = remember(context) { ThemeFonts(context.assets) }
     val type = remember(theme) { typography(theme, fonts) }
     val systemReducesMotion = remember(context) {

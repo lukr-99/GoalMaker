@@ -1,6 +1,9 @@
 package com.goalmaker.app.domain.design
 
-/** One of the switchable themes (ADR 0008), with its palettes for light, dark and pure black and the colors of its logo. */
+/**
+ * One of the switchable themes (ADR 0008), with its palettes for light, dark and pure black, the
+ * colors of its logo, and how a Settings card lights up in light and in dark (pure black too).
+ */
 data class ThemeDefinition(
     val id: String,
     val name: String,
@@ -11,4 +14,6 @@ data class ThemeDefinition(
     val dark: Palette,
     val black: Palette,
     val logo: LogoColors,
+    val highlightLight: HighlightTokens,
+    val highlightDark: HighlightTokens,
 )
