@@ -1,0 +1,171 @@
+{
+  "schema": 1,
+  "description": "The Settings page's jump navigation and its hints (docs/design/spec.md, Settings). 'order': every section id in screen order; an app shows the ones it has (problems only while there are some, developer only in a dev build, PC-only sections on the PC). 'navigation.minimumSections': the chip row (phone) or the section list (PC) only shows with this many visible sections or more. 'showNavigation': cases over the visible sections. 'current': the section being read. 'tops' are where each section's card starts in the scrolling content, 'scroll' is how far the page is scrolled and 'maxScroll' how far it can go, all in the same units (dp on the phone, px on the PC). The current section is the last one whose top is at or above a line 'navigation.currentLine' below the top of the scroll area (top <= scroll + currentLine). When the page scrolls (maxScroll > 0) and is within 'navigation.bottomSlack' of the bottom (scroll >= maxScroll - bottomSlack), the last section is current, since a short last section never reaches the line. 'pinned' is the section a jump went to: it stays current while the page scrolls there and after it lands, until the user scrolls; a pinned section that is not visible is ignored. Sections without a top yet are skipped; before any is measured the first visible section is current, and with no sections there is none. 'jumpScroll': how long the jump's scroll takes for a distance in dp/px: under 2 is instant (0), otherwise 250 + distance x 0.12, rounded, at most 450, decelerating; with reduce motion it is always instant. 'hints': what a section's card does after a jump lands ('jump') or after the user scrolls into it ('scroll'), with reduce motion on or off: rise, hold and fade in milliseconds, which layers show (tint, ring, glow), how much of the left edge bar grows (edge, a fraction of its full height) and whether the title takes the highlight color; null means no hint. 'scrollHints': whether the scroll hint plays once the page has been idle for 'scrollHintIdle' ms: only for a section other than the one hinted last, never during a jump, never with reduce motion. 'saved': the 'Saved' mark next to a control, fading in, holding and fading out, in milliseconds. 'deepLinks': where a link from outside the page lands, with the jump hint.",
+  "order": ["problems", "account", "appearance", "planning", "areas", "claude", "data", "updates", "about", "developer"],
+  "navigation": {
+    "minimumSections": 4,
+    "currentLine": 80,
+    "bottomSlack": 2
+  },
+  "showNavigation": [
+    { "name": "no sections, no navigation", "sections": [], "expect": false },
+    { "name": "three sections are short enough to read without it", "sections": ["general", "fov", "updates"], "expect": false },
+    { "name": "four sections show it", "sections": ["general", "fov", "tweaks", "updates"], "expect": true },
+    {
+      "name": "the phone's everyday sections show it",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "expect": true
+    }
+  ],
+  "current": [
+    {
+      "name": "at the top the first section is current",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 0, "maxScroll": 3500, "pinned": null,
+      "expect": "account"
+    },
+    {
+      "name": "a section is current once its top reaches the line 80 below the top",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 320, "maxScroll": 3500, "pinned": null,
+      "expect": "appearance"
+    },
+    {
+      "name": "one short of the line it is not current yet",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 319, "maxScroll": 3500, "pinned": null,
+      "expect": "account"
+    },
+    {
+      "name": "in the middle of a long section that section is current",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 1500, "maxScroll": 3500, "pinned": null,
+      "expect": "planning"
+    },
+    {
+      "name": "at the very bottom the last section is current, though its top never reached the line",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 3500, "maxScroll": 3500, "pinned": null,
+      "expect": "about"
+    },
+    {
+      "name": "within 2 of the bottom counts as the bottom",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 3498, "maxScroll": 3500, "pinned": null,
+      "expect": "about"
+    },
+    {
+      "name": "3 short of the bottom the line decides",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 3497, "maxScroll": 3500, "pinned": null,
+      "expect": "updates"
+    },
+    {
+      "name": "during a jump the target stays current",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 120, "maxScroll": 3500, "pinned": "planning",
+      "expect": "planning"
+    },
+    {
+      "name": "a jump to a short section near the bottom keeps it current at the bottom",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 3500, "maxScroll": 3500, "pinned": "updates",
+      "expect": "updates"
+    },
+    {
+      "name": "a pinned section that is not visible is ignored",
+      "sections": ["account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "account": 0, "appearance": 400, "planning": 1000, "areas": 1900, "claude": 2300, "data": 2700, "updates": 3200, "about": 3700 },
+      "scroll": 0, "maxScroll": 3500, "pinned": "developer",
+      "expect": "account"
+    },
+    {
+      "name": "problems come first while there are some",
+      "sections": ["problems", "account", "appearance", "planning", "areas", "claude", "data", "updates", "about"],
+      "tops": { "problems": 0, "account": 300, "appearance": 700, "planning": 1300, "areas": 2200, "claude": 2600, "data": 3000, "updates": 3500, "about": 4000 },
+      "scroll": 0, "maxScroll": 3800, "pinned": null,
+      "expect": "problems"
+    },
+    {
+      "name": "sections not measured yet are skipped",
+      "sections": ["account", "appearance", "planning", "areas"],
+      "tops": { "account": 0, "planning": 1000 },
+      "scroll": 600, "maxScroll": 2000, "pinned": null,
+      "expect": "account"
+    },
+    {
+      "name": "a page that does not scroll is read by the line",
+      "sections": ["account", "appearance", "planning", "areas"],
+      "tops": { "account": 0, "appearance": 60, "planning": 200, "areas": 300 },
+      "scroll": 0, "maxScroll": 0, "pinned": null,
+      "expect": "appearance"
+    },
+    {
+      "name": "before anything is measured the first section is current",
+      "sections": ["account", "appearance", "planning", "areas"],
+      "tops": {},
+      "scroll": 0, "maxScroll": 0, "pinned": null,
+      "expect": "account"
+    },
+    {
+      "name": "no sections, no current section",
+      "sections": [],
+      "tops": {},
+      "scroll": 0, "maxScroll": 0, "pinned": null,
+      "expect": null
+    }
+  ],
+  "jumpScroll": [
+    { "name": "already there", "distance": 0, "reduceMotion": false, "expect": 0 },
+    { "name": "under 2 is instant", "distance": 1, "reduceMotion": false, "expect": 0 },
+    { "name": "a short jump takes the shortest time", "distance": 2, "reduceMotion": false, "expect": 250 },
+    { "name": "500 away", "distance": 500, "reduceMotion": false, "expect": 310 },
+    { "name": "1000 away", "distance": 1000, "reduceMotion": false, "expect": 370 },
+    { "name": "1666 away reaches the longest time", "distance": 1666, "reduceMotion": false, "expect": 450 },
+    { "name": "a long way is capped", "distance": 4000, "reduceMotion": false, "expect": 450 },
+    { "name": "reduce motion scrolls at once", "distance": 1000, "reduceMotion": true, "expect": 0 }
+  ],
+  "hints": [
+    {
+      "name": "a jump lights the card up, holds it and fades it out",
+      "kind": "jump", "reduceMotion": false,
+      "expect": { "rise": 150, "hold": 350, "fade": 700, "tint": true, "ring": true, "glow": true, "edge": 1.0, "title": true }
+    },
+    {
+      "name": "with reduce motion a jump shows a static tint and ring for 900 ms, no glow and no fade",
+      "kind": "jump", "reduceMotion": true,
+      "expect": { "rise": 0, "hold": 900, "fade": 0, "tint": true, "ring": true, "glow": false, "edge": 1.0, "title": true }
+    },
+    {
+      "name": "scrolling into a section only grows the edge bar to 85% and colors the title",
+      "kind": "scroll", "reduceMotion": false,
+      "expect": { "rise": 120, "hold": 0, "fade": 580, "tint": false, "ring": false, "glow": false, "edge": 0.85, "title": true }
+    },
+    {
+      "name": "with reduce motion scrolling plays no hint",
+      "kind": "scroll", "reduceMotion": true,
+      "expect": null
+    }
+  ],
+  "scrollHintIdle": 150,
+  "scrollHints": [
+    { "name": "a new section after the page settles", "current": "planning", "lastHinted": "appearance", "jumping": false, "reduceMotion": false, "expect": true },
+    { "name": "the section hinted last does not flash again", "current": "planning", "lastHinted": "planning", "jumping": false, "reduceMotion": false, "expect": false },
+    { "name": "never during a jump, which has a hint of its own", "current": "planning", "lastHinted": "appearance", "jumping": true, "reduceMotion": false, "expect": false },
+    { "name": "never with reduce motion", "current": "planning", "lastHinted": "appearance", "jumping": false, "reduceMotion": true, "expect": false },
+    { "name": "nothing to hint on an empty page", "current": null, "lastHinted": null, "jumping": false, "reduceMotion": false, "expect": false }
+  ],
+  "saved": { "in": 120, "hold": 1500, "out": 250 },
+  "deepLinks": [
+    { "name": "the update notification and the mark on the gear land on Updates", "link": "update", "expect": "updates" }
+  ]
+}

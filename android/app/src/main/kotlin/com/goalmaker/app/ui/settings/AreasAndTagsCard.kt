@@ -4,15 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -26,34 +28,43 @@ import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.ui.theme.AppTheme
 
 /**
- * The Areas and tags section of Settings: the areas in use with their colors, the tags, and the way
- * to the full manager, where they are added, renamed, recolored, reordered and archived.
+ * The Areas and tags section of Settings: the areas in use with their colors, the tags, and a link
+ * row to the full manager, where they are added, renamed, recolored, reordered and archived. An
+ * empty list says in one muted line how to fill it.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AreasAndTagsCard(areas: List<AreaItem>, tags: List<TagItem>, onOpenAreas: () -> Unit) {
-    Text(
-        stringResource(R.string.areas_open_hint),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    PillsRow(stringResource(R.string.areas_areas), empty = stringResource(R.string.areas_none).takeIf { areas.isEmpty() }) {
+        areas.forEach { area -> AreaPill(area) }
+    }
+    RowDivider()
+    PillsRow(stringResource(R.string.areas_tags), empty = stringResource(R.string.areas_no_tags).takeIf { tags.isEmpty() }) {
+        tags.forEach { tag -> Pill { Text("#${tag.name}", style = MaterialTheme.typography.labelLarge, color = AppTheme.colors.text) } }
+    }
+    RowDivider()
+    LinkRow(
+        title = stringResource(R.string.areas_open),
+        hint = stringResource(R.string.areas_open_hint),
+        external = false,
+        onClick = onOpenAreas,
     )
-    Text(stringResource(R.string.areas_areas), style = MaterialTheme.typography.titleSmall)
-    if (areas.isEmpty()) {
-        Text(stringResource(R.string.areas_none), style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.textMuted)
-    } else {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            areas.forEach { area -> AreaPill(area) }
+}
+
+// A label over a wrap of pills, or the one muted line that says how to add the first.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PillsRow(title: String, empty: String?, pills: @Composable () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = AppTheme.colors.text)
+        if (empty != null) {
+            Text(empty, style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.textMuted)
+        } else {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { pills() }
         }
     }
-    Text(stringResource(R.string.areas_tags), style = MaterialTheme.typography.titleSmall)
-    if (tags.isEmpty()) {
-        Text(stringResource(R.string.areas_no_tags), style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.textMuted)
-    } else {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            tags.forEach { tag -> Pill { Text("#${tag.name}", style = MaterialTheme.typography.labelLarge, color = AppTheme.colors.text) } }
-        }
-    }
-    OutlinedButton(onClick = onOpenAreas) { Text(stringResource(R.string.areas_open)) }
 }
 
 // An area as the lists show it: its color, its emoji and its name.

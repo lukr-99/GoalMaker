@@ -4,19 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
 import com.goalmaker.app.application.backup.RestoreReport
 import com.goalmaker.app.domain.backup.BackupProblem
@@ -25,9 +16,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Your data (docs/backup.md, spec story 91): one file with everything, written wherever the owner
- * picks, and read back after they have seen what it would do. The file picking is the system's, so
- * no storage permission is asked for.
+ * Your data (docs/backup.md, spec story 91): Export writes one file with everything wherever the
+ * owner picks, and Restore, in the danger zone at the end, reads one back after the owner has seen
+ * what it would do and agreed, with Cancel focused. A result replaces the hint of the row it
+ * belongs to. The file picking is the system's, so no storage permission is asked for.
  */
 @Composable
 fun BackupCard(viewModel: SettingsViewModel, state: BackupUiState) {
@@ -46,50 +38,47 @@ fun BackupCard(viewModel: SettingsViewModel, state: BackupUiState) {
         scope.launch { viewModel.offerRestore(withContext(Dispatchers.IO) { context.read(uri) }) }
     }
 
-    Text(
-        stringResource(R.string.settings_backup_hint),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    val exportResult = when (state.outcome) {
+        BackupOutcome.EXPORTED -> stringResource(R.string.settings_backup_exported)
+        BackupOutcome.COULD_NOT_WRITE -> stringResource(R.string.settings_backup_not_written)
+        else -> null
+    }
+    val report = state.report
+    val problem = state.problem
+    val restoreResult = when {
+        problem != null -> stringResource(reason(problem))
+        report != null -> stringResource(R.string.settings_backup_restored, report.added, report.updated, report.kept)
+        state.outcome == BackupOutcome.COULD_NOT_READ -> stringResource(R.string.settings_backup_not_read)
+        else -> null
+    }
+    ButtonRow(
+        title = stringResource(R.string.settings_backup_export_title),
+        hint = stringResource(R.string.settings_backup_export_hint),
+        button = stringResource(R.string.settings_backup_export),
+        onClick = { write.launch(viewModel.exportName()) },
+        result = exportResult,
+        trouble = state.outcome == BackupOutcome.COULD_NOT_WRITE,
     )
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { write.launch(viewModel.exportName()) }) {
-            Text(stringResource(R.string.settings_backup_export))
-        }
-        OutlinedButton(onClick = { read.launch(arrayOf(MIME, "application/octet-stream", "text/plain")) }) {
-            Text(stringResource(R.string.settings_backup_restore))
-        }
+    DangerZone {
+        DangerRow(
+            title = stringResource(R.string.settings_backup_restore_title),
+            hint = stringResource(R.string.settings_backup_restore_hint),
+            button = stringResource(R.string.settings_backup_restore),
+            onClick = { read.launch(arrayOf(MIME, "application/octet-stream", "text/plain")) },
+            result = restoreResult,
+            trouble = problem != null || state.outcome == BackupOutcome.COULD_NOT_READ,
+        )
     }
 
     if (state.isAsking) {
         val preview = state.preview ?: RestoreReport()
-        AlertDialog(
-            onDismissRequest = viewModel::clearBackup,
-            title = { Text(stringResource(R.string.settings_backup_restore)) },
-            text = { Text(stringResource(R.string.settings_backup_preview, preview.added, preview.updated, preview.kept)) },
-            confirmButton = {
-                Button(onClick = viewModel::confirmRestore) { Text(stringResource(R.string.settings_backup_restore_go)) }
-            },
-            dismissButton = { TextButton(onClick = viewModel::clearBackup) { Text(stringResource(R.string.plan_cancel)) } },
+        ConfirmDialog(
+            title = stringResource(R.string.settings_backup_restore_ask),
+            text = stringResource(R.string.settings_backup_preview, preview.added, preview.updated, preview.kept),
+            confirm = stringResource(R.string.settings_backup_restore_go),
+            onConfirm = viewModel::confirmRestore,
+            onDismiss = viewModel::clearBackup,
         )
-    }
-
-    if (state.isSaying) {
-        val report = state.report
-        val message = when {
-            state.problem != null -> stringResource(reason(state.problem))
-            report != null -> stringResource(R.string.settings_backup_restored, report.added, report.updated, report.kept)
-            state.outcome == BackupOutcome.EXPORTED -> stringResource(R.string.settings_backup_exported)
-            state.outcome == BackupOutcome.COULD_NOT_WRITE -> stringResource(R.string.settings_backup_not_written)
-            else -> stringResource(R.string.settings_backup_not_read)
-        }
-        val trouble = state.problem != null || state.outcome == BackupOutcome.COULD_NOT_WRITE ||
-            state.outcome == BackupOutcome.COULD_NOT_READ
-        Text(
-            message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (trouble) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        TextButton(onClick = viewModel::clearBackup) { Text(stringResource(R.string.settings_backup_ok)) }
     }
 }
 

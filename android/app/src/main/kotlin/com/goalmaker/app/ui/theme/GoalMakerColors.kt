@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.theme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import com.goalmaker.app.domain.design.AreaColor
+import com.goalmaker.app.domain.design.HighlightTokens
 import com.goalmaker.app.domain.design.Palette
 
 /**
@@ -26,6 +27,8 @@ data class GoalMakerColors(
     val heroAccent: Color,
     val danger: Color,
     val isDark: Boolean,
+    /** How a Settings card lights up after a jump. */
+    val highlight: SectionHighlightColors,
 ) {
     /** An area chip's fill in this mode. */
     fun areaContainer(area: AreaColor): Color = Color(if (isDark) area.dark.container else area.light.container)
@@ -34,7 +37,7 @@ data class GoalMakerColors(
     fun areaContent(area: AreaColor): Color = Color(if (isDark) area.dark.content else area.light.content)
 
     companion object {
-        fun from(palette: Palette, isDark: Boolean) = GoalMakerColors(
+        fun from(palette: Palette, isDark: Boolean, highlight: HighlightTokens) = GoalMakerColors(
             background = Color(palette.background),
             surface = Color(palette.surface),
             surfaceVariant = Color(palette.surfaceVariant),
@@ -50,6 +53,7 @@ data class GoalMakerColors(
             heroAccent = Color(palette.heroAccent),
             danger = Color(palette.danger),
             isDark = isDark,
+            highlight = SectionHighlightColors.from(highlight, Color(palette.surface)),
         )
     }
 }

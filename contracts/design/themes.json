@@ -18,6 +18,7 @@
     "heroAccent": "The big number and the progress bar on hero.",
     "danger": "Destructive actions and errors, as text or icons on background or surface."
   },
+  "highlight": "How a Settings card lights up after a jump (docs/design/spec.md, Settings). Per theme and mode (pure black uses dark): spot is the theme's brightest accent; the card mixes it into surface at tint; a 2 dp inner ring in ring at ringAlpha; a 4 dp soft glow of the spot at glowAlpha; a 3 dp left edge bar in edge; the title in title at the peak. Text and the title keep 4.5:1 on the tinted card.",
   "themes": {
     "track": {
       "name": "Track",
@@ -45,7 +46,11 @@
         "hero": "#D6FF3A", "onHero": "#0A0A0A", "heroAccent": "#0A0A0A",
         "danger": "#FF7A6E"
       },
-      "black": { "background": "#000000", "surface": "#111210", "surfaceVariant": "#1B1D19" }
+      "black": { "background": "#000000", "surface": "#111210", "surfaceVariant": "#1B1D19" },
+      "highlight": {
+        "light": { "spot": "#D6FF3A", "tint": 0.30, "ring": "#0A0A0A", "ringAlpha": 1.00, "glowAlpha": 0.55, "edge": "#0A0A0A", "title": "#0A0A0A" },
+        "dark": { "spot": "#D6FF3A", "tint": 0.12, "ring": "#D6FF3A", "ringAlpha": 0.70, "glowAlpha": 0.20, "edge": "#D6FF3A", "title": "#F5F5F2" }
+      }
     },
     "electric": {
       "name": "Electric",
@@ -73,7 +78,11 @@
         "hero": "#5B2EE6", "onHero": "#FFFFFF", "heroAccent": "#FFB8A6",
         "danger": "#FF8A80"
       },
-      "black": { "background": "#000000", "surface": "#140F20", "surfaceVariant": "#1E182D" }
+      "black": { "background": "#000000", "surface": "#140F20", "surfaceVariant": "#1E182D" },
+      "highlight": {
+        "light": { "spot": "#5B2EE6", "tint": 0.10, "ring": "#5B2EE6", "ringAlpha": 0.65, "glowAlpha": 0.20, "edge": "#5B2EE6", "title": "#5B2EE6" },
+        "dark": { "spot": "#9579FF", "tint": 0.12, "ring": "#9579FF", "ringAlpha": 0.70, "glowAlpha": 0.22, "edge": "#9579FF", "title": "#B9A8FF" }
+      }
     },
     "night": {
       "name": "Night",
@@ -101,7 +110,11 @@
         "hero": "#3730A3", "onHero": "#FFFFFF", "heroAccent": "#67E8F9",
         "danger": "#FF7A7A"
       },
-      "black": { "background": "#000000", "surface": "#0E0C1C", "surfaceVariant": "#161429" }
+      "black": { "background": "#000000", "surface": "#0E0C1C", "surfaceVariant": "#161429" },
+      "highlight": {
+        "light": { "spot": "#4F46E5", "tint": 0.09, "ring": "#4F46E5", "ringAlpha": 0.60, "glowAlpha": 0.18, "edge": "#4F46E5", "title": "#4F46E5" },
+        "dark": { "spot": "#22D3EE", "tint": 0.12, "ring": "#22D3EE", "ringAlpha": 0.70, "glowAlpha": 0.22, "edge": "#22D3EE", "title": "#67E8F9" }
+      }
     },
     "sunrise": {
       "name": "Sunrise",
@@ -129,7 +142,11 @@
         "hero": "#B0205A", "onHero": "#FFFFFF", "heroAccent": "#FFD23F",
         "danger": "#FF8A80"
       },
-      "black": { "background": "#000000", "surface": "#170E09", "surfaceVariant": "#21150E" }
+      "black": { "background": "#000000", "surface": "#170E09", "surfaceVariant": "#21150E" },
+      "highlight": {
+        "light": { "spot": "#C2410C", "tint": 0.10, "ring": "#C2410C", "ringAlpha": 0.65, "glowAlpha": 0.20, "edge": "#C2410C", "title": "#9A3412" },
+        "dark": { "spot": "#FF8A3D", "tint": 0.12, "ring": "#FF8A3D", "ringAlpha": 0.70, "glowAlpha": 0.22, "edge": "#FF8A3D", "title": "#FFB37A" }
+      }
     }
   },
   "areaPalette": {
