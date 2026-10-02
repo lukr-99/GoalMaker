@@ -32,6 +32,11 @@ object WidgetData {
         return WidgetContent.goalLines(graph.goals.all(), horizon, day(context))
     }
 
+    fun goalsAllDone(context: Context, horizon: GoalHorizon): Boolean {
+        val graph = (context.applicationContext as GoalMakerApplication).graph
+        return WidgetContent.goalsAllDone(graph.goals.all(), horizon, day(context))
+    }
+
     fun rings(context: Context): List<WidgetRing> {
         val graph = (context.applicationContext as GoalMakerApplication).graph
         return WidgetContent.rings(graph.goals.all(), graph.goals.entries(), graph.tasks.all(), graph.habits.read(), day(context))

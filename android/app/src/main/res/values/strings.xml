@@ -811,6 +811,7 @@
     <string name="widget_motivation_month">This month\'s goals</string>
     <string name="widget_motivation_year">This year\'s goals</string>
     <string name="widget_motivation_no_goals">No goals here yet. Tap to open Goals.</string>
+    <string name="widget_motivation_all_done">Every goal here is done. Tap to open Goals.</string>
     <string name="widget_motivation_no_text">Tap to write your own words.</string>
     <string name="widget_motivation_setup_title">Motivation widget</string>
     <string name="widget_motivation_setup_cancel">Close without saving</string>

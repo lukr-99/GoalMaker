@@ -66,15 +66,24 @@ object WidgetContent {
     fun habitsLeft(habits: List<WidgetHabit>): Int = habits.count(WidgetHabit::left)
 
     /**
-     * The Motivation widget's goals: the goals of this [horizon]'s current period as plain written
-     * lines, in the order the owner keeps them, each with its emoji. Dropped goals stay off; a goal
-     * already done stays, since it is still one the owner wrote down.
+     * The Motivation widget's goals: the open goals of this [horizon]'s current period as plain
+     * written lines, in the order the owner keeps them, each with its emoji. A goal marked done or
+     * dropped leaves the widget, so it shows what is still to reach.
      */
-    fun goalLines(all: List<GoalItem>, horizon: GoalHorizon, today: LocalDate): List<String> {
-        val start = GoalRules.periodStart(horizon, today)
-        return all.filter { !it.deleted && it.horizon == horizon && it.periodStart == start && it.status != GoalRules.DROPPED }
+    fun goalLines(all: List<GoalItem>, horizon: GoalHorizon, today: LocalDate): List<String> =
+        current(all, horizon, today).filter { it.status == GoalRules.OPEN }
             .sortedWith(compareBy(GoalItem::position).thenBy { it.title.lowercase(java.util.Locale.ROOT) })
             .map { goal -> goal.emoji?.takeIf(String::isNotBlank)?.let { "$it ${goal.title}" } ?: goal.title }
+
+    /** True when this [horizon]'s current period has goals and every one not dropped is done. */
+    fun goalsAllDone(all: List<GoalItem>, horizon: GoalHorizon, today: LocalDate): Boolean {
+        val kept = current(all, horizon, today).filter { it.status != GoalRules.DROPPED }
+        return kept.isNotEmpty() && kept.all { it.status == GoalRules.DONE }
+    }
+
+    private fun current(all: List<GoalItem>, horizon: GoalHorizon, today: LocalDate): List<GoalItem> {
+        val start = GoalRules.periodStart(horizon, today)
+        return all.filter { !it.deleted && it.horizon == horizon && it.periodStart == start }
     }
 
     /** The Goals widget's rings: this year, month, week and today, by the Goals screen's own board. */
