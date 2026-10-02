@@ -53,7 +53,8 @@ class MotivationWidget : GlanceAppWidget() {
                 } else {
                     choice.text.lines().map(String::trim).filter(String::isNotEmpty)
                 }
-                Shown(WidgetSkin.of(context), widgetId, choice, lines)
+                val allDone = choice.mode == MotivationMode.GOALS && WidgetData.goalsAllDone(context, choice.horizon)
+                Shown(WidgetSkin.of(context), widgetId, choice, lines, allDone)
             }
         }
         val first = read()
@@ -65,11 +66,12 @@ class MotivationWidget : GlanceAppWidget() {
 
     @Composable
     private fun Content(context: Context, shown: Shown) {
-        val (skin, widgetId, choice, lines) = shown
+        val (skin, widgetId, choice, lines, allDone) = shown
         val goals = choice.mode == MotivationMode.GOALS
         val header = if (goals) context.getString(headerOf(choice.horizon)) else null
         val empty = when {
             lines.isNotEmpty() -> null
+            goals && allDone -> context.getString(R.string.widget_motivation_all_done)
             goals -> context.getString(R.string.widget_motivation_no_goals)
             else -> context.getString(R.string.widget_motivation_no_text)
         }
@@ -147,5 +149,12 @@ class MotivationWidget : GlanceAppWidget() {
     }
 
     /** What one widget shows, read before it is drawn. */
-    private data class Shown(val skin: WidgetSkin, val widgetId: Int, val choice: MotivationChoice, val lines: List<String>)
+    private data class Shown(
+        val skin: WidgetSkin,
+        val widgetId: Int,
+        val choice: MotivationChoice,
+        val lines: List<String>,
+        /** The goals mode's horizon has goals and all of them are done, so it says that rather than "none". */
+        val allDone: Boolean = false,
+    )
 }

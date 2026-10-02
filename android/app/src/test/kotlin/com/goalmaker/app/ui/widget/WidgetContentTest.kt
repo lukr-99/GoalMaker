@@ -118,7 +118,7 @@ class WidgetContentTest {
     }
 
     @Test
-    fun `the motivation widget shows one horizon's current goals as written lines`() {
+    fun `the motivation widget shows one horizon's open goals as written lines`() {
         val week = GoalRules.periodStart(GoalHorizon.WEEK, today)
         val month = GoalRules.periodStart(GoalHorizon.MONTH, today)
         goals.add(GoalDraft("Three runs", GoalHorizon.WEEK, week, emoji = "🏃"))
@@ -128,7 +128,9 @@ class WidgetContentTest {
         goals.add(GoalDraft("Read two books", GoalHorizon.MONTH, month))
         goals.add(GoalDraft("Half marathon", GoalHorizon.YEAR, GoalRules.periodStart(GoalHorizon.YEAR, today)))
 
-        assertEquals(listOf("🏃 Three runs", "Call grandma"), WidgetContent.goalLines(goals.all(), GoalHorizon.WEEK, today))
+        // Done and dropped goals leave the widget; it shows what is still to reach.
+        assertEquals(listOf("🏃 Three runs"), WidgetContent.goalLines(goals.all(), GoalHorizon.WEEK, today))
+        assertFalse(WidgetContent.goalsAllDone(goals.all(), GoalHorizon.WEEK, today))
         assertEquals(listOf("Read two books"), WidgetContent.goalLines(goals.all(), GoalHorizon.MONTH, today))
         assertEquals(listOf("Half marathon"), WidgetContent.goalLines(goals.all(), GoalHorizon.YEAR, today))
     }
@@ -138,6 +140,17 @@ class WidgetContentTest {
         goals.add(GoalDraft("Three runs", GoalHorizon.WEEK, GoalRules.periodStart(GoalHorizon.WEEK, today)))
 
         assertTrue(WidgetContent.goalLines(goals.all(), GoalHorizon.MONTH, today).isEmpty())
+        assertFalse(WidgetContent.goalsAllDone(goals.all(), GoalHorizon.MONTH, today))
+    }
+
+    @Test
+    fun `the motivation widget knows when every goal of the horizon is done`() {
+        val month = GoalRules.periodStart(GoalHorizon.MONTH, today)
+        goals.add(GoalDraft("Finish the tax return", GoalHorizon.MONTH, month))!!.also { goals.setStatus(it.id, GoalRules.DONE) }
+        goals.add(GoalDraft("Old idea", GoalHorizon.MONTH, month))!!.also { goals.setStatus(it.id, GoalRules.DROPPED) }
+
+        assertTrue(WidgetContent.goalLines(goals.all(), GoalHorizon.MONTH, today).isEmpty())
+        assertTrue(WidgetContent.goalsAllDone(goals.all(), GoalHorizon.MONTH, today))
     }
 
     @Test

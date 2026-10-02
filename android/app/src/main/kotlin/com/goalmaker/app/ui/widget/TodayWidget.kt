@@ -63,8 +63,13 @@ class TodayWidget : GlanceAppWidget() {
                 .padding(12.dp)
                 .clickable(WidgetOpen.app(context)),
         ) {
+            // A day with nothing planned has nothing to count, so the header says only "Today".
             Text(
-                context.getString(R.string.widget_today_header, done, total),
+                if (total == 0) {
+                    context.getString(R.string.widget_today_title)
+                } else {
+                    context.getString(R.string.widget_today_header, done, total)
+                },
                 style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
             )
             // A Spacer needs a size: with only padding, Glance stretches it over the rest of the
@@ -72,7 +77,7 @@ class TodayWidget : GlanceAppWidget() {
             Spacer(GlanceModifier.height(6.dp))
             if (tasks.isEmpty()) {
                 Text(
-                    context.getString(R.string.widget_today_empty),
+                    context.getString(if (total == 0) R.string.widget_today_empty else R.string.widget_today_all_done),
                     style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
                 )
             }
