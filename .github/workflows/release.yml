@@ -143,6 +143,9 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: windows/global.json
+          # The same NuGet cache as CI. A tag run can read main's caches, never a pull request's.
+          cache: true
+          cache-dependency-path: windows/**/*.csproj
 
       - name: Make sure Inno Setup 6 is available
         shell: pwsh
