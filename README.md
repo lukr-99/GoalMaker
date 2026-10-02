@@ -89,6 +89,7 @@ python tools/validate_repository.py --root .
 
 Running the apps against the local stack, including reading sign-in codes from the local mail viewer,
 is in [docs/setup/local-development.md](docs/setup/local-development.md).
+How GitHub Actions splits and skips these checks is in [docs/setup/ci.md](docs/setup/ci.md).
 
 ## Architecture
 

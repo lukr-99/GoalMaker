@@ -1,11 +1,19 @@
 name: Repository baseline
 
+# Runs on pull requests (where "validate" is a required check) and on main. It used to run on every
+# push to any branch too, which ran it twice for each pull request push (docs/setup/ci.md).
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: baseline-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   validate:
