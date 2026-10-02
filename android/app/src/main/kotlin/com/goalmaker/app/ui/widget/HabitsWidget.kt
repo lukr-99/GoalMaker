@@ -19,6 +19,7 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
@@ -33,39 +34,44 @@ import com.goalmaker.app.R
  */
 class HabitsWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val shown = WidgetFallback.load(context) { WidgetSkin.of(context) to WidgetData.habits(context) }
-        if (shown == null) {
-            provideContent { WidgetFallback.Content(context) }
-            return
-        }
-        val (skin, habits) = shown
-        val left = WidgetContent.habitsLeft(habits)
+        val read = suspend { WidgetFallback.load(context) { WidgetSkin.of(context) to WidgetData.habits(context) } }
+        val first = read()
         provideContent {
-            Column(
-                GlanceModifier
-                    .fillMaxSize()
-                    .background(Color(skin.background))
-                    .cornerRadius(20.dp)
-                    .padding(12.dp)
-                    .clickable(WidgetOpen.app(context)),
-            ) {
-                Text(
-                    if (habits.isEmpty()) {
-                        context.getString(R.string.widget_habits_title)
-                    } else {
-                        context.getString(R.string.widget_habits_header, left)
-                    },
-                    style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
-                )
-                Spacer(GlanceModifier.padding(top = 6.dp))
+            val shown = Widgets.fresh(first, read)
+            if (shown == null) WidgetFallback.Content(context) else Content(context, shown.first, shown.second)
+        }
+    }
+
+    /** What the widget draws, apart from reading it, so a test can lay it out. */
+    @Composable
+    internal fun Content(context: Context, skin: WidgetSkin, habits: List<WidgetHabit>) {
+        val left = WidgetContent.habitsLeft(habits)
+        Column(
+            GlanceModifier
+                .fillMaxSize()
+                .background(Color(skin.background))
+                .cornerRadius(20.dp)
+                .padding(12.dp)
+                .clickable(WidgetOpen.app(context)),
+        ) {
+            Text(
                 if (habits.isEmpty()) {
-                    Text(
-                        context.getString(R.string.widget_habits_empty),
-                        style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
-                    )
-                }
-                habits.forEach { habit -> HabitRow(habit, skin, context) }
+                    context.getString(R.string.widget_habits_title)
+                } else {
+                    context.getString(R.string.widget_habits_header, left)
+                },
+                style = TextStyle(color = ColorProvider(Color(skin.accent)), fontWeight = FontWeight.Bold),
+            )
+            // A Spacer needs a size: with only padding, Glance stretches it over the rest of the
+            // widget and the rows below go out of sight (docs/pitfalls.md).
+            Spacer(GlanceModifier.height(6.dp))
+            if (habits.isEmpty()) {
+                Text(
+                    context.getString(R.string.widget_habits_empty),
+                    style = TextStyle(color = ColorProvider(Color(skin.textMuted))),
+                )
             }
+            habits.forEach { habit -> HabitRow(habit, skin, context) }
         }
     }
 

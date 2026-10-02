@@ -4,6 +4,10 @@ import android.app.Application
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.ComponentName
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.getAppWidgetState
+import androidx.glance.state.PreferencesGlanceStateDefinition
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -58,9 +62,25 @@ class WidgetsTest {
     }
 
     @Test
+    fun `a redraw leaves a mark in the widget's state, so a running session reads its rows again`() = runTest {
+        // Once only: on Windows, DataStore cannot replace its own file in a JVM test.
+        val context = RuntimeEnvironment.getApplication()
+        shadowOf(AppWidgetManager.getInstance(context)).addBoundWidget(
+            7,
+            AppWidgetProviderInfo().apply { provider = ComponentName(context, WidgetKind.TODAY.receiver) },
+        )
+        val glanceId = GlanceAppWidgetManager(context).getGlanceIdBy(7)
+
+        Widgets.redraw(context, WidgetKind.TODAY, 7)
+
+        assertEquals(1L, getAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId)[Widgets.DRAWN])
+    }
+
+    @Test
     fun `the release build keeps each widget class apart`() {
         // R8 folds look-alike classes into one unless they are kept; Glance needs their names.
         val rules = listOf(File("proguard-rules.pro"), File("app/proguard-rules.pro")).first(File::exists).readText()
         assertTrue(rules.contains("-keep,allowshrinking class * extends androidx.glance.appwidget.GlanceAppWidget"))
     }
+
 }

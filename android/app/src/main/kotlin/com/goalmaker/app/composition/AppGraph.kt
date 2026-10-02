@@ -86,6 +86,7 @@ import com.goalmaker.app.data.update.UpdateFolder
 import com.goalmaker.app.data.update.UpdateNotifications
 import com.goalmaker.app.data.update.WorkManagerUpdateDownloads
 import com.goalmaker.app.domain.design.DesignTokens
+import com.goalmaker.app.ui.widget.WidgetData
 import com.goalmaker.app.ui.widget.Widgets
 import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.planning.PromptLibrary
@@ -109,9 +110,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -489,6 +493,19 @@ class AppGraph(context: Context) {
                 clearStaleWants()
             }
         }
+        // The home screen widgets show the replica, so a change made in the app or brought in by a
+        // sync draws them again, a moment after the last of a burst (docs/widgets.md).
+        scope.launch(io) {
+            combine(WidgetData.TABLES.map(replica::watch)) { versions -> versions.toList() }
+                .drop(1)
+                .collectLatest {
+                    delay(WIDGET_REDRAW_DELAY)
+                    Widgets.refresh(appContext)
+                }
+        }
+        scope.launch {
+            settings.appearance.drop(1).collectLatest { Widgets.refresh(appContext) }
+        }
         scope.launch {
             auth.session.collect { session ->
                 when (session) {
@@ -694,5 +711,8 @@ class AppGraph(context: Context) {
         // A dev build's own replica, never mixed with one a release build synced.
         const val LOCAL_REPLICA = "replica-local.db"
         const val LOG_TAG = "GoalMaker"
+
+        // A sync writes table by table; the widgets draw once it has settled.
+        val WIDGET_REDRAW_DELAY = 1.seconds
     }
 }
