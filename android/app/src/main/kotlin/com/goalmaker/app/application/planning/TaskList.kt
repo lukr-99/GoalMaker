@@ -3,9 +3,12 @@ package com.goalmaker.app.application.planning
 import com.goalmaker.app.application.sync.Replica
 import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.planning.Recurrence
+import com.goalmaker.app.domain.sync.SyncRules
 import com.goalmaker.app.domain.sync.SyncedTable
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -103,6 +106,14 @@ class TaskList(
     }
 
     fun setDone(id: String, done: Boolean) = if (done) finish(id, "done") else reopen(id) {}
+
+    /**
+     * Finishes the task as done on planning [day], from the calendar (docs/calendar.md): a day gone by
+     * stamps its noon in [zone], so the stats and the archive count it on that day; today or a day still
+     * to come stamps now.
+     */
+    fun finishOn(id: String, day: LocalDate, today: LocalDate, zone: ZoneId) =
+        finish(id, "done", day.takeIf { it.isBefore(today) }?.atTime(NOON)?.atZone(zone)?.toInstant())
 
     fun delete(id: String) = change(id) { row -> row[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
 
@@ -203,14 +214,15 @@ class TaskList(
         requestSync()
     }
 
-    // Done or dropped; an open repeating task makes its next occurrence in the same transaction.
-    private fun finish(id: String, status: String) {
+    // Done or dropped; an open repeating task makes its next occurrence in the same transaction. [at] is
+    // when it was done, now unless the calendar says a day gone by.
+    private fun finish(id: String, status: String, at: Instant? = null) {
         val changed = replica.inTransaction {
             val row = replica.get(TABLE, id) ?: return@inTransaction false
             val wasOpen = row.text("status") == "open"
             val values = LinkedHashMap(row)
             values["status"] = JsonPrimitive(status)
-            values["completed_at"] = if (status == "done") JsonPrimitive(rows.timestamp()) else JsonNull
+            values["completed_at"] = if (status == "done") JsonPrimitive(at?.let(SyncRules::format) ?: rows.timestamp()) else JsonNull
             // Only a done item stays off its board; the server clears it too (docs/projects.md).
             if (status != "done") values[BOARD_ARCHIVED_AT] = JsonNull
             boardColumn(values)?.let { column ->
@@ -419,6 +431,7 @@ class TaskList(
         const val GOAL_ID = "goal_id"
         const val GOALS = "goals"
         const val BOARD_ARCHIVED_AT = "board_archived_at"
+        val NOON: LocalTime = LocalTime.NOON
         const val MAX_TITLE = 500
         const val MAX_NOTES = 20_000
         val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
