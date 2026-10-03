@@ -199,6 +199,13 @@
                                    AutomationProperties.Name="{Binding FoldText}">
                             <ui:SymbolIcon Symbol="ChevronLeft24" FontSize="12" />
                         </ui:Button>
+                        <!-- A new item in this column, in the new item window; Done has none. -->
+                        <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent" VerticalAlignment="Center"
+                                   Command="{Binding AddCommand}" ToolTip="{Binding AddText}"
+                                   AutomationProperties.Name="{Binding AddText}"
+                                   Visibility="{Binding CanAdd, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Symbol="Add24" FontSize="12" />
+                        </ui:Button>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Style="{StaticResource ColumnTitle}" Margin="4,0,0,0" Text="{Binding Title}" />
                             <TextBlock Margin="6,0,0,0" FontSize="11" Text="{Binding Count}"
@@ -230,6 +237,11 @@
             </Style.Triggers>
         </Style>
     </Page.Resources>
+
+    <Page.InputBindings>
+        <!-- The new item window, from anywhere on the page (docs/projects.md). -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding OpenItemWindowCommand}" />
+    </Page.InputBindings>
 
     <!-- Projects (docs/projects.md): the projects on the left, the board of the one on show beside them. -->
     <Grid Margin="{DynamicResource GM.PagePaddingToEdge}">
@@ -309,16 +321,22 @@
                 </Border>
 
                 <StackPanel Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}">
-                    <!-- A long title wraps down the box instead of running off to the right, and Return adds it. -->
+                    <!--
+                      The quick line: a long title wraps down the box instead of running off to the right,
+                      and Return adds it with its kind. New item opens the window with every field, and
+                      takes what the line holds along.
+                    -->
                     <Grid Margin="0,12,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <ui:TextBox Grid.Column="0" MinWidth="280" MaxHeight="140" TextWrapping="Wrap"
                                     VerticalAlignment="Top" VerticalScrollBarVisibility="Auto"
                                     PlaceholderText="{DynamicResource Projects.ItemTitle}"
+                                    AutomationProperties.Name="{DynamicResource Projects.ItemTitle}"
                                     Text="{Binding NewItemTitle, UpdateSourceTrigger=PropertyChanged}">
                             <ui:TextBox.InputBindings>
                                 <KeyBinding Key="Return" Command="{Binding AddItemCommand}" />
@@ -330,29 +348,15 @@
                                   AutomationProperties.Name="{DynamicResource Projects.ItemType}" />
                         <ui:Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Top" Appearance="Primary"
                                    Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
-                    </Grid>
-
-                    <!-- The new item's column (it follows the kind until one is picked), priority and notes. -->
-                    <Grid Margin="0,0,0,12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <ComboBox Grid.Column="0" MinWidth="110" VerticalAlignment="Top"
-                                  ItemsSource="{Binding NewItemColumns}"
-                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemColumn}"
-                                  ToolTip="{DynamicResource Projects.ItemColumn}"
-                                  AutomationProperties.Name="{DynamicResource Projects.ItemColumn}" />
-                        <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="110" VerticalAlignment="Top"
-                                  ItemsSource="{Binding Priorities}"
-                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemPriority}"
-                                  ToolTip="{DynamicResource Projects.ItemPriority}"
-                                  AutomationProperties.Name="{DynamicResource Projects.ItemPriority}" />
-                        <ui:TextBox Grid.Column="2" Margin="8,0,0,0" MaxHeight="140" TextWrapping="Wrap" AcceptsReturn="True"
-                                    VerticalAlignment="Top" VerticalScrollBarVisibility="Auto"
-                                    PlaceholderText="{DynamicResource Projects.ItemNotes}"
-                                    Text="{Binding NewItemNotes, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Grid.Column="3" Margin="8,0,0,0" VerticalAlignment="Top"
+                                   Command="{Binding OpenItemWindowCommand}" Content="{DynamicResource Projects.NewItem}"
+                                   ToolTip="{DynamicResource Projects.NewItemHelp}"
+                                   AutomationProperties.Name="{DynamicResource Projects.NewItem}"
+                                   AutomationProperties.HelpText="{DynamicResource Projects.NewItemHelp}">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="WindowNew24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
                     </Grid>
 
                     <!-- Who made the items on show: everyone, the owner, or Claude (docs/projects.md). -->

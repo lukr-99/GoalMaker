@@ -673,7 +673,8 @@ public sealed class PageSnapshots
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
         using var theme = Theme(planner);
-        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, planner.Settings, strings, _ => { }, action => action(), planner.Time);
+        var windows = new List<ProjectItemFormViewModel>();
+        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, planner.Settings, strings, _ => { }, action => action(), planner.Time, windows.Add);
         projects.NewCommand.Execute(null);
         projects.ProjectName = "GoalMaker";
         projects.ProjectDescription = "The planner on the phone and the PC.";
@@ -727,6 +728,26 @@ public sealed class PageSnapshots
         // Done folded to its strip, so the other columns take the room.
         done.FoldCommand.Execute(null);
         Save(new ProjectsPage(projects), folder, "projects-folded", new Size(1100, 700));
+
+        // The new item window, from Doing's plus, with a milestone to pick and one item already added.
+        planner.Projects.AddMilestone(planner.Projects.All().Single(project => project.Name == "GoalMaker").Id, "M5");
+        projects.Columns.Single(column => column.Column == ProjectRules.Doing).AddCommand.Execute(null);
+        var form = windows[^1];
+        form.AddAnother = true;
+        form.Title = "Drag cards between columns";
+        form.Create();
+        form.ItemType = ProjectRules.Bug;
+        form.Priority = ProjectRules.High;
+        form.Title = "A card dropped on a folded column vanishes until the board is opened again";
+        form.Deadline = new DateTime(2026, 9, 30);
+        form.Notes = "Seen on Windows only.\n\n- fold Done\n- drop a card on its strip";
+        var window = new ProjectItemWindow(form);
+        var content = (FrameworkElement)window.Content;
+        window.Content = null;
+        content.DataContext = form;
+        content.Width = window.Width;
+        Save(content, folder, "project-item-window", new Size(window.Width, 680));
+        window.Close();
     });
 
     [Fact(Explicit = true)]

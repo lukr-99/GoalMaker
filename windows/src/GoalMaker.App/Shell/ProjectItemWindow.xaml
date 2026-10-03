@@ -1,0 +1,135 @@
+<ui:FluentWindow x:Class="GoalMaker.App.Shell.ProjectItemWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="{Binding Heading}"
+                 Width="560"
+                 SizeToContent="Height"
+                 ResizeMode="NoResize"
+                 ShowInTaskbar="False"
+                 Icon="{DynamicResource GM.LogoIcon}"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="None"
+                 WindowCornerPreference="Round"
+                 WindowStartupLocation="CenterOwner"
+                 FontFamily="{DynamicResource GM.BodyFont}"
+                 Foreground="{DynamicResource GM.TextBrush}">
+    <!--
+      The new item window of the Projects page (docs/projects.md). Top to bottom is also the Tab order:
+      the title, the kind, column and priority, the milestone, day and deadline, the notes, then Add
+      another and the buttons. The keys are the view model's (Press): Enter in the title and Ctrl+Enter
+      anywhere add the item, Esc closes.
+    -->
+    <Grid Background="{DynamicResource GM.BackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="{Binding Heading}" ShowMinimize="False" ShowMaximize="False" CanMaximize="False">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="{DynamicResource GM.LogoIcon}" />
+            </ui:TitleBar.Icon>
+        </ui:TitleBar>
+
+        <StackPanel Grid.Row="1" Margin="24,4,24,20">
+            <TextBlock Style="{StaticResource GM.FieldLabel}" Margin="0,0,0,4" Text="{DynamicResource Projects.ItemTitle}" />
+            <ui:TextBox x:Name="TitleBox"
+                        MaxLength="500"
+                        MaxHeight="120"
+                        TextWrapping="Wrap"
+                        VerticalScrollBarVisibility="Auto"
+                        Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                        AutomationProperties.Name="{DynamicResource Projects.ItemTitle}"
+                        AutomationProperties.IsRequiredForForm="True" />
+            <TextBlock Margin="0,4,0,0"
+                       FontSize="12"
+                       Foreground="{DynamicResource GM.DangerBrush}"
+                       Text="{DynamicResource ProjectItem.TitleMissing}"
+                       AutomationProperties.LiveSetting="Assertive"
+                       Visibility="{Binding TitleMissing, Converter={StaticResource BoolToVisibility}}" />
+
+            <UniformGrid Rows="1">
+                <StackPanel Margin="0,0,8,0">
+                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource Projects.ItemType}" />
+                    <ComboBox ItemsSource="{Binding ItemTypes}"
+                              DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding ItemType}"
+                              AutomationProperties.Name="{DynamicResource Projects.ItemType}" />
+                </StackPanel>
+                <StackPanel Margin="0,0,8,0">
+                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource Projects.ItemColumn}" />
+                    <ComboBox ItemsSource="{Binding Columns}"
+                              DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding Column}"
+                              AutomationProperties.Name="{DynamicResource Projects.ItemColumn}" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource Projects.ItemPriority}" />
+                    <ComboBox ItemsSource="{Binding Priorities}"
+                              DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding Priority}"
+                              AutomationProperties.Name="{DynamicResource Projects.ItemPriority}" />
+                </StackPanel>
+            </UniformGrid>
+
+            <!-- A collapsed milestone picker gives its room to the day and the deadline. -->
+            <UniformGrid Rows="1">
+                <StackPanel Margin="0,0,8,0" Visibility="{Binding HasMilestones, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource ProjectItem.Milestone}" />
+                    <ComboBox ItemsSource="{Binding Milestones}"
+                              DisplayMemberPath="Label" SelectedItem="{Binding Milestone}"
+                              AutomationProperties.Name="{DynamicResource ProjectItem.Milestone}" />
+                </StackPanel>
+                <StackPanel Margin="0,0,8,0">
+                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource Task.Day}" />
+                    <DatePicker SelectedDateFormat="Short" SelectedDate="{Binding PlannedDay}" AutomationProperties.Name="{DynamicResource Task.Day}" />
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource Task.Deadline}" />
+                    <DatePicker SelectedDateFormat="Short" SelectedDate="{Binding Deadline}" AutomationProperties.Name="{DynamicResource Task.Deadline}" />
+                </StackPanel>
+            </UniformGrid>
+
+            <TextBlock Style="{StaticResource GM.FieldLabel}" Text="{DynamicResource Projects.ItemNotes}" />
+            <ui:TextBox MinHeight="120"
+                        MaxHeight="260"
+                        MaxLength="20000"
+                        AcceptsReturn="True"
+                        AcceptsTab="False"
+                        TextWrapping="Wrap"
+                        VerticalContentAlignment="Top"
+                        VerticalScrollBarVisibility="Auto"
+                        Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                        AutomationProperties.Name="{DynamicResource Projects.ItemNotes}"
+                        AutomationProperties.HelpText="{DynamicResource ProjectItem.NotesHint}" />
+            <TextBlock Margin="0,6,0,0" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                       Text="{DynamicResource ProjectItem.NotesHint}" />
+
+            <!-- With Add another on, the last item added is named here while the window waits for the next. -->
+            <TextBlock Margin="0,12,0,0" FontSize="12" TextWrapping="Wrap"
+                       Foreground="{DynamicResource GM.AccentBrush}"
+                       Text="{Binding AddedText}"
+                       AutomationProperties.LiveSetting="Polite"
+                       Visibility="{Binding HasAdded, Converter={StaticResource BoolToVisibility}}" />
+
+            <DockPanel Margin="0,16,0,0">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:Button Command="{Binding CancelCommand}"
+                               Content="{DynamicResource ProjectItem.Cancel}"
+                               AutomationProperties.Name="{DynamicResource ProjectItem.Cancel}" />
+                    <ui:Button Margin="8,0,0,0"
+                               Appearance="Primary"
+                               Command="{Binding CreateCommand}"
+                               Content="{DynamicResource ProjectItem.Add}"
+                               AutomationProperties.Name="{DynamicResource ProjectItem.Add}" />
+                </StackPanel>
+                <CheckBox VerticalAlignment="Center"
+                          IsChecked="{Binding AddAnother}"
+                          Content="{DynamicResource ProjectItem.AddAnother}"
+                          AutomationProperties.Name="{DynamicResource ProjectItem.AddAnother}" />
+            </DockPanel>
+            <TextBlock Margin="0,10,0,0" FontSize="11" TextWrapping="Wrap"
+                       Foreground="{DynamicResource GM.TextMutedBrush}"
+                       Text="{DynamicResource ProjectItem.Keys}" />
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>

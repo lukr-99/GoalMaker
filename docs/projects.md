@@ -86,7 +86,20 @@ An idea and a bug carry their own icon and colour on the board, so a mixed colum
 
 In both apps a new item takes its type, column, priority and notes; the column follows the type
 until one is picked. Moving an item to Done or taking it out of the project offers Undo, as the
-lists do. Each project's status carries a mark of its own, in the list or picker and on the card:
+lists do.
+
+On Windows a new item goes in two ways. The quick line above the board takes a title and its type,
+and Enter adds it to the column the type calls for. For a fuller item, the **new item window** opens
+over the main window: from New item beside the quick line, from the plus in the header of Backlog,
+To do or Doing (that column is then picked), or with Ctrl+N anywhere on the Projects page. It takes
+the title, the type, the column, the priority, a milestone of the project (when it has any), the
+planned day, the deadline and notes in light Markdown, as a task's notes are. Whatever the quick line
+held moves into the window and leaves the line once an item goes in. The keyboard starts in the
+title; Enter there adds the item, Ctrl+Enter adds it from anywhere (the notes included, where Enter
+starts a new line), and Esc closes the window. With **Add another after this one** ticked, the window
+stays open after each item, empty but for its choices and naming the item just added, so a run of
+items goes in without reopening it; the next window opens the same way. The window takes the theme,
+its accent, fonts and light or dark, like the main window. Each project's status carries a mark of its own, in the list or picker and on the card:
 active plays on in the accent, paused and done step back in the muted colour.
 
 ## Through the connector
