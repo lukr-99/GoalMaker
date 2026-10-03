@@ -14,6 +14,12 @@ from typing import Any, Iterable, Sequence
 from migrations import MigrationError, discover_migrations
 
 
+if sys.version_info < (3, 11):
+    sys.exit(
+        f"CodePrint tools need Python 3.11 or newer, but this is {sys.version.split()[0]}."
+    )
+
+
 TEXT_EXTENSIONS = {
     ".cs",
     ".csproj",
@@ -95,28 +101,33 @@ def _matches_any(path: Path, patterns: Iterable[str]) -> bool:
     return any(normalized.match(pattern) for pattern in patterns)
 
 
-def _git_ignored(root: Path) -> set[str]:
-    """What git is told to ignore. A generated file (a tool's state, a local config) is not the
-    repository's to keep tidy, and complaining about it stops the whole check."""
+def _git_files(root: Path) -> list[Path] | None:
+    """Tracked and untracked files that Git does not ignore, or None outside a Git work tree."""
+
     try:
         result = subprocess.run(
-            ["git", "-C", str(root), "ls-files", "--others", "--ignored", "--exclude-standard"],
-            capture_output=True, text=True, check=False, timeout=60,
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+            cwd=root,
+            check=False,
+            capture_output=True,
         )
-    except (OSError, subprocess.SubprocessError):
-        return set()
-    return {line.strip() for line in result.stdout.splitlines() if line.strip()} if result.returncode == 0 else set()
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    names = result.stdout.decode("utf-8").split("\0")
+    return [root / name for name in names if name]
 
 
 def _iter_files(root: Path) -> Iterable[Path]:
-    ignored = _git_ignored(root)
-    for path in root.rglob("*"):
+    # Inside a Git work tree, gitignored build output such as an installer's publish folder is
+    # never checked; elsewhere only the generated folder names above are skipped.
+    candidates = _git_files(root)
+    for path in sorted(set(candidates)) if candidates is not None else root.rglob("*"):
         if not path.is_file():
             continue
         relative = path.relative_to(root)
         if any(part in IGNORED_DIRECTORY_NAMES for part in relative.parts):
-            continue
-        if relative.as_posix() in ignored:
             continue
         yield path
 
