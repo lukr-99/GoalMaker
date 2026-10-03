@@ -96,6 +96,9 @@
                                    Foreground="{DynamicResource GM.TextMutedBrush}"
                                    Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
+                    <ContentControl Margin="0,4,0,0" HorizontalAlignment="Left" Focusable="False"
+                                    Content="{Binding Project}" ContentTemplate="{StaticResource ProjectTag}"
+                                    Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </ui:Button>
         </DataTemplate>

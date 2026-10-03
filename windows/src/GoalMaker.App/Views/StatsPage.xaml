@@ -27,14 +27,43 @@
             <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
         </Style>
 
-        <!-- One column of the tasks or goals chart. -->
-        <DataTemplate x:Key="ChartBar" DataType="{x:Type vm:StatsBarViewModel}">
-            <StackPanel Margin="3,0">
+        <!--
+            One week of the tasks chart: everything done in the faded accent, and the project work in the
+            full accent from the bottom, so the bar reads as project work under the rest (docs/stats.md).
+        -->
+        <DataTemplate x:Key="WeekBar" DataType="{x:Type vm:StatsBarViewModel}">
+            <StackPanel Margin="3,0" ToolTip="{Binding Tip}" AutomationProperties.Name="{Binding Tip}">
                 <TextBlock Text="{Binding Value}" FontSize="11" HorizontalAlignment="Center"
                            Foreground="{DynamicResource GM.TextMutedBrush}" />
-                <controls:ShareBar Height="78" Track="False" Fraction="{Binding Fraction}" Filled="{Binding Filled}"
-                                   ToolTip="{Binding Label}" />
+                <Grid Height="78">
+                    <controls:ShareBar Track="False" Fraction="{Binding Fraction}" Filled="{Binding Filled}">
+                        <controls:ShareBar.Style>
+                            <Style TargetType="controls:ShareBar">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding DataContext.HasProjectWork, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True">
+                                        <Setter Property="Opacity" Value="0.45" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </controls:ShareBar.Style>
+                    </controls:ShareBar>
+                    <controls:ShareBar Track="False" Fraction="{Binding ProjectFraction}" Filled="True"
+                                       Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
             </StackPanel>
+        </DataTemplate>
+
+        <!-- One project in the By project block: its name, a bar against the busiest, and what it finished. -->
+        <DataTemplate x:Key="ProjectRow" DataType="{x:Type vm:StatsProjectViewModel}">
+            <DockPanel Margin="0,0,0,8">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Value}" FontSize="14" MinWidth="28" TextAlignment="Right"
+                           FontFamily="{DynamicResource GM.NumberFont}" Typography.NumeralAlignment="Tabular"
+                           Foreground="{DynamicResource GM.AccentBrush}" VerticalAlignment="Center" />
+                <StackPanel VerticalAlignment="Center" Margin="0,0,12,0">
+                    <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                    <controls:ShareBar Height="6" Margin="0,4,0,0" Flat="True" Fraction="{Binding Fraction}" />
+                </StackPanel>
+            </DockPanel>
         </DataTemplate>
 
         <!-- One column of the goals chart, which names its month underneath. -->
@@ -106,6 +135,8 @@
                         <TextBlock Text="{Binding DoneValue}" FontSize="28" Foreground="{DynamicResource GM.AccentBrush}" />
                         <TextBlock Text="{DynamicResource Stats.Done}" FontSize="12" FontFamily="{DynamicResource GM.BodyStrongFont}" />
                         <TextBlock Text="{Binding DonePerWeek}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <TextBlock Text="{Binding DoneOnProjects}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding HasProjectWork, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </Border>
                 <Border Style="{StaticResource Card}" Margin="3,0,3,0">
@@ -127,7 +158,7 @@
             <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Stats.TasksAWeek}" />
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <ItemsControl ItemsSource="{Binding Weeks}" ItemTemplate="{StaticResource ChartBar}" Focusable="False">
+                    <ItemsControl ItemsSource="{Binding Weeks}" ItemTemplate="{StaticResource WeekBar}" Focusable="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <primitives:UniformGrid Rows="1" />
@@ -140,8 +171,29 @@
                         <TextBlock HorizontalAlignment="Right" Text="{DynamicResource Stats.ThisWeek}" FontSize="11"
                                    Foreground="{DynamicResource GM.TextMutedBrush}" />
                     </DockPanel>
+                    <!-- Which part of a bar is which, once any of the weeks had project work. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0"
+                                Visibility="{Binding HasProjectWork, Converter={StaticResource BoolToVisibility}}">
+                        <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource GM.AccentBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ProjectWorkLegend}" FontSize="11" Margin="6,0,16,0" VerticalAlignment="Center" />
+                        <Border Width="10" Height="10" CornerRadius="5" Background="{DynamicResource GM.AccentBrush}" Opacity="0.45" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding OtherWorkLegend}" FontSize="11" Margin="6,0,0,0" VerticalAlignment="Center" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
+
+            <!-- The projects that finished the most over the same weeks. -->
+            <StackPanel Visibility="{Binding HasProjectWork, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Stats.ByProject}" />
+                <Border Style="{StaticResource Card}" Padding="12,12,12,4">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding ByProject}" ItemTemplate="{StaticResource ProjectRow}" Focusable="False" />
+                        <TextBlock Text="{Binding MoreProjects}" FontSize="11" Margin="0,0,0,8"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding HasMoreProjects, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
 
             <StackPanel Visibility="{Binding HasMonths, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Stats.GoalsAMonth}" />

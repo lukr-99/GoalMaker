@@ -14,6 +14,8 @@ public sealed partial class ArchiveViewModel : ObservableObject
     private readonly TaskList tasks;
     private readonly IStrings strings;
     private readonly Action<string> openTask;
+    private readonly ProjectList? projects;
+    private readonly Action<string>? openProject;
 
     [ObservableProperty]
     private string query = string.Empty;
@@ -24,12 +26,25 @@ public sealed partial class ArchiveViewModel : ObservableObject
     [ObservableProperty]
     private string emptyText = string.Empty;
 
-    public ArchiveViewModel(TaskList tasks, IStrings strings, Action<Action> runOnUi, Action<string> openTask)
+    public ArchiveViewModel(
+        TaskList tasks,
+        IStrings strings,
+        Action<Action> runOnUi,
+        Action<string> openTask,
+        ProjectList? projects = null,
+        Action<string>? openProject = null)
     {
         this.tasks = tasks;
         this.strings = strings;
         this.openTask = openTask;
+        this.projects = projects;
+        this.openProject = openProject;
         tasks.Changed += (_, _) => runOnUi(Refresh);
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
@@ -38,12 +53,18 @@ public sealed partial class ArchiveViewModel : ObservableObject
     public void Refresh()
     {
         Results.Clear();
+        var projectById = (projects?.All() ?? []).ToDictionary(project => project.Id, StringComparer.Ordinal);
         foreach (var task in ArchiveRules.Search(tasks.All(), Query))
         {
             var done = task.CompletedAt is { } stamp && SyncRules.InstantOf(stamp) is { } instant
                 ? strings.Get("Archive.DoneOn", instant.ToLocalTime().ToString("ddd d MMM", CultureInfo.CurrentCulture))
                 : string.Empty;
-            Results.Add(new ArchiveRowViewModel(task.Title, done, new RelayCommand(() => openTask(task.Id)), new RelayCommand(() => tasks.SetDone(task.Id, false))));
+            Results.Add(new ArchiveRowViewModel(
+                task.Title,
+                done,
+                new RelayCommand(() => openTask(task.Id)),
+                new RelayCommand(() => tasks.SetDone(task.Id, false)),
+                ProjectTagViewModel.For(task, projectById, strings, openProject)));
         }
 
         IsEmpty = Results.Count == 0;

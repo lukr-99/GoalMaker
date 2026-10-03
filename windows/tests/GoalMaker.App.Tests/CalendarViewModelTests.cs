@@ -104,6 +104,24 @@ public sealed class CalendarViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AProjectItemOnTheDayWearsItsProjectsChip()
+    {
+        Plan("Fix the build +GoalMaker", Today);
+        Plan("Call the bank", Today);
+        var opened = new List<string>();
+        var page = Page(opened.Add);
+
+        page.Open(Today);
+
+        var item = page.DayEntries.Single(entry => entry.Title == "Fix the build");
+        Assert.True(item.HasProject);
+        Assert.Equal("GoalMaker", item.Project!.Name);
+        Assert.False(page.DayEntries.Single(entry => entry.Title == "Call the bank").HasProject);
+        item.Project.OpenCommand.Execute(null);
+        Assert.Equal([planner.Projects.Find("GoalMaker")!.Id], opened);
+    }
+
+    [Fact]
     public void PickingTheSameDayAgainClosesIt()
     {
         var page = Page();
@@ -123,12 +141,14 @@ public sealed class CalendarViewModelTests : IDisposable
         return planner.Tasks.Find(task.Id)!;
     }
 
-    private CalendarViewModel Page() => new(
+    private CalendarViewModel Page(Action<string>? openProject = null) => new(
         planner.Tasks,
         planner.Reminders,
         planner.Settings,
         planner.Strings,
         planner.Time,
         _ => { },
-        action => action());
+        action => action(),
+        planner.Projects,
+        openProject);
 }

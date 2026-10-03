@@ -140,6 +140,24 @@ public sealed class TaskDetailViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ADoneProjectItemInTheArchiveWearsItsProjectsChip()
+    {
+        var item = Add("Fix the build +GoalMaker");
+        var milk = Add("Buy milk");
+        planner.Tasks.SetDone(item.Id, true);
+        planner.Tasks.SetDone(milk.Id, true);
+        var opened = new List<string>();
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Strings, action => action(), _ => { }, planner.Projects, opened.Add);
+
+        var row = archive.Results.Single(result => result.Title == "Fix the build");
+        Assert.True(row.HasProject);
+        Assert.Equal("Lists.ProjectTask(GoalMaker)", row.Project!.Label);
+        Assert.False(archive.Results.Single(result => result.Title == "Buy milk").HasProject);
+        row.Project.OpenCommand.Execute(null);
+        Assert.Equal([planner.Projects.Find("GoalMaker")!.Id], opened);
+    }
+
+    [Fact]
     public void TheGoalPickerOffersOpenGoalsStillRunningAndLinksOne()
     {
         var task = Add("Long run");

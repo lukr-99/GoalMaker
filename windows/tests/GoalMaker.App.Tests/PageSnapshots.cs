@@ -638,6 +638,59 @@ public sealed class PageSnapshots
     });
 
     [Fact(Explicit = true)]
+    public void ProjectWorkInTheListsAndStats() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Fix the build 9:00 +GoalMaker", Today);
+        Add(planner, "Dark widget @Home +GoalMaker", Today);
+        Add(planner, "Crash on start ! +GoalMaker", Today);
+        Add(planner, "Prune the roses +Garden", Today);
+        Add(planner, "Buy milk @Home", Today);
+        planner.Tasks.SetItemType(planner.Task("Dark widget").Id, ProjectRules.Idea);
+        planner.Tasks.SetItemType(planner.Task("Crash on start").Id, ProjectRules.Bug);
+        using var theme = Theme(planner);
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time, theme.AreaBrush,
+            () => true, planner.Tick, action => action(), projects: planner.Projects, openProject: _ => { });
+        Save(new TodayPage(today), folder, "project-chips-today");
+
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Settings, strings, planner.Time, _ => { }, action => action(), planner.Projects, _ => { });
+        calendar.Open(Today);
+        Save(new CalendarPage(calendar), folder, "project-chips-calendar", new Size(1000, 620));
+
+        foreach (var title in new[] { "Fix the build", "Prune the roses", "Buy milk" })
+        {
+            planner.Tasks.SetDone(planner.Task(title).Id, true);
+        }
+
+        var archive = new ArchiveViewModel(planner.Tasks, strings, action => action(), _ => { }, planner.Projects, _ => { });
+        Save(new ArchivePage(archive), folder, "project-chips-archive");
+
+        // A few weeks of finished work, some of it for projects, for the stats page.
+        foreach (var (back, project, count) in new[] { (1, "+GoalMaker", 3), (1, string.Empty, 2), (3, "+Garden", 2), (3, string.Empty, 4), (5, "+GoalMaker", 1) })
+        {
+            for (var index = 0; index < count; index++)
+            {
+                Add(planner, $"Week {back} thing {index} {project}", null);
+                var task = planner.Tasks.All().Last();
+                planner.Tasks.SetDone(task.Id, true);
+                var row = planner.Replica.Get("tasks", task.Id)!;
+                row["completed_at"] = JsonValue.Create($"{Today.AddDays(-7 * back):yyyy-MM-dd}T18:00:00.000000Z");
+                planner.Replica.Queue("tasks", row);
+            }
+        }
+
+        var stats = new StatsViewModel(
+            planner.Tasks, planner.Goals, planner.Habits, planner.Reviews, planner.Settings, strings, planner.Time, action => action(),
+            projects: planner.Projects);
+        Save(new StatsPage(stats), folder, "stats-project-work", new Size(900, 900));
+    });
+
+    [Fact(Explicit = true)]
     public void CalendarPage_() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();
