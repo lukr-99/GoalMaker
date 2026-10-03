@@ -1143,7 +1143,7 @@
     <string name="tally_categories">Your categories</string>
     <string name="tally_categories_none">None yet. The shipped ones, like Coding and Video, are always there.</string>
     <string name="tally_rules">Your rules</string>
-    <string name="tally_rules_none">None yet. Your rules come before the shipped ones, from the next count on.</string>
+    <string name="tally_rules_none">None yet. Your rules come before the shipped ones and sort today\'s time again at once. Make a rule under an app to start one.</string>
     <string name="tally_rule_line">%1$s counts as %2$s</string>
     <string name="tally_category_add">Add a category</string>
     <string name="tally_category_name">Name</string>
