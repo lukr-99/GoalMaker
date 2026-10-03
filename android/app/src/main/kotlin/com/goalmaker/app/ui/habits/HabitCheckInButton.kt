@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,7 +42,8 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * A habit card's check-in button (the habits prototype, option B). A check toggles, a count adds one
  * ("+1"), an amount asks for its value. Done, it fills with the accent and turns round; skipped, it is a
- * dashed outline whose tap undoes the skip. It rests while the habit is paused or not due today.
+ * dashed outline whose tap undoes the skip; failed, a danger outline with a cross whose tap undoes the
+ * fail. It rests while the habit is paused or not due today.
  */
 @Composable
 fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -57,7 +59,7 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
     )
     val fill by animateColorAsState(
         targetValue = when {
-            row.skipped -> colors.surface.copy(alpha = 0f)
+            row.skipped || row.failed -> colors.surface.copy(alpha = 0f)
             on -> colors.accent
             else -> colors.surfaceVariant
         },
@@ -67,6 +69,7 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
     val content = if (on) colors.onAccent else colors.text
     val label = when {
         row.skipped -> stringResource(R.string.habits_unskip_on, habit.name)
+        row.failed -> stringResource(R.string.habits_unfail_on, habit.name)
         checkMeasure && row.value >= 1.0 -> stringResource(R.string.habits_take_back, habit.name)
         checkMeasure -> stringResource(R.string.habits_check_in, habit.name)
         habit.measure == HabitRules.COUNT -> stringResource(R.string.habits_add_one, habit.name)
@@ -75,6 +78,7 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
     val status = statusText(row)
     val shape = RoundedCornerShape(corner)
     val outline = colors.outline
+    val danger = colors.danger
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -83,6 +87,16 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
             .clip(shape)
             .background(fill, shape)
             .drawBehind {
+                if (row.failed) {
+                    val width = 2.dp.toPx()
+                    drawRoundRect(
+                        danger,
+                        topLeft = androidx.compose.ui.geometry.Offset(width / 2, width / 2),
+                        size = androidx.compose.ui.geometry.Size(size.width - width, size.height - width),
+                        cornerRadius = CornerRadius(corner.toPx()),
+                        style = Stroke(width),
+                    )
+                }
                 if (row.skipped) {
                     val width = 2.dp.toPx()
                     drawRoundRect(
@@ -102,6 +116,7 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
     ) {
         when {
             row.skipped -> Icon(Icons.AutoMirrored.Outlined.Undo, contentDescription = null, tint = colors.textMuted)
+            row.failed -> Icon(Icons.Outlined.Close, contentDescription = null, tint = colors.danger)
             !checkMeasure && habit.measure == HabitRules.COUNT ->
                 Text("+1", style = AppTheme.type.number.merge(MaterialTheme.typography.titleSmall), fontWeight = FontWeight.Bold, color = content)
             on && checkMeasure -> Icon(Icons.Outlined.Check, contentDescription = null, tint = content)

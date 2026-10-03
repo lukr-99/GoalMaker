@@ -96,11 +96,12 @@ fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() ->
         if (before != null && !reduceMotion && !before.containsAll(state.milestones)) bursts++
     }
 
-    // The card's button: undo a skip, ask an amount for its value, or check in or add one.
+    // The card's button: undo a skip or a fail, ask an amount for its value, or check in or add one.
     fun checkIn(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
         when {
             row.skipped -> viewModel.skip(row.habit.id, false)
+            row.failed -> viewModel.fail(row.habit.id, false)
             else -> scope.launch { if (!viewModel.tap(row.habit.id)) logging = row.habit }
         }
     }
@@ -233,6 +234,7 @@ fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() ->
                 onCheckIn = { checkIn(row) },
                 onLog = { logging = row.habit },
                 onSkip = { skipped -> viewModel.skip(id, skipped) },
+                onFail = { failed -> viewModel.fail(id, failed) },
                 onClear = { viewModel.clearToday(id) },
                 onPause = { viewModel.pause(id) },
                 onResume = { viewModel.resume(id) },

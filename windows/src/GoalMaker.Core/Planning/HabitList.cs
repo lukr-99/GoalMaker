@@ -92,7 +92,7 @@ public sealed class HabitList
 
     /// <summary>
     /// Adds <paramref name="amount"/> to the day's value (a check sets it to 1) and returns the new value;
-    /// a check-in that said skipped counts again. Null when the habit is gone or the amount isn't positive.
+    /// a check-in that said skipped or failed counts again. Null when the habit is gone or the amount isn't positive.
     /// </summary>
     public double? CheckIn(string habitId, DateOnly day, double amount = 1)
     {
@@ -101,7 +101,7 @@ public sealed class HabitList
             return null;
         }
 
-        var before = CheckinOn(habitId, day) is { Skipped: false } checkin ? checkin.Value : 0;
+        var before = CheckinOn(habitId, day) is { Skipped: false, Failed: false } checkin ? checkin.Value : 0;
         var value = habit.Measure == HabitRules.Check ? 1 : before + amount;
         Write(habitId, day, value, skipped: false);
         return value;
@@ -121,7 +121,7 @@ public sealed class HabitList
         switch (habit.Measure)
         {
             case HabitRules.Check:
-                var checked_ = CheckinOn(habitId, day) is { Skipped: false, Value: >= 1 };
+                var checked_ = CheckinOn(habitId, day) is { Skipped: false, Failed: false, Value: >= 1 };
                 Write(habitId, day, checked_ ? 0 : 1, skipped: false);
                 return true;
             case HabitRules.Count:
@@ -153,6 +153,21 @@ public sealed class HabitList
 
         var value = skipped ? 0 : CheckinOn(habitId, day)?.Value ?? 0;
         Write(habitId, day, value, skipped);
+        return true;
+    }
+
+    /// <summary>
+    /// Marks the period holding <paramref name="day"/> failed: the owner says it won't happen, so it is
+    /// missed at once and stops asking. Taking the fail back leaves the day empty again.
+    /// </summary>
+    public bool Fail(string habitId, DateOnly day, bool failed = true)
+    {
+        if (Find(habitId) is null)
+        {
+            return false;
+        }
+
+        Write(habitId, day, 0, skipped: false, failed);
         return true;
     }
 
@@ -204,7 +219,7 @@ public sealed class HabitList
     private HabitCheckin? CheckinOn(string habitId, DateOnly day) =>
         replica.Get(CheckinTable, HabitRules.CheckinId(habitId, day)) is { } row && ToCheckin(row) is { Deleted: false } checkin ? checkin : null;
 
-    private void Write(string habitId, DateOnly day, double value, bool skipped)
+    private void Write(string habitId, DateOnly day, double value, bool skipped, bool failed = false)
     {
         var id = HabitRules.CheckinId(habitId, day);
         var existing = replica.Get(CheckinTable, id);
@@ -212,6 +227,7 @@ public sealed class HabitList
         {
             existing["value"] = value;
             existing["skipped"] = skipped;
+            existing["failed"] = failed;
             existing[SyncedTable.DeletedAt] = null;
             replica.Queue(CheckinTable, existing);
             requestSync();
@@ -225,6 +241,7 @@ public sealed class HabitList
             ["day"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["value"] = value,
             ["skipped"] = skipped,
+            ["failed"] = failed,
         });
         if (row is null)
         {
@@ -344,7 +361,9 @@ public sealed class HabitList
         Day(row["day"]),
         Number(row["value"]) ?? 0,
         Flag(row["skipped"]),
-        row[SyncedTable.DeletedAt] is not null);
+        row[SyncedTable.DeletedAt] is not null,
+        // A row from before Supabase migration 0021 has no value, and nothing was failed then.
+        Flag(row["failed"]));
 
     private static HabitPause ToPause(JsonObject row) => new(
         (string?)row[SyncedTable.Id] ?? string.Empty,

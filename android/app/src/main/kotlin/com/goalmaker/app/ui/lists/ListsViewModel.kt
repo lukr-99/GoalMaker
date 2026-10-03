@@ -219,6 +219,11 @@ class ListsViewModel(
         viewModelScope.launch(io) { habits.skip(id, today(), skipped) }
     }
 
+    /** Fails a habit's period holding today (it won't happen: missed now, the streak ends) or takes the fail back. */
+    fun failHabit(id: String, failed: Boolean) {
+        viewModelScope.launch(io) { habits.fail(id, today(), failed) }
+    }
+
     /** Clears today's value of a habit, for a check-in made by mistake. */
     fun clearHabit(id: String) {
         viewModelScope.launch(io) { habits.setValue(id, today(), 0.0) }

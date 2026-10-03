@@ -64,7 +64,7 @@ fun HabitCard(
     val colors = AppTheme.colors
     val more = stringResource(R.string.habits_more, habit.name)
     val skipLabel = stringResource(skipText(habit))
-    val canSkip = !habit.archived && row.canCheckIn && !row.skipped
+    val canSkip = !habit.archived && row.canCheckIn && !row.skipped && !row.failed
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -105,13 +105,13 @@ fun HabitCard(
                         status,
                         style = MaterialTheme.typography.bodySmall,
                         fontStyle = if (row.skipped) FontStyle.Italic else FontStyle.Normal,
-                        color = if (row.isOver) colors.danger else colors.textMuted,
+                        color = if (row.isOver || row.failed) colors.danger else colors.textMuted,
                     )
                     if (full) {
                         row.goalTitle?.let { Text(stringResource(R.string.habits_serves, it), style = MaterialTheme.typography.bodySmall, color = colors.textMuted) }
                     }
                 }
-                if (row.canCheckIn && !row.skipped) HabitProgress(row)
+                if (row.canCheckIn && !row.skipped && !row.failed) HabitProgress(row)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                     HabitWeekDots(row.dots, today, Modifier.weight(1f, fill = false))
                     if (full && !habit.showOnToday && !habit.archived) NotOnToday(Modifier.padding(start = 8.dp))
@@ -187,6 +187,13 @@ private fun NotOnToday(modifier: Modifier = Modifier) {
             .border(1.dp, AppTheme.colors.outline.copy(alpha = 0.6f), RoundedCornerShape(50))
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
+}
+
+/** What failing a habit's period is called: today, this week or this month. */
+internal fun failText(habit: HabitItem): Int = when (habit.cadence) {
+    HabitRules.PER_WEEK -> R.string.habits_fail_week
+    HabitRules.PER_MONTH -> R.string.habits_fail_month
+    else -> R.string.habits_fail_day
 }
 
 /** What skipping a habit's period is called: today, this week or this month. */

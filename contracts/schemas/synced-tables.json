@@ -356,6 +356,11 @@
           "required": true
         },
         {
+          "name": "failed",
+          "kind": "boolean",
+          "required": true
+        },
+        {
           "name": "created_at",
           "kind": "timestamp",
           "required": true

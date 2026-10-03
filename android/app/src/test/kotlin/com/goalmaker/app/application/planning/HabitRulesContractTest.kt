@@ -48,6 +48,7 @@ class HabitRulesContractTest {
             day = checkin.day("day"),
             value = checkin.number("value")!!,
             skipped = checkin.getValue("skipped").jsonPrimitive.boolean,
+            failed = checkin["failed"]?.jsonPrimitive?.boolean ?: false,
         )
     }
 

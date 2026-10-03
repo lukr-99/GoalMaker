@@ -338,7 +338,7 @@ Story numbers continue from 99 (the list above repeats 88 once; those numbers st
 - `habits`: cadence (`daily | weekdays | per_week | per_month` with days or count), measure
   (`check | count | amount`), target and unit, linked goal, paused ranges, and whether it shows on
   Today.
-- `habit_checkins`: date, value, skipped flag.
+- `habit_checkins`: date, value, skipped flag, failed flag.
 - `projects`: name, description, area, status, repository URL, local folder, notes.
 - `project_milestones`.
 - `reminders`: owner item, fire time (absolute or offset from the task's time), important flag,

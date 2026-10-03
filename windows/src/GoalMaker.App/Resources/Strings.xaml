@@ -678,6 +678,10 @@
     <sys:String x:Key="Habits.SkipWeek">Skip this week</sys:String>
     <sys:String x:Key="Habits.SkipMonth">Skip this month</sys:String>
     <sys:String x:Key="Habits.Unskip">Undo the skip</sys:String>
+    <sys:String x:Key="Habits.FailDay">Fail today</sys:String>
+    <sys:String x:Key="Habits.FailWeek">Fail this week</sys:String>
+    <sys:String x:Key="Habits.FailMonth">Fail this month</sys:String>
+    <sys:String x:Key="Habits.Unfail">Undo the fail</sys:String>
     <sys:String x:Key="Habits.Pause">Pause</sys:String>
     <sys:String x:Key="Habits.Resume">Resume</sys:String>
     <sys:String x:Key="Habits.Archive">Archive</sys:String>
@@ -687,6 +691,7 @@
     <sys:String x:Key="Habits.StreakMonths">{0}-month streak</sys:String>
     <sys:String x:Key="Habits.Paused">Paused</sys:String>
     <sys:String x:Key="Habits.Skipped">Skipped</sys:String>
+    <sys:String x:Key="Habits.Failed">Failed</sys:String>
     <sys:String x:Key="Habits.NotDue">Not today</sys:String>
     <sys:String x:Key="Habits.Done">Done today</sys:String>
     <sys:String x:Key="Habits.NotYet">Not yet today</sys:String>
@@ -725,6 +730,7 @@
     <sys:String x:Key="Habits.LogOn">Log an amount on {0}</sys:String>
     <sys:String x:Key="Habits.TakeBack">Take back {0}</sys:String>
     <sys:String x:Key="Habits.UnskipOn">Undo the skip on {0}</sys:String>
+    <sys:String x:Key="Habits.UnfailOn">Undo the fail on {0}</sys:String>
     <sys:String x:Key="Habits.MenuCheckIn">Check in</sys:String>
     <sys:String x:Key="Habits.MenuTakeBack">Take back today's check-in</sys:String>
     <sys:String x:Key="Habits.MenuAddOne">Add one</sys:String>

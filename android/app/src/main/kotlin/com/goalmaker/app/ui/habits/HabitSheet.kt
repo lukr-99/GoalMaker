@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PauseCircle
@@ -41,7 +42,7 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * Everything a habit can do besides its button, as a sheet: the card's menu and its long press open it
  * (the habits prototype). Check in or add one, log an amount, skip today (or this week) or undo the
- * skip, clear today, pause or resume; the Habits screen adds edit, archive and delete, and Today a way
+ * skip, fail today (or this week) or undo the fail, clear today, pause or resume; the Habits screen adds edit, archive and delete, and Today a way
  * to the Habits screen. Each choice closes the sheet first.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,6 +53,7 @@ fun HabitSheet(
     onCheckIn: () -> Unit,
     onLog: () -> Unit,
     onSkip: (Boolean) -> Unit,
+    onFail: (Boolean) -> Unit,
     onClear: () -> Unit,
     onPause: () -> Unit,
     onResume: (() -> Unit)? = null,
@@ -71,7 +73,7 @@ fun HabitSheet(
             Text(
                 listOfNotNull(statusText(row), streakText(row)).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.textMuted,
+                color = if (row.isOver || row.failed) AppTheme.colors.danger else AppTheme.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
             )
 
@@ -101,6 +103,11 @@ fun HabitSheet(
                     Choice(Icons.AutoMirrored.Outlined.Undo, stringResource(R.string.habits_unskip)) { onSkip(false) }
                 } else {
                     Choice(Icons.AutoMirrored.Outlined.Redo, stringResource(skipText(habit))) { onSkip(true) }
+                }
+                if (row.failed) {
+                    Choice(Icons.AutoMirrored.Outlined.Undo, stringResource(R.string.habits_unfail)) { onFail(false) }
+                } else if (!row.skipped) {
+                    Choice(Icons.Outlined.Close, stringResource(failText(habit))) { onFail(true) }
                 }
             }
             if (!habit.archived && row.value > 0.0) Choice(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.habits_clear), action = onClear)

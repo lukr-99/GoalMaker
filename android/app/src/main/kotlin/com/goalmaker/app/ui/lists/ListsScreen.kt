@@ -133,13 +133,13 @@ fun ListsScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
-    // A habit card's button: undo a skip, or check in; an amount asks for its value first.
+    // A habit card's button: undo a skip or a fail, or check in; an amount asks for its value first.
     fun checkInHabit(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
-        if (row.skipped) {
-            viewModel.skipHabit(row.habit.id, false)
-        } else {
-            scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
+        when {
+            row.skipped -> viewModel.skipHabit(row.habit.id, false)
+            row.failed -> viewModel.failHabit(row.habit.id, false)
+            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
         }
     }
 
@@ -169,6 +169,7 @@ fun ListsScreen(
                 onCheckIn = { checkInHabit(row) },
                 onLog = { logging = row.habit },
                 onSkip = { skipped -> viewModel.skipHabit(id, skipped) },
+                onFail = { failed -> viewModel.failHabit(id, failed) },
                 onClear = { viewModel.clearHabit(id) },
                 onPause = { viewModel.pauseHabit(id) },
                 onOpenHabits = onOpenHabits,

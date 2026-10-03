@@ -233,11 +233,12 @@ public sealed partial class HabitsViewModel : ObservableObject
         }
     }
 
-    // The summary card: of the habits that ask something of today (limits, skips and pauses ask nothing),
+    // The summary card: of the habits that ask something of today (limits, skips and pauses ask nothing,
+    // a failed one asked and didn't get it),
     // how many are done, how far the day has got (one still to do counts its ring), and the longest streak.
     private void ShowSummary(DateOnly today)
     {
-        var asking = Rows.Where(row => row.Standing is HabitStanding.Done or HabitStanding.Left).ToList();
+        var asking = Rows.Where(row => row.Standing is HabitStanding.Done or HabitStanding.Left or HabitStanding.Failed).ToList();
         var done = asking.Count(row => row.IsDone);
         SummaryShare = asking.Count == 0 ? 0 : asking.Sum(row => row.IsDone ? 1 : row.Fraction) / asking.Count;
         SummaryDate = today.ToString("dddd d MMMM", System.Globalization.CultureInfo.CurrentCulture).ToUpper(System.Globalization.CultureInfo.CurrentUICulture);
@@ -272,6 +273,9 @@ public sealed partial class HabitsViewModel : ObservableObject
     internal void ClearToday(string id) => habits.SetValue(id, Today(), 0);
 
     internal void Skip(string id, bool skipped) => habits.Skip(id, Today(), skipped);
+
+    /// <summary>Fails today's period (it won't happen: missed now, the streak ends) or takes the fail back.</summary>
+    internal void Fail(string id, bool failed) => habits.Fail(id, Today(), failed);
 
     internal void Pause(string id) => habits.Pause(id, Today());
 

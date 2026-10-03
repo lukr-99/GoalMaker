@@ -274,6 +274,14 @@ Deno.test({
           select skipped from public.habit_checkins where habit_id = ${habitId} and day = '2026-09-17'`;
         assertEquals(rest.skipped, true);
 
+        const failed = await client.tool("fail_habit", { id: habitId, day: "2026-09-16" });
+        assertStringIncludes(failed.text, "Water failed on 2026-09-16.");
+        const [slip] = await sql`
+          select value, skipped, failed from public.habit_checkins where habit_id = ${habitId} and day = '2026-09-16'`;
+        assertEquals(slip, { value: 0, skipped: false, failed: true });
+        const again = await client.tool("check_in_habit", { id: habitId, day: "2026-09-16", amount: 2 });
+        assertStringIncludes(again.text, "at 2 glasses");
+
         const strangers = await client.tool("check_in_habit", { id: "c0ffee00-0000-4000-8000-0000000000ff" });
         assert(strangers.isError, strangers.text);
       });

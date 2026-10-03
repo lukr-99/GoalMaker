@@ -651,6 +651,10 @@
     <string name="habits_skip_week">Skip this week</string>
     <string name="habits_skip_month">Skip this month</string>
     <string name="habits_unskip">Undo the skip</string>
+    <string name="habits_fail_day">Fail today</string>
+    <string name="habits_fail_week">Fail this week</string>
+    <string name="habits_fail_month">Fail this month</string>
+    <string name="habits_unfail">Undo the fail</string>
     <string name="habits_pause">Pause</string>
     <string name="habits_resume">Resume</string>
     <string name="habits_archive">Archive</string>
@@ -670,6 +674,7 @@
     </plurals>
     <string name="habits_paused">Paused</string>
     <string name="habits_skipped">Skipped</string>
+    <string name="habits_failed">Failed</string>
     <string name="habits_not_due">Not today</string>
     <string name="habits_done">Done today</string>
     <string name="habits_not_yet">Not yet today</string>
@@ -737,6 +742,7 @@
     <string name="habits_log_on">Log an amount on %1$s</string>
     <string name="habits_take_back">Take back %1$s</string>
     <string name="habits_unskip_on">Undo the skip on %1$s</string>
+    <string name="habits_unfail_on">Undo the fail on %1$s</string>
     <string name="habits_menu_check_in">Check in</string>
     <string name="habits_menu_take_back">Take back today\'s check-in</string>
     <string name="habits_menu_add_one">Add one</string>

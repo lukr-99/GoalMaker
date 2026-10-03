@@ -40,7 +40,7 @@ internal fun streakText(row: HabitRow): String? {
     }
 }
 
-/** Where today stands: "Paused", "4 of 8 glasses", "1 of at most 2 snacks", "Done", "Not yet". */
+/** Where today stands: "Paused", "Failed", "4 of 8 glasses", "1 of at most 2 snacks", "Done", "Not yet". */
 @Composable
 internal fun statusText(row: HabitRow): String {
     val habit = row.habit
@@ -48,6 +48,7 @@ internal fun statusText(row: HabitRow): String {
     return when {
         row.paused -> stringResource(R.string.habits_paused)
         row.skipped -> stringResource(R.string.habits_skipped)
+        row.failed -> stringResource(R.string.habits_failed)
         habit.cadence == HabitRules.PER_WEEK -> pluralStringResource(R.plurals.habits_met_week, habit.times ?: 1, row.met, habit.times ?: 1)
         habit.cadence == HabitRules.PER_MONTH -> pluralStringResource(R.plurals.habits_met_month, habit.times ?: 1, row.met, habit.times ?: 1)
         row.ring == null -> stringResource(R.string.habits_not_due)

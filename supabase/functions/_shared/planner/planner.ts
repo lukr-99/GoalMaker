@@ -743,13 +743,14 @@ export class Planner {
   /** Every check-in that is not deleted, with the habit it belongs to. */
   async checkins(): Promise<Checkin[]> {
     const rows = await this.db`
-      select habit_id::text, day::text, value, skipped from public.habit_checkins
+      select habit_id::text, day::text, value, skipped, failed from public.habit_checkins
       where deleted_at is null order by day, habit_id`;
     return rows.map((row) => ({
       habitId: row.habit_id,
       day: row.day,
       value: row.value,
       skipped: row.skipped,
+      failed: row.failed,
       deleted: false,
     }));
   }
@@ -785,7 +786,7 @@ export class Planner {
     const habit = await this.habit(habitId);
     if (!Number.isFinite(amount) || amount <= 0) throw new PlannerError("An amount has to be more than zero.");
     const before = (await this.checkins()).find((checkin) => checkin.habitId === habitId && checkin.day === day);
-    const had = before === undefined || before.skipped ? 0 : before.value;
+    const had = before === undefined || before.skipped || before.failed ? 0 : before.value;
     const value = habit.measure === "check" ? 1 : had + amount;
     await this.writeCheckin(habitId, day, value, false);
     return { habit, value };
@@ -924,6 +925,16 @@ export class Planner {
   async skipHabit(habitId: string, day: Day, skipped = true): Promise<Habit> {
     const habit = await this.habit(habitId);
     await this.writeCheckin(habitId, day, 0, skipped);
+    return habit;
+  }
+
+  /**
+   * Fails the habit's period holding this day (it won't happen: missed at once, the streak ends), or takes
+   * the fail back, which leaves the day empty.
+   */
+  async failHabit(habitId: string, day: Day, failed = true): Promise<Habit> {
+    const habit = await this.habit(habitId);
+    await this.writeCheckin(habitId, day, 0, false, failed);
     return habit;
   }
 
@@ -1347,12 +1358,13 @@ export class Planner {
       from public.activity_log`;
   }
 
-  private async writeCheckin(habitId: string, day: Day, value: number, skipped: boolean) {
+  private async writeCheckin(habitId: string, day: Day, value: number, skipped: boolean, failed = false) {
     const id = await checkinId(habitId, day);
     await this.db`
-      insert into public.habit_checkins (id, habit_id, day, value, skipped)
-      values (${id}, ${habitId}, ${day}, ${value}, ${skipped})
-      on conflict (id) do update set value = excluded.value, skipped = excluded.skipped, deleted_at = null`;
+      insert into public.habit_checkins (id, habit_id, day, value, skipped, failed)
+      values (${id}, ${habitId}, ${day}, ${value}, ${skipped}, ${failed})
+      on conflict (id) do update set value = excluded.value, skipped = excluded.skipped, failed = excluded.failed,
+        deleted_at = null`;
   }
 
   private taskColumns() {

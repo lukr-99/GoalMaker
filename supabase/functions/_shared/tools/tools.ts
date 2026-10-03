@@ -239,7 +239,7 @@ async function habitFields(planner: Planner, args: Record<string, unknown>): Pro
 function habitView(habit: Habit, day: Day, own: HabitCheckin[], rests: HabitPause[]): format.HabitView {
   const start = habitPeriodStart(habit, day);
   const end = habitPeriodEnd(habit, start);
-  const live = own.filter((checkin) => !checkin.deleted && !checkin.skipped);
+  const live = own.filter((checkin) => !checkin.deleted && !checkin.skipped && checkin.failed !== true);
   return {
     standing: standing(habit, day, own, rests),
     value: live.find((checkin) => checkin.day === day)?.value ?? 0,
@@ -1028,7 +1028,7 @@ export const tools: Tool[] = [
     title: "Habits",
     description:
       "The owner's habits as the Habits screen shows them, grouped into Every day, Weekly and Limits: how often " +
-      "each one asks, where it stands on the day (done, left, skipped, paused, a limit with its count, or not " +
+      "each one asks, where it stands on the day (done, left, skipped, failed, paused, a limit with its count, or not " +
       "due), the streak it is on and the goal it serves. A habit kept off Today says not on Today. Archived " +
       "habits are left out.",
     input: {
@@ -1111,6 +1111,27 @@ export const tools: Tool[] = [
       const skipped = args.skipped !== false;
       const habit = await planner.skipHabit(args.id, day, skipped);
       return skipped ? `${habit.name} skipped for ${day}.` : `${habit.name} is no longer skipped on ${day}.`;
+    },
+  },
+  {
+    name: "fail_habit",
+    title: "Fail a habit",
+    description:
+      "Fails a habit's period: the owner says it won't happen, so it is missed at once, today included, and " +
+      "its streak ends. A skip is for a day off; this is for a slip. Checking in or skipping takes the fail " +
+      "back too. Set failed to false to take it back and leave the day empty.",
+    input: {
+      id: habitId,
+      day: z.string().optional().describe("A day in the period that failed. Today by default."),
+      failed: z.boolean().optional().describe("True by default."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const failed = args.failed !== false;
+      const habit = await planner.failHabit(args.id, day, failed);
+      return failed ? `${habit.name} failed on ${day}.` : `${habit.name} is no longer failed on ${day}.`;
     },
   },
   {

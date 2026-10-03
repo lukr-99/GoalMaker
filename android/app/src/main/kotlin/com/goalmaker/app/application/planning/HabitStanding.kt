@@ -11,6 +11,9 @@ enum class HabitStanding(val id: String) {
     /** The period holding today is skipped. */
     SKIPPED("skipped"),
 
+    /** The period holding today is failed: neither done nor left, so it holds nothing up. */
+    FAILED("failed"),
+
     /** A limit: never done and never left, so it never reads as not done. */
     LIMIT("limit"),
 
