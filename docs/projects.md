@@ -75,6 +75,26 @@ A board has a **Made by** switch: **Everyone** (the default), **Me**, or **Claud
 what the board shows; the project list's counts still count every item. On a board, an item Claude
 made says "by Claude" in small print.
 
+## Filtering by area and tag
+
+Projects has the lists' area and tag filter ([lists](lists.md#filtering)), with a filter of its own.
+A project's own area counts like this:
+
+- **On the board**, an item without an area of its own counts as being in its project's area, and an
+  item's own area wins. So under Work, a Work project shows the items with no area and the ones filed
+  under Work, but not one filed under Home.
+- **In the project list**, a project stays while its own area is the one chosen and no tag is, or
+  while the filter keeps at least one of its items. So under Home, a Work project holding one item
+  filed under Home stays, showing just that item; under a tag, only the projects holding a tagged
+  item stay, and a project's area alone is not enough once a tag is chosen.
+
+The project on show moves to the first one the filter keeps, and when it keeps none the page says
+so, with the filter still there to let go. Like Made by, the filter leaves the project list's counts
+alone. It works with Made by: an item has to pass both. The rule is pinned by the `filter` cases
+with `projects` in [`contracts/vectors/lists.json`](../contracts/vectors/lists.json). The pickers sit
+over the board on Windows and above the project picker on the phone. A project's area is set in its
+edit form on both apps, and a new project made while an area filter is on starts in it.
+
 ## In the apps
 
 Windows shows the four columns side by side as a board. Android shows one column at a time under

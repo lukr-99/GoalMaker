@@ -273,7 +273,7 @@ public sealed class PageSnapshots
         planner.Tasks.SetDone(planner.Task("Call the bank").Id, true);
         planner.Time.Advance(TimeSpan.FromHours(2));
         planner.Tasks.SetDone(planner.Task("Buy milk").Id, true);
-        var archive = new ArchiveViewModel(planner.Tasks, strings, action => action(), _ => { });
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, strings, _ => null, action => action(), _ => { });
         Save(new ArchivePage(archive), folder, "archive");
     });
 
@@ -658,7 +658,7 @@ public sealed class PageSnapshots
         Save(new TodayPage(today), folder, "project-chips-today");
 
         var calendar = new CalendarViewModel(
-            planner.Tasks, planner.Reminders, planner.Settings, strings, planner.Time, _ => { }, action => action(), planner.Projects, _ => { });
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time, _ => { }, action => action(), _ => { });
         calendar.Open(Today);
         Save(new CalendarPage(calendar), folder, "project-chips-calendar", new Size(1000, 620));
 
@@ -667,7 +667,7 @@ public sealed class PageSnapshots
             planner.Tasks.SetDone(planner.Task(title).Id, true);
         }
 
-        var archive = new ArchiveViewModel(planner.Tasks, strings, action => action(), _ => { }, planner.Projects, _ => { });
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, strings, theme.AreaBrush, action => action(), _ => { }, _ => { });
         Save(new ArchivePage(archive), folder, "project-chips-archive");
 
         // A few weeks of finished work, some of it for projects, for the stats page.
@@ -704,7 +704,7 @@ public sealed class PageSnapshots
             ("Pack the gym bag 7:00", Today.AddDays(1)),
             ("Book the dentist", Today.AddDays(4)),
             ("Read about sourdough", Today.AddDays(4)),
-            ("Fix the bike", Today.AddDays(4)),
+            ("Fix the bike @Home", Today.AddDays(4)),
         })
         {
             var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
@@ -715,7 +715,7 @@ public sealed class PageSnapshots
         planner.Tasks.SetRecurrence(planner.Task("Water the plants").Id, "FREQ=DAILY");
 
         var calendar = new CalendarViewModel(
-            planner.Tasks, planner.Reminders, planner.Settings, strings, planner.Time, _ => { }, action => action());
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, _ => null, planner.Time, _ => { }, action => action());
         calendar.Open(Today);
         Save(new CalendarPage(calendar), folder, "calendar", new Size(1000, 620));
     });
@@ -727,7 +727,8 @@ public sealed class PageSnapshots
         var strings = new ResourceStrings(Application.Current);
         using var theme = Theme(planner);
         var windows = new List<ProjectItemFormViewModel>();
-        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, planner.Settings, strings, _ => { }, action => action(), planner.Time, windows.Add);
+        var projects = new ProjectsViewModel(
+            planner.Projects, planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, _ => null, _ => { }, action => action(), planner.Time, windows.Add);
         projects.NewCommand.Execute(null);
         projects.ProjectName = "GoalMaker";
         projects.ProjectDescription = "The planner on the phone and the PC.";
@@ -754,6 +755,8 @@ public sealed class PageSnapshots
         var shared = planner.Replica.Get("tasks", planner.Task("Share to GoalMaker").Id)!;
         shared["made_by"] = ProjectRules.Claude;
         planner.Replica.Put("tasks", shared);
+        // An area, so the area and tag filter shows over the board.
+        planner.Areas.FindOrCreate("Work");
         // A paused and a finished project, so the list shows every status's mark.
         planner.Projects.Add(new ProjectDraft("Relay") { Status = ProjectRules.Paused });
         planner.Projects.Add(new ProjectDraft("Treeline") { Status = ProjectRules.Finished });

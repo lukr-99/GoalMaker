@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
@@ -10,17 +11,20 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The Calendar page (docs/calendar.md, spec story 68): a week or a month of planned tasks, deadlines
-/// and reminders, with a day showing what it holds and a task opening from there.
+/// and reminders, with a day showing what it holds and a task opening from there. An area and tag
+/// filter of its own narrows what the grid counts and the day lists, the same filter the lists use.
 /// </summary>
 public sealed partial class CalendarViewModel : ObservableObject
 {
     private readonly TaskList tasks;
     private readonly ReminderList reminders;
+    private readonly TagList tags;
+    private readonly ProjectList projects;
+    private readonly ListFilterState filter = new();
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
     private readonly Action<string> openTask;
-    private readonly ProjectList? projects;
     private readonly Action<string>? openProject;
     private DateOnly? anchor;
     private DateOnly? selected;
@@ -52,29 +56,32 @@ public sealed partial class CalendarViewModel : ObservableObject
     public CalendarViewModel(
         TaskList tasks,
         ReminderList reminders,
+        AreaList areas,
+        TagList tags,
+        ProjectList projects,
         ISettingsStore settings,
         IStrings strings,
+        Func<string, Brush?> areaBrush,
         TimeProvider time,
         Action<string> openTask,
         Action<Action> runOnUi,
-        ProjectList? projects = null,
         Action<string>? openProject = null)
     {
-        this.projects = projects;
         this.openProject = openProject;
         this.tasks = tasks;
         this.reminders = reminders;
+        this.tags = tags;
+        this.projects = projects;
         this.settings = settings;
         this.strings = strings;
         this.time = time;
         this.openTask = openTask;
         tasks.Changed += (_, _) => runOnUi(Refresh);
         reminders.Changed += (_, _) => runOnUi(Refresh);
-        if (projects is not null)
-        {
-            projects.Changed += (_, _) => runOnUi(Refresh);
-        }
-
+        tags.Changed += (_, _) => runOnUi(Refresh);
+        projects.Changed += (_, _) => runOnUi(Refresh);
+        filter.Changed += (_, _) => runOnUi(Refresh);
+        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
         Weekdays = [.. Enumerable.Range(0, 7).Select(day => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7])];
         Refresh();
     }
@@ -86,6 +93,9 @@ public sealed partial class CalendarViewModel : ObservableObject
 
     /// <summary>Whether no day is open, so the page asks the owner to pick one.</summary>
     public bool HasNoDay => !HasDay;
+
+    /// <summary>The area and tag pickers over the grid.</summary>
+    public ListFiltersViewModel Filters { get; }
 
     /// <summary>The weekday headings, Monday first.</summary>
     public IReadOnlyList<string> Weekdays { get; }
@@ -100,11 +110,15 @@ public sealed partial class CalendarViewModel : ObservableObject
     {
         var today = Today();
         var shown = anchor ?? today;
+        var narrowed = filter.Current;
+        var links = narrowed.IsEmpty ? null : tags.TagLinks();
+        var projectAreas = narrowed.IsEmpty ? null : projects.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal);
         var days = CalendarRules.Build(
             tasks.All(),
             reminders.All(),
             CalendarRules.Start(Kind, shown),
-            CalendarRules.End(Kind, shown));
+            CalendarRules.End(Kind, shown),
+            links is null ? null : task => narrowed.Keeps(task, links, projectAreas));
 
         Cells.Clear();
         foreach (var day in days)
@@ -131,7 +145,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         DayEntries.Clear();
         if (open is not null)
         {
-            var projectById = (projects?.All() ?? []).ToDictionary(project => project.Id, StringComparer.Ordinal);
+            var projectById = projects.All().ToDictionary(project => project.Id, StringComparer.Ordinal);
             foreach (var (task, label) in Entries(open))
             {
                 var id = task.Id;

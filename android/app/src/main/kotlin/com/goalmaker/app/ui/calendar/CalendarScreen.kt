@@ -62,6 +62,7 @@ import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
@@ -126,6 +127,11 @@ fun CalendarScreen(
                         Icon(Icons.Outlined.ChevronRight, contentDescription = stringResource(R.string.calendar_forward))
                     }
                 }
+            }
+
+            // The area and tag filter narrows what the grid counts and the day lists, as on the lists.
+            item("filter") {
+                ListFilterRow(state.filter, onArea = viewModel::filterByArea, onTag = viewModel::filterByTag)
             }
 
             item("weekdays") { WeekdayRow(locale) }

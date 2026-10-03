@@ -363,6 +363,92 @@ public sealed class ProjectsViewModelTests : IDisposable
     private static BoardColumnViewModel Column(ProjectsViewModel page, string column) =>
         page.Columns.Single(candidate => candidate.Column == column);
 
+    [Fact]
+    public void AnAreaKeepsItsProjectsAndAnItemWithoutOneTakesItsProjects()
+    {
+        var page = TwoAreas();
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Work");
+
+        Assert.Equal(["GoalMaker"], page.Projects.Select(project => project.Name));
+        Assert.Equal(["Ship the board"], Column(page, "todo").Items.Select(item => item.Title));
+    }
+
+    [Fact]
+    public void AnItemsOwnAreaKeepsItsProjectListedUnderThatArea()
+    {
+        var page = TwoAreas();
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Home");
+        page.Select(page.Projects.Single(project => project.Name == "GoalMaker").Id);
+
+        Assert.Equal(["GoalMaker", "House"], page.Projects.Select(project => project.Name).Order());
+        Assert.Equal(["Order a shelf"], Column(page, "todo").Items.Select(item => item.Title));
+    }
+
+    [Fact]
+    public void ATagKeepsTheProjectsHoldingATaggedItem()
+    {
+        var page = TwoAreas();
+
+        page.Filters.SelectedTag = page.Filters.TagChoices.Single(tag => tag.Label == "#errand");
+
+        Assert.Equal(["House"], page.Projects.Select(project => project.Name));
+        Assert.Equal(["Buy paint"], Column(page, "todo").Items.Select(item => item.Title));
+
+        page.Filters.ClearCommand.Execute(null);
+        Assert.Equal(2, page.Projects.Count);
+    }
+
+    [Fact]
+    public void AFilterThatHidesEveryProjectSaysSo()
+    {
+        var page = TwoAreas();
+        planner.Areas.FindOrCreate("Garden");
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Garden");
+
+        Assert.Empty(page.Projects);
+        Assert.False(page.HasProject);
+        Assert.True(page.IsFilteredAway);
+        Assert.False(page.IsEmpty);
+    }
+
+    [Fact]
+    public void EditingAProjectKeepsItsNotesAndSetsItsArea()
+    {
+        var work = planner.Areas.FindOrCreate("Work")!;
+        var project = planner.Projects.Add(new ProjectDraft("GoalMaker") { Notes = "Ship by spring." })!;
+        var page = Page();
+
+        page.EditCommand.Execute(null);
+        page.ProjectArea = page.ProjectAreaChoices.Single(choice => choice.Id == work.Id);
+        page.SaveCommand.Execute(null);
+
+        Assert.Equal("Ship by spring.", planner.Projects.Get(project.Id)!.Notes);
+        Assert.Equal(work.Id, planner.Projects.Get(project.Id)!.AreaId);
+    }
+
+    // A Work project with an item of its own and one filed under Home, and a Home project with an errand.
+    private ProjectsViewModel TwoAreas()
+    {
+        var work = planner.Areas.FindOrCreate("Work")!;
+        var home = planner.Areas.FindOrCreate("Home")!;
+        var goalMaker = planner.Projects.Add(new ProjectDraft("GoalMaker") { AreaId = work.Id })!;
+        var house = planner.Projects.Add(new ProjectDraft("House") { AreaId = home.Id })!;
+        TaskItem Item(string title, string project)
+        {
+            var task = planner.Tasks.Add(title)!;
+            planner.Tasks.SetProject(task.Id, project, ProjectRules.Task);
+            return task;
+        }
+
+        Item("Ship the board", goalMaker.Id);
+        planner.Tasks.SetArea(Item("Order a shelf", goalMaker.Id).Id, home.Id);
+        planner.Tasks.SetTags(Item("Buy paint", house.Id).Id, ["errand"]);
+        return Page();
+    }
+
     private ProjectsViewModel WithProject()
     {
         var page = Page();
@@ -373,5 +459,5 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     private ProjectsViewModel Page() =>
-        new(planner.Projects, planner.Tasks, planner.Settings, planner.Strings, _ => { }, action => action(), planner.Time, windows.Add);
+        new(planner.Projects, planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, _ => null, _ => { }, action => action(), planner.Time, windows.Add);
 }

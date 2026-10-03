@@ -48,6 +48,8 @@ class ProjectsViewModelTest {
     private lateinit var test: TestReplica
     private lateinit var tasks: TaskList
     private lateinit var projects: ProjectList
+    private lateinit var areas: AreaList
+    private lateinit var tags: TagList
     private lateinit var settings: SharedPreferencesSettingsStore
     private lateinit var viewModel: ProjectsViewModel
     private val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("projects-view-test", Context.MODE_PRIVATE)
@@ -58,12 +60,15 @@ class ProjectsViewModelTest {
         preferences.edit(commit = true) { clear() }
         settings = SharedPreferencesSettingsStore(preferences)
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-22T17:00:00Z") })
-        val areas = AreaList(test.replica, rows, listOf("violet", "blue"), {})
+        areas = AreaList(test.replica, rows, listOf("violet", "blue"), {})
+        tags = TagList(test.replica, rows, {})
         projects = ProjectList(test.replica, rows, {})
-        tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), projects, {}) { LocalDate.parse("2026-09-22") }
+        tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { LocalDate.parse("2026-09-22") }
         viewModel = ProjectsViewModel(
             projects,
             tasks,
+            areas,
+            tags,
             settings,
             Dispatchers.Unconfined,
             { LocalDateTime.parse("2026-09-30T12:00") },
@@ -85,6 +90,77 @@ class ProjectsViewModelTest {
     }
 
     private fun todo(state: ProjectsUiState) = state.board.single { it.column == ProjectRules.TODO }.items.map { it.title }
+
+    // A Work project with an item of its own and one filed under Home, and a Home project with an errand.
+    private fun twoAreas() {
+        val work = areas.findOrCreate("Work")!!
+        val home = areas.findOrCreate("Home")!!
+        val goalMaker = projects.add(ProjectDraft("GoalMaker", areaId = work.id))!!
+        val house = projects.add(ProjectDraft("House", areaId = home.id))!!
+        fun item(title: String, project: String) = tasks.add(title)!!.also { tasks.setProject(it.id, project, ProjectRules.TASK) }
+        item("Ship the board", goalMaker.id)
+        val shelf = item("Order a shelf for the office", goalMaker.id)
+        tasks.setArea(shelf.id, home.id)
+        val paint = item("Buy paint", house.id)
+        tasks.setTags(paint.id, listOf("errand"))
+    }
+
+    @Test
+    fun `an area keeps its projects and the items in it, an item without one taking its project's`() = runTest {
+        twoAreas()
+        val work = areas.all().single { it.name == "Work" }
+
+        viewModel.filterByArea(work.id)
+        val state = viewModel.uiState.first { it.filter.filter.areaId == work.id }
+
+        assertEquals(listOf("GoalMaker"), state.projects.map { it.name })
+        assertEquals(listOf("Ship the board"), todo(state))
+        assertEquals(true, state.anyProject)
+    }
+
+    @Test
+    fun `an item's own area keeps its project in the list under that area`() = runTest {
+        twoAreas()
+        val home = areas.all().single { it.name == "Home" }
+
+        viewModel.filterByArea(home.id)
+        val state = viewModel.uiState.first { it.filter.filter.areaId == home.id }
+
+        assertEquals(listOf("GoalMaker", "House"), state.projects.map { it.name }.sorted())
+        viewModel.select(state.projects.single { it.name == "GoalMaker" }.id)
+        assertEquals(
+            listOf("Order a shelf for the office"),
+            todo(viewModel.uiState.first { it.selected?.name == "GoalMaker" && it.filter.filter.areaId == home.id }),
+        )
+    }
+
+    @Test
+    fun `a tag keeps the projects holding a tagged item, and clearing it shows them all`() = runTest {
+        twoAreas()
+        val errand = tags.all().single { it.name == "errand" }
+
+        viewModel.filterByTag(errand.id)
+        val state = viewModel.uiState.first { it.filter.filter.tagId == errand.id }
+        assertEquals(listOf("House"), state.projects.map { it.name })
+        assertEquals(listOf("Buy paint"), todo(state))
+
+        viewModel.filterByTag(null)
+        settle()
+        assertEquals(2, viewModel.uiState.first { it.filter.filter.isEmpty && it.loaded }.projects.size)
+    }
+
+    @Test
+    fun `a filter that hides every project leaves the board empty`() = runTest {
+        twoAreas()
+        val garden = areas.findOrCreate("Garden")!!
+
+        viewModel.filterByArea(garden.id)
+        val state = viewModel.uiState.first { it.filter.filter.areaId == garden.id }
+
+        assertEquals(emptyList<String>(), state.projects.map { it.name })
+        assertNull(state.selected)
+        assertEquals(true, state.anyProject)
+    }
 
     @Test
     fun `the board shows everyone's items at first`() = runTest {

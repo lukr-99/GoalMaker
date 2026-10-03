@@ -11,7 +11,9 @@ import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderScheduler
 import com.goalmaker.app.application.planning.ReminderService
@@ -23,6 +25,7 @@ import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
+import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.QuietHours
 import java.time.Instant
@@ -60,9 +63,9 @@ class ListsViewModelTest {
     private lateinit var habits: HabitList
     private lateinit var tasks: TaskList
     private lateinit var areas: AreaList
+    private lateinit var projects: ProjectList
     private lateinit var viewModel: ListsViewModel
     private lateinit var settings: SharedPreferencesSettingsStore
-    private lateinit var projects: ProjectList
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     // Friday 18 September 2026, noon.
@@ -110,6 +113,20 @@ class ListsViewModelTest {
     fun tearDown() {
         scope.cancel()
         test.close()
+    }
+
+    @Test
+    fun `an area filter keeps a project item without an area when its project is in the area`() = runTest {
+        val work = areas.findOrCreate("Work")!!
+        val project = projects.add(ProjectDraft("GoalMaker", areaId = work.id))!!
+        val item = tasks.add(ComposerDraft(title = "Ship the board", plannedDate = today))!!
+        tasks.setProject(item.id, project.id, ProjectRules.TASK)
+        tasks.add(ComposerDraft(title = "Water plants", plannedDate = today))
+
+        viewModel.filterByArea(work.id)
+
+        val state = loaded { it.filter.areaId == work.id }
+        assertEquals(listOf("Ship the board"), state.lists!!.todaySections.more.map { it.title })
     }
 
     @Test

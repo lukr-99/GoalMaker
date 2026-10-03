@@ -2,12 +2,15 @@ package com.goalmaker.app.ui.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderList
+import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
+import com.goalmaker.app.ui.lists.PlaceFilter
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,25 +25,31 @@ import kotlinx.coroutines.launch
 
 /**
  * The calendar (docs/calendar.md, spec story 68): a week or a month of planned tasks, deadlines and
- * reminders, with a day opening what it holds and a task moving to another day from there. A project
+ * reminders, with a day opening what it holds and a task moving to another day from there. The area
+ * and tag filter narrows what the grid counts and the day lists, as it narrows the lists, and a project
  * item on the day wears its project's chip ([projects], docs/lists.md).
  */
 class CalendarViewModel(
     private val tasks: TaskList,
     reminders: ReminderList,
+    areas: AreaList,
+    tags: TagList,
     projects: ProjectList,
     private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
 ) : ViewModel() {
     private val view = MutableStateFlow(View(CalendarRules.MONTH, null, null))
+    private val filter = PlaceFilter(areas, tags, io)
 
     val uiState: StateFlow<CalendarUiState> = combine(
         tasks.watchAll().flowOn(io),
         reminders.watchAll().flowOn(io),
         projects.watch().flowOn(io).map { it.projects },
         view,
-    ) { taskList, reminderList, projectList, showing ->
+        filter.choices,
+    ) { taskList, reminderList, projectList, showing, choices ->
+        val areasOfProjects = projectList.associate { it.id to it.areaId }
         val today = today()
         val anchor = showing.anchor ?: today
         CalendarUiState(
@@ -53,9 +62,10 @@ class CalendarViewModel(
                 reminderList,
                 CalendarRules.start(showing.kind, anchor),
                 CalendarRules.end(showing.kind, anchor),
-            ),
+            ) { task -> choices.filter.keeps(task, choices.links, areasOfProjects) },
             selected = showing.selected,
             projects = projectList,
+            filter = choices,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState())
 
@@ -73,6 +83,12 @@ class CalendarViewModel(
 
     /** Opens a day, or closes it when it is already open. */
     fun open(day: LocalDate) = view.update { it.copy(selected = if (it.selected == day) null else day) }
+
+    /** Narrows the calendar to an area, or stops narrowing by area when [areaId] is null. */
+    fun filterByArea(areaId: String?) = filter.byArea(areaId)
+
+    /** Narrows the calendar to a tag, or stops narrowing by tag when [tagId] is null. */
+    fun filterByTag(tagId: String?) = filter.byTag(tagId)
 
     /** Moves a task to another day, the way Plan tomorrow does. */
     fun plan(taskId: String, day: LocalDate) {

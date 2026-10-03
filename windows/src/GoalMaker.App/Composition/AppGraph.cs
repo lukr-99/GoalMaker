@@ -330,17 +330,21 @@ public sealed class AppGraph : IDisposable
             Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
             [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
         StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally, Projects);
+        // Projects, the calendar and the archive each keep an area and tag filter of their own (docs/lists.md).
         ProjectsPage = new ProjectsViewModel(
             Projects,
             Tasks,
+            Areas,
+            Tags,
             Settings,
             strings,
+            Theme.AreaBrush,
             id => OpenTask(id, AppPage.Projects),
             runOnUi,
             TimeProvider.System,
             form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach));
         CalendarPage = new CalendarViewModel(
-            Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, Projects, OpenProject);
+            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
             Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
@@ -349,7 +353,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
-        Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive), Projects, OpenProject);
+        Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive), OpenProject);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,

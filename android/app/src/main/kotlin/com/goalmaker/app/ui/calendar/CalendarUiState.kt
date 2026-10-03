@@ -4,9 +4,13 @@ import com.goalmaker.app.application.planning.CalendarDay
 import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.lists.FilterChoices
 import java.time.LocalDate
 
-/** The calendar screen: the grid on show, the day the owner has opened, and the [projects] its items' chips name. */
+/**
+ * The calendar screen: the grid on show, the day the owner has opened, the [projects] its items' chips
+ * name, and the area and tag [filter].
+ */
 data class CalendarUiState(
     val loaded: Boolean = false,
     val kind: String = CalendarRules.MONTH,
@@ -15,6 +19,7 @@ data class CalendarUiState(
     val days: List<CalendarDay> = emptyList(),
     val selected: LocalDate? = null,
     val projects: List<ProjectItem> = emptyList(),
+    val filter: FilterChoices = FilterChoices(),
 ) {
     /** The project a task is an item of, while that project is still there. */
     fun projectOf(task: TaskItem): ProjectItem? = task.projectId?.let { id -> projects.firstOrNull { it.id == id } }

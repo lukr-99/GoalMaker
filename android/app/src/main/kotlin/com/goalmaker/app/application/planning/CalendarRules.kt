@@ -29,22 +29,27 @@ object CalendarRules {
         return generateSequence(start(kind, day)) { it.plusDays(1) }.takeWhile { !it.isAfter(last) }.toList()
     }
 
-    /** What each day from [from] to [to] holds, in order. */
+    /**
+     * What each day from [from] to [to] holds, in order. Only the tasks [keep] says yes to show, the
+     * area and tag filter (docs/calendar.md), but every live task still keeps its day from a repeat.
+     */
     fun build(
         tasks: List<TaskItem>,
         reminders: List<ReminderItem>,
         from: LocalDate,
         to: LocalDate,
+        keep: (TaskItem) -> Boolean = { true },
     ): List<CalendarDay> {
         val live = tasks.filterNot(TaskItem::deleted)
-        val byId = live.associateBy(TaskItem::id)
-        val planned = live.filter { it.state != TaskState.DROPPED && it.plannedDate != null }
+        val shown = live.filter(keep)
+        val byId = shown.associateBy(TaskItem::id)
+        val planned = shown.filter { it.state != TaskState.DROPPED && it.plannedDate != null }
             .groupBy { it.plannedDate!! }
-        val deadlines = live.filter { it.state == TaskState.OPEN && it.deadline != null }.groupBy { it.deadline!! }
+        val deadlines = shown.filter { it.state == TaskState.OPEN && it.deadline != null }.groupBy { it.deadline!! }
         val ringing = reminders.mapNotNull { reminder ->
             byId[reminder.taskId]?.let { task -> ReminderRules.due(reminder, task)?.toLocalDate() }
         }.groupingBy { it }.eachCount()
-        val repeats = repeats(live, from, to)
+        val repeats = repeats(live, from, to, keep)
 
         return generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.map { day ->
             CalendarDay(
@@ -58,13 +63,13 @@ object CalendarRules {
     }
 
     /** The days each repeating task would come round to inside the range, by day. */
-    private fun repeats(tasks: List<TaskItem>, from: LocalDate, to: LocalDate): Map<LocalDate, List<TaskItem>> {
+    private fun repeats(tasks: List<TaskItem>, from: LocalDate, to: LocalDate, keep: (TaskItem) -> Boolean): Map<LocalDate, List<TaskItem>> {
         // A day another occurrence of the same series is already planned for is that occurrence's, not a repeat.
         val taken = tasks.filter { it.plannedDate != null }
             .groupBy({ Occurrences.seriesOf(it) }, { it.plannedDate!! })
             .mapValues { (_, days) -> days.toSet() }
         val found = mutableMapOf<LocalDate, MutableList<TaskItem>>()
-        tasks.filter { it.state == TaskState.OPEN && it.recurrence != null && it.plannedDate != null }.forEach { task ->
+        tasks.filter { it.state == TaskState.OPEN && it.recurrence != null && it.plannedDate != null && keep(it) }.forEach { task ->
             val rule = Recurrence.parse(task.recurrence) ?: return@forEach
             val series = taken[Occurrences.seriesOf(task)].orEmpty()
             var day = task.plannedDate!!

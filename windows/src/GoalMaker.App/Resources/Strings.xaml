@@ -797,6 +797,8 @@
     <sys:String x:Key="Projects.Normal">Normal</sys:String>
     <sys:String x:Key="Projects.Low">Low</sys:String>
     <sys:String x:Key="Projects.MadeBy">Made by</sys:String>
+    <sys:String x:Key="Projects.NoneMatch">No project matches the filter.</sys:String>
+    <sys:String x:Key="Projects.Area">Area</sys:String>
     <sys:String x:Key="Projects.MadeByAll">Everyone</sys:String>
     <sys:String x:Key="Projects.MadeByOwner">Me</sys:String>
     <sys:String x:Key="Projects.MadeByClaude">Claude</sys:String>

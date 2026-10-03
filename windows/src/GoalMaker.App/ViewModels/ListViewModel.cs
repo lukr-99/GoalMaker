@@ -31,6 +31,7 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly ReminderService? reminders;
     private readonly TagList? tags;
     private readonly ListFilterState? filter;
+    private readonly ProjectList? projects;
     private readonly Action<string>? openTask;
     private readonly GoalList? goals;
     private readonly Action? openGoals;
@@ -39,7 +40,6 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly HabitsViewModel? habitsPage;
     private readonly HabitList? habitList;
     private readonly Action? openHabits;
-    private readonly ProjectList? projects;
     private readonly Action<string>? openProject;
     private Action? undo;
     private ITimer? undoTimer;
@@ -197,6 +197,8 @@ public sealed partial class ListViewModel : ObservableObject
             tags.Changed += (_, _) => runOnUi(Refresh);
         }
 
+        // A project item without an area of its own counts as being in its project's (docs/lists.md), and
+        // wears its project's chip.
         if (projects is not null)
         {
             projects.Changed += (_, _) => runOnUi(Refresh);
@@ -310,7 +312,9 @@ public sealed partial class ListViewModel : ObservableObject
         var areaById = areas.All().ToDictionary(area => area.Id, StringComparer.Ordinal);
         var narrowed = filter?.Current ?? ListFilter.None;
         var all = tasks.All();
-        var lists = ListRules.Lists(narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks()), today);
+        var lists = ListRules.Lists(
+            narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks(), projects?.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal)),
+            today);
         ShowFilter(narrowed, areaById);
         var remindersByTask = (reminders?.All() ?? []).ToLookup(reminder => reminder.TaskId, StringComparer.Ordinal);
         var projectById = (projects?.All() ?? []).ToDictionary(project => project.Id, StringComparer.Ordinal);

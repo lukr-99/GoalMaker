@@ -134,6 +134,41 @@ public sealed class CalendarViewModelTests : IDisposable
         Assert.Empty(page.DayEntries);
     }
 
+    [Fact]
+    public void AnAreaNarrowsTheGridAndTheDayAndAProjectItemTakesItsProjectsArea()
+    {
+        Plan("Fix the shelf @Home", Today);
+        Plan("Send the invoice @Work", Today);
+        var item = Plan("Ship the board", Today);
+        var project = planner.Projects.Add(new ProjectDraft("GoalMaker") { AreaId = planner.Areas.Find("Work")!.Id })!;
+        planner.Tasks.SetProject(item.Id, project.Id, ProjectRules.Task);
+        var page = Page();
+        Assert.Equal(3, page.Cells.Single(cell => cell.Day == Today).Count);
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Work");
+        page.Open(Today);
+
+        Assert.Equal(2, page.Cells.Single(cell => cell.Day == Today).Count);
+        Assert.Equal(["Send the invoice", "Ship the board"], page.DayEntries.Select(entry => entry.Title).Order());
+    }
+
+    [Fact]
+    public void ATagNarrowsTheDeadlinesAndShowEverythingLetsGo()
+    {
+        var stamps = Plan("Buy stamps #errand", Today);
+        var report = Plan("Write the report", Today);
+        planner.Tasks.SetDeadline(stamps.Id, Today.AddDays(2));
+        planner.Tasks.SetDeadline(report.Id, Today.AddDays(2));
+        var page = Page();
+
+        page.Filters.SelectedTag = page.Filters.TagChoices.Single(tag => tag.Label == "#errand");
+        page.Open(Today.AddDays(2));
+        Assert.Equal(["Buy stamps"], page.DayEntries.Select(entry => entry.Title));
+
+        page.Filters.ClearCommand.Execute(null);
+        Assert.Equal(["Buy stamps", "Write the report"], page.DayEntries.Select(entry => entry.Title).Order());
+    }
+
     private TaskItem Plan(string line, DateOnly day)
     {
         var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
@@ -144,11 +179,14 @@ public sealed class CalendarViewModelTests : IDisposable
     private CalendarViewModel Page(Action<string>? openProject = null) => new(
         planner.Tasks,
         planner.Reminders,
+        planner.Areas,
+        planner.Tags,
+        planner.Projects,
         planner.Settings,
         planner.Strings,
+        _ => null,
         planner.Time,
         _ => { },
         action => action(),
-        planner.Projects,
         openProject);
 }

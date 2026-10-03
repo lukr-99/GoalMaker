@@ -9,7 +9,6 @@ import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
-import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderItem
@@ -42,7 +41,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -80,17 +78,15 @@ class ListsViewModel(
 
     // The filter the owner chose, kept while they switch lists (docs/lists.md); one whose area or tag
     // was deleted meanwhile falls away instead of hiding everything.
-    private val chosenFilter = MutableStateFlow(ListFilter.NONE)
-    private val filter = combine(chosenFilter, areas.watch().flowOn(io), tags.watch().flowOn(io)) { chosen, areaList, tagList ->
-        ListFilter(
-            areaId = chosen.areaId?.takeIf { id -> areaList.any { it.id == id && !it.archived } },
-            tagId = chosen.tagId?.takeIf { id -> tagList.any { it.id == id } },
-        )
-    }
+    private val filter = PlaceFilter(areas, tags, io)
 
-    private val lists = combine(tasks.watchAll().flowOn(io), tags.watchLinks().flowOn(io), filter, settings.dayStartHour, minutes) {
-            all, links, narrowed, startHour, _ ->
-        ListRules.lists(narrowed.apply(all, links), PlanningDay.of(clock(), startHour)) to narrowed
+    // A project item without an area of its own counts as being in its project's area.
+    private val projectAreas = projects.watch().flowOn(io).map { data -> data.projects.associate { it.id to it.areaId } }
+
+    private val lists = combine(tasks.watchAll().flowOn(io), filter.choices, projectAreas, settings.dayStartHour, minutes) {
+            all, choices, areasOfProjects, startHour, _ ->
+        val narrowed = choices.filter
+        ListRules.lists(narrowed.apply(all, choices.links, areasOfProjects), PlanningDay.of(clock(), startHour)) to narrowed
     }
 
     // The tasks with a reminder still to come, so a row can show it without reading the table again.
@@ -261,10 +257,10 @@ class ListsViewModel(
     }
 
     /** Narrows every list to an area, or stops narrowing by area when [areaId] is null. */
-    fun filterByArea(areaId: String?) = chosenFilter.update { it.copy(areaId = areaId) }
+    fun filterByArea(areaId: String?) = filter.byArea(areaId)
 
     /** Narrows every list to a tag, or stops narrowing by tag when [tagId] is null. */
-    fun filterByTag(tagId: String?) = chosenFilter.update { it.copy(tagId = tagId) }
+    fun filterByTag(tagId: String?) = filter.byTag(tagId)
 
     /** The reminders already on a task, for the sheet that edits them. */
     suspend fun remindersOf(taskId: String): List<ReminderItem> = withContext(io) { reminders.on(taskId) }

@@ -15,7 +15,7 @@ run wants, the review digest, Tally and the bottom bar's lines.
 | `vectors/sync-merge.json` | Sync merge, full resync, pull start, timestamp form ([sync](../docs/sync.md)) | `SyncRulesContractTest` | `SyncRulesContractTests` |
 | `vectors/composer.json` | The composer's shortcut grammar ([composer](../docs/composer.md)) | `ComposerParserContractTest` | `ComposerParserContractTests` |
 | `vectors/quick-add.json` | What the bottom bar reads from a want, habit or goal line ([composer](../docs/composer.md#adding-on-wants-habits-and-goals)) | `QuickAddLinesContractTest` | `QuickAddLinesContractTests` |
-| `vectors/lists.json` | What Today, Tomorrow and Inbox hold, and filtering by area and tag ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |
+| `vectors/lists.json` | What Today, Tomorrow and Inbox hold, and filtering by area and tag, which Projects, the calendar and the archive share ([lists](../docs/lists.md)) | `ListRulesContractTest` | `ListRulesContractTests` |
 | `vectors/plan.json` | The Plan tomorrow ritual ([plan tomorrow](../docs/plan-tomorrow.md)) | `PlanRulesContractTest` | `PlanRulesContractTests` |
 | `vectors/recurrence.json` | Repeating tasks and their occurrences ([repeating](../docs/repeating.md)) | `RecurrenceContractTest` | `RecurrenceContractTests` |
 | `vectors/archive.json` | The archive of done tasks and its search ([archive](../docs/archive.md)) | `ArchiveContractTest` | `ArchiveContractTests` |

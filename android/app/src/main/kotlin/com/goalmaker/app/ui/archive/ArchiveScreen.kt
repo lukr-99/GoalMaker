@@ -37,6 +37,7 @@ import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.domain.sync.SyncRules
+import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.ZoneId
@@ -55,6 +56,7 @@ fun ArchiveScreen(
     val query by viewModel.query.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
     val projects by viewModel.projects.collectAsStateWithLifecycle()
+    val choices by viewModel.choices.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val dates = DateTimeFormatter.ofPattern("EEE d MMM", LocalConfiguration.current.locales[0])
 
@@ -84,11 +86,15 @@ fun ArchiveScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 )
             }
+            // The area and tag filter narrows what the search finds, as it narrows the lists.
+            item {
+                ListFilterRow(choices, onArea = viewModel::filterByArea, onTag = viewModel::filterByTag)
+            }
             val found = results
             if (found != null && found.isEmpty()) {
                 item {
                     Text(
-                        stringResource(if (query.isBlank()) R.string.archive_empty else R.string.archive_no_match),
+                        stringResource(if (query.isBlank() && choices.filter.isEmpty) R.string.archive_empty else R.string.archive_no_match),
                         color = AppTheme.colors.textMuted,
                     )
                 }

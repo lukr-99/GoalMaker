@@ -93,6 +93,60 @@
     </DataTemplate>
 
     <!--
+        The area and tag pickers with Show everything (docs/lists.md): above the lists, and over Projects,
+        the calendar and the archive, each with a filter of its own. A chosen area or tag is outlined in
+        the accent, so a narrowed place is plain to see.
+    -->
+    <DataTemplate x:Key="ListFilters" DataType="{x:Type vm:ListFiltersViewModel}">
+        <StackPanel Orientation="Horizontal"
+                    Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+            <ComboBox MinWidth="160"
+                      VerticalAlignment="Center"
+                      ItemsSource="{Binding AreaChoices}"
+                      SelectedItem="{Binding SelectedArea}"
+                      ItemTemplate="{StaticResource FilterChoice}"
+                      AutomationProperties.Name="{DynamicResource Lists.FilterArea}"
+                      Visibility="{Binding HasAreas, Converter={StaticResource BoolToVisibility}}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAreaChosen}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
+            <ComboBox MinWidth="140"
+                      Margin="8,0,0,0"
+                      VerticalAlignment="Center"
+                      ItemsSource="{Binding TagChoices}"
+                      SelectedItem="{Binding SelectedTag}"
+                      ItemTemplate="{StaticResource FilterChoice}"
+                      AutomationProperties.Name="{DynamicResource Lists.FilterTag}"
+                      Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTagChosen}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
+            <ui:Button Margin="8,0,0,0"
+                       VerticalAlignment="Center"
+                       Appearance="Transparent"
+                       Content="{DynamicResource Lists.ClearFilter}"
+                       Command="{Binding ClearCommand}"
+                       Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!--
         One list (Today, Tomorrow, Inbox) as ListPage shows it (docs/lists.md). Today's habits sit in a
         panel beside the tasks where the window is wide enough, and under them where it is not (a narrow
         window, a mini window): the root's Tag says which.
@@ -164,54 +218,10 @@
                                Text="{Binding SyncText}"
                                FontSize="13"
                                Foreground="{DynamicResource GM.TextMutedBrush}" />
-                    <StackPanel DockPanel.Dock="Left"
-                                Orientation="Horizontal"
-                                DataContext="{Binding Filters}"
-                                Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
-                        <ComboBox MinWidth="160"
-                                  VerticalAlignment="Center"
-                                  ItemsSource="{Binding AreaChoices}"
-                                  SelectedItem="{Binding SelectedArea}"
-                                  ItemTemplate="{StaticResource FilterChoice}"
-                                  AutomationProperties.Name="{DynamicResource Lists.FilterArea}"
-                                  Visibility="{Binding HasAreas, Converter={StaticResource BoolToVisibility}}">
-                            <ComboBox.Style>
-                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAreaChosen}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
-                                            <Setter Property="BorderThickness" Value="2" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ComboBox.Style>
-                        </ComboBox>
-                        <ComboBox MinWidth="140"
-                                  Margin="8,0,0,0"
-                                  VerticalAlignment="Center"
-                                  ItemsSource="{Binding TagChoices}"
-                                  SelectedItem="{Binding SelectedTag}"
-                                  ItemTemplate="{StaticResource FilterChoice}"
-                                  AutomationProperties.Name="{DynamicResource Lists.FilterTag}"
-                                  Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
-                            <ComboBox.Style>
-                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsTagChosen}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
-                                            <Setter Property="BorderThickness" Value="2" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ComboBox.Style>
-                        </ComboBox>
-                        <ui:Button Margin="8,0,0,0"
-                                   VerticalAlignment="Center"
-                                   Appearance="Transparent"
-                                   Content="{DynamicResource Lists.ClearFilter}"
-                                   Command="{Binding ClearCommand}"
-                                   Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
-                    </StackPanel>
+                    <ContentControl DockPanel.Dock="Left"
+                                    Focusable="False"
+                                    Content="{Binding Filters}"
+                                    ContentTemplate="{StaticResource ListFilters}" />
                 </DockPanel>
             </StackPanel>
 

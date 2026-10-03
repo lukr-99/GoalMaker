@@ -260,12 +260,22 @@
                        Command="{Binding NewCommand}" Content="{DynamicResource Projects.Add}" />
             <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.Empty}"
                        Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+            <!-- Every project filtered away: the filter stays over the board, where it can be let go. -->
+            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.NoneMatch}"
+                       Visibility="{Binding IsFilteredAway, Converter={StaticResource BoolToVisibility}}" />
             <ItemsControl ItemsSource="{Binding Projects}" ItemTemplate="{StaticResource ProjectRow}" Focusable="False" />
         </StackPanel>
 
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <!-- The scrollbar rides the window's edge, and the page's own gutter keeps the content clear of it. -->
             <StackPanel Margin="{DynamicResource GM.PageGutter}">
+                <!--
+                  The area and tag filter (docs/projects.md) narrows the project list and the board, so
+                  it sits over both, and stays when it filters every project away.
+                -->
+                <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
                 <!-- The project on show, or the editor when one is being written. -->
                 <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
                         Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
@@ -303,6 +313,13 @@
                                   ItemsSource="{Binding Statuses}" DisplayMemberPath="Label" SelectedValuePath="Id"
                                   SelectedValue="{Binding ProjectStatus}"
                                   AutomationProperties.Name="{DynamicResource Projects.Status}" />
+                        <!-- The project's area: its items without one of their own count as in it. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.Area}" />
+                            <ComboBox MinWidth="140" ItemsSource="{Binding ProjectAreaChoices}" SelectedItem="{Binding ProjectArea}"
+                                      DisplayMemberPath="Label" AutomationProperties.Name="{DynamicResource Projects.Area}" />
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                             <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
                                        Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.ArchiveAfter}" />

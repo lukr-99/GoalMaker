@@ -345,6 +345,13 @@
     <string name="settings_reminder_time">Time</string>
     <string name="settings_quiet_hours_start_hint">Ordinary reminders wait from this time.</string>
     <string name="settings_quiet_hours_end_hint">Ordinary reminders come back at this time.</string>
+    <string name="settings_important_dnd">Important reminders in Do Not Disturb</string>
+    <string name="settings_important_dnd_allowed">Allowed: an important reminder rings even while Do Not Disturb is on.</string>
+    <string name="settings_important_dnd_not_allowed">Do Not Disturb silences them. To let them ring, turn on Override Do Not Disturb for Important reminders.</string>
+    <string name="settings_important_dnd_channel_off">Important reminders are switched off on this phone.</string>
+    <string name="settings_important_dnd_notifications_off">GoalMaker\'s notifications are off, so no reminder rings.</string>
+    <string name="settings_important_dnd_allow">Allow</string>
+    <string name="settings_important_dnd_change">Change</string>
     <string name="settings_time_invalid">Use a time like 22:00.</string>
     <string name="settings_check_now">Check now</string>
     <string name="settings_update_check_hint">GoalMaker also checks once a day on its own.</string>
@@ -1003,6 +1010,9 @@
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
     <string name="projects_pick">Choose a project</string>
+    <string name="projects_none_match">No project matches the filter.</string>
+    <string name="projects_area">Area</string>
+    <string name="projects_no_area">No area</string>
     <string name="task_project">Project</string>
     <string name="task_no_project">No project</string>
     <string name="activity_goal">goal “%1$s”</string>

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday.",
+  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday. A case with 'area' or 'tag' is narrowed by the lists' filter (contracts/vectors/lists.json, 'filter', a task without an area taking its project's from 'projects'): the planned tasks, deadlines, repeats and reminders of the tasks it leaves out don't show, but an occurrence it leaves out still keeps its day from being a repeat.",
   "grids": [
     {
       "kind": "week",
@@ -352,6 +352,181 @@
           "deadlines": [],
           "reminders": 0,
           "repeats": []
+        }
+      }
+    },
+    {
+      "name": "an area filter keeps its tasks, a project's items and what they bring",
+      "from": "2026-09-14",
+      "to": "2026-09-20",
+      "today": "2026-09-16",
+      "area": "work",
+      "tag": null,
+      "projects": [
+        {
+          "id": "gm",
+          "area": "work"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "w1",
+          "createdAt": "2026-09-01T08:00:00Z",
+          "plannedDate": "2026-09-15",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false,
+          "area": "work"
+        },
+        {
+          "id": "h1",
+          "createdAt": "2026-09-01T08:01:00Z",
+          "plannedDate": "2026-09-15",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false,
+          "area": "home"
+        },
+        {
+          "id": "p1",
+          "createdAt": "2026-09-01T08:02:00Z",
+          "plannedDate": "2026-09-16",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false,
+          "project": "gm"
+        },
+        {
+          "id": "d1",
+          "createdAt": "2026-09-01T08:03:00Z",
+          "plannedDate": null,
+          "plannedTime": null,
+          "deadline": "2026-09-17",
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false,
+          "area": "home"
+        },
+        {
+          "id": "d2",
+          "createdAt": "2026-09-01T08:04:00Z",
+          "plannedDate": null,
+          "plannedTime": null,
+          "deadline": "2026-09-17",
+          "state": "open",
+          "recurrence": null,
+          "seriesId": null,
+          "deleted": false,
+          "area": "work"
+        },
+        {
+          "id": "r1",
+          "createdAt": "2026-09-01T08:05:00Z",
+          "plannedDate": "2026-09-16",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": "FREQ=DAILY",
+          "seriesId": "r1",
+          "deleted": false,
+          "area": "work"
+        },
+        {
+          "id": "r2",
+          "createdAt": "2026-09-01T08:06:00Z",
+          "plannedDate": "2026-09-18",
+          "plannedTime": null,
+          "deadline": null,
+          "state": "open",
+          "recurrence": null,
+          "seriesId": "r1",
+          "deleted": false,
+          "area": "home"
+        }
+      ],
+      "reminders": [
+        {
+          "taskId": "w1",
+          "at": "2026-09-15T09:00"
+        },
+        {
+          "taskId": "h1",
+          "at": "2026-09-15T10:00"
+        },
+        {
+          "taskId": "d1",
+          "at": "2026-09-17T08:00"
+        },
+        {
+          "taskId": "d2",
+          "at": "2026-09-17T09:00"
+        }
+      ],
+      "expect": {
+        "2026-09-14": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-15": {
+          "planned": [
+            "w1"
+          ],
+          "deadlines": [],
+          "reminders": 1,
+          "repeats": []
+        },
+        "2026-09-16": {
+          "planned": [
+            "p1",
+            "r1"
+          ],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-17": {
+          "planned": [],
+          "deadlines": [
+            "d2"
+          ],
+          "reminders": 1,
+          "repeats": [
+            "r1"
+          ]
+        },
+        "2026-09-18": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": []
+        },
+        "2026-09-19": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "r1"
+          ]
+        },
+        "2026-09-20": {
+          "planned": [],
+          "deadlines": [],
+          "reminders": 0,
+          "repeats": [
+            "r1"
+          ]
         }
       }
     }

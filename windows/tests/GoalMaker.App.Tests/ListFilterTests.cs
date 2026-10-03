@@ -1,5 +1,6 @@
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Composer;
+using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.Tests;
 
@@ -101,6 +102,22 @@ public sealed class ListFilterTests : IDisposable
     }
 
     [Fact]
+    public void AProjectItemWithoutAnAreaCountsAsInItsProjectsArea()
+    {
+        Add("Send the invoice @Work", Today);
+        Add("Fix the shelf @Home", Today);
+        var item = planner.Tasks.Add(ComposerParser.Parse("Ship the board", planner.Time.GetLocalNow().DateTime) with { PlannedDate = Today })!;
+        var project = planner.Projects.Add(new ProjectDraft("GoalMaker") { AreaId = planner.Areas.Find("Work")!.Id })!;
+        planner.Tasks.SetProject(item.Id, project.Id, ProjectRules.Task);
+        var today = List(ListKind.Today);
+        var filters = Filters();
+
+        filters.SelectedArea = filters.AreaChoices.Single(area => area.Label == "Work");
+
+        Assert.Equal(["Send the invoice", "Ship the board"], Titles(today).Order());
+    }
+
+    [Fact]
     public void ThePickersStayAwayUntilThereIsAnAreaOrTag()
     {
         var filters = Filters();
@@ -133,7 +150,8 @@ public sealed class ListFilterTests : IDisposable
             planner.Tick,
             action => action(),
             tags: planner.Tags,
-            filter: filter);
+            filter: filter,
+            projects: planner.Projects);
     }
 
     private void Add(string line, DateOnly day)

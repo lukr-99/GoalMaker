@@ -272,5 +272,5 @@ public sealed class ProjectItemFormViewModelTests : IDisposable
     }
 
     private ProjectsViewModel Page() =>
-        new(planner.Projects, planner.Tasks, planner.Settings, planner.Strings, _ => { }, action => action(), planner.Time, windows.Add);
+        new(planner.Projects, planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, _ => null, _ => { }, action => action(), planner.Time, windows.Add);
 }

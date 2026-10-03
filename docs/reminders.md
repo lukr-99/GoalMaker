@@ -38,6 +38,33 @@ and the end counts as outside, so a reminder due at exactly 07:00 is not held.
 An **important** reminder ignores quiet hours (spec, story 57). It fires at its own time and keeps
 ringing until it is handled.
 
+## Do Not Disturb
+
+Quiet hours are GoalMaker's own; the device's Do Not Disturb is the system's, and only the owner can
+let a reminder through it.
+
+On **Android**, important reminders have their own notification channel (id `reminders_important`,
+category reminder, high importance, ringing insistently). Do Not Disturb silences that channel too
+until its **Override Do Not Disturb** switch is on, and Android lets only the owner turn it on: an
+app can set a channel's override itself only while it holds Do Not Disturb access, which would let
+GoalMaker switch Do Not Disturb on and off, far more than it needs. So Settings, Planning, has an
+**Important reminders in Do Not Disturb** row that says where it stands (allowed, silenced, the
+channel switched off, or GoalMaker's notifications off) and opens the channel's own system page to
+change it, or the app's notification page while notifications are off altogether; it asks the phone
+again when the owner comes back. The channel keeps its id, so the owner's choice lasts across
+updates. An override lets the reminder through Do Not Disturb's priority setting; a "total silence"
+or "alarms only" setting still holds it back. The reminder stays in the reminder category rather
+than posing as an alarm (which Do Not Disturb lets through by default) because it is not an alarm
+clock, and it has no full-screen intent: it should ring, not take over the screen. Ordinary
+reminders keep their own channel and follow Do Not Disturb.
+
+On **Windows**, an important reminder's toast uses the alarm scenario with a looping alarm sound,
+and an ordinary one the reminder scenario. Windows' Do not disturb lets alarms through, and lets
+reminders through while "Show reminders, regardless of app used" is on under Set priority
+notifications, so nothing more is needed there. The urgent scenario was left alone: it needs a
+recent Windows 11 build and the owner's per-app consent, and the alarm scenario already rings
+through.
+
 ## Snooze
 
 A notification offers Done and the snoozes below. Windows shows all of them on the toast. Android
