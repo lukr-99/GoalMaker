@@ -188,6 +188,12 @@ A habit can serve a goal. When the goal counts a number and the habit's unit is 
 case and spaces), the habit's check-ins in the goal's period add to it like logged amounts (story 32,
 [goals](goals.md)).
 
+## Reminders
+
+The habit form's **Remind me** sets a time of day a habit reminds at, on the days it is still left,
+with Check in (+1 for a count, Log for an amount) and Skip on the notification; see
+[reminders](reminders.md#habit-reminders).
+
 ## Storage
 
 `habits`, `habit_checkins` and `habit_pauses` are synced tables (Supabase migration 0010, replica
@@ -195,5 +201,5 @@ migration 0005). `habit_checkins.failed` came with Supabase migration 0021 (repl
 default; a trigger clears it whenever a check-in holds a value or a skip, so an app from before it,
 which leaves the column out, still takes a fail back by checking in. `direction` came with Supabase migration 0014 (replica 0009) and `show_on_today`
 with Supabase migration 0020 (replica 0014); both have defaults, so a habit from before reads as it
-did. Deleting a habit takes its check-ins and pauses with it; deleting its goal leaves the
+did. `remind_at` came with Supabase migration 0022 (replica 0016), null for no reminder. Deleting a habit takes its check-ins and pauses with it; deleting its goal leaves the
 habit without one.

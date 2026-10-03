@@ -69,6 +69,10 @@ class ReminderReceiver : BroadcastReceiver() {
                         notifications.clearPlanTomorrow(it)
                     }
 
+                    ReminderAlarm.ACTION_HABIT_CHECK_IN, ReminderAlarm.ACTION_HABIT_SKIP -> {
+                        HabitReminderButtons.settle(intent, reminders, notifications)
+                    }
+
                     // The alarm, a reboot, a changed clock: show what is due and arm what follows.
                     else -> {
                         graph.show(reminders.catchUp())

@@ -747,6 +747,15 @@ public sealed class AppGraph : IDisposable
             var byId = Wants.All().ToDictionary(want => want.Id);
             toasts.ShowWants(ready, [.. ready.WantIds.Where(byId.ContainsKey).Select(id => byId[id].Title)]);
         }
+
+        if (look.Habits is { Count: > 0 } habits)
+        {
+            var checkins = Habits.Checkins();
+            foreach (var due in habits)
+            {
+                toasts.ShowHabit(due, [.. checkins.Where(checkin => checkin.HabitId == due.Habit.Id)]);
+            }
+        }
     }
 
     private void SettleReminders()
@@ -768,6 +777,10 @@ public sealed class AppGraph : IDisposable
         }
 
         ClearStaleWants();
+        foreach (var (habitId, habitDay) in toasts.ShownHabits().Where(shown => Reminders.HabitStale(shown.HabitId, shown.Day)))
+        {
+            toasts.ClearHabit(habitId, habitDay);
+        }
     }
 
     // A wants toast goes once every want it names was decided, here or on the other device.
@@ -806,6 +819,12 @@ public sealed class AppGraph : IDisposable
         if (activation.Action == ToastAction.Wants)
         {
             WindowRequested?.Invoke(this, AppPage.Wants);
+            return;
+        }
+
+        if (activation.Habit() is { HabitId.Length: > 0 } habit)
+        {
+            OnHabitToast(activation.Action, habit.HabitId, habit.Day);
             return;
         }
 
@@ -850,6 +869,30 @@ public sealed class AppGraph : IDisposable
         }
 
         toasts.Clear(activation.ReminderId);
+    }
+
+    // A habit reminder's buttons check in or skip; its body opens the Habits page, and an amount's Log
+    // opens it on the log panel. Whatever was clicked, the toast goes.
+    private void OnHabitToast(ToastAction action, string habitId, DateOnly day)
+    {
+        switch (action)
+        {
+            case ToastAction.HabitCheckIn:
+                Reminders.CheckInHabit(habitId, day);
+                break;
+            case ToastAction.HabitSkip:
+                Reminders.SkipHabit(habitId, day);
+                break;
+            case ToastAction.HabitLog when Habits.Find(habitId) is { } habit:
+                HabitsPage.StartLog(habit);
+                WindowRequested?.Invoke(this, AppPage.Habits);
+                break;
+            default:
+                WindowRequested?.Invoke(this, AppPage.Habits);
+                break;
+        }
+
+        toasts.ClearHabit(habitId, day);
     }
 
     // Tally follows the switch on its page at once; switching it off writes what it has.

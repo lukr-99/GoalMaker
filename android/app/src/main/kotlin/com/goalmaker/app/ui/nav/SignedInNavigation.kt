@@ -130,6 +130,14 @@ fun SignedInNavigation(graph: AppGraph) {
             graph.wantsOpened()
         }
     }
+    // A habit reminder opens the Habits place, pinned or not.
+    val habitsRequested by graph.habitsRequested.collectAsState()
+    LaunchedEffect(habitsRequested) {
+        if (habitsRequested) {
+            select(PlaceRules.HABITS)
+            graph.habitsOpened()
+        }
+    }
     // The Goals and Motivation widgets open the Goals place, pinned or not.
     val goalsRequested by graph.goalsRequested.collectAsState()
     LaunchedEffect(goalsRequested) {
@@ -286,7 +294,16 @@ fun SignedInNavigation(graph: AppGraph) {
                                     val habitsViewModel = viewModel(key = "habits-tab") {
                                         HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
                                     }
-                                    HabitsScreen(viewModel = habitsViewModel, chat = chatViewModel, onBack = backToHub, actions = actions)
+                                    // A habit reminder's Log opens the habit's log dialog here.
+                                    val logRequest by graph.habitLogRequested.collectAsState()
+                                    HabitsScreen(
+                                        viewModel = habitsViewModel,
+                                        chat = chatViewModel,
+                                        onBack = backToHub,
+                                        actions = actions,
+                                        logRequest = logRequest,
+                                        onLogRequestSeen = graph::habitLogOpened,
+                                    )
                                 }
                                 PlaceRules.GOALS -> {
                                     val goalsViewModel = viewModel(key = "goals-tab") {
