@@ -1,0 +1,27 @@
+# A line typed in the bottom bar lands on Today; ticking it off takes it off with a Done snackbar.
+appId: com.goalmaker.app.debug
+name: Add a task and tick it off
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Add a task…"
+    timeout: 60000
+- tapOn: "Add a task…"
+# Lower case on purpose: with the field's sentence capitals, a typed capital comes out doubled on
+# some emulators ("BBuy milk"). The composer capitalizes the title itself.
+- inputText: "water the plants"
+- hideKeyboard
+- tapOn: "Add task"
+- extendedWaitUntil:
+    visible: "Water the plants"
+    timeout: 15000
+# The row's box: the unchecked checkbox left of the title (the Chat switch is below the list).
+- tapOn:
+    checked: false
+    leftOf: "Water the plants"
+    above: "Add a task…"
+- extendedWaitUntil:
+    visible: "Done: Water the plants"
+    timeout: 15000
+- assertNotVisible: "Water the plants"
