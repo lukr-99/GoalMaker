@@ -916,12 +916,29 @@ public sealed class PageSnapshots
         planner.Tally.AddRule(new TallyRule(TallyRules.Folder, "GoalMaker", TallyRules.Windows, "coding", project.Id));
         using var theme = Theme(planner);
         var defaults = ContractResources.TallyDefaults();
+        // This PC's own log for today, for the hours and the apps.
+        var friday = week.AddDays(4);
+        List<TallyStretch> local =
+        [
+            new(friday.ToDateTime(new TimeOnly(8, 30)), friday.ToDateTime(new TimeOnly(9, 45)), "code.exe", "Tally.cs - GoalMaker - Visual Studio Code", "coding"),
+            new(friday.ToDateTime(new TimeOnly(9, 45)), friday.ToDateTime(new TimeOnly(10, 10)), "chrome.exe", "Lo-fi beats - YouTube - Google Chrome", "video"),
+            new(friday.ToDateTime(new TimeOnly(10, 10)), friday.ToDateTime(new TimeOnly(10, 30)), "chrome.exe", "r/androiddev - Reddit - Google Chrome", "social"),
+            new(friday.ToDateTime(new TimeOnly(11, 0)), friday.ToDateTime(new TimeOnly(12, 30)), "code.exe", "main.py - Thesis - Visual Studio Code", "study"),
+            new(friday.ToDateTime(new TimeOnly(13, 0)), friday.ToDateTime(new TimeOnly(13, 40)), "slack.exe", "general - Slack", "chat"),
+            new(friday.ToDateTime(new TimeOnly(13, 40)), friday.ToDateTime(new TimeOnly(14, 0)), "spotify.exe", "Spotify Premium", "music"),
+        ];
         var tally = new TallyViewModel(
             planner.Tally, defaults, planner.Projects, planner.Settings, strings, planner.Time, theme.SwatchBrush,
-            [.. ContractResources.Themes().AreaColors.Select(color => color.Id)], action => action());
+            [.. ContractResources.Themes().AreaColors.Select(color => color.Id)], action => action(), stretches: (_, _) => local);
+        tally.Apps[0].IsExpanded = true;
+        tally.Apps[1].IsExpanded = true;
         var page = new TallyPage(tally);
-        Save(page, folder, "tally-wide", new Size(1100, 1500));
-        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 1700));
+        Save(page, folder, "tally-wide", new Size(1100, 2300));
+        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 2600));
+
+        tally.ShowDay(week.AddDays(2));
+        Save(new TallyPage(tally), folder, "tally-a-day-picked", new Size(1100, 1200));
+        tally.ShowDay(week.AddDays(2));
 
         tally.Choose(TallyRules.Phone);
         tally.AddRuleCommand.Execute(null);

@@ -6,7 +6,9 @@ namespace GoalMaker.Core.Planning;
 /// Tally on the PC (docs/tally.md, ADR 0013): follows the window in front, sorts its time with
 /// <see cref="TallyRules"/> and keeps it in the raw log on this PC. The clock stops after five minutes
 /// without input (not for video), on lock and on sleep. <see cref="Flush"/>, on the sync timer, turns
-/// the log into this PC's daily totals, the only part that syncs.
+/// the log into this PC's daily totals, the only part that syncs, sorting it again with the rules as
+/// they are then, so a new rule re-sorts the days still being written. <see cref="Stretches"/> reads
+/// the log back for the Tally page's hours and apps.
 /// </summary>
 public sealed class TallyTracker : IDisposable
 {
@@ -136,18 +138,65 @@ public sealed class TallyTracker : IDisposable
 
             Clean(now);
             var hour = dayStartHour();
+            var sorter = Sorter();
             foreach (var day in touched.ToList())
             {
                 // A day's stretches are logged under the date they started on, so its neighbors hold some too.
                 var intervals = Enumerable.Range(-1, 3)
                     .SelectMany(offset => Entries(day.AddDays(offset)))
-                    .Select(entry => new TallyInterval(entry.Start, entry.End, entry.Category, entry.Project));
+                    .Select(entry => (entry, sort: sorter(entry.App, entry.Title)))
+                    .Select(pair => new TallyInterval(pair.entry.Start, pair.entry.End, pair.sort.Category, pair.sort.Project));
                 var totals = TallyRules.DayTotals(intervals, hour).Where(total => total.Day == day);
                 if (tally.RewriteDay(day, totals))
                 {
                     touched.Remove(day);
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// Counts today again from the log with the rules as they are now, as the Tally page asks after the
+    /// owner makes, changes or deletes a rule.
+    /// </summary>
+    public void Recount()
+    {
+        lock (gate)
+        {
+            touched.Add(PlanningDay.Of(Now(), dayStartHour()));
+        }
+
+        Flush();
+    }
+
+    /// <summary>
+    /// What this PC's log says was in front from the start of the planning day <paramref name="from"/>
+    /// to the end of <paramref name="to"/>, the window still open included, each sorted with the
+    /// owner's rules and the shipped ones as they are now. Nothing is written.
+    /// </summary>
+    public IReadOnlyList<TallyStretch> Stretches(DateOnly from, DateOnly to)
+    {
+        lock (gate)
+        {
+            var sorter = Sorter();
+            var hour = dayStartHour();
+            var start = from.ToDateTime(new TimeOnly(hour, 0));
+            var end = to.AddDays(1).ToDateTime(new TimeOnly(hour, 0));
+            var read = Enumerable.Range(-1, to.DayNumber - from.DayNumber + 3)
+                .SelectMany(offset => Entries(from.AddDays(offset)))
+                .Select(entry => (entry.Start, entry.End, entry.App, entry.Title))
+                .ToList();
+            if (since is { } open && window is not null)
+            {
+                read.Add((open, Now(), window.App, window.Title));
+            }
+
+            return
+            [
+                .. read
+                    .Where(entry => entry.End > start && entry.Start < end)
+                    .Select(entry => new TallyStretch(entry.Start, entry.End, entry.App, entry.Title, sorter(entry.App, entry.Title).Category)),
+            ];
         }
     }
 
@@ -252,6 +301,24 @@ public sealed class TallyTracker : IDisposable
         }
     }
 
+    // Sorts a window with the rules as they are now, each window once.
+    private Func<string, string?, TallySort> Sorter()
+    {
+        var own = tally.Rules();
+        var known = projects();
+        var sorted = new Dictionary<(string App, string Title), TallySort>();
+        return (app, title) =>
+        {
+            if (!sorted.TryGetValue((app, title ?? string.Empty), out var sort))
+            {
+                sort = TallyRules.SortSample(new TallySample(TallyRules.Windows, app, title), own, defaults, known);
+                sorted[(app, title ?? string.Empty)] = sort;
+            }
+
+            return sort;
+        };
+    }
+
     private void Clean(DateTime now)
     {
         var oldest = DateOnly.FromDateTime(now).AddDays(1 - KeepDays);
@@ -276,7 +343,8 @@ public sealed class TallyTracker : IDisposable
                 continue;
             }
 
-            if (entry is not null)
+            // A line without its window can't be sorted, so it is skipped too.
+            if (entry is { App: not null })
             {
                 yield return entry;
             }

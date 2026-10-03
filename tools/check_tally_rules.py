@@ -43,12 +43,17 @@ def main() -> int:
             problems.append(f"category {where}: an id is one lowercase word")
         if not 0 < len(category.get("name", "")) <= MAX_NAME:
             problems.append(f"category {where}: a name has 1 to {MAX_NAME} characters")
+        if category.get("name") != where.capitalize():
+            problems.append(f"category {where}: the name is the id capitalized, as the connector names a default")
         if category.get("color") not in colors:
             problems.append(f"category {where}: {category.get('color')} is not in the area palette")
         if not category.get("emoji"):
             problems.append(f"category {where}: every category has an emoji")
     if len(ids) != len(set(ids)):
         problems.append("two categories share an id")
+    shades = [category.get("color") for category in document["categories"]]
+    if len(shades) != len(set(shades)):
+        problems.append("two categories share a color, so a chart couldn't tell them apart")
     if "other" not in ids:
         problems.append("'other' has to be there: it is where unmatched time goes")
 

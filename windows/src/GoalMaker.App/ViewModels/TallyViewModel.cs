@@ -11,9 +11,11 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The Tally page (docs/tally.md, M8-13, stories 109 to 113): the switch on top with what is recorded
-/// and what syncs, filter chips (Phone, PC, a category), today as one stacked bar by category, the
-/// week as stacked bars per day, time per project, and the owner's rules and categories with a panel
-/// each to add and edit them. Every device's time counts; the chips narrow it.
+/// and what syncs, filter chips (Phone, PC, a category), the day (today, or the day picked in the week)
+/// as one stacked bar by category, then that day by hour and the apps, sites and folders on this PC
+/// (from its own log, which never syncs), the week as stacked bars per day, time per project, and the
+/// owner's rules and categories with a panel each to add and edit them. Every device's time counts in
+/// the bars; the chips narrow everything. Make a rule under an app or a site fills the rule panel in.
 /// </summary>
 public sealed partial class TallyViewModel : ObservableObject
 {
@@ -25,9 +27,13 @@ public sealed partial class TallyViewModel : ObservableObject
     private readonly TimeProvider time;
     private readonly Func<string, Brush?> areaBrush;
     private readonly Action<bool>? switchTally;
+    private readonly Func<DateOnly, DateOnly, IReadOnlyList<TallyStretch>>? stretches;
+    private readonly Action? recount;
+    private readonly HashSet<string> open = new(StringComparer.Ordinal);
     private TallyLabels labels;
     private string? kind;
     private string? category;
+    private DateOnly? pickedDay;
     private string? editingRuleId;
     private string? editingCategoryId;
 
@@ -36,14 +42,49 @@ public sealed partial class TallyViewModel : ObservableObject
     private bool hasTime;
 
     [ObservableProperty]
-    private string todayTotal = string.Empty;
+    private string dayTitle = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasNoToday))]
-    private bool hasToday;
+    private string dayTotal = string.Empty;
 
     [ObservableProperty]
-    private IReadOnlyList<(double Amount, Brush? Brush)> todayParts = [];
+    [NotifyPropertyChangedFor(nameof(HasNoDay))]
+    private bool hasDay;
+
+    [ObservableProperty]
+    private string dayEmpty = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNotToday))]
+    private bool isToday = true;
+
+    [ObservableProperty]
+    private IReadOnlyList<(double Amount, Brush? Brush)> dayParts = [];
+
+    // This PC's own look at the day: its hours and its apps.
+    [ObservableProperty]
+    private bool showLocal;
+
+    [ObservableProperty]
+    private bool showLocalElsewhere;
+
+    [ObservableProperty]
+    private string hoursDescription = string.Empty;
+
+    /// <summary>The time under every sixth hour of the day chart: "04:00", "10:00", "16:00", "22:00".</summary>
+    [ObservableProperty]
+    private IReadOnlyList<string> hourMarks = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AppsForDay))]
+    private bool appsForWeek;
+
+    [ObservableProperty]
+    private string dayChoice = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoApps))]
+    private bool hasApps;
 
     [ObservableProperty]
     private string weekTotal = string.Empty;
@@ -120,7 +161,9 @@ public sealed partial class TallyViewModel : ObservableObject
         Func<string, Brush?> areaBrush,
         IReadOnlyList<string> palette,
         Action<Action> runOnUi,
-        Action<bool>? switchTally = null)
+        Action<bool>? switchTally = null,
+        Func<DateOnly, DateOnly, IReadOnlyList<TallyStretch>>? stretches = null,
+        Action? recount = null)
     {
         this.tally = tally;
         this.defaults = defaults;
@@ -130,6 +173,8 @@ public sealed partial class TallyViewModel : ObservableObject
         this.time = time;
         this.areaBrush = areaBrush;
         this.switchTally = switchTally;
+        this.stretches = stretches;
+        this.recount = recount;
         labels = new TallyLabels(defaults, [], strings, areaBrush);
         MatchChoices =
         [
@@ -154,7 +199,13 @@ public sealed partial class TallyViewModel : ObservableObject
     /// <summary>Phone, PC, then each category with time this week; a chosen chip narrows everything below it.</summary>
     public ObservableCollection<FilterOptionViewModel> Chips { get; } = [];
 
-    public ObservableCollection<TallySegmentViewModel> TodayLegend { get; } = [];
+    public ObservableCollection<TallySegmentViewModel> DayLegend { get; } = [];
+
+    /// <summary>The shown day's 24 hours on this PC, from the hour the planning day starts.</summary>
+    public ObservableCollection<TallyHourViewModel> Hours { get; } = [];
+
+    /// <summary>This PC's apps by category, for the shown day or the week.</summary>
+    public ObservableCollection<TallyAppGroupViewModel> Apps { get; } = [];
 
     /// <summary>Monday to Sunday of this planning week.</summary>
     public ObservableCollection<TallyBarViewModel> WeekDays { get; } = [];
@@ -173,7 +224,13 @@ public sealed partial class TallyViewModel : ObservableObject
 
     public bool HasNoTime => !HasTime;
 
-    public bool HasNoToday => !HasToday;
+    public bool HasNoDay => !HasDay;
+
+    public bool HasNoApps => !HasApps;
+
+    public bool IsNotToday => !IsToday;
+
+    public bool AppsForDay => !AppsForWeek;
 
     public bool HasNoRules => !HasRules;
 
@@ -202,6 +259,7 @@ public sealed partial class TallyViewModel : ObservableObject
             settings.TallyOn = value;
             switchTally?.Invoke(value);
             OnPropertyChanged();
+            Refresh();
         }
     }
 
@@ -228,31 +286,41 @@ public sealed partial class TallyViewModel : ObservableObject
         ShowChips(week);
 
         var kept = week.Where(day => (kind is null || day.DeviceKind == kind) && (category is null || day.Category == category)).ToList();
-        var todays = TallyRules.ByCategory(kept.Where(day => day.Day == today));
-        var todayMinutes = todays.Sum(group => group.Minutes);
-        TodayTotal = labels.Duration(todayMinutes);
-        HasToday = todayMinutes > 0;
-        TodayParts = Parts(todays);
-        TodayLegend.Clear();
-        foreach (var group in todays)
+        var shown = pickedDay is { } picked && picked >= weekStart && picked <= today ? picked : today;
+        IsToday = shown == today;
+        DayTitle = IsToday ? strings.Get("Tally.Today") : shown.ToString("dddd d MMMM", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture);
+        DayEmpty = strings.Get(IsToday ? "Tally.NothingToday" : "Tally.NothingThatDay");
+        DayChoice = IsToday ? strings.Get("Tally.TodayChoice") : shown.ToString("dddd", CultureInfo.CurrentCulture);
+        var days = TallyRules.ByCategory(kept.Where(day => day.Day == shown));
+        var dayMinutes = days.Sum(group => group.Minutes);
+        DayTotal = labels.Duration(dayMinutes);
+        HasDay = dayMinutes > 0;
+        DayParts = Parts(days);
+        DayLegend.Clear();
+        foreach (var group in days)
         {
-            TodayLegend.Add(new TallySegmentViewModel(labels.Name(group.Key!), labels.Emoji(group.Key!), labels.Duration(group.Minutes), labels.Brush(group.Key!)));
+            DayLegend.Add(new TallySegmentViewModel(labels.Name(group.Key!), labels.Emoji(group.Key!), labels.Duration(group.Minutes), labels.Brush(group.Key!)));
         }
 
-        var days = Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
-        var byDay = days.Select(day => TallyRules.ByCategory(kept.Where(row => row.Day == day))).ToList();
+        ShowLocalStretches(weekStart, today, shown);
+
+        var weekDays = Enumerable.Range(0, 7).Select(offset => weekStart.AddDays(offset)).ToList();
+        var byDay = weekDays.Select(day => TallyRules.ByCategory(kept.Where(row => row.Day == day))).ToList();
         var most = Math.Max(1, byDay.Max(groups => groups.Sum(group => group.Minutes)));
         WeekDays.Clear();
-        for (var index = 0; index < days.Count; index++)
+        for (var index = 0; index < weekDays.Count; index++)
         {
             var minutes = byDay[index].Sum(group => group.Minutes);
+            var day = weekDays[index];
             WeekDays.Add(new TallyBarViewModel(
-                days[index].ToString("ddd", CultureInfo.CurrentCulture),
+                day.ToString("ddd", CultureInfo.CurrentCulture),
                 minutes > 0 ? labels.Duration(minutes) : string.Empty,
                 (double)minutes / most,
                 Parts(byDay[index]),
-                strings.Get("Tally.BarTip", days[index].ToString("dddd d MMM", CultureInfo.CurrentCulture), labels.Duration(minutes)),
-                days[index] == today));
+                strings.Get("Tally.BarTip", day.ToString("dddd d MMM", CultureInfo.CurrentCulture), labels.Duration(minutes)),
+                day == today,
+                day == shown,
+                new RelayCommand(() => ShowDay(day))));
         }
 
         WeekTotal = strings.Get("Tally.WeekTotal", labels.Duration(kept.Sum(day => day.Minutes)));
@@ -288,6 +356,19 @@ public sealed partial class TallyViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>Shows one day of the week closer up, or today again when that day is picked a second time.</summary>
+    public void ShowDay(DateOnly day)
+    {
+        pickedDay = pickedDay == day ? null : day;
+        Refresh();
+    }
+
+    /// <summary>Starts a new rule that puts one of this PC's apps into a category, for the owner to change the category.</summary>
+    public void MakeAppRule(string forCategory, string app) => StartNewRule(TallyRules.App, app, forCategory);
+
+    /// <summary>Starts a new rule from a site (a title rule) or an editor's folder (a folder rule) under an app.</summary>
+    public void MakeWindowRule(string forCategory, string app, string label) => StartNewRule(TallyBreakdown.WindowMatch(app), label, forCategory);
+
     public void StartEditRule(TallyRuleRowViewModel row)
     {
         editingRuleId = row.Rule.Id;
@@ -304,9 +385,9 @@ public sealed partial class TallyViewModel : ObservableObject
 
     public void DeleteRule(TallyRuleRowViewModel row)
     {
-        if (row.Rule.Id is { } id)
+        if (row.Rule.Id is { } id && tally.DeleteRule(id))
         {
-            tally.DeleteRule(id);
+            recount?.Invoke();
         }
     }
 
@@ -325,6 +406,21 @@ public sealed partial class TallyViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleChip(string chip) => Choose(chip);
+
+    [RelayCommand]
+    private void ShowToday()
+    {
+        pickedDay = null;
+        Refresh();
+    }
+
+    /// <summary>Shows this PC's apps for the day shown ("day") or the whole week ("week").</summary>
+    [RelayCommand]
+    private void ShowApps(string scope)
+    {
+        AppsForWeek = scope == "week";
+        Refresh();
+    }
 
     [RelayCommand]
     private void AddRule()
@@ -354,6 +450,8 @@ public sealed partial class TallyViewModel : ObservableObject
         if (saved)
         {
             IsEditingRule = false;
+            // The day still being written is sorted again by the rule at once.
+            recount?.Invoke();
         }
     }
 
@@ -389,6 +487,97 @@ public sealed partial class TallyViewModel : ObservableObject
 
     [RelayCommand]
     private void CancelCategory() => IsEditingCategory = false;
+
+    private void StartNewRule(string match, string pattern, string forCategory)
+    {
+        editingRuleId = null;
+        IsAddingRule = true;
+        DraftMatch = MatchChoices.FirstOrDefault(choice => choice.Id == match) ?? MatchChoices[0];
+        DraftPattern = pattern;
+        DraftPlatform = PlatformChoices.First(choice => choice.Id == TallyRules.Windows);
+        DraftCategory = CategoryChoices.FirstOrDefault(choice => choice.Id == forCategory) ?? CategoryChoices.FirstOrDefault();
+        DraftProject = ProjectChoices[0];
+        RuleRefused = false;
+        OnPropertyChanged(nameof(RulePanelTitle));
+        IsEditingRule = true;
+    }
+
+    // This PC's own hours and apps from its log, while Tally is on here and the PC isn't filtered out.
+    private void ShowLocalStretches(DateOnly weekStart, DateOnly today, DateOnly shown)
+    {
+        var counting = TallyOn && stretches is not null;
+        ShowLocal = counting && kind != TallyRules.Phone;
+        ShowLocalElsewhere = counting && kind == TallyRules.Phone;
+        var local = ShowLocal ? stretches!(weekStart, today).Where(stretch => category is null || stretch.Category == category).ToList() : [];
+        var startHour = settings.DayStartHour;
+
+        Hours.Clear();
+        var spoken = new List<string>();
+        var hours = TallyBreakdown.Hours(local, shown, startHour);
+        for (var index = 0; index < hours.Count; index++)
+        {
+            var hour = hours[index];
+            var clock = Clock(hour.Hour);
+            var tip = hour.Seconds > 0 ? strings.Get("Tally.HourTip", clock, labels.Duration(Math.Max(1, (hour.Seconds + 30) / 60))) : clock;
+            if (hour.Seconds > 0)
+            {
+                spoken.Add(tip);
+            }
+
+            Hours.Add(new TallyHourViewModel(
+                Math.Min(1, hour.Seconds / 3600d),
+                [.. hour.Categories.Select(part => ((double)part.Seconds, labels.Brush(part.Category)))],
+                tip));
+        }
+
+        HourMarks = [.. hours.Where((_, index) => index % 6 == 0).Select(hour => Clock(hour.Hour))];
+        HoursDescription = spoken.Count == 0 ? strings.Get("Tally.HoursNone") : strings.Get("Tally.HoursSpoken", string.Join(", ", spoken));
+
+        Apps.Clear();
+        var groups = AppsForWeek ? TallyBreakdown.Apps(local, weekStart, today, startHour) : TallyBreakdown.Apps(local, shown, shown, startHour);
+        foreach (var group in groups)
+        {
+            List<TallyAppRowViewModel> apps =
+            [
+                .. group.Apps.Select(app => new TallyAppRowViewModel(
+                    this,
+                    group.Category,
+                    app.App,
+                    labels.Duration(app.Minutes),
+                    strings.Get("Tally.MakeRuleFor", app.App),
+                    [
+                        .. app.Windows.Select(window => new TallyWindowRowViewModel(
+                            this, group.Category, app.App, window.Label, labels.Duration(window.Minutes), strings.Get("Tally.MakeRuleFor", window.Label))),
+                    ])),
+            ];
+            Apps.Add(new TallyAppGroupViewModel(
+                group.Category,
+                labels.Name(group.Category),
+                labels.Emoji(group.Category),
+                labels.Brush(group.Category),
+                labels.Duration(group.Minutes),
+                apps,
+                open.Contains(group.Category),
+                Remember));
+        }
+
+        HasApps = Apps.Count > 0;
+    }
+
+    // Keeps which categories are open across a refresh.
+    private void Remember(string opened, bool isOpen)
+    {
+        if (isOpen)
+        {
+            open.Add(opened);
+        }
+        else
+        {
+            open.Remove(opened);
+        }
+    }
+
+    private static string Clock(int hour) => hour.ToString("00", CultureInfo.InvariantCulture) + ":00";
 
     // Phone and PC always; a category once it has time this week, or while it is the chosen one.
     private void ShowChips(IReadOnlyList<TallyDay> week)

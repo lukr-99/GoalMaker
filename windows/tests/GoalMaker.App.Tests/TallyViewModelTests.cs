@@ -30,11 +30,11 @@ public sealed class TallyViewModelTests : IDisposable
         var page = Page();
 
         Assert.True(page.HasTime);
-        Assert.Equal("Tally.HoursMinutes(2,15)", page.TodayTotal);
-        Assert.Equal([90d, 45d], page.TodayParts.Select(part => part.Amount));
+        Assert.Equal("Tally.HoursMinutes(2,15)", page.DayTotal);
+        Assert.Equal([90d, 45d], page.DayParts.Select(part => part.Amount));
         Assert.Equal(
             [("Coding", "Tally.HoursMinutes(1,30)"), ("Video", "Tally.Minutes(45)")],
-            page.TodayLegend.Select(segment => (segment.Name, segment.Value)));
+            page.DayLegend.Select(segment => (segment.Name, segment.Value)));
 
         Assert.Equal(7, page.WeekDays.Count);
         Assert.True(page.WeekDays[4].IsCurrent);
@@ -53,8 +53,8 @@ public sealed class TallyViewModelTests : IDisposable
         var page = Page();
 
         Assert.False(page.HasTime);
-        Assert.False(page.HasToday);
-        Assert.Equal("Tally.Minutes(0)", page.TodayTotal);
+        Assert.False(page.HasDay);
+        Assert.Equal("Tally.Minutes(0)", page.DayTotal);
         Assert.Equal([TallyRules.Phone, TallyRules.Pc], page.Chips.Select(chip => chip.Id));
     }
 
@@ -72,20 +72,20 @@ public sealed class TallyViewModelTests : IDisposable
         page.Chips[0].Command.Execute(TallyRules.Phone);
         Assert.Equal(TallyRules.Phone, page.Kind);
         Assert.True(page.Chips[0].IsSelected);
-        Assert.Equal("Tally.Minutes(30)", page.TodayTotal);
+        Assert.Equal("Tally.Minutes(30)", page.DayTotal);
 
         page.Choose(TallyRules.Pc);
-        Assert.Equal("Tally.HoursMinutes(1,45)", page.TodayTotal);
+        Assert.Equal("Tally.HoursMinutes(1,45)", page.DayTotal);
 
         page.Choose("video");
-        Assert.Equal("Tally.Minutes(15)", page.TodayTotal);
+        Assert.Equal("Tally.Minutes(15)", page.DayTotal);
         Assert.True(page.Chips.Single(chip => chip.Id == "video").IsSelected);
 
         page.Choose(TallyRules.Pc);
         page.Choose("video");
         Assert.Null(page.Kind);
         Assert.Null(page.Category);
-        Assert.Equal("Tally.HoursMinutes(2,15)", page.TodayTotal);
+        Assert.Equal("Tally.HoursMinutes(2,15)", page.DayTotal);
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public sealed class TallyViewModelTests : IDisposable
         planner.TallyDay(Today, TallyRules.Pc, row.Category.Id, 20);
         page.Categories[0].DeleteCommand.Execute(null);
         Assert.False(page.HasCategories);
-        Assert.Equal("Tally.GoneCategory", Assert.Single(page.TodayLegend).Name);
+        Assert.Equal("Tally.GoneCategory", Assert.Single(page.DayLegend).Name);
     }
 
     [Fact]
@@ -204,7 +204,120 @@ public sealed class TallyViewModelTests : IDisposable
         Assert.Equal([true, false], switched);
     }
 
-    private TallyViewModel Page() => new(
+    [Fact]
+    public void ADayOfTheWeekShowsCloserUpAndPickingItAgainGoesBackToToday()
+    {
+        planner.TallyDay(Today, TallyRules.Pc, "coding", 90);
+        planner.TallyDay(Today.AddDays(-2), TallyRules.Phone, "video", 40);
+        var page = Page();
+
+        Assert.True(page.IsToday);
+        Assert.Equal("Tally.Today", page.DayTitle);
+        Assert.True(page.WeekDays[4].IsSelected);
+
+        page.WeekDays[2].Pick!.Execute(null);
+        Assert.True(page.IsNotToday);
+        Assert.True(page.WeekDays[2].IsSelected);
+        Assert.False(page.WeekDays[4].IsSelected);
+        Assert.Equal("Tally.Minutes(40)", page.DayTotal);
+        Assert.Equal(["Video"], page.DayLegend.Select(segment => segment.Name));
+        Assert.Equal("Tally.NothingThatDay", page.DayEmpty);
+
+        page.WeekDays[2].Pick!.Execute(null);
+        Assert.True(page.IsToday);
+        Assert.Equal("Tally.HoursMinutes(1,30)", page.DayTotal);
+
+        page.ShowDay(Today.AddDays(-1));
+        page.ShowTodayCommand.Execute(null);
+        Assert.True(page.IsToday);
+    }
+
+    [Fact]
+    public void ThisPcsOwnHoursAndAppsShowWhileTallyIsOnHere()
+    {
+        var page = Page(Local);
+        Assert.False(page.ShowLocal);
+
+        page.TallyOn = true;
+
+        Assert.True(page.ShowLocal);
+        Assert.Equal(24, page.Hours.Count);
+        Assert.Equal(["04:00", "10:00", "16:00", "22:00"], page.HourMarks);
+        Assert.Equal(40d / 60d, page.Hours[5].Fraction, 9);
+        Assert.Equal(1d, page.Hours[6].Fraction);
+        Assert.Equal([30d, 10d], page.Hours[5].Parts.Select(part => part.Amount / 60));
+        Assert.Equal("Tally.HoursSpoken(Tally.HourTip(09:00,Tally.Minutes(40)), Tally.HourTip(10:00,Tally.Hours(1)))", page.HoursDescription);
+        Assert.Equal(["coding", "video", "social"], page.Apps.Select(group => group.Category));
+        var video = page.Apps[1];
+        Assert.Equal(("Video", "Tally.Minutes(30)"), (video.Name, video.Value));
+        var chrome = Assert.Single(video.Apps);
+        Assert.Equal(("chrome.exe", "Tally.Minutes(30)"), (chrome.App, chrome.Value));
+        Assert.Equal([("YouTube", "Tally.Minutes(30)")], chrome.Windows.Select(window => (window.Label, window.Value)));
+        Assert.Equal("Tally.MakeRuleFor(chrome.exe)", chrome.MakeRuleName);
+
+        page.ShowAppsCommand.Execute("week");
+        Assert.True(page.AppsForWeek);
+        Assert.Equal(["coding", "video", "games", "social"], page.Apps.Select(group => group.Category));
+
+        // An open category stays open when the page refreshes.
+        page.Apps[0].ToggleCommand.Execute(null);
+        page.Refresh();
+        Assert.True(page.Apps[0].IsExpanded);
+        Assert.False(page.Apps[1].IsExpanded);
+
+        page.Choose("video");
+        Assert.Equal(["video"], page.Apps.Select(group => group.Category));
+        Assert.Equal(30d / 60d, page.Hours[5].Fraction, 9);
+
+        page.Choose("video");
+        page.Choose(TallyRules.Phone);
+        Assert.False(page.ShowLocal);
+        Assert.True(page.ShowLocalElsewhere);
+    }
+
+    [Fact]
+    public void MakeARuleUnderAnAppOrASiteFillsThePanelInAndSavingCountsAgain()
+    {
+        var recounts = 0;
+        var page = Page(Local, () => recounts++);
+        page.TallyOn = true;
+        var chrome = page.Apps.Single(group => group.Category == "video").Apps.Single();
+
+        chrome.MakeRuleCommand.Execute(null);
+
+        Assert.True(page.IsEditingRule);
+        Assert.Equal("Tally.AddRule", page.RulePanelTitle);
+        Assert.Equal((TallyRules.App, "chrome.exe", TallyRules.Windows, "video"), (page.DraftMatch.Id, page.DraftPattern, page.DraftPlatform.Id, page.DraftCategory!.Id));
+        page.DraftCategory = page.CategoryChoices.Single(choice => choice.Id == "music");
+        page.SaveRuleCommand.Execute(null);
+
+        Assert.False(page.IsEditingRule);
+        Assert.Equal(1, recounts);
+        var rule = Assert.Single(planner.Tally.Rules());
+        Assert.Equal((TallyRules.App, "chrome.exe", TallyRules.Windows, "music"), (rule.Match, rule.Pattern, rule.Platform, rule.Category));
+
+        chrome.Windows[0].MakeRuleCommand.Execute(null);
+        Assert.Equal((TallyRules.Title, "YouTube", "video"), (page.DraftMatch.Id, page.DraftPattern, page.DraftCategory!.Id));
+
+        page.Apps.Single(group => group.Category == "coding").Apps.Single().Windows.Single().MakeRuleCommand.Execute(null);
+        Assert.Equal((TallyRules.Folder, "GoalMaker"), (page.DraftMatch.Id, page.DraftPattern));
+
+        page.DeleteRule(Assert.Single(page.Rules));
+        Assert.Equal(2, recounts);
+    }
+
+    // This PC's own log for the page: today's morning, and an evening earlier in the week.
+    private static IReadOnlyList<TallyStretch> Local(DateOnly from, DateOnly to) =>
+    [
+        new(At(Today, 9, 0), At(Today, 9, 30), "chrome.exe", "Lo-fi beats - YouTube - Google Chrome", "video"),
+        new(At(Today, 9, 30), At(Today, 9, 40), "chrome.exe", "r/androiddev - Reddit - Google Chrome", "social"),
+        new(At(Today, 10, 0), At(Today, 11, 0), "code.exe", "Tally.cs - GoalMaker - Visual Studio Code", "coding"),
+        new(At(Today.AddDays(-1), 20, 0), At(Today.AddDays(-1), 20, 15), "steam.exe", null, "games"),
+    ];
+
+    private static DateTime At(DateOnly day, int hour, int minute) => day.ToDateTime(new TimeOnly(hour, minute));
+
+    private TallyViewModel Page(Func<DateOnly, DateOnly, IReadOnlyList<TallyStretch>>? stretches = null, Action? recount = null) => new(
         planner.Tally,
         defaults,
         planner.Projects,
@@ -214,5 +327,7 @@ public sealed class TallyViewModelTests : IDisposable
         _ => null,
         planner.Areas.Palette(),
         action => action(),
-        switched.Add);
+        switched.Add,
+        stretches,
+        recount);
 }
