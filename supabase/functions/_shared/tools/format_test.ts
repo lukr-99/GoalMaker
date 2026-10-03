@@ -26,6 +26,7 @@ function habit(fields: Partial<Habit>): Habit {
     deleted: false,
     archived: false,
     showOnToday: true,
+    remindAt: null,
     ...fields,
   };
 }
@@ -161,4 +162,9 @@ Deno.test("the January nudge and a yearly digest's period read like the apps", (
   );
   assertEquals(newYearLine({ year: 2027, review: false, goals: true }), "New year: 2027 has no year goals yet.");
   assertEquals(periodOf("yearly", "2026-07-14"), { kind: "yearly", start: "2026-01-01", end: "2026-12-31" });
+});
+
+Deno.test("a habit that reminds says when", () => {
+  const line = habitLine(habit({ remindAt: "20:30" }), { standing: "left", value: 0, met: 0, streak: 0 });
+  assertEquals(line.includes("reminds at 20:30"), true, line);
 });

@@ -316,6 +316,7 @@ public sealed class HabitList
         ["unit"] = draft.Unit,
         ["goal_id"] = draft.GoalId,
         ["show_on_today"] = draft.ShowOnToday,
+        ["remind_at"] = draft.RemindAt?.ToString("HH:mm:ss", CultureInfo.InvariantCulture),
     };
 
     private static double? Number(JsonNode? node) => node is JsonValue value
@@ -351,6 +352,9 @@ public sealed class HabitList
 
         // A row from before 0020 has no value, and every habit showed then.
         ShowOnToday = row["show_on_today"] is null || Flag(row["show_on_today"]),
+
+        // A row from before 0022 has no value, and no habit reminded then.
+        RemindAt = (string?)row["remind_at"] is { } remind ? TimeOnly.Parse(remind, CultureInfo.InvariantCulture) : null,
         Position = Number(row["position"]) ?? 0,
         Deleted = row[SyncedTable.DeletedAt] is not null,
     };

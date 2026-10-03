@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Reminders (docs/reminders.md). 'due': the local date and time a reminder fires, from the reminder ('fireAt', or 'offsetMinutes' before the task's planned time, plus its state and 'snoozedUntil') and its task; null means it never fires. 'quietHours': what the window [start, end) does to a reminder due at 'at'; a window whose start equals its end is off, and important reminders pass. 'snooze': where each snooze option lands, counted from 'now' with the day starting at 'dayStartHour'; 'tomorrowMorning' is 'morningHour' on the day after the current planning day. 'schedule': what a device does when it looks: 'due' lists the reminders that arrive after 'since' (the last look) up to and including 'now', soonest first; 'next' is the first one after 'now', the one the alarm is armed for. Reminders and tasks in 'schedule' and 'stale' leave out fields that keep their defaults (no offset, pending, not snoozed, not important; a task open with no day or time). 'stale': which of the notifications on screen ('shown', reminder ids) have to go at 'now' because their reminder was handled, snoozed, moved or deleted, or its task finished; sorted by id. 'ritual': the evening Plan tomorrow reminder at 'time' (null: off). For a planning day D it rings at the first moment of D whose clock reads 'time' (after midnight when 'time' is before the day's start), unless D is in 'ran' (done or skipped on any device); quiet hours don't move it. 'due' is today's planning day when its moment came after 'since' and up to 'now', never an earlier day; 'next' is the moment the alarm waits for. 'ritualStale': whether a reminder on screen for 'day' has to go, because it ran or the planning day moved on. 'ritualIds': a run's id is a UUID version 5 of '<owner, lower case>/<ritual>/<day>' in 'runNamespace'. 'reviewReminders': the review reminders (docs/reviews.md): a weekly one rings on the owner's 'weekday' (1 Monday to 7 Sunday), a monthly one on the first day of a month, at 'time' on the planning day, once per day, and never on a day already in 'ran'; 'due' is the planning day to show now and 'next' the moment the alarm waits for, as in 'ritual'. 'reviewPeriods': the period a reminder on 'day' looks back on: the week that is ending when it falls on a Saturday or Sunday, the week just gone earlier in the week, and the month just gone for a monthly reminder. 'letterWaiting': whether a review reminder ringing on 'day' says the letter is here (docs/letter.md): the review of 'kind' for the period it looks back on (as in 'reviewPeriods') is not deleted and has a summary that isn't blank. The reminder reads the reviews as they are when it rings, so a letter that arrives later doesn't change a reminder already on screen.",
+  "description": "Reminders (docs/reminders.md). 'due': the local date and time a reminder fires, from the reminder ('fireAt', or 'offsetMinutes' before the task's planned time, plus its state and 'snoozedUntil') and its task; null means it never fires. 'quietHours': what the window [start, end) does to a reminder due at 'at'; a window whose start equals its end is off, and important reminders pass. 'snooze': where each snooze option lands, counted from 'now' with the day starting at 'dayStartHour'; 'tomorrowMorning' is 'morningHour' on the day after the current planning day. 'schedule': what a device does when it looks: 'due' lists the reminders that arrive after 'since' (the last look) up to and including 'now', soonest first; 'next' is the first one after 'now', the one the alarm is armed for. Reminders and tasks in 'schedule' and 'stale' leave out fields that keep their defaults (no offset, pending, not snoozed, not important; a task open with no day or time). 'stale': which of the notifications on screen ('shown', reminder ids) have to go at 'now' because their reminder was handled, snoozed, moved or deleted, or its task finished; sorted by id. 'ritual': the evening Plan tomorrow reminder at 'time' (null: off). For a planning day D it rings at the first moment of D whose clock reads 'time' (after midnight when 'time' is before the day's start), unless D is in 'ran' (done or skipped on any device); quiet hours don't move it. 'due' is today's planning day when its moment came after 'since' and up to 'now', never an earlier day; 'next' is the moment the alarm waits for. 'ritualStale': whether a reminder on screen for 'day' has to go, because it ran or the planning day moved on. 'ritualIds': a run's id is a UUID version 5 of '<owner, lower case>/<ritual>/<day>' in 'runNamespace'. 'reviewReminders': the review reminders (docs/reviews.md): a weekly one rings on the owner's 'weekday' (1 Monday to 7 Sunday), a monthly one on the first day of a month, at 'time' on the planning day, once per day, and never on a day already in 'ran'; 'due' is the planning day to show now and 'next' the moment the alarm waits for, as in 'ritual'. 'reviewPeriods': the period a reminder on 'day' looks back on: the week that is ending when it falls on a Saturday or Sunday, the week just gone earlier in the week, and the month just gone for a monthly reminder. 'letterWaiting': whether a review reminder ringing on 'day' says the letter is here (docs/letter.md): the review of 'kind' for the period it looks back on (as in 'reviewPeriods') is not deleted and has a summary that isn't blank. The reminder reads the reviews as they are when it rings, so a letter that arrives later doesn't change a reminder already on screen. 'habitReminders': a habit's reminder (Supabase migration 0022): on each planning day it rings at the first moment of that day whose clock reads 'remindAt' (as the rituals' reminders do), but only while the habit's standing on that day (contracts/vectors/habits.json, standings) is left, so a habit done, skipped, failed, paused, not due, not started yet or a limit stays quiet. 'due' is today's planning day when its moment came after 'since' and by 'now' and the habit is still left; 'next' is the first moment after 'now', within seven planning days, of a day on which the habit is left as its check-ins stand; null for neither or when 'remindAt' is null. Quiet hours don't move it: the owner picked the time. 'habitReminderStale': whether a habit reminder on screen for planning day 'day' has to go at 'now': the planning day moved on, the habit is no longer left that day, or it no longer reminds. A check-in's 'failed' is false when left out.",
   "morningHour": 8,
   "runNamespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
   "due": [
@@ -1418,6 +1418,462 @@
       "day": "2026-09-20",
       "reviews": [],
       "letter": false
+    }
+  ],
+  "habitReminders": [
+    {
+      "name": "before its time, the alarm waits for it",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T10:00",
+      "now": "2026-09-18T12:00",
+      "due": null,
+      "next": "2026-09-18T20:00"
+    },
+    {
+      "name": "at its time it rings, and tomorrow's is next",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:00",
+      "due": "2026-09-18",
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "checked in already: quiet today, tomorrow next",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "skipped today: quiet",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 0,
+          "skipped": true
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "failed today: quiet",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 0,
+          "skipped": false,
+          "failed": true
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "a weekday habit waits for its next day",
+      "habit": {
+        "cadence": "weekdays",
+        "weekdays": 21,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-19T10:00",
+      "now": "2026-09-19T12:00",
+      "due": null,
+      "next": "2026-09-21T20:00"
+    },
+    {
+      "name": "a paused habit stays quiet",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [
+        {
+          "from": "2026-09-15",
+          "until": null
+        }
+      ],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": null
+    },
+    {
+      "name": "a pause that ends brings it back",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [
+        {
+          "from": "2026-09-15",
+          "until": "2026-09-19"
+        }
+      ],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": "2026-09-20T20:00"
+    },
+    {
+      "name": "after midnight it belongs to the evening before",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "00:30"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-19T00:00",
+      "now": "2026-09-19T00:45",
+      "due": "2026-09-18",
+      "next": "2026-09-20T00:30"
+    },
+    {
+      "name": "no time, no reminder",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": null
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": null
+    },
+    {
+      "name": "a limit never reminds",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 2,
+        "direction": "at_most",
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": null
+    },
+    {
+      "name": "a week already met waits for the next week",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T10:00",
+      "now": "2026-09-18T12:00",
+      "due": null,
+      "next": "2026-09-21T20:00"
+    },
+    {
+      "name": "a week still short reminds every day",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T19:00",
+      "now": "2026-09-18T20:00",
+      "due": "2026-09-18",
+      "next": "2026-09-19T20:00"
+    },
+    {
+      "name": "a habit not started yet waits for its start",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-20",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T10:00",
+      "now": "2026-09-18T12:00",
+      "due": null,
+      "next": "2026-09-20T20:00"
+    },
+    {
+      "name": "a moment already seen doesn't ring again",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "since": "2026-09-18T20:10",
+      "now": "2026-09-18T20:30",
+      "due": null,
+      "next": "2026-09-19T20:00"
+    }
+  ],
+  "habitReminderStale": [
+    {
+      "name": "still left today: it stays",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "day": "2026-09-18",
+      "now": "2026-09-18T21:00",
+      "expect": false
+    },
+    {
+      "name": "checked in: it goes",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "day": "2026-09-18",
+      "now": "2026-09-18T21:00",
+      "expect": true
+    },
+    {
+      "name": "skipped: it goes",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 0,
+          "skipped": true
+        }
+      ],
+      "pauses": [],
+      "dayStartHour": 4,
+      "day": "2026-09-18",
+      "now": "2026-09-18T21:00",
+      "expect": true
+    },
+    {
+      "name": "the planning day moved on: it goes",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "day": "2026-09-18",
+      "now": "2026-09-19T05:00",
+      "expect": true
+    },
+    {
+      "name": "before the day's start it is still the same day",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": "20:00"
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "day": "2026-09-18",
+      "now": "2026-09-19T03:00",
+      "expect": false
+    },
+    {
+      "name": "no longer reminds: it goes",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "check",
+        "target": null,
+        "startsOn": "2026-09-01",
+        "remindAt": null
+      },
+      "checkins": [],
+      "pauses": [],
+      "dayStartHour": 4,
+      "day": "2026-09-18",
+      "now": "2026-09-18T21:00",
+      "expect": true
     }
   ]
 }

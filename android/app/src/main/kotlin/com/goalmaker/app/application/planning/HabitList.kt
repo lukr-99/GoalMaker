@@ -3,6 +3,8 @@ package com.goalmaker.app.application.planning
 import com.goalmaker.app.application.sync.Replica
 import com.goalmaker.app.domain.sync.SyncedTable
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -212,6 +214,7 @@ class HabitList(
         "unit" to (draft.unit?.let(::JsonPrimitive) ?: JsonNull),
         "goal_id" to (draft.goalId?.let(::JsonPrimitive) ?: JsonNull),
         "show_on_today" to JsonPrimitive(draft.showOnToday),
+        "remind_at" to (draft.remindAt?.format(TIME)?.let(::JsonPrimitive) ?: JsonNull),
     )
 
     private fun change(table: String, id: String, edit: (MutableMap<String, JsonElement>) -> Unit): Boolean {
@@ -241,6 +244,8 @@ class HabitList(
         // A row from before 0020 has no value, and every habit showed then.
         showOnToday = (row["show_on_today"] as? JsonPrimitive)?.let { it.booleanOrNull ?: it.intOrNull?.let { value -> value != 0 } } ?: true,
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
+        // A row from before 0022 has no value, and no habit reminded then.
+        remindAt = row.text("remind_at")?.let(LocalTime::parse),
         deleted = row.text(SyncedTable.DELETED_AT) != null,
     )
 
@@ -270,6 +275,7 @@ class HabitList(
         const val MAX_NAME = 100
         const val MAX_EMOJI = 16
         const val MAX_UNIT = 20
+        val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
         val ORDER = compareBy<HabitItem> { it.archived }
             .thenBy(HabitItem::position)
             .thenBy { it.name.lowercase(Locale.ROOT) }

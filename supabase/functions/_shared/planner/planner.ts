@@ -135,6 +135,8 @@ export interface HabitFields {
   archived?: boolean;
   /** false keeps the habit off Today; it is still checked in and counted everywhere else. */
   showOnToday?: boolean;
+  /** The local time it reminds, "HH:MM"; null for no reminder (docs/reminders.md). */
+  remindAt?: string | null;
 }
 
 /** The settings every planning day is worked out from. */
@@ -176,6 +178,8 @@ export interface Habit extends HabitItem {
   emoji: string | null;
   archived: boolean;
   showOnToday: boolean;
+  /** The local time it reminds on the days it is still left, "HH:MM", or null. */
+  remindAt: string | null;
 }
 
 /** A habit's rest, with the habit it belongs to. */
@@ -719,7 +723,8 @@ export class Planner {
   async habits(): Promise<Habit[]> {
     const rows = await this.db`
       select id::text, name, emoji, cadence, weekdays, times, measure, target, direction, unit,
-             goal_id::text, starts_on::text, archived_at is not null as archived, show_on_today
+             goal_id::text, starts_on::text, archived_at is not null as archived, show_on_today,
+             to_char(remind_at, 'HH24:MI') as remind_at
       from public.habits where deleted_at is null order by position, created_at, id`;
     return rows.map((row) => ({
       id: row.id,
@@ -736,6 +741,7 @@ export class Planner {
       startsOn: row.starts_on,
       archived: row.archived,
       showOnToday: row.show_on_today,
+      remindAt: row.remind_at,
       deleted: false,
     }));
   }
@@ -1230,10 +1236,10 @@ export class Planner {
     const id = crypto.randomUUID();
     await this.db`
       insert into public.habits (id, name, emoji, cadence, weekdays, times, measure, target, direction, unit,
-                                 goal_id, starts_on, position, show_on_today)
+                                 goal_id, starts_on, position, show_on_today, remind_at)
       values (${id}, ${name}, ${clip(fields.emoji ?? null, MAX_EMOJI)}, ${shape.cadence}, ${shape.weekdays},
               ${shape.times}, ${shape.measure}, ${shape.target}, ${shape.direction}, ${shape.unit},
-              ${goalId}, ${startsOn}, ${position}, ${fields.showOnToday ?? true})`;
+              ${goalId}, ${startsOn}, ${position}, ${fields.showOnToday ?? true}, ${fields.remindAt ?? null}::time)`;
     return await this.habit(id);
   }
 
@@ -1260,6 +1266,7 @@ export class Planner {
         measure = ${shape.measure}, target = ${shape.target}, direction = ${shape.direction}, unit = ${shape.unit},
         goal_id = ${goalId}, starts_on = ${fields.startsOn ?? habit.startsOn},
         show_on_today = ${fields.showOnToday ?? habit.showOnToday},
+        remind_at = ${fields.remindAt === undefined ? habit.remindAt : fields.remindAt}::time,
         archived_at = case when ${archived}::boolean then coalesce(archived_at, now()) else null end
       where id = ${id}`;
     return await this.habit(id);

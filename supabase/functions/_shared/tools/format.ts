@@ -208,6 +208,7 @@ export function habitLine(habit: Habit, view: HabitView): string {
   if (view.streak > 0) parts.push(streakText(habit, view.streak));
   if (view.serves) parts.push(`serves ${view.serves}`);
   if (!habit.showOnToday) parts.push("not on Today");
+  if (habit.remindAt) parts.push(`reminds at ${habit.remindAt}`);
   return `- ${parts.join(" · ")} (habit id ${habit.id})`;
 }
 

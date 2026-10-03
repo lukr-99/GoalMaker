@@ -230,7 +230,19 @@ async function habitFields(planner: Planner, args: Record<string, unknown>): Pro
     startsOn: (await dayFrom(planner, args.starts_on as string | undefined)) ?? undefined,
     archived: args.archived as boolean | undefined,
     showOnToday: args.show_on_today as boolean | undefined,
+    remindAt: remindTime(args.remind_at as string | undefined),
   };
+}
+
+/** A habit's reminder time as typed: "20:30" or "8:05"; empty is none, and undefined leaves it. */
+function remindTime(text: string | undefined): string | null | undefined {
+  if (text === undefined) return undefined;
+  if (text.trim() === "") return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
+  if (match === null || Number(match[1]) > 23 || Number(match[2]) > 59) {
+    throw new PlannerError(`"${text}" isn't a time: use one like 20:30.`);
+  }
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
 }
 
 /**
@@ -288,6 +300,10 @@ const HABIT_GROUPS: [HabitGroup, string][] = [["days", "Every day"], ["weekly", 
 
 const goalId = z.string().describe("The goal's id, from get_goals.");
 const habitId = z.string().describe("The habit's id, from get_habits.");
+const remindAt = z.string().describe(
+  'The local time it reminds on the days it is due and still left, like "20:30"; empty for no reminder. ' +
+    "Its notification checks in, adds one or skips.",
+);
 const showOnToday = z.boolean().describe(
   "false keeps the habit off Today and its widgets. It still counts, keeps its streak and is checked in on the " +
     "Habits page. Not a pause: its days still count.",
@@ -1186,6 +1202,7 @@ export const tools: Tool[] = [
         "The first day it counts from; today by default. Streaks never reach back past it.",
       ),
       show_on_today: showOnToday.optional().describe("true by default."),
+      remind_at: remindAt.optional().describe("No reminder by default."),
     },
     readOnly: false,
     destructive: false,
@@ -1215,7 +1232,7 @@ export const tools: Tool[] = [
     title: "Edit a habit",
     description:
       "Changes a habit's name, emoji, cadence, measure, target, unit, direction, the goal it serves, the day it " +
-      "starts from or whether it shows on Today, and archives it or brings it back. What is left out stays as it " +
+      "starts from, whether it shows on Today or when it reminds, and archives it or brings it back. What is left out stays as it " +
       "was. Its check-ins are kept.",
     input: {
       id: habitId,
@@ -1232,6 +1249,7 @@ export const tools: Tool[] = [
       starts_on: day.optional(),
       archived: z.boolean().optional().describe("true puts it away, false brings it back."),
       show_on_today: showOnToday.optional(),
+      remind_at: remindAt.optional(),
     },
     readOnly: false,
     destructive: false,
