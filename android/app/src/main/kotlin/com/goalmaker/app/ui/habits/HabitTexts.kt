@@ -52,18 +52,30 @@ internal fun statusText(row: HabitRow): String {
         habit.cadence == HabitRules.PER_WEEK -> pluralStringResource(R.plurals.habits_met_week, habit.times ?: 1, row.met, habit.times ?: 1)
         habit.cadence == HabitRules.PER_MONTH -> pluralStringResource(R.plurals.habits_met_month, habit.times ?: 1, row.met, habit.times ?: 1)
         row.ring == null -> stringResource(R.string.habits_not_due)
-        row.isLimit && habit.measure == HabitRules.CHECK ->
-            stringResource(if (row.value >= 1.0) R.string.habits_over_today else R.string.habits_none_today)
-        habit.measure == HabitRules.CHECK -> stringResource(if (row.done) R.string.habits_done else R.string.habits_not_yet)
+        // A day other than today (the calendar's) says what happened without "today".
+        row.isLimit && habit.measure == HabitRules.CHECK -> stringResource(
+            when {
+                row.value >= 1.0 -> if (row.onDay) R.string.habits_over_on_day else R.string.habits_over_today
+                else -> if (row.onDay) R.string.habits_none_on_day else R.string.habits_none_today
+            },
+        )
+        habit.measure == HabitRules.CHECK -> stringResource(
+            when {
+                row.done -> if (row.onDay) R.string.habits_done_on_day else R.string.habits_done
+                else -> if (row.onDay) R.string.habits_not_yet_on_day else R.string.habits_not_yet
+            },
+        )
         else -> {
             val value = amountText(row.value, locale)
             val target = amountText(habit.target ?: 0.0, locale)
             val unit = habit.unit
             when {
-                row.isLimit && unit != null -> stringResource(R.string.habits_limit_unit, value, target, unit)
-                row.isLimit -> stringResource(R.string.habits_limit, value, target)
-                unit != null -> stringResource(R.string.habits_value_unit, value, target, unit)
-                else -> stringResource(R.string.habits_value, value, target)
+                row.isLimit && unit != null ->
+                    stringResource(if (row.onDay) R.string.habits_limit_unit_on_day else R.string.habits_limit_unit, value, target, unit)
+                row.isLimit -> stringResource(if (row.onDay) R.string.habits_limit_on_day else R.string.habits_limit, value, target)
+                unit != null ->
+                    stringResource(if (row.onDay) R.string.habits_value_unit_on_day else R.string.habits_value_unit, value, target, unit)
+                else -> stringResource(if (row.onDay) R.string.habits_value_on_day else R.string.habits_value, value, target)
             }
         }
     }

@@ -49,10 +49,13 @@ object HabitBoard {
         .filter { HabitRules.onToday(it, today, data.pausesOf(it.id)) }
         .map { row(it, data, today, emptyMap(), heat = false) }
 
-    /** Every habit due today, the ones kept off Today too: what the Places hub counts. */
-    fun due(data: HabitData, today: LocalDate): List<HabitRow> = data.habits
+    /**
+     * Every habit due today, the ones kept off Today too: what the Places hub counts. The calendar asks
+     * for another day's with [onDay], read as of that day.
+     */
+    fun due(data: HabitData, today: LocalDate, onDay: Boolean = false): List<HabitRow> = data.habits
         .filter { HabitRules.dueToday(it, today, data.pausesOf(it.id)) }
-        .map { row(it, data, today, emptyMap(), heat = false) }
+        .map { row(it, data, today, emptyMap(), heat = false).copy(onDay = onDay) }
 
     /**
      * The Habits screen's groups in order, Every day, Weekly and Limits (contracts/vectors/habits.json,

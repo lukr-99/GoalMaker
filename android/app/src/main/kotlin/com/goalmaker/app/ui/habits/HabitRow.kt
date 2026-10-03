@@ -30,6 +30,8 @@ data class HabitRow(
     val heat: List<HabitHeat> = emptyList(),
     val standing: HabitStanding = HabitStanding.NONE,
     val dots: List<HabitDot> = emptyList(),
+    /** Read as of a day other than today (the calendar's), so its line leaves "today" out. */
+    val onDay: Boolean = false,
 ) {
     /** The habit's number is a limit, so the ring fills with what has been had (docs/habits.md). */
     val isLimit: Boolean get() = HabitRules.isLimit(habit)

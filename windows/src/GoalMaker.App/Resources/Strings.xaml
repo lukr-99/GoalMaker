@@ -717,6 +717,14 @@
     <sys:String x:Key="Habits.LimitUnit">{0} of at most {1} {2} today</sys:String>
     <sys:String x:Key="Habits.NoneToday">None today</sys:String>
     <sys:String x:Key="Habits.OverToday">Over the line today</sys:String>
+    <sys:String x:Key="Habits.DoneOnDay">Done</sys:String>
+    <sys:String x:Key="Habits.NotYetOnDay">Not done</sys:String>
+    <sys:String x:Key="Habits.ValueOnDay">{0} of {1}</sys:String>
+    <sys:String x:Key="Habits.ValueUnitOnDay">{0} of {1} {2}</sys:String>
+    <sys:String x:Key="Habits.LimitOnDay">{0} of at most {1}</sys:String>
+    <sys:String x:Key="Habits.LimitUnitOnDay">{0} of at most {1} {2}</sys:String>
+    <sys:String x:Key="Habits.NoneTodayOnDay">None</sys:String>
+    <sys:String x:Key="Habits.OverTodayOnDay">Over the line</sys:String>
     <sys:String x:Key="Habits.MetWeek">{0} of {1} this week</sys:String>
     <sys:String x:Key="Habits.MetMonth">{0} of {1} this month</sys:String>
     <sys:String x:Key="Habits.Serves">Serves {0}</sys:String>

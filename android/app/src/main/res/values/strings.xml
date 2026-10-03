@@ -719,6 +719,14 @@
     <string name="habits_limit_unit">%1$s of at most %2$s %3$s today</string>
     <string name="habits_none_today">None today</string>
     <string name="habits_over_today">Over the line today</string>
+    <string name="habits_done_on_day">Done</string>
+    <string name="habits_not_yet_on_day">Not done</string>
+    <string name="habits_value_on_day">%1$s of %2$s</string>
+    <string name="habits_value_unit_on_day">%1$s of %2$s %3$s</string>
+    <string name="habits_limit_on_day">%1$s of at most %2$s</string>
+    <string name="habits_limit_unit_on_day">%1$s of at most %2$s %3$s</string>
+    <string name="habits_none_on_day">None</string>
+    <string name="habits_over_on_day">Over the line</string>
     <plurals name="habits_met_week">
         <item quantity="one">%1$d of %2$d this week</item>
         <item quantity="other">%1$d of %2$d this week</item>

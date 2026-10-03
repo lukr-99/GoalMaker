@@ -176,7 +176,8 @@ public sealed partial class HabitsViewModel : ObservableObject
         var pauses = habits.Pauses();
         return [.. habits.All()
             .Where(habit => HabitRules.DueToday(habit, day, [.. pauses.Where(pause => pause.HabitId == habit.Id)]))
-            .Select(habit => Row(habit, checkins, pauses, day, null, strings, full: false, owner: this, day: day))];
+            // Today's own cards say "today"; another day's leave it out.
+            .Select(habit => Row(habit, checkins, pauses, day, null, strings, full: false, owner: this, day: day == Today() ? null : day))];
     }
 
     private List<HabitRowViewModel> RowsWhere(Func<HabitItem, DateOnly, IReadOnlyList<HabitPause>, bool> rule)

@@ -46,7 +46,7 @@ public sealed class HabitRowViewModel
         Heat = heat;
         Serves = goalTitle is null ? string.Empty : strings.Get("Habits.Serves", goalTitle);
         CadenceText = Cadence(habit, strings);
-        StatusText = Status(habit, ring, value, met, skipped, standing == HabitStanding.Failed, paused, strings);
+        StatusText = Status(habit, ring, value, met, skipped, standing == HabitStanding.Failed, paused, day is not null, strings);
         StreakText = streak <= 0 ? string.Empty : strings.Get(habit.Cadence switch
         {
             HabitRules.PerWeek => "Habits.StreakWeeks",
@@ -373,21 +373,26 @@ public sealed class HabitRowViewModel
             .Select(day => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7])),
     };
 
-    private static string Status(HabitItem habit, double? ring, double value, int met, bool skipped, bool failed, bool paused, IStrings strings) => (habit, ring) switch
+    private static string Status(HabitItem habit, double? ring, double value, int met, bool skipped, bool failed, bool paused, bool onDay, IStrings strings)
     {
-        _ when paused => strings.Get("Habits.Paused"),
-        _ when skipped => strings.Get("Habits.Skipped"),
-        _ when failed => strings.Get("Habits.Failed"),
-        ({ Cadence: HabitRules.PerWeek }, _) => strings.Get("Habits.MetWeek", met, habit.Times ?? 1),
-        ({ Cadence: HabitRules.PerMonth }, _) => strings.Get("Habits.MetMonth", met, habit.Times ?? 1),
-        (_, null) => strings.Get("Habits.NotDue"),
-        ({ Direction: HabitRules.AtMost, Measure: HabitRules.Check }, _) =>
-            strings.Get(value >= 1 ? "Habits.OverToday" : "Habits.NoneToday"),
-        ({ Direction: HabitRules.AtMost, Unit: { } unit }, _) =>
-            strings.Get("Habits.LimitUnit", Amount(value), Amount(habit.Target ?? 0), unit),
-        ({ Direction: HabitRules.AtMost }, _) => strings.Get("Habits.Limit", Amount(value), Amount(habit.Target ?? 0)),
-        ({ Measure: HabitRules.Check }, _) => strings.Get(ring >= 1 ? "Habits.Done" : "Habits.NotYet"),
-        ({ Unit: { } unit }, _) => strings.Get("Habits.ValueUnit", Amount(value), Amount(habit.Target ?? 0), unit),
-        _ => strings.Get("Habits.Value", Amount(value), Amount(habit.Target ?? 0)),
-    };
+        // A day other than today (the calendar's) says what happened without "today".
+        string Key(string key) => onDay ? key + "OnDay" : key;
+        return (habit, ring) switch
+        {
+            _ when paused => strings.Get("Habits.Paused"),
+            _ when skipped => strings.Get("Habits.Skipped"),
+            _ when failed => strings.Get("Habits.Failed"),
+            ({ Cadence: HabitRules.PerWeek }, _) => strings.Get("Habits.MetWeek", met, habit.Times ?? 1),
+            ({ Cadence: HabitRules.PerMonth }, _) => strings.Get("Habits.MetMonth", met, habit.Times ?? 1),
+            (_, null) => strings.Get("Habits.NotDue"),
+            ({ Direction: HabitRules.AtMost, Measure: HabitRules.Check }, _) =>
+                strings.Get(Key(value >= 1 ? "Habits.OverToday" : "Habits.NoneToday")),
+            ({ Direction: HabitRules.AtMost, Unit: { } unit }, _) =>
+                strings.Get(Key("Habits.LimitUnit"), Amount(value), Amount(habit.Target ?? 0), unit),
+            ({ Direction: HabitRules.AtMost }, _) => strings.Get(Key("Habits.Limit"), Amount(value), Amount(habit.Target ?? 0)),
+            ({ Measure: HabitRules.Check }, _) => strings.Get(Key(ring >= 1 ? "Habits.Done" : "Habits.NotYet")),
+            ({ Unit: { } unit }, _) => strings.Get(Key("Habits.ValueUnit"), Amount(value), Amount(habit.Target ?? 0), unit),
+            _ => strings.Get(Key("Habits.Value"), Amount(value), Amount(habit.Target ?? 0)),
+        };
+    }
 }

@@ -690,6 +690,72 @@ public sealed class PageSnapshots
         Save(new StatsPage(stats), folder, "stats-project-work", new Size(900, 900));
     });
 
+    /// <summary>The 2026-10-03 backlog: a failed habit, a habit's reminder, a day put right, the January card, the year rows and the code paste.</summary>
+    [Fact(Explicit = true)]
+    public void BacklogChanges() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark });
+
+        var read = planner.Habits.Add(new HabitDraft("Read", Today.AddDays(-30)) { Emoji = "📖", RemindAt = new TimeOnly(21, 0) })!;
+        var run = planner.Habits.Add(new HabitDraft("Run", Today.AddDays(-30)) { Emoji = "🏃", Cadence = HabitRules.PerWeek, Times = 3 })!;
+        var water = planner.Habits.Add(new HabitDraft("Water", Today.AddDays(-30)) { Emoji = "💧", Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
+        for (var back = 1; back <= 9; back++)
+        {
+            planner.Habits.CheckIn(read.Id, Today.AddDays(-back));
+        }
+
+        planner.Habits.Fail(read.Id, Today);
+        planner.Habits.CheckIn(run.Id, Today.AddDays(-2));
+        planner.Habits.CheckIn(water.Id, Today, 3);
+        Add(planner, "Call the bank 9:00", Today);
+        Add(planner, "Water the plants", Today);
+
+        var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action());
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action(), habitsPage: habits, habitList: planner.Habits,
+            goals: planner.Goals, reviews: planner.Reviews);
+        Save(new TodayPage(today), folder, "backlog-today-failed-habit", new Size(1100, 760));
+        Save(new HabitsPage(habits), folder, "backlog-habits-failed", new Size(1100, 1300));
+        habits.Editor.OpenEdit(read);
+        Save(new HabitsPage(habits), folder, "backlog-habit-form-reminder", new Size(1100, 1100));
+        habits.Editor.IsOpen = false;
+
+        // A day gone by, put right: its habits as cards, its tasks with a done box.
+        var monday = Today.AddDays(-4);
+        Add(planner, "File the receipts", monday);
+        Add(planner, "Pay the rent", monday);
+        planner.Tasks.FinishOn(planner.Task("Pay the rent").Id, monday, Today, TimeZoneInfo.Utc);
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time,
+            _ => { }, action => action(), habitsPage: habits, habitList: planner.Habits);
+        calendar.Open(monday);
+        Save(new CalendarPage(calendar), folder, "backlog-calendar-day-gone-by", new Size(1100, 900));
+
+        // January: the card on Today, and the year rows on Reviews.
+        planner.Time.SetUtcNow(new DateTimeOffset(2027, 1, 5, 12, 0, 0, TimeSpan.Zero));
+        today.Refresh();
+        Save(new TodayPage(today), folder, "backlog-today-january", new Size(1100, 760));
+        var reviews = new ReviewsViewModel(planner.Reviews, planner.Settings, strings, planner.Time, (_, _) => { }, action => action());
+        Save(new ReviewsPage(reviews), folder, "backlog-reviews-year-rows", new Size(900, 760));
+
+        // The code step after Paste found nothing on the clipboard.
+        var auth = new SnapshotAuth();
+        var signIn = new SignInViewModel(
+            auth, new SignInWatch(auth, planner.Settings, () => DateTimeOffset.Now), strings, devBackend: null, readClipboard: () => "hello")
+        {
+            Email = "me@example.com",
+        };
+        signIn.SendCodeCommand.Execute(null);
+        signIn.PasteCodeCommand.Execute(null);
+        Save(new SignInView { DataContext = signIn }, folder, "backlog-sign-in-paste", new Size(900, 700));
+    });
+
     [Fact(Explicit = true)]
     public void CalendarPage_() => OnUiThread(folder =>
     {

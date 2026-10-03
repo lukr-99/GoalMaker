@@ -79,7 +79,7 @@ class CalendarViewModel(
             projects = projectList,
             filter = choices,
             // A day gone by, or today, can still be checked in; a day to come can't (docs/calendar.md).
-            dayHabits = showing.selected?.takeUnless { it.isAfter(today) }?.let { HabitBoard.due(habitData, it) }.orEmpty(),
+            dayHabits = showing.selected?.takeUnless { it.isAfter(today) }?.let { HabitBoard.due(habitData, it, onDay = it != today) }.orEmpty(),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState())
 
