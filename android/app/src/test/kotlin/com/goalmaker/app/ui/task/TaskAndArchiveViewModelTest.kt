@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -127,12 +128,26 @@ class TaskAndArchiveViewModelTest {
         val milk = tasks.add(ComposerParser.parse("Buy milk", LocalDateTime.parse("2026-09-18T14:00")))!!
         tasks.setDone(bank.id, true)
         tasks.setDone(milk.id, true)
-        val archive = ArchiveViewModel(tasks, Dispatchers.Unconfined)
+        val archive = ArchiveViewModel(tasks, projects, Dispatchers.Unconfined)
 
         archive.setQuery("bank")
         assertEquals(listOf("Call the bank"), archive.results.filterNotNull().first { it.size == 1 }.map { it.title })
 
         archive.reopen(bank.id)
         assertEquals(TaskState.OPEN, tasks.find(bank.id)!!.state)
+    }
+
+    @Test
+    fun `the archive names the projects its done items belong to`() = runTest {
+        val item = tasks.add(ComposerParser.parse("Fix the build +GoalMaker", LocalDateTime.parse("2026-09-18T14:00")))!!
+        tasks.setDone(item.id, true)
+        val archive = ArchiveViewModel(tasks, projects, Dispatchers.Unconfined)
+
+        val done = archive.results.filterNotNull().first { it.isNotEmpty() }.single()
+        val named = archive.projects.first { it.isNotEmpty() }
+        assertEquals("GoalMaker", done.projectId?.let(named::get)?.name)
+
+        projects.delete(done.projectId!!)
+        assertTrue(archive.projects.first { it.isEmpty() }.isEmpty())
     }
 }

@@ -56,9 +56,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.CalendarDay
 import com.goalmaker.app.application.planning.CalendarRules
+import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
+import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.AppMark
@@ -76,6 +78,7 @@ fun CalendarScreen(
     onOpenTask: (String) -> Unit,
     actions: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenProject: ((String) -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -178,13 +181,15 @@ fun CalendarScreen(
                     )
                 }
                 open.planned.forEach { task ->
-                    item("planned-" + task.id) { DayRow(task, R.string.calendar_planned, onOpenTask, draggable = true) }
+                    item("planned-" + task.id) {
+                        DayRow(task, R.string.calendar_planned, onOpenTask, state.projectOf(task), onOpenProject, draggable = true)
+                    }
                 }
                 open.deadlines.forEach { task ->
-                    item("deadline-" + task.id) { DayRow(task, R.string.calendar_deadline, onOpenTask) }
+                    item("deadline-" + task.id) { DayRow(task, R.string.calendar_deadline, onOpenTask, state.projectOf(task), onOpenProject) }
                 }
                 open.repeats.forEach { task ->
-                    item("repeat-" + task.id) { DayRow(task, R.string.calendar_repeat, onOpenTask) }
+                    item("repeat-" + task.id) { DayRow(task, R.string.calendar_repeat, onOpenTask, state.projectOf(task), onOpenProject) }
                 }
                 if (open.reminders > 0) {
                     item("reminders") {
@@ -305,10 +310,20 @@ private fun DayCell(
     }
 }
 
-/** One line of what a day holds; a planned task can be dragged onto another day of the grid. */
+/**
+ * One line of what a day holds, with its [project]'s chip when it is a project item; a planned task
+ * can be dragged onto another day of the grid.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun DayRow(task: TaskItem, label: Int, onOpenTask: (String) -> Unit, draggable: Boolean = false) {
+private fun DayRow(
+    task: TaskItem,
+    label: Int,
+    onOpenTask: (String) -> Unit,
+    project: ProjectItem?,
+    onOpenProject: ((String) -> Unit)?,
+    draggable: Boolean = false,
+) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -340,6 +355,7 @@ private fun DayRow(task: TaskItem, label: Int, onOpenTask: (String) -> Unit, dra
                 style = MaterialTheme.typography.labelSmall,
                 color = AppTheme.colors.textMuted,
             )
+            project?.let { item -> ProjectChip(item, task.itemType, onOpenProject?.let { open -> { open(item.id) } }, Modifier.padding(top = 4.dp)) }
         }
     }
 }

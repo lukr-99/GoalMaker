@@ -22,6 +22,7 @@ import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
+import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.QuietHours
 import java.time.Instant
 import java.time.LocalDate
@@ -36,6 +37,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -58,6 +60,7 @@ class ListsViewModelTest {
     private lateinit var tasks: TaskList
     private lateinit var areas: AreaList
     private lateinit var viewModel: ListsViewModel
+    private lateinit var projects: ProjectList
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     // Friday 18 September 2026, noon.
@@ -70,7 +73,7 @@ class ListsViewModelTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T10:00:00Z") })
         areas = AreaList(test.replica, rows, listOf("violet"), {})
         val tags = TagList(test.replica, rows, {})
-        val projects = ProjectList(test.replica, rows, {})
+        projects = ProjectList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         habits = HabitList(test.replica, rows, {})
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("lists-test", Context.MODE_PRIVATE)
@@ -249,6 +252,31 @@ class ListsViewModelTest {
         assertTrue(viewModel.addTask("Water the plants", NewTaskDay.TODAY, null, topPriority = false, notes = ""))
 
         assertEquals(today, tasks.all().single().plannedDate)
+    }
+
+    @Test
+    fun `a project item's row wears its project's chip`() = runTest {
+        planToday("Fix the build +GoalMaker")
+        planToday("Buy milk")
+
+        val state = loaded { it.projects.isNotEmpty() && it.lists!!.todaySections.more.size == 2 }
+        val rows = state.lists!!.todaySections.more
+        assertEquals("GoalMaker", state.projectOf(rows.single { it.title == "Fix the build" })?.name)
+        assertNull(state.projectOf(rows.single { it.title == "Buy milk" }))
+    }
+
+    @Test
+    fun `an item of a deleted project wears no chip`() = runTest {
+        planToday("Fix the build +GoalMaker")
+        projects.delete(projects.find("GoalMaker")!!.id)
+
+        val state = loaded { it.lists!!.todaySections.more.isNotEmpty() }
+        assertNull(state.projectOf(state.lists!!.todaySections.more.single()))
+    }
+
+    private fun planToday(line: String) {
+        val task = tasks.add(ComposerParser.parse(line, now))!!
+        tasks.plan(task.id, today)
     }
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()

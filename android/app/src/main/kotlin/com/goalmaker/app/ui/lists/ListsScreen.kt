@@ -118,6 +118,7 @@ fun ListsScreen(
     actions: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
     onOpenWant: (String) -> Unit = {},
+    onOpenProject: ((String) -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -301,6 +302,7 @@ fun ListsScreen(
                                 onCheckInHabit = ::checkInHabit,
                                 onHabitMenu = { habitMenu = it.habit.id },
                                 onRemind = { remindFor = it },
+                                onOpenProject = onOpenProject,
                             )
                         }
                     }
@@ -326,6 +328,7 @@ private fun ListContent(
     onCheckInHabit: (HabitRow) -> Unit,
     onHabitMenu: (HabitRow) -> Unit,
     onRemind: (TaskItem) -> Unit,
+    onOpenProject: ((String) -> Unit)?,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
     var goalsOpen by rememberSaveable { mutableStateOf(false) }
@@ -348,6 +351,8 @@ private fun ListContent(
                     reminded = task.id in state.reminded,
                     tick = tick,
                     modifier = Modifier.animateItem(),
+                    project = state.projectOf(task),
+                    onOpenProject = task.projectId?.let { id -> onOpenProject?.let { open -> { open(id) } } },
                 )
             }
         }

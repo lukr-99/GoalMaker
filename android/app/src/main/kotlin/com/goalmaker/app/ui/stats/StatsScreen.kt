@@ -35,11 +35,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.StatsDigest
+import com.goalmaker.app.application.planning.StatsRules
 import com.goalmaker.app.application.planning.WantStats
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
@@ -105,7 +109,13 @@ fun StatsScreen(viewModel: StatsViewModel, onBack: (() -> Unit)?, actions: @Comp
             item("heroes") { Heroes(digest) }
 
             item("h-weeks") { SectionHeader(stringResource(R.string.stats_tasks_a_week)) }
-            item("weeks") { WeekBars(digest.weeks) }
+            item("weeks") { WeekBars(digest) }
+
+            // The projects that finished the most over the same weeks.
+            if (digest.byProject.isNotEmpty()) {
+                item("h-projects") { SectionHeader(stringResource(R.string.stats_by_project)) }
+                item("projects") { ProjectRows(digest.byProject) }
+            }
 
             if (digest.months.isNotEmpty()) {
                 item("h-months") { SectionHeader(stringResource(R.string.stats_goals_a_month)) }
@@ -144,6 +154,7 @@ private fun Heroes(digest: StatsDigest) {
             label = stringResource(R.string.stats_hero_done),
             hint = stringResource(R.string.stats_hero_per_week, oneDecimal(digest.perWeek)),
             modifier = Modifier.weight(1f),
+            more = if (digest.projectWork > 0) stringResource(R.string.stats_on_projects, digest.projectWork) else null,
         )
         Hero(
             value = stringResource(R.string.stats_hero_goals_value, digest.goalsHit, digest.goalsTotal),
@@ -177,7 +188,7 @@ private fun WantHeroes(wants: WantStats, currency: String) {
 }
 
 @Composable
-private fun Hero(value: String, label: String, hint: String, modifier: Modifier = Modifier) {
+private fun Hero(value: String, label: String, hint: String, modifier: Modifier = Modifier, more: String? = null) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
@@ -197,14 +208,30 @@ private fun Hero(value: String, label: String, hint: String, modifier: Modifier 
             color = AppTheme.colors.textMuted,
             textAlign = TextAlign.Center,
         )
+        more?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                color = AppTheme.colors.textMuted,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
-/** A bar per week, the week holding today last, with the first and last week named underneath. */
+/**
+ * A bar per week, the week holding today last, with the first and last week named underneath. Once
+ * any week had project work, its part of each bar is the full accent at the bottom, the rest the
+ * faded accent above it, and a legend says which is which (docs/stats.md).
+ */
 @Composable
-private fun WeekBars(weeks: List<StatsDigest.Week>) {
+private fun WeekBars(digest: StatsDigest) {
+    val weeks = digest.weeks
     if (weeks.isEmpty()) return
     val most = max(1, weeks.maxOf { it.done })
+    val split = digest.projectWork > 0
+    val accent = AppTheme.colors.accent
+    val other = if (split) accent.copy(alpha = OTHER_ALPHA) else accent
     val locale = LocalConfiguration.current.locales[0]
     val format = DateTimeFormatter.ofPattern("d MMM", locale)
     Column(
@@ -219,17 +246,29 @@ private fun WeekBars(weeks: List<StatsDigest.Week>) {
             modifier = Modifier.fillMaxWidth().height(84.dp),
         ) {
             weeks.forEach { week ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                val tip = stringResource(R.string.stats_week_tip, format.format(week.start), week.done, week.project)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).clearAndSetSemantics { contentDescription = tip },
+                ) {
                     if (week.done > 0) {
                         Text(week.done.toString(), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted, maxLines = 1)
                     }
-                    Box(
+                    // The project work sits at the bottom of the bar, the rest on top of it.
+                    val height = 6 + 54 * week.done / most
+                    val project = if (week.done == 0) 0 else height * week.project / week.done
+                    Column(
                         Modifier
                             .fillMaxWidth()
-                            .height((6 + 54 * week.done / most).dp)
+                            .height(height.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (week.done > 0) AppTheme.colors.accent else AppTheme.colors.outline.copy(alpha = 0.3f)),
-                    )
+                            .background(if (week.done > 0) other else AppTheme.colors.outline.copy(alpha = 0.3f)),
+                    ) {
+                        if (project > 0) {
+                            Box(Modifier.weight(1f))
+                            Box(Modifier.fillMaxWidth().height(project.dp).background(accent))
+                        }
+                    }
                 }
             }
         }
@@ -237,6 +276,62 @@ private fun WeekBars(weeks: List<StatsDigest.Week>) {
             Text(format.format(weeks.first().start), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted)
             Box(Modifier.weight(1f))
             Text(stringResource(R.string.stats_this_week), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted)
+        }
+        if (split) {
+            Row(modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Legend(accent, stringResource(R.string.stats_project_work, digest.projectWork))
+                Legend(other, stringResource(R.string.stats_other_work, digest.otherWork))
+            }
+        }
+    }
+}
+
+/** The projects that finished the most, a bar each against the busiest, and how many more there were. */
+@Composable
+private fun ProjectRows(projects: List<StatsDigest.ProjectDone>) {
+    val busiest = max(1, projects.first().done)
+    Column(
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppTheme.colors.surface, AppTheme.shapes.card)
+            .padding(12.dp),
+    ) {
+        projects.take(StatsRules.TOP_PROJECTS).forEach { project ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.semantics(mergeDescendants = true) {}) {
+                Column(Modifier.weight(1f)) {
+                    Text(project.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(AppTheme.colors.outline.copy(alpha = 0.25f)),
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth(project.done.toFloat() / busiest)
+                                .height(6.dp)
+                                .background(AppTheme.colors.accent),
+                        )
+                    }
+                }
+                Text(
+                    project.done.toString(),
+                    style = tabular(MaterialTheme.typography.titleMedium),
+                    color = AppTheme.colors.accent,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.padding(start = 12.dp),
+                )
+            }
+        }
+        if (projects.size > StatsRules.TOP_PROJECTS) {
+            Text(
+                stringResource(R.string.stats_more_projects, projects.size - StatsRules.TOP_PROJECTS),
+                style = MaterialTheme.typography.labelSmall,
+                color = AppTheme.colors.textMuted,
+            )
         }
     }
 }
@@ -412,6 +507,9 @@ private fun Legend(color: Color, label: String) {
         Text(label, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 6.dp))
     }
 }
+
+// The part of a tasks bar that was not project work, once some was: the accent, faded.
+private const val OTHER_ALPHA = 0.45f
 
 private fun percent(fraction: Double): String = "${(fraction.coerceIn(0.0, 1.0) * 100).roundToInt()}%"
 

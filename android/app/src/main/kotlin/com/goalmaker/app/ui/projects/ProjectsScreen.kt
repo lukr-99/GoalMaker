@@ -20,15 +20,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material3.AlertDialog
@@ -62,7 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
@@ -530,15 +526,15 @@ private fun ItemRow(
             // An idea and a bug carry their own icon and colour, so a board reads at a glance.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    typeIcon(task.itemType),
+                    ItemTypeLook.icon(task.itemType),
                     contentDescription = null,
-                    tint = typeColor(task.itemType),
+                    tint = ItemTypeLook.color(task.itemType),
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
                     typeName(task.itemType),
                     style = MaterialTheme.typography.labelSmall,
-                    color = typeColor(task.itemType),
+                    color = ItemTypeLook.color(task.itemType),
                     modifier = Modifier.padding(start = 4.dp),
                 )
                 task.plannedDate?.let { day ->
@@ -775,21 +771,6 @@ private fun makerName(filter: String): String = stringResource(
         else -> R.string.projects_made_by_all
     },
 )
-
-/** The icon an item's type wears on the board: a bug, a lightbulb, or a plain task. */
-private fun typeIcon(itemType: String): ImageVector = when (itemType) {
-    ProjectRules.IDEA -> Icons.Outlined.Lightbulb
-    ProjectRules.BUG -> Icons.Outlined.BugReport
-    else -> Icons.Outlined.TaskAlt
-}
-
-/** A bug reads as a problem, an idea as something to pick up, and a task keeps the quiet colour. */
-@Composable
-private fun typeColor(itemType: String): Color = when (itemType) {
-    ProjectRules.IDEA -> AppTheme.colors.accent
-    ProjectRules.BUG -> AppTheme.colors.danger
-    else -> AppTheme.colors.textMuted
-}
 
 @Composable
 private fun priorityName(priority: String): String = stringResource(

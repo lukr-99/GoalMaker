@@ -6,6 +6,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,8 +47,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
+import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.nav.sharedTaskBounds
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalTime
@@ -56,10 +60,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * A task in a list: the theme's checkbox, the title, and what else it says (time, area, repeat,
- * top priority, a waiting reminder). Checking it plays the check, a haptic and the optional tick,
- * then the row leaves. Swiping it away deletes it; both offer undo. A tap opens the task's details,
- * a long press its reminders (docs/reminders.md). TalkBack gets delete and remind as actions.
+ * A task in a list: the theme's checkbox, the title, and what else it says (time, area, its
+ * [project]'s chip, repeat, top priority, a waiting reminder). Checking it plays the check, a haptic
+ * and the optional tick, then the row leaves. Swiping it away deletes it; both offer undo. A tap
+ * opens the task's details, a long press its reminders (docs/reminders.md), the chip the project's
+ * board ([onOpenProject]). TalkBack gets delete, remind and open the board as actions.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -74,6 +79,8 @@ fun TaskRow(
     reminded: Boolean,
     tick: () -> Unit,
     modifier: Modifier = Modifier,
+    project: ProjectItem? = null,
+    onOpenProject: (() -> Unit)? = null,
 ) {
     var checked by remember(task.id) { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
@@ -90,6 +97,7 @@ fun TaskRow(
     val scope = rememberCoroutineScope()
     val deleteLabel = stringResource(R.string.lists_delete, task.title)
     val remindLabel = stringResource(R.string.reminder_add)
+    val openProjectLabel = project?.let { stringResource(R.string.lists_open_project, it.name) }
     SwipeToDismissBox(
         state = dismiss,
         enableDismissFromStartToEnd = false,
@@ -101,9 +109,10 @@ fun TaskRow(
         // Only while a swipe is under way: the row also lifts off when it grows into the task's details.
         backgroundContent = { if (dismiss.dismissDirection == SwipeToDismissBoxValue.EndToStart) DeleteBackground() },
         modifier = modifier.semantics {
-            customActions = listOf(
+            customActions = listOfNotNull(
                 CustomAccessibilityAction(deleteLabel) { onDelete(); true },
                 CustomAccessibilityAction(remindLabel) { onRemind(); true },
+                if (openProjectLabel != null && onOpenProject != null) CustomAccessibilityAction(openProjectLabel) { onOpenProject(); true } else null,
             )
         },
     ) {
@@ -139,7 +148,7 @@ fun TaskRow(
                         .semantics(mergeDescendants = true) {},
                 ) {
                     Text(task.title, style = MaterialTheme.typography.bodyLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                    TaskDetails(task, area, showDay)
+                    TaskDetails(task, area, showDay, project = project, onOpenProject = onOpenProject)
                 }
                 if (reminded) {
                     Icon(
@@ -168,13 +177,28 @@ internal fun TaskTime(time: LocalTime, modifier: Modifier = Modifier) {
 
 /**
  * The line under a task's title: its day when [showDay] (overdue), top priority unless the row
- * shows it elsewhere ([showPriority] false), area and repeat.
+ * shows it elsewhere ([showPriority] false), area, the [project]'s chip and repeat. It wraps when a
+ * narrow screen can't hold it all on one line.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun TaskDetails(task: TaskItem, area: AreaItem?, showDay: Boolean, showPriority: Boolean = true) {
-    val parts = task.recurrence != null || area != null || (showPriority && task.topPriority) || (showDay && task.plannedDate != null)
+internal fun TaskDetails(
+    task: TaskItem,
+    area: AreaItem?,
+    showDay: Boolean,
+    showPriority: Boolean = true,
+    project: ProjectItem? = null,
+    onOpenProject: (() -> Unit)? = null,
+) {
+    val parts = task.recurrence != null || area != null || project != null ||
+        (showPriority && task.topPriority) || (showDay && task.plannedDate != null)
     if (!parts) return
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(top = 2.dp),
+    ) {
         if (showDay) {
             task.plannedDate?.let { date ->
                 Text(
@@ -194,6 +218,7 @@ internal fun TaskDetails(task: TaskItem, area: AreaItem?, showDay: Boolean, show
                 Text(it.name, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
             }
         }
+        project?.let { ProjectChip(it, task.itemType, onOpenProject) }
         if (task.recurrence != null) {
             Icon(Icons.Outlined.Repeat, contentDescription = stringResource(R.string.lists_repeats), tint = AppTheme.colors.textMuted, modifier = Modifier.size(14.dp))
         }
