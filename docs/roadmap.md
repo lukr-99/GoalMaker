@@ -134,7 +134,9 @@ From M6's close-out (2026-09-28):
   purge crossing a pull)
 - Habit reminders with check-in from the notification
 - A yearly review you can start, and the January nudge to set yearly goals (story 66)
-- UI tests: Maestro flows, Compose UI tests, a Windows start-up smoke test
+- More UI tests: the Maestro flows in CI on an emulator, and Compose screen tests for more places
+  (Today, the bottom bar, Habits and the calendar have them; three Maestro flows and the Windows
+  start-up smoke test are in, see [local development](setup/local-development.md#ui-tests))
 - Small spec gaps: filters on Projects, Calendar and Archive, important reminders through Do Not
   Disturb
 

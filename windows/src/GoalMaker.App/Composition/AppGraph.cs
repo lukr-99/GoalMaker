@@ -77,11 +77,13 @@ public sealed class AppGraph : IDisposable
         Action<Action> runOnUi,
         Action shutdownApp,
         Action restartApp,
-        bool signIn = false)
+        bool signIn = false,
+        AppDataPaths? paths = null)
     {
         this.runOnUi = runOnUi;
         this.strings = strings;
-        Paths = new AppDataPaths(build.IsDevBuild);
+        // The build's own folder; the start-up smoke test passes a throwaway one.
+        Paths = paths ?? new AppDataPaths(build.IsDevBuild);
         Paths.EnsureRoot();
         Paths.ClearUpdates();
         Settings = new JsonSettingsStore(Paths.Settings);

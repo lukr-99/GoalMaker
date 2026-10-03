@@ -102,6 +102,38 @@ A side-by-side dev installer ("GoalMaker Dev") for testing the installer itself:
 powershell -File windows\installer\build-installer.ps1 -Dev
 ```
 
+## UI tests
+
+Three kinds, besides the unit tests (spec, "Testing Decisions"):
+
+- **Compose screen tests** (Android): `ui/*/*ScreenTest.kt` host the real screens under Robolectric
+  over a real replica on a throwaway file (`ui/ScreenPlanner`), with the clock fixed at noon on
+  Friday 18 September 2026, disk work on Unconfined and motion reduced (`ui/ScreenTheme`). They run
+  with the rest: `android\gradlew.bat -p android testDebugUnitTest`, or only them with
+  `--tests "*ScreenTest"`.
+- **Maestro flows** (Android): `android/.maestro/` holds a launch smoke, adding a task from the
+  bottom bar and ticking it off, and checking in a habit. They run against the debug app, which
+  needs no sign-in, and start from a cleared app each time. Start an emulator in the background,
+  install the debug build and run them; Maestro drives the emulator without a window:
+
+  ```powershell
+  emulator -avd <avd> -no-window -no-audio -no-boot-anim -no-snapshot-save
+  adb wait-for-device
+  powershell -File android\tools\build-and-install.ps1 -Serial emulator-5554
+  maestro --device emulator-5554 test android\.maestro
+  adb -s emulator-5554 emu kill
+  ```
+
+  Typed text is lower case on purpose: with the field's sentence capitals, a typed capital can come
+  out doubled on an emulator.
+- **Start-up smoke test** (Windows): `windows/tests/GoalMaker.App.SmokeTests` starts GoalMaker the
+  way `App.xaml.cs` starts a dev build, over a throwaway data folder: the resources, `AppGraph`,
+  `Shell/AppShell` (the tray icon, the quick-add box, the main window), the session coming back and
+  every page opened. The window shows for a few seconds without taking the focus. It runs with the
+  other tests; `dotnet test --project tests/GoalMaker.App.Tests` (from `windows`) skips it. While it
+  runs it registers the dev build's toast name and clears the dev build's toasts on the way out, as
+  a dev build quitting does.
+
 ## Checking both apps together
 
 Run this after changing sync or reminders. Dev builds keep to themselves, so turn signing in on in

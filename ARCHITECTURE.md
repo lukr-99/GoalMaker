@@ -85,7 +85,8 @@ composition root creates everything
   `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Assistant/SupabaseAssistantClient`, `Planning/TimerReminderScheduler` and
   `Startup/` (GoalMaker's own value under Run, and finding Startup Profiles).
 - `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
-  `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon with the Today
+  `Composition/AppGraph` (composition root), `Shell/` (`AppShell`, what `App` puts up over the
+  graph and the start-up smoke test builds the same way; Fluent main window, tray icon with the Today
   flyout, page provider, reminder toasts, the quick-add box and its global shortcut through NHotkey,
   the sidebar's pinned places and All places (`PlaceSidebar`, `AllPlacesItem`, ADR 0014), the
   sidebar's area and tag filters, the Today and Habits mini windows, the Projects page's new item
