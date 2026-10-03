@@ -60,8 +60,7 @@ Robolectric tests. The Windows job's `dotnet test --solution` runs `GoalMaker.Ap
 start-up smoke test, as its own test process: it builds the app as a dev build starts, over a
 throwaway folder, shows the main window without activating it and opens every page, in about 5 s.
 It needs a desktop session with a taskbar for the tray icon, which the `windows-latest` runners
-have. The Maestro flows need an emulator and do not run in CI ([local
-development](local-development.md#ui-tests)).
+have.
 
 **Concurrency.** A new push to a pull request cancels its older CI and baseline runs. Each push to
 `main` gets its own group and is never cancelled (see the pitfall "A merge to main cancelled the

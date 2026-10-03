@@ -4,7 +4,7 @@ The spec is [docs/spec.md](spec.md). Each milestone lands in the order backend â
 and each has markdown issues under `.scratch/<milestone>/`.
 
 GoalMaker is built for the owner's personal use only (ADR 0011): nothing shared or multi-user is
-planned, and the shared habit challenges idea was taken off the roadmap on 2026-09-28.
+planned.
 
 ## Process
 
@@ -132,13 +132,13 @@ From M6's close-out (2026-09-28):
   [docs/design/accessibility.md](design/accessibility.md)
 - Hardening: a full disk, sync under pressure (a device off for weeks, two devices on one row, the
   purge crossing a pull)
-- Habit reminders with check-in from the notification
-- A yearly review you can start, and the January nudge to set yearly goals (story 66)
-- More UI tests: the Maestro flows in CI on an emulator, and Compose screen tests for more places
-  (Today, the bottom bar, Habits and the calendar have them; three Maestro flows and the Windows
-  start-up smoke test are in, see [local development](setup/local-development.md#ui-tests))
+- Habit reminders with check-in from the notification (done in 1.10.0)
+- A yearly review you can start, and the January nudge to set yearly goals (story 66; done in 1.10.0)
+- More UI tests: Compose screen tests for more places (Today, the bottom bar, Habits and the calendar
+  have them, and the Windows start-up smoke test is in, see
+  [local development](setup/local-development.md#ui-tests))
 - Small spec gaps: filters on Projects, Calendar and Archive, important reminders through Do Not
-  Disturb
+  Disturb (done in 1.10.0)
 
 From the spec:
 
