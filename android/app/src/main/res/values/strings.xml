@@ -135,6 +135,8 @@
     <string name="lists_inbox_empty">Inbox zero. Anything without a day or an area lands here.</string>
     <string name="lists_delete">Delete %1$s</string>
     <string name="lists_repeats">Repeats</string>
+    <string name="lists_done_box">%1$s done</string>
+    <string name="lists_reminded">Reminder set</string>
     <string name="lists_done_message">Done: %1$s</string>
     <string name="lists_deleted_message">Deleted: %1$s</string>
     <string name="lists_undo">Undo</string>
@@ -148,7 +150,10 @@
     <string name="composer_soon">coming soon</string>
     <string name="composer_opens_plan">opens Plan tomorrow</string>
     <string name="composer_unknown_command">unknown command</string>
-    <string name="composer_remove">Remove %1$s</string>
+    <!-- Read after a preview chip's label by a screen reader, since a tap on the chip takes it out. -->
+    <string name="composer_remove">Remove</string>
+    <!-- Read before a preview chip that says what the line still lacks. -->
+    <string name="composer_warning">Warning</string>
 
     <!-- Quick chat in the composer (spec, "Quick chat (M7)") -->
     <string name="chat_mode">Chat</string>
@@ -913,6 +918,26 @@
     <string name="calendar_repeat">Repeats</string>
     <string name="calendar_reminders">%1$d reminders ring</string>
     <string name="calendar_drag_hint">Hold a task and drag it onto another day to move it.</string>
+    <!-- A day cell as a screen reader says it, after the date. -->
+    <string name="calendar_cell_today">today</string>
+    <string name="calendar_cell_open">open</string>
+    <string name="calendar_cell_empty">nothing on it</string>
+    <plurals name="calendar_cell_planned">
+        <item quantity="one">%1$d planned</item>
+        <item quantity="other">%1$d planned</item>
+    </plurals>
+    <plurals name="calendar_cell_due">
+        <item quantity="one">%1$d due</item>
+        <item quantity="other">%1$d due</item>
+    </plurals>
+    <plurals name="calendar_cell_repeats">
+        <item quantity="one">%1$d repeating</item>
+        <item quantity="other">%1$d repeating</item>
+    </plurals>
+    <plurals name="calendar_cell_reminders">
+        <item quantity="one">%1$d reminder</item>
+        <item quantity="other">%1$d reminders</item>
+    </plurals>
 
     <!-- Projects (docs/projects.md) -->
     <string name="projects_title">Projects</string>
@@ -1053,8 +1078,8 @@
     <string name="places_pinned">Pinned</string>
     <string name="places_not_pinned">Not pinned</string>
     <plurals name="places_waiting">
-        <item quantity="one">%1$d waiting in Places</item>
-        <item quantity="other">%1$d waiting in Places</item>
+        <item quantity="one">%1$d waiting</item>
+        <item quantity="other">%1$d waiting</item>
     </plurals>
     <string name="places_out_of">/ %1$d</string>
     <string name="places_tomorrow">%1$d planned</string>

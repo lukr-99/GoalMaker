@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -33,7 +34,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.HabitRules
@@ -82,15 +82,16 @@ fun HabitCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             EmojiTile(row)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                // The name, the streak and where today stands read as one line (M6-05).
-                Column(Modifier.semantics(mergeDescendants = true) {}) {
+                // The card's tap merges the name, the streak and where today stands into one item to read
+                // (M6-05); the check-in button and the menu stay their own controls.
+                Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             habit.name,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = if (row.done) colors.textMuted else colors.text,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
                         )
@@ -139,7 +140,8 @@ private fun EmojiTile(row: HabitRow) {
     ) {
         val emoji = row.habit.emoji
         if (emoji != null) {
-            Text(emoji, fontSize = 20.sp)
+            // A picture on the tile, so it keeps its size when the system's text grows.
+            Text(emoji, fontSize = with(LocalDensity.current) { 20.dp.toSp() })
         } else {
             Text(
                 row.habit.name.take(1).uppercase(),

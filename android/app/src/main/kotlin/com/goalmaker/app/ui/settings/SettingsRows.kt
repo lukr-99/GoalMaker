@@ -50,6 +50,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -76,6 +77,9 @@ import com.goalmaker.app.ui.theme.AppTheme
 
 private val ROW_HEIGHT = 56.dp
 private const val DISABLED_ALPHA = 0.45f
+
+// The most of a row its control takes, so the title keeps room to read.
+private const val CONTROL_SHARE = 0.6f
 
 /** The thin line between two rows of a card. */
 @Composable
@@ -118,12 +122,21 @@ private fun SideRow(
             titleColor,
         )
         Row(
-            modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA),
+            modifier = Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA).atMost(CONTROL_SHARE),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             content = control,
         )
     }
+}
+
+/**
+ * Measures the content at most [share] of the width on offer. At the largest text sizes a row's
+ * button would otherwise squeeze its title to a letter a line; this way the button's text wraps.
+ */
+private fun Modifier.atMost(share: Float) = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = (constraints.maxWidth * share).toInt()))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
 }
 
 /** A row whose control sits under the title, full width: segmented choices, sliders, fields, pickers. */
