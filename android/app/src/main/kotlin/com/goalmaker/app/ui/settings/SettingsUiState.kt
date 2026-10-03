@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.settings
 
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.UnlockAvailability
+import com.goalmaker.app.application.planning.DndBreakthrough
 import com.goalmaker.app.application.update.UpdateCheckResult
 import com.goalmaker.app.domain.design.ThemeDefinition
 import com.goalmaker.app.domain.planning.QuietHours
@@ -32,6 +33,8 @@ data class SettingsUiState(
     val appLock: Boolean,
     /** What this phone can ask for, which decides whether the lock can be turned on at all. */
     val unlock: UnlockAvailability,
+    /** Whether an important reminder rings through Do Not Disturb on this phone (docs/reminders.md). */
+    val importantDnd: DndBreakthrough = DndBreakthrough.NOT_ALLOWED,
     val signingOut: Boolean,
     val unsyncedAtSignOut: Int?,
     val update: UpdateUiState,

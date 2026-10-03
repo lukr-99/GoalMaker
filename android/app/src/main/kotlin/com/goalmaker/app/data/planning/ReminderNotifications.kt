@@ -7,11 +7,13 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.getSystemService
 import com.goalmaker.app.MainActivity
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.DndBreakthrough
 import com.goalmaker.app.application.planning.ScheduledReminder
 import com.goalmaker.app.application.planning.WantsDue
 import com.goalmaker.app.domain.planning.Snooze
@@ -22,6 +24,12 @@ import java.time.LocalDate
  * their own channel, so the owner can tune each; an important one keeps ringing until it is handled.
  * Each notification is tagged with its reminder id, which is how stale ones are found after a sync.
  * The evening Plan tomorrow reminder has a third channel and is tagged with its planning day.
+ *
+ * Do Not Disturb silences the important channel too until the owner lets it through: Android only
+ * honours a channel's "Override Do Not Disturb" when the owner turns it on (an app may set it only
+ * with Do Not Disturb access, which is far more than GoalMaker needs), so [importantThroughDnd]
+ * says where it stands and [dndSettings] opens the page where it is changed. The channel id stays
+ * the same, so turning it on there lasts.
  */
 class ReminderNotifications(private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
@@ -218,6 +226,30 @@ class ReminderNotifications(private val context: Context) {
         notify(reminderId, notification)
     }
 
+    /** Whether an important reminder rings through Do Not Disturb on this phone (docs/reminders.md). */
+    fun importantThroughDnd(): DndBreakthrough {
+        val channel = context.getSystemService<NotificationManager>()?.getNotificationChannel(CHANNEL_IMPORTANT)
+        return DndBreakthrough.of(
+            notificationsOn = manager.areNotificationsEnabled(),
+            channelOn = channel == null || channel.importance != NotificationManager.IMPORTANCE_NONE,
+            bypassesDnd = channel?.canBypassDnd() == true,
+        )
+    }
+
+    /**
+     * The system page that changes [state]: the important reminders' channel, with its "Override Do
+     * Not Disturb" switch, or the app's notification page while notifications are off altogether.
+     */
+    fun dndSettings(state: DndBreakthrough): Intent {
+        createChannels()
+        val page = if (state.opensAppPage) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+        } else {
+            Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_CHANNEL_ID, CHANNEL_IMPORTANT)
+        }
+        return page.putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    }
+
     /** Takes a reminder's notification away, because it was handled here or on the other device. */
     fun clear(reminderId: String) = manager.cancel(reminderId, ID)
 
@@ -313,16 +345,18 @@ class ReminderNotifications(private val context: Context) {
         )
     }
 
-    private companion object {
-        const val CHANNEL = "reminders"
+    companion object {
+        private const val CHANNEL = "reminders"
+
+        /** The important reminders' channel; its id never changes, so the owner's DND choice on it lasts. */
         const val CHANNEL_IMPORTANT = "reminders_important"
-        const val CHANNEL_PLAN = "plan_tomorrow"
-        const val CHANNEL_REVIEW = "reviews"
-        const val ID = 4001
-        const val PLAN_ID = 4002
-        const val REVIEW_ID = 4003
-        const val WANTS_ID = 4004
-        const val CHANNEL_WANTS = "wants_ready"
-        const val EXTRA_WANT_IDS = "com.goalmaker.app.WANT_IDS"
+        private const val CHANNEL_PLAN = "plan_tomorrow"
+        private const val CHANNEL_REVIEW = "reviews"
+        private const val ID = 4001
+        private const val PLAN_ID = 4002
+        private const val REVIEW_ID = 4003
+        private const val WANTS_ID = 4004
+        private const val CHANNEL_WANTS = "wants_ready"
+        private const val EXTRA_WANT_IDS = "com.goalmaker.app.WANT_IDS"
     }
 }
