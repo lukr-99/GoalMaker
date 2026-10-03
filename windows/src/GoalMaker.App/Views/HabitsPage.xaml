@@ -259,6 +259,19 @@
                             <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Habits.ShowOnTodayHint}" />
                         </StackPanel>
                     </DockPanel>
+                    <!-- A reminder on the days it is still left (docs/reminders.md). -->
+                    <DockPanel Margin="0,12,0,0">
+                        <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding RemindOn}"
+                                         AutomationProperties.Name="{DynamicResource Habits.Remind}" />
+                        <ui:TextBox DockPanel.Dock="Right" Width="80" MaxLength="5" VerticalAlignment="Center"
+                                    Text="{Binding RemindText, UpdateSourceTrigger=PropertyChanged}"
+                                    IsEnabled="{Binding RemindOn}"
+                                    AutomationProperties.Name="{DynamicResource Habits.RemindAt}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource Habits.Remind}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Habits.RemindHint}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DockPanel>
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Goal}" />
                     <ComboBox ItemsSource="{Binding GoalChoices}" SelectedItem="{Binding Goal}" DisplayMemberPath="Label"
                               AutomationProperties.Name="{DynamicResource Habits.Goal}" />

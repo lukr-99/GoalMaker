@@ -678,6 +678,9 @@
     <sys:String x:Key="Habits.SkipWeek">Skip this week</sys:String>
     <sys:String x:Key="Habits.SkipMonth">Skip this month</sys:String>
     <sys:String x:Key="Habits.Unskip">Undo the skip</sys:String>
+    <sys:String x:Key="Habits.Remind">Remind me</sys:String>
+    <sys:String x:Key="Habits.RemindAt">Reminder time</sys:String>
+    <sys:String x:Key="Habits.RemindHint">On the days it is still left, with Check in and Skip on the notification.</sys:String>
     <sys:String x:Key="Habits.FailDay">Fail today</sys:String>
     <sys:String x:Key="Habits.FailWeek">Fail this week</sys:String>
     <sys:String x:Key="Habits.FailMonth">Fail this month</sys:String>

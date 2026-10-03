@@ -651,6 +651,9 @@
     <string name="habits_skip_week">Skip this week</string>
     <string name="habits_skip_month">Skip this month</string>
     <string name="habits_unskip">Undo the skip</string>
+    <string name="habits_remind">Remind me</string>
+    <string name="habits_remind_hint">On the days it is still left, with Check in and Skip on the notification.</string>
+    <string name="habits_remind_at">At %1$s</string>
     <string name="new_year_title">%1$d is here</string>
     <string name="new_year_both">Look back on %1$d before it fades, then set what %2$d is for.</string>
     <string name="new_year_review_only">%2$d has its goals. Look back on %1$d while you still remember it.</string>
