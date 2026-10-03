@@ -8,6 +8,6 @@
   },
   "devDependencies": {
     "deno": "2.1.4",
-    "supabase": "2.117.0"
+    "supabase": "2.119.0"
   }
 }
