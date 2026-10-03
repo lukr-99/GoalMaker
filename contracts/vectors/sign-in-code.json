@@ -12,6 +12,7 @@
   ],
   "find": [
     { "name": "the subject line", "text": "482913 is your GoalMaker code", "expect": "482913" },
+    { "name": "the verification code subject", "text": "Your GoalMaker verification code is 482913", "expect": "482913" },
     { "name": "the code alone", "text": "482913", "expect": "482913" },
     { "name": "a sentence around it", "text": "Your sign-in code is 482913. It works for 10 minutes.", "expect": "482913" },
     { "name": "grouped with a space", "text": "Code: 482 913", "expect": "482913" },
