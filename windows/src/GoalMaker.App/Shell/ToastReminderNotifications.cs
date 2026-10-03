@@ -5,6 +5,7 @@ using System.Security;
 using System.Windows.Media.Imaging;
 using System.Xml.Linq;
 using GoalMaker.App.Localization;
+using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Planning;
 using Microsoft.Win32;
 using Windows.UI.Notifications;
@@ -16,7 +17,8 @@ namespace GoalMaker.App.Shell;
 /// Reminder toasts through the Windows SDK, without MSIX or the Windows App SDK runtime (ADR 0009).
 /// The app registers its own AppUserModelID for the current user, shows each reminder tagged with its
 /// id, and hears the buttons while it runs, which the tray keeps it doing. An ordinary reminder uses
-/// the reminder style and stays until handled; an important one uses the alarm style and rings.
+/// the reminder style and stays until handled; an important one uses the alarm style and rings. A habit
+/// still left at its reminder time gets a toast of its own, tagged with the habit and its planning day.
 /// </summary>
 public sealed class ToastReminderNotifications
 {
@@ -24,6 +26,7 @@ public sealed class ToastReminderNotifications
     private const string PlanGroup = "plan";
     private const string ReviewGroup = "review";
     private const string WantsGroup = "wants";
+    private const string HabitsGroup = "habits";
     private readonly Dictionary<DateOnly, IReadOnlyList<string>> shownWants = [];
     private readonly string appId;
     private readonly IStrings strings;
@@ -140,6 +143,41 @@ public sealed class ToastReminderNotifications
         Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
     }
 
+    /// <summary>
+    /// Shows the reminder of a habit still left on its planning day (docs/reminders.md): its emoji and
+    /// name, where the day or the period stands by <paramref name="checkins"/> (the habit's own), Check in,
+    /// +1 or Log, and the skip of its period. Clicking it opens the Habits page.
+    /// </summary>
+    public void ShowHabit(DueHabit due, IReadOnlyList<HabitCheckin> checkins)
+    {
+        var document = new WinRtXml.XmlDocument();
+        document.LoadXml(HabitContent(due, checkins, strings).ToString(SaveOptions.DisableFormatting));
+        var toast = new ToastNotification(document) { Tag = HabitTag(due.Habit.Id, due.Day), Group = HabitsGroup };
+        toast.Activated += (_, args) =>
+        {
+            if (ToastActivation.Parse((args as ToastActivatedEventArgs)?.Arguments) is { } activation)
+            {
+                Activated?.Invoke(this, activation);
+            }
+        };
+        Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>Takes the reminder of a habit for planning <paramref name="day"/> away.</summary>
+    public void ClearHabit(string habitId, DateOnly day) =>
+        Try(() => ToastNotificationManager.History.Remove(HabitTag(habitId, day), HabitsGroup, appId));
+
+    /// <summary>The habit reminders on screen or in the notification centre, as the habit's id and the planning day.</summary>
+    public IReadOnlyList<(string HabitId, DateOnly Day)> ShownHabits()
+    {
+        IReadOnlyList<(string, DateOnly)> shown = [];
+        Try(() => shown = [.. ToastNotificationManager.History.GetHistory(appId)
+            .Where(toast => toast.Group == HabitsGroup)
+            .Select(toast => new ToastActivation(ToastAction.Habit, toast.Tag).Habit())
+            .Where(habit => habit.HabitId.Length > 0)]);
+        return shown;
+    }
+
     /// <summary>The wants toasts shown since GoalMaker started, as their planning day and the wants they name.</summary>
     public IReadOnlyList<(DateOnly Day, IReadOnlyList<string> Wants)> ShownWants() =>
         [.. shownWants.Select(entry => (entry.Key, entry.Value))];
@@ -240,6 +278,65 @@ public sealed class ToastReminderNotifications
             // The toast still shows, under whatever name and icon Windows already has for the app.
         }
     }
+
+    /// <summary>A habit reminder's toast: Check in for a check, +1 for a count, Log for an amount, then the skip of its period.</summary>
+    internal static XElement HabitContent(DueHabit due, IReadOnlyList<HabitCheckin> checkins, IStrings strings)
+    {
+        var habit = due.Habit;
+        var tag = HabitTag(habit.Id, due.Day);
+        XElement Button(string label, ToastAction action) => new(
+            "action",
+            new XAttribute("content", strings.Get(label)),
+            new XAttribute("arguments", new ToastActivation(action, tag).Arguments),
+            new XAttribute("activationType", "foreground"));
+
+        var first = habit.Measure switch
+        {
+            HabitRules.Count => Button("HabitReminder.AddOne", ToastAction.HabitCheckIn),
+            HabitRules.Amount => Button("HabitReminder.Log", ToastAction.HabitLog),
+            _ => Button("HabitReminder.CheckIn", ToastAction.HabitCheckIn),
+        };
+        var skip = habit.Cadence switch
+        {
+            HabitRules.PerWeek => "Habits.SkipWeek",
+            HabitRules.PerMonth => "Habits.SkipMonth",
+            _ => "Habits.SkipDay",
+        };
+        return new XElement(
+            "toast",
+            new XAttribute("launch", new ToastActivation(ToastAction.Habit, tag).Arguments),
+            new XElement(
+                "visual",
+                new XElement(
+                    "binding",
+                    new XAttribute("template", "ToastGeneric"),
+                    new XElement("text", string.IsNullOrWhiteSpace(habit.Emoji) ? habit.Name : habit.Emoji + " " + habit.Name),
+                    new XElement("text", HabitText(habit, due.Day, checkins, strings)))),
+            new XElement("actions", first, Button(skip, ToastAction.HabitSkip)));
+    }
+
+    /// <summary>
+    /// Where a habit still left stands: the days a weekly or monthly one has met, a count's or an amount's
+    /// value against its target, or simply that a check is still to do. A limit never reminds.
+    /// </summary>
+    internal static string HabitText(HabitItem habit, DateOnly day, IReadOnlyList<HabitCheckin> checkins, IStrings strings)
+    {
+        var start = HabitRules.PeriodStart(habit, day);
+        var end = HabitRules.PeriodEnd(habit, start);
+        var met = checkins.Count(checkin => checkin.Day >= start && checkin.Day <= end && HabitRules.DayMet(habit, checkin));
+        var value = checkins.FirstOrDefault(checkin => checkin.Day == day && !checkin.Skipped && !checkin.Failed)?.Value ?? 0;
+        var target = HabitRowViewModel.Amount(habit.Target ?? 0);
+        return habit switch
+        {
+            { Cadence: HabitRules.PerWeek } => strings.Get("Habits.MetWeek", met, habit.Times ?? 1),
+            { Cadence: HabitRules.PerMonth } => strings.Get("Habits.MetMonth", met, habit.Times ?? 1),
+            { Measure: HabitRules.Check } => strings.Get("HabitReminder.Left"),
+            { Unit: { } unit } when !string.IsNullOrWhiteSpace(unit) => strings.Get("Habits.ValueUnit", HabitRowViewModel.Amount(value), target, unit),
+            _ => strings.Get("Habits.Value", HabitRowViewModel.Amount(value), target),
+        };
+    }
+
+    private static string HabitTag(string habitId, DateOnly day) => habitId + "/" + day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
     private XElement ReviewContent(string tag, bool monthly, bool letter)
     {
