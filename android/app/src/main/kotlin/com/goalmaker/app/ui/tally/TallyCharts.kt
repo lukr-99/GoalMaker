@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,13 +30,17 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
 import com.goalmaker.app.ui.theme.AppTheme
+import java.util.Locale
 import kotlin.math.max
 
 /*
@@ -101,10 +106,18 @@ fun TallyStackedBar(slices: List<TallySlice>, modifier: Modifier = Modifier, hei
 
 /**
  * A stacked bar per day or week, the tallest as tall as the row, each with its label underneath when
- * [labels] has them; a bar with nothing is a short grey stub, as in the stats screen.
+ * [labels] has them; a bar with nothing is a short grey stub, as in the stats screen. With [onSelect],
+ * each bar is a button and the [selected] one's label wears the accent.
  */
 @Composable
-fun TallyColumns(bars: List<TallyBar>, modifier: Modifier = Modifier, labels: List<String> = emptyList(), height: Dp = 96.dp) {
+fun TallyColumns(
+    bars: List<TallyBar>,
+    modifier: Modifier = Modifier,
+    labels: List<String> = emptyList(),
+    height: Dp = 96.dp,
+    selected: Int = -1,
+    onSelect: ((Int) -> Unit)? = null,
+) {
     val shown = rememberShown()
     val reduced = AppTheme.reduceMotion
     val scale = if (reduced) 1f else shown
@@ -119,9 +132,14 @@ fun TallyColumns(bars: List<TallyBar>, modifier: Modifier = Modifier, labels: Li
         bars.forEachIndexed { index, bar ->
             val colors = bar.slices.map { tallyColor(it.color) }
             val description = listOf(labels.getOrElse(index) { bar.day.toString() }, durationText(bar.minutes)).joinToString(", ")
+            val picked = index == selected
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(1f).semantics { contentDescription = description },
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .let { column -> if (onSelect == null) column else column.selectable(picked, role = Role.Tab) { onSelect(index) } }
+                    .semantics { contentDescription = description },
             ) {
                 Canvas(
                     Modifier
@@ -147,7 +165,8 @@ fun TallyColumns(bars: List<TallyBar>, modifier: Modifier = Modifier, labels: Li
                     Text(
                         labels.getOrElse(index) { "" },
                         style = MaterialTheme.typography.labelSmall,
-                        color = AppTheme.colors.textMuted,
+                        color = if (picked) AppTheme.colors.accent else AppTheme.colors.textMuted,
+                        fontWeight = if (picked) FontWeight.Bold else null,
                         maxLines = 1,
                     )
                 }
@@ -155,6 +174,66 @@ fun TallyColumns(bars: List<TallyBar>, modifier: Modifier = Modifier, labels: Li
         }
     }
 }
+
+/**
+ * The day by hour on this phone: a thin stacked column per clock hour, as tall as its share of the
+ * hour, the planning day's first hour on the left, with the time every six hours underneath. A
+ * screen reader hears each hour with time and how long it was.
+ */
+@Composable
+fun TallyHours(hours: List<TallyHourBar>, modifier: Modifier = Modifier, height: Dp = 72.dp) {
+    val shown = rememberShown()
+    val reduced = AppTheme.reduceMotion
+    val scale = if (reduced) 1f else shown
+    val fade = if (reduced) shown else 1f
+    val empty = AppTheme.colors.outline.copy(alpha = 0.3f)
+    val colors = hours.map { hour -> hour.parts.map { tallyColor(it.color) } }
+    val spoken = hours.filter { it.seconds > 0 }.map { hour ->
+        listOf(clock(hour.hour), durationText(max(1, (hour.seconds + 30) / 60))).joinToString(" ")
+    }
+    val description = if (spoken.isEmpty()) stringResource(R.string.tally_hours_none) else stringResource(R.string.tally_hours_spoken, spoken.joinToString(", "))
+    Column(modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = description }) {
+        Canvas(
+            Modifier
+                .fillMaxWidth()
+                .height(height)
+                .alpha(fade),
+        ) {
+            if (hours.isEmpty()) return@Canvas
+            val gap = 2.dp.toPx()
+            val width = (size.width - gap * (hours.size - 1)) / hours.size
+            val stub = 2.dp.toPx()
+            hours.forEachIndexed { index, hour ->
+                val left = index * (width + gap)
+                if (hour.seconds == 0) {
+                    drawRect(empty, Offset(left, size.height - stub), Size(width, stub))
+                    return@forEachIndexed
+                }
+                val full = max(stub, size.height * hour.seconds.coerceAtMost(HOUR) / HOUR) * scale
+                var bottom = size.height
+                hour.parts.forEachIndexed { part, slice ->
+                    val tall = full * slice.seconds / hour.seconds
+                    drawRect(colors[index][part], topLeft = Offset(left, bottom - tall), size = Size(width, tall))
+                    bottom -= tall
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            hours.chunked(6).forEach { six ->
+                Text(
+                    clock(six.first().hour),
+                    style = tabular(MaterialTheme.typography.labelSmall),
+                    color = AppTheme.colors.textMuted,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+/** "09:00": a clock hour as the day chart writes it. */
+fun clock(hour: Int): String = String.format(Locale.ROOT, "%02d:00", hour)
 
 /** A dot, the name and the minutes for each slice. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -179,6 +258,8 @@ fun TallyLegend(slices: List<TallySlice>, modifier: Modifier = Modifier) {
         }
     }
 }
+
+private const val HOUR = 3_600
 
 /** How far a chart has come in, from 0 to 1: grown over the standard duration, or faded in quickly with reduce motion. */
 @Composable

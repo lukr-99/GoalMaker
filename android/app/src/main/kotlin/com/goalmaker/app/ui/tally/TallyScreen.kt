@@ -29,9 +29,11 @@ import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -55,13 +57,16 @@ import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
+import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle as DayStyle
 
 /**
  * The Tally place (docs/tally.md, M8-13): the switch and, when needed, the usage access card on top;
- * filter chips for Phone, PC and each category with time; today as one stacked bar, the week as a
- * stacked bar per day, the time per project (the PC's alone); then the owner's own categories and
- * rules, each with an add sheet.
+ * filter chips for Phone, PC and each category with time; the day (today, or the day picked in the
+ * week) as one stacked bar, then that day by hour and the apps on this phone; the week as a stacked
+ * bar per day, each a button that picks its day; the time per project (the PC's alone); then the
+ * owner's own categories and rules, each with an add sheet. Make a rule under an app opens the rule
+ * sheet already filled in.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,6 +112,11 @@ fun TallyScreen(viewModel: TallyViewModel, onBack: (() -> Unit)?, actions: @Comp
             )
         },
     ) { padding ->
+        val locale = LocalConfiguration.current.locales[0]
+        val dayName = when {
+            state.isToday -> stringResource(R.string.tally_today)
+            else -> state.day?.day?.format(DateTimeFormatter.ofPattern("EEEE d MMMM", locale)).orEmpty()
+        }
         LazyColumn(
             contentPadding = PaddingValues(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
@@ -125,22 +135,48 @@ fun TallyScreen(viewModel: TallyViewModel, onBack: (() -> Unit)?, actions: @Comp
                     )
                 }
             } else {
-                state.today?.let { today ->
-                    item("h-today") { SectionHeader(stringResource(R.string.tally_today)) }
-                    item("today") {
+                state.day?.let { day ->
+                    item("h-day") { SectionHeader(dayName) }
+                    item("day") {
                         Panel {
-                            Total(today.minutes)
-                            TallyStackedBar(today.slices)
-                            if (today.slices.isNotEmpty()) TallyLegend(today.slices)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.weight(1f)) { Total(day.minutes) }
+                                if (!state.isToday) {
+                                    TextButton(onClick = { viewModel.showDay(day.day) }) { Text(stringResource(R.string.tally_back_today)) }
+                                }
+                            }
+                            // Re-keyed by day, so a newly picked day's bar grows in again.
+                            key(day.day) { TallyStackedBar(day.slices) }
+                            if (day.slices.isNotEmpty()) TallyLegend(day.slices)
                         }
                     }
                 }
+                if (state.counting && !state.otherDevice) {
+                    item("h-hours") { SectionHeader(stringResource(R.string.tally_hours_title)) }
+                    item("hours") { Panel { key(state.day?.day) { TallyHours(state.hours) } } }
+                    item("h-apps") { SectionHeader(stringResource(R.string.tally_apps_title)) }
+                    item("apps") {
+                        TallyAppsPanel(
+                            state = state,
+                            dayLabel = dayName,
+                            onScope = viewModel::showApps,
+                            onMakeRule = { group, app -> editingRule = viewModel.ruleFor(app.app, group.category) },
+                        )
+                    }
+                } else if (state.counting) {
+                    item("apps-pc") { Muted(stringResource(R.string.tally_apps_pc)) }
+                }
                 item("h-week") { SectionHeader(stringResource(R.string.tally_this_week)) }
                 item("week") {
-                    val locale = LocalConfiguration.current.locales[0]
                     Panel {
                         Total(state.weekMinutes)
-                        TallyColumns(state.week, labels = state.week.map { it.day.dayOfWeek.getDisplayName(DayStyle.SHORT, locale) })
+                        TallyColumns(
+                            state.week,
+                            labels = state.week.map { it.day.dayOfWeek.getDisplayName(DayStyle.SHORT, locale) },
+                            selected = state.dayIndex,
+                            onSelect = { index -> viewModel.showDay(state.week[index].day) },
+                        )
+                        Text(stringResource(R.string.tally_week_hint), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
                         if (state.weekSlices.isNotEmpty()) TallyLegend(state.weekSlices)
                     }
                 }

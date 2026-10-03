@@ -139,8 +139,69 @@ class TallyRulesContractTest {
     }
 
     @Test
+    fun `every window label`() {
+        vectors.cases("window").forEach { case ->
+            assertEquals(case.text("name"), case.text("expect"), TallyBreakdown.windowLabel(case.text("app")!!, case.text("title")))
+        }
+    }
+
+    @Test
+    fun `every day by the hour`() {
+        vectors.cases("hours").forEach { case ->
+            val startHour = case.getValue("startHour").jsonPrimitive.int
+            val hours = TallyBreakdown.hours(stretches(case), LocalDate.parse(case.text("day")!!), startHour)
+            assertEquals(case.text("name"), (0 until 24).map { (startHour + it) % 24 }, hours.map(TallyHour::hour))
+            val expect = case.getValue("expect").jsonArray.map { it.jsonObject }.map { hour ->
+                TallyHour(
+                    hour.getValue("hour").jsonPrimitive.int,
+                    hour.getValue("seconds").jsonPrimitive.int,
+                    hour.getValue("categories").jsonArray.map { it.jsonObject }.map { TallySeconds(it.text("category")!!, it.getValue("seconds").jsonPrimitive.int) },
+                )
+            }
+            assertEquals(case.text("name"), expect, hours.filter { it.seconds > 0 })
+            assertTrue(case.text("name"), hours.filter { it.seconds == 0 }.all { it.categories.isEmpty() })
+        }
+    }
+
+    @Test
+    fun `every app list`() {
+        vectors.cases("apps").forEach { case ->
+            val expect = case.getValue("expect").jsonArray.map { it.jsonObject }.map { group ->
+                TallyCategoryApps(
+                    group.text("category")!!,
+                    group.getValue("minutes").jsonPrimitive.int,
+                    group.getValue("apps").jsonArray.map { it.jsonObject }.map { app ->
+                        TallyAppTime(
+                            app.text("app")!!,
+                            app.getValue("minutes").jsonPrimitive.int,
+                            app.getValue("windows").jsonArray.map { it.jsonObject }.map { TallyWindowTime(it.text("label")!!, it.getValue("minutes").jsonPrimitive.int) },
+                        )
+                    },
+                )
+            }
+            assertEquals(
+                case.text("name"),
+                expect,
+                TallyBreakdown.apps(stretches(case), LocalDate.parse(case.text("from")!!), LocalDate.parse(case.text("to")!!), case.getValue("startHour").jsonPrimitive.int),
+            )
+        }
+    }
+
+    private fun stretches(case: JsonObject) = case.getValue("stretches").jsonArray.map { it.jsonObject }.map { stretch ->
+        TallyStretch(
+            LocalDateTime.parse(stretch.text("start")!!),
+            LocalDateTime.parse(stretch.text("end")!!),
+            stretch.text("app")!!,
+            stretch.text("title"),
+            stretch.text("category")!!,
+        )
+    }
+
+    @Test
     fun `the shipped defaults read in full`() {
         assertEquals(TallyRules.OTHER, shipped.categories.last().id)
+        assertEquals("every category keeps its own color", shipped.categories.size, shipped.categories.map { it.color }.toSet().size)
+        assertTrue(shipped.categories.map { it.id }.containsAll(listOf("coding", "study", "work", "video", "social", "games", "reading", "chat")))
         assertEquals(TallyRules.VIDEO, shipped.rules.first { it.pattern == "com.google.android.youtube" }.category)
         shipped.rules.forEach { rule ->
             assertTrue(rule.pattern, rule.match in TallyRules.MATCHES && rule.platform in TallyRules.PLATFORMS)

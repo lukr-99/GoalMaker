@@ -2,8 +2,10 @@ package com.goalmaker.app.ui.tally
 
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TallyCategory
+import com.goalmaker.app.application.planning.TallyCategoryApps
 import com.goalmaker.app.application.planning.TallyDay
 import com.goalmaker.app.application.planning.TallyFilter
+import com.goalmaker.app.application.planning.TallyHour
 import com.goalmaker.app.application.planning.TallyMinutes
 import com.goalmaker.app.application.planning.TallyRules
 import com.goalmaker.app.application.planning.TallyWeek
@@ -65,4 +67,30 @@ object TallyBoard {
     /** The rows' minutes as one bar for [day], by category. */
     fun bar(day: LocalDate, rows: List<TallyDay>, categories: Map<String, TallyCategory>): TallyBar =
         TallyBar(day, rows.sumOf(TallyDay::minutes), slices(TallyRules.byCategory(rows), categories))
+
+    /** A day's hours on this phone as the day chart's bars, each category in its color. */
+    fun hours(hours: List<TallyHour>, categories: Map<String, TallyCategory>): List<TallyHourBar> = hours.map { hour ->
+        TallyHourBar(
+            hour.hour,
+            hour.seconds,
+            hour.categories.map { part ->
+                val category = categories[part.category]
+                TallyHourPart(part.category, category?.name.orEmpty(), category?.color ?: UNKNOWN_COLOR, part.seconds)
+            },
+        )
+    }
+
+    /** This phone's apps by category, each app by the name the phone knows it by ([names], by package in lower case). */
+    fun apps(groups: List<TallyCategoryApps>, categories: Map<String, TallyCategory>, names: Map<String, String>): List<TallyAppGroup> =
+        groups.map { group ->
+            val category = categories[group.category]
+            TallyAppGroup(
+                category = group.category,
+                name = category?.name.orEmpty(),
+                color = category?.color ?: UNKNOWN_COLOR,
+                emoji = category?.emoji,
+                minutes = group.minutes,
+                apps = group.apps.map { app -> TallyAppRow(app.app, names[app.app] ?: app.app, app.minutes, app.windows) },
+            )
+        }
 }
