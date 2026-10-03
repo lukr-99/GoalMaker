@@ -26,6 +26,7 @@ public sealed partial class CalendarViewModel : ObservableObject
     private readonly TimeProvider time;
     private readonly Action<string> openTask;
     private readonly Action<string>? openProject;
+    private readonly HabitsViewModel? habitsPage;
     private DateOnly? anchor;
     private DateOnly? selected;
 
@@ -53,6 +54,11 @@ public sealed partial class CalendarViewModel : ObservableObject
     [ObservableProperty]
     private bool hasReminders;
 
+    /// <summary>The open day's habits, when it is today or gone by: what can still be checked in there.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDayHabits))]
+    private IReadOnlyList<HabitRowViewModel> dayHabits = [];
+
     public CalendarViewModel(
         TaskList tasks,
         ReminderList reminders,
@@ -65,9 +71,17 @@ public sealed partial class CalendarViewModel : ObservableObject
         TimeProvider time,
         Action<string> openTask,
         Action<Action> runOnUi,
-        Action<string>? openProject = null)
+        Action<string>? openProject = null,
+        HabitsViewModel? habitsPage = null,
+        HabitList? habitList = null)
     {
         this.openProject = openProject;
+        this.habitsPage = habitsPage;
+        if (habitList is not null)
+        {
+            habitList.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         this.tasks = tasks;
         this.reminders = reminders;
         this.tags = tags;
@@ -149,6 +163,7 @@ public sealed partial class CalendarViewModel : ObservableObject
             foreach (var (task, label) in Entries(open))
             {
                 var id = task.Id;
+                var tickable = label != "Calendar.Repeat" && task.State != TaskState.Dropped;
                 DayEntries.Add(new CalendarEntryViewModel(
                     id,
                     task.Title,
@@ -156,15 +171,38 @@ public sealed partial class CalendarViewModel : ObservableObject
                     task.PlannedTime?.ToString("t", CultureInfo.CurrentCulture) ?? string.Empty,
                     task.State == TaskState.Done,
                     () => openTask(id),
-                    ProjectTagViewModel.For(task, projectById, strings, openProject)));
+                    ProjectTagViewModel.For(task, projectById, strings, openProject),
+                    tickable ? done => SetDone(id, done, open.Day) : null));
             }
         }
+
+        // A day gone by, or today, can still be checked in; a day to come can't (docs/calendar.md).
+        DayHabits = open is not null && open.Day <= today && habitsPage is not null ? habitsPage.DayRows(open.Day) : [];
 
         DayTitle = open is null ? string.Empty : open.Day.ToString("D", CultureInfo.CurrentCulture);
         HasDay = open is not null;
         IsDayEmpty = open is not null && open.Empty;
         HasReminders = open is { Reminders: > 0 };
         DayReminders = HasReminders ? strings.Get("Calendar.Reminders", open!.Reminders) : string.Empty;
+    }
+
+    /// <summary>Whether the open day lists habits to check in.</summary>
+    public bool HasDayHabits => DayHabits.Count > 0;
+
+    /// <summary>
+    /// Ticks a task off on <paramref name="day"/>, or opens it again: a day gone by counts it as done on that
+    /// day, so the stats and the archive put it there (docs/calendar.md).
+    /// </summary>
+    public void SetDone(string taskId, bool done, DateOnly day)
+    {
+        if (done)
+        {
+            tasks.FinishOn(taskId, day, Today(), time.LocalTimeZone);
+        }
+        else
+        {
+            tasks.SetDone(taskId, false);
+        }
     }
 
     /// <summary>Shows the week or the month.</summary>

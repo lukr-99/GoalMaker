@@ -55,7 +55,7 @@ fun HabitSheet(
     onSkip: (Boolean) -> Unit,
     onFail: (Boolean) -> Unit,
     onClear: () -> Unit,
-    onPause: () -> Unit,
+    onPause: (() -> Unit)? = null,
     onResume: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onArchive: ((Boolean) -> Unit)? = null,
@@ -115,7 +115,7 @@ fun HabitSheet(
                 if (row.paused) {
                     onResume?.let { Choice(Icons.Outlined.PlayCircle, stringResource(R.string.habits_resume), action = it) }
                 } else {
-                    Choice(Icons.Outlined.PauseCircle, stringResource(R.string.habits_pause), action = onPause)
+                    onPause?.let { Choice(Icons.Outlined.PauseCircle, stringResource(R.string.habits_pause), action = it) }
                 }
             }
             onEdit?.let { Choice(Icons.Outlined.Edit, stringResource(R.string.habits_edit_menu), action = it) }

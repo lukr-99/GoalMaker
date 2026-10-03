@@ -344,7 +344,7 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach));
         CalendarPage = new CalendarViewModel(
-            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject);
+            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject, HabitsPage, Habits);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
             Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);

@@ -176,7 +176,53 @@ public sealed class CalendarViewModelTests : IDisposable
         return planner.Tasks.Find(task.Id)!;
     }
 
-    private CalendarViewModel Page(Action<string>? openProject = null) => new(
+    [Fact]
+    public void ADayGoneByListsItsHabitsAndACheckInOrAFailLandsOnThatDay()
+    {
+        var read = planner.Habits.Add(new HabitDraft("Read", new DateOnly(2026, 9, 1)))!;
+        planner.Habits.Add(new HabitDraft("Floss", new DateOnly(2026, 9, 1)));
+        var monday = new DateOnly(2026, 9, 14);
+        var page = Page(habits: true);
+        page.Open(monday);
+
+        Assert.Equal(["Read", "Floss"], page.DayHabits.Select(row => row.Name));
+        page.DayHabits.Single(row => row.Name == "Read").CheckInCommand.Execute(null);
+        page.DayHabits.Single(row => row.Name == "Floss").FailCommand.Execute(null);
+
+        Assert.True(page.DayHabits.Single(row => row.Name == "Read").IsDone);
+        Assert.True(page.DayHabits.Single(row => row.Name == "Floss").IsFailed);
+        Assert.All(planner.Habits.Checkins(), checkin => Assert.Equal(monday, checkin.Day));
+        Assert.Equal(HabitStanding.Left, HabitRules.Standing(read, Today, planner.Habits.Checkins(), []));
+    }
+
+    [Fact]
+    public void ADayToComeHasNoHabitsToCheckIn()
+    {
+        planner.Habits.Add(new HabitDraft("Read", new DateOnly(2026, 9, 1)));
+        var page = Page(habits: true);
+        page.Open(Today.AddDays(2));
+
+        Assert.False(page.HasDayHabits);
+    }
+
+    [Fact]
+    public void ATaskTickedOffOnADayGoneByIsDoneOnThatDay()
+    {
+        var monday = new DateOnly(2026, 9, 14);
+        var rent = Plan("Pay the rent", monday);
+        var page = Page();
+        page.Open(monday);
+
+        var entry = page.DayEntries.Single();
+        Assert.True(entry.CanTick);
+        entry.ToggleDoneCommand.Execute(null);
+
+        Assert.Equal(TaskState.Done, planner.Tasks.Find(rent.Id)!.State);
+        Assert.StartsWith("2026-09-14T12:00:00", planner.Tasks.Find(rent.Id)!.CompletedAt);
+        Assert.True(page.DayEntries.Single().Done);
+    }
+
+    private CalendarViewModel Page(Action<string>? openProject = null, bool habits = false) => new(
         planner.Tasks,
         planner.Reminders,
         planner.Areas,
@@ -188,5 +234,7 @@ public sealed class CalendarViewModelTests : IDisposable
         planner.Time,
         _ => { },
         action => action(),
-        openProject);
+        openProject,
+        habits ? new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, planner.Strings, planner.Time, () => true, action => action()) : null,
+        habits ? planner.Habits : null);
 }

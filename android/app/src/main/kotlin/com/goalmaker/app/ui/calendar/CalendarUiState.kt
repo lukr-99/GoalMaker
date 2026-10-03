@@ -4,6 +4,7 @@ import com.goalmaker.app.application.planning.CalendarDay
 import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.habits.HabitRow
 import com.goalmaker.app.ui.lists.FilterChoices
 import java.time.LocalDate
 
@@ -20,6 +21,8 @@ data class CalendarUiState(
     val selected: LocalDate? = null,
     val projects: List<ProjectItem> = emptyList(),
     val filter: FilterChoices = FilterChoices(),
+    /** The open day's habits, when the day is today or gone by: what can still be checked in there. */
+    val dayHabits: List<HabitRow> = emptyList(),
 ) {
     /** The project a task is an item of, while that project is still there. */
     fun projectOf(task: TaskItem): ProjectItem? = task.projectId?.let { id -> projects.firstOrNull { it.id == id } }

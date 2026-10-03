@@ -922,6 +922,7 @@
     <string name="calendar_planned">Planned</string>
     <string name="calendar_deadline">Due</string>
     <string name="calendar_repeat">Repeats</string>
+    <string name="calendar_habits">Habits</string>
     <string name="calendar_reminders">%1$d reminders ring</string>
     <string name="calendar_drag_hint">Hold a task and drag it onto another day to move it.</string>
 

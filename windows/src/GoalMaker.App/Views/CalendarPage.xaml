@@ -84,7 +84,13 @@
 
         <!-- One line of what a day holds. -->
         <DataTemplate x:Key="DayEntry" DataType="{x:Type vm:CalendarEntryViewModel}">
-            <ui:Button Margin="0,0,0,6" Padding="12,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+            <DockPanel Margin="0,0,0,6">
+            <!-- Ticks the task off on the open day (docs/calendar.md); a repeat has no row to tick yet. -->
+            <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" Margin="4,0,0,0" MinWidth="0"
+                      IsChecked="{Binding Done, Mode=OneWay}" Command="{Binding ToggleDoneCommand}"
+                      AutomationProperties.Name="{Binding Title}"
+                      Visibility="{Binding CanTick, Converter={StaticResource BoolToVisibility}}" />
+            <ui:Button Padding="12,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        PreviewMouseLeftButtonDown="OnEntryPressed" PreviewMouseMove="OnEntryMove"
                        ToolTip="{DynamicResource Calendar.DragHint}">
@@ -101,6 +107,7 @@
                                     Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </ui:Button>
+            </DockPanel>
         </DataTemplate>
     </Page.Resources>
 
@@ -169,6 +176,12 @@
                                Margin="0,0,0,8" TextWrapping="Wrap" />
                     <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Calendar.DayEmpty}"
                                Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- The open day's habits, checked in, skipped or failed on that day (docs/calendar.md). -->
+                    <StackPanel Margin="0,0,0,8" Visibility="{Binding HasDayHabits, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{DynamicResource Calendar.Habits}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                   Foreground="{DynamicResource GM.AccentBrush}" Margin="0,0,0,6" />
+                        <ItemsControl ItemsSource="{Binding DayHabits}" ItemTemplate="{StaticResource HabitCard}" Focusable="False" />
+                    </StackPanel>
                     <ItemsControl ItemsSource="{Binding DayEntries}" ItemTemplate="{StaticResource DayEntry}" Focusable="False" />
                     <TextBlock Text="{Binding DayReminders}" FontSize="11" Margin="0,4,0,0"
                                Foreground="{DynamicResource GM.TextMutedBrush}"

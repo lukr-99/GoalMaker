@@ -47,3 +47,17 @@ repeat. Pinned by the filtered case in
 it is planned for that day, moves counted like any other move ([plan tomorrow](plan-tomorrow.md)).
 The cell lights up while a task hangs over it. Deadlines and projected repeats are not dragged: a
 deadline belongs to its task and a repeat has no row of its own yet.
+
+## Putting a day right
+
+The open day is also where a day gone by is put right (the owner's board item "able to finish
+task/habits in retrospective from calendar"):
+
+- **Tasks:** a planned task or a deadline on the open day has a done box. Ticking it off on a day
+  gone by stamps that day's noon as when it was done, so the stats and the archive count it on that
+  day; on today or a day to come it is done now. Unticking opens it again. A repeat has no row of its
+  own yet, so it has no box.
+- **Habits:** on today or a day gone by, the day lists every habit due on it as a card, the way Today
+  shows them, read as of that day. Its button and menu check in, add one, log an amount, skip, fail or
+  clear on that day, so a run that was never logged still counts toward the streak. A day to come
+  lists none.

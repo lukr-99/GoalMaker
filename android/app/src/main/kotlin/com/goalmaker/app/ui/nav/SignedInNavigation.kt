@@ -226,6 +226,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 graph.areas,
                                 graph.tags,
                                 graph.projects,
+                                graph.habits,
                                 graph.settings,
                                 graph.io,
                                 LocalDateTime::now,

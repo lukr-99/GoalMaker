@@ -9,7 +9,8 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// One habit on the Habits page or Today (docs/habits.md; the habits prototype, option B): where today
 /// stands, how often it runs, the streak, pips or a bar, the week's dots, the check-in button, its
-/// heatmap (the page only, <see cref="IsFull"/>) and its actions.
+/// heatmap (the page only, <see cref="IsFull"/>) and its actions. A row for a day other than today (the
+/// calendar's, docs/calendar.md) checks in, skips and fails on that day.
 /// </summary>
 public sealed class HabitRowViewModel
 {
@@ -29,7 +30,8 @@ public sealed class HabitRowViewModel
         HabitsViewModel? owner = null,
         HabitStanding standing = HabitStanding.None,
         IReadOnlyList<HabitDotViewModel>? dots = null,
-        bool full = false)
+        bool full = false,
+        DateOnly? day = null)
     {
         this.owner = owner;
         Habit = habit;
@@ -89,17 +91,17 @@ public sealed class HabitRowViewModel
         LogExactText = strings.Get("Habits.LogExact", habit.Name);
         AmountHint = habit.Unit ?? strings.Get("Habits.Amount");
         RingText = habit.Emoji ?? string.Empty;
-        CheckInCommand = new RelayCommand(() => owner?.Tap(habit));
+        CheckInCommand = new RelayCommand(() => owner?.Tap(habit, day));
         OpenHabitsCommand = new RelayCommand(() => owner?.OpenPage());
-        LogOneCommand = new RelayCommand(() => owner?.LogOne(habit));
-        LogAmountCommand = new RelayCommand(() => owner?.LogTyped(habit, AmountText));
+        LogOneCommand = new RelayCommand(() => owner?.LogOne(habit, day));
+        LogAmountCommand = new RelayCommand(() => owner?.LogTyped(habit, AmountText, day));
         EditCommand = new RelayCommand(() => owner?.Edit(habit));
-        LogCommand = new RelayCommand(() => owner?.StartLog(habit));
-        ClearCommand = new RelayCommand(() => owner?.ClearToday(habit.Id));
-        SkipCommand = new RelayCommand(() => owner?.Skip(habit.Id, true));
-        UnskipCommand = new RelayCommand(() => owner?.Skip(habit.Id, false));
-        FailCommand = new RelayCommand(() => owner?.Fail(habit.Id, true));
-        UnfailCommand = new RelayCommand(() => owner?.Fail(habit.Id, false));
+        LogCommand = new RelayCommand(() => owner?.StartLog(habit, day));
+        ClearCommand = new RelayCommand(() => owner?.ClearToday(habit.Id, day));
+        SkipCommand = new RelayCommand(() => owner?.Skip(habit.Id, true, day));
+        UnskipCommand = new RelayCommand(() => owner?.Skip(habit.Id, false, day));
+        FailCommand = new RelayCommand(() => owner?.Fail(habit.Id, true, day));
+        UnfailCommand = new RelayCommand(() => owner?.Fail(habit.Id, false, day));
         PauseCommand = new RelayCommand(() => owner?.Pause(habit.Id));
         ResumeCommand = new RelayCommand(() => owner?.Resume(habit.Id));
         ArchiveCommand = new RelayCommand(() => owner?.SetArchived(habit.Id, true));

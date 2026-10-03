@@ -5,6 +5,9 @@ import android.content.Context
 import android.os.Looper
 import androidx.core.content.edit
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.HabitDraft
+import com.goalmaker.app.application.planning.HabitList
+import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
@@ -13,6 +16,7 @@ import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.domain.composer.ComposerParser
@@ -45,6 +49,7 @@ class CalendarViewModelTest {
     private lateinit var areas: AreaList
     private lateinit var tags: TagList
     private lateinit var projects: ProjectList
+    private lateinit var habits: HabitList
     private lateinit var viewModel: CalendarViewModel
     private val now = LocalDateTime.parse("2026-09-18T12:00")
     private val today = LocalDate.parse("2026-09-18")
@@ -56,6 +61,7 @@ class CalendarViewModelTest {
         areas = AreaList(test.replica, rows, listOf("violet"), {})
         tags = TagList(test.replica, rows, {})
         projects = ProjectList(test.replica, rows, {})
+        habits = HabitList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("calendar-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
@@ -65,6 +71,7 @@ class CalendarViewModelTest {
             areas,
             tags,
             projects,
+            habits,
             SharedPreferencesSettingsStore(preferences),
             Dispatchers.Unconfined,
         ) { now }
@@ -135,5 +142,44 @@ class CalendarViewModelTest {
         val state = viewModel.uiState.first { it.filter.filter.tagId == errand.id }
 
         assertEquals(listOf("Buy stamps"), state.days.single { it.day == today }.deadlines.map(TaskItem::title))
+    }
+
+    @Test
+    fun `a day gone by lists its habits, and a check-in or a fail lands on that day`() = runTest {
+        val read = habits.add(HabitDraft("Read", LocalDate.parse("2026-09-01")))!!
+        val floss = habits.add(HabitDraft("Floss", LocalDate.parse("2026-09-01")))!!
+        val monday = LocalDate.parse("2026-09-14")
+        viewModel.open(monday)
+
+        assertEquals(listOf("Read", "Floss"), viewModel.uiState.first { it.dayHabits.size == 2 }.dayHabits.map { it.habit.name })
+        assertEquals(true, viewModel.tapHabit(read.id, monday))
+        viewModel.failHabit(floss.id, monday, true)
+        settle()
+
+        val rows = viewModel.uiState.first { state -> state.dayHabits.none { it.standing == HabitStanding.LEFT } }.dayHabits
+        assertEquals(HabitStanding.DONE, rows.single { it.habit.name == "Read" }.standing)
+        assertEquals(HabitStanding.FAILED, rows.single { it.habit.name == "Floss" }.standing)
+        assertEquals(listOf(monday, monday), habits.read().checkins.map { it.day })
+    }
+
+    @Test
+    fun `a day to come has no habits to check in`() = runTest {
+        habits.add(HabitDraft("Read", LocalDate.parse("2026-09-01")))
+        viewModel.open(today.plusDays(2))
+
+        assertEquals(emptyList<String>(), viewModel.uiState.first { it.loaded && it.selected != null }.dayHabits.map { it.habit.name })
+    }
+
+    @Test
+    fun `a task ticked off on a day gone by is done on that day`() = runTest {
+        val monday = LocalDate.parse("2026-09-14")
+        val task = tasks.add(ComposerParser.parse("Pay the rent", now).copy(plannedDate = monday))!!
+
+        viewModel.setDone(task, true, monday)
+        settle()
+
+        val done = tasks.all().single()
+        assertEquals(TaskState.DONE, done.state)
+        assertEquals(monday, ProjectRules.completedOn(done, java.time.ZoneId.systemDefault(), 4))
     }
 }

@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,16 +61,23 @@ import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.components.ChoiceChip
+import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.habits.AmountDialog
+import com.goalmaker.app.ui.habits.HabitCard
+import com.goalmaker.app.ui.habits.HabitRow
+import com.goalmaker.app.ui.habits.HabitSheet
 import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.DayOfWeek
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import kotlinx.coroutines.launch
 
 /** A week or a month of planned tasks, deadlines and reminders (docs/calendar.md). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +92,18 @@ fun CalendarScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val locale = LocalConfiguration.current.locales[0]
+    val scope = rememberCoroutineScope()
+    var logging by remember { mutableStateOf<HabitRow?>(null) }
+    var habitMenu by remember { mutableStateOf<String?>(null) }
+
+    // A habit's button on the open day: undo a skip or a fail, or check in; an amount asks for its value.
+    fun checkIn(row: HabitRow, day: LocalDate) {
+        when {
+            row.skipped -> viewModel.skipHabit(row.habit.id, day, false)
+            row.failed -> viewModel.failHabit(row.habit.id, day, false)
+            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id, day)) logging = row }
+        }
+    }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -186,13 +206,29 @@ fun CalendarScreen(
                         modifier = Modifier.padding(start = 8.dp),
                     )
                 }
+                if (state.dayHabits.isNotEmpty()) {
+                    item("h-habits") { SectionHeader(stringResource(R.string.calendar_habits)) }
+                    state.dayHabits.forEach { row ->
+                        item("habit-" + row.habit.id) {
+                            HabitCard(
+                                row = row,
+                                today = open.day,
+                                full = false,
+                                onCheckIn = { checkIn(row, open.day) },
+                                onMenu = { habitMenu = row.habit.id },
+                                onSkip = { viewModel.skipHabit(row.habit.id, open.day, true) },
+                            )
+                        }
+                    }
+                }
+                val onDone = { task: TaskItem, done: Boolean -> viewModel.setDone(task, done, open.day) }
                 open.planned.forEach { task ->
                     item("planned-" + task.id) {
-                        DayRow(task, R.string.calendar_planned, onOpenTask, state.projectOf(task), onOpenProject, draggable = true)
+                        DayRow(task, R.string.calendar_planned, onOpenTask, state.projectOf(task), onOpenProject, draggable = true, onDone = onDone)
                     }
                 }
                 open.deadlines.forEach { task ->
-                    item("deadline-" + task.id) { DayRow(task, R.string.calendar_deadline, onOpenTask, state.projectOf(task), onOpenProject) }
+                    item("deadline-" + task.id) { DayRow(task, R.string.calendar_deadline, onOpenTask, state.projectOf(task), onOpenProject, onDone = onDone) }
                 }
                 open.repeats.forEach { task ->
                     item("repeat-" + task.id) { DayRow(task, R.string.calendar_repeat, onOpenTask, state.projectOf(task), onOpenProject) }
@@ -216,6 +252,26 @@ fun CalendarScreen(
                     }
                 }
             }
+        }
+    }
+
+    val day = state.openDay?.day
+    logging?.let { row ->
+        if (day != null) AmountDialog(row.habit, onLog = { amount -> viewModel.checkInHabit(row.habit.id, day, amount) }, onDismiss = { logging = null })
+    }
+    // A habit's menu on the open day: check in, skip, fail or clear there; pausing and editing stay on Habits.
+    habitMenu?.let { id ->
+        val row = state.dayHabits.firstOrNull { it.habit.id == id }
+        if (row != null && day != null) {
+            HabitSheet(
+                row = row,
+                onDismiss = { habitMenu = null },
+                onCheckIn = { checkIn(row, day) },
+                onLog = { logging = row },
+                onSkip = { skipped -> viewModel.skipHabit(id, day, skipped) },
+                onFail = { failed -> viewModel.failHabit(id, day, failed) },
+                onClear = { viewModel.clearHabit(id, day) },
+            )
         }
     }
 }
@@ -329,6 +385,7 @@ private fun DayRow(
     project: ProjectItem?,
     onOpenProject: ((String) -> Unit)?,
     draggable: Boolean = false,
+    onDone: ((TaskItem, Boolean) -> Unit)? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -347,8 +404,12 @@ private fun DayRow(
                     )
                 },
             )
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(start = if (onDone == null) 12.dp else 0.dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
     ) {
+        // A planned task or a deadline is ticked off here on the open day; a repeat has no row to tick yet.
+        if (onDone != null && task.state != TaskState.DROPPED) {
+            GoalMakerCheckbox(checked = task.state == TaskState.DONE, onCheckedChange = { done -> onDone(task, done) })
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 task.title,
