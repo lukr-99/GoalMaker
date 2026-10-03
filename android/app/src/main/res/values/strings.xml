@@ -135,6 +135,10 @@
     <string name="lists_inbox_empty">Inbox zero. Anything without a day or an area lands here.</string>
     <string name="lists_delete">Delete %1$s</string>
     <string name="lists_repeats">Repeats</string>
+    <string name="lists_project_task">Project %1$s</string>
+    <string name="lists_project_idea">Idea for %1$s</string>
+    <string name="lists_project_bug">Bug in %1$s</string>
+    <string name="lists_open_project">Open the %1$s board</string>
     <string name="lists_done_message">Done: %1$s</string>
     <string name="lists_deleted_message">Deleted: %1$s</string>
     <string name="lists_undo">Undo</string>
@@ -990,6 +994,12 @@
     <string name="stats_this_week">This week</string>
     <string name="stats_month_hit">%1$d/%2$d</string>
     <string name="stats_habit_met">%1$d of %2$d met, best run %3$d</string>
+    <string name="stats_on_projects">%1$d on projects</string>
+    <string name="stats_project_work">Projects %1$d</string>
+    <string name="stats_other_work">Other %1$d</string>
+    <string name="stats_week_tip">Week of %1$s: %2$d done, %3$d on projects</string>
+    <string name="stats_by_project">By project</string>
+    <string name="stats_more_projects">and %1$d more</string>
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
     <string name="projects_pick">Choose a project</string>

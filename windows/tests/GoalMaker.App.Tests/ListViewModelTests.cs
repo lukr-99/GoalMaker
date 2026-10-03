@@ -193,7 +193,50 @@ public sealed class ListViewModelTests : IDisposable
         Assert.Null(List(ListKind.Tomorrow).NewYear);
     }
 
-    private ListViewModel List(ListKind kind, ReminderService? reminders = null, Action<string, DateOnly>? openReview = null)
+    [Fact]
+    public void AProjectItemWearsItsProjectsChipThatOpensTheBoard()
+    {
+        var opened = new List<string>();
+        var today = List(ListKind.Today, openProject: opened.Add);
+        Add(today, "Fix the build +GoalMaker");
+        Add(today, "Buy milk");
+        var project = planner.Projects.Find("GoalMaker")!;
+
+        var rows = today.Sections.SelectMany(section => section.Rows).ToList();
+        var item = rows.Single(row => row.Title == "Fix the build");
+        Assert.True(item.HasProject);
+        Assert.Equal("GoalMaker", item.Project!.Name);
+        Assert.Equal(ProjectRules.Task, item.Project.ItemType);
+        Assert.Equal("Lists.ProjectTask(GoalMaker)", item.Project.Label);
+        Assert.Equal("Lists.OpenProject(GoalMaker)", item.Project.OpenLabel);
+        Assert.Equal("Lists.ProjectTask(GoalMaker)", item.Status);
+        Assert.True(item.Project.CanOpen);
+        Assert.False(rows.Single(row => row.Title == "Buy milk").HasProject);
+
+        item.Project.OpenCommand.Execute(null);
+        Assert.Equal([project.Id], opened);
+    }
+
+    [Fact]
+    public void AnIdeaAndABugSayWhatTheyAreAndADeletedProjectsItemsLoseTheChip()
+    {
+        var today = List(ListKind.Today);
+        Add(today, "Dark widget +GoalMaker");
+        Add(today, "Crash on start +GoalMaker");
+        planner.Tasks.SetItemType(Task("Dark widget").Id, ProjectRules.Idea);
+        planner.Tasks.SetItemType(Task("Crash on start").Id, ProjectRules.Bug);
+
+        var rows = today.Sections.SelectMany(section => section.Rows).ToList();
+        Assert.Equal("Lists.ProjectIdea(GoalMaker)", rows.Single(row => row.Title == "Dark widget").Project!.Label);
+        Assert.Equal("Lists.ProjectBug(GoalMaker)", rows.Single(row => row.Title == "Crash on start").Project!.Label);
+        Assert.False(rows[0].Project!.CanOpen);
+
+        planner.Projects.Delete(planner.Projects.Find("GoalMaker")!.Id);
+
+        Assert.All(today.Sections.SelectMany(section => section.Rows), row => Assert.False(row.HasProject));
+    }
+
+    private ListViewModel List(ListKind kind, ReminderService? reminders = null, Action<string, DateOnly>? openReview = null, Action<string>? openProject = null)
     {
         Func<DateOnly, DateOnly?> defaultDay = kind switch
         {
@@ -219,7 +262,9 @@ public sealed class ListViewModelTests : IDisposable
             reminders: reminders,
             goals: planner.Goals,
             reviews: planner.Reviews,
-            openReview: openReview);
+            openReview: openReview,
+            projects: planner.Projects,
+            openProject: openProject);
     }
 
     // A second apart, so creation order breaks ties the way the test reads.

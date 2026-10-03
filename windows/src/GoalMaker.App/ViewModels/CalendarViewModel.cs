@@ -20,6 +20,8 @@ public sealed partial class CalendarViewModel : ObservableObject
     private readonly IStrings strings;
     private readonly TimeProvider time;
     private readonly Action<string> openTask;
+    private readonly ProjectList? projects;
+    private readonly Action<string>? openProject;
     private DateOnly? anchor;
     private DateOnly? selected;
 
@@ -54,8 +56,12 @@ public sealed partial class CalendarViewModel : ObservableObject
         IStrings strings,
         TimeProvider time,
         Action<string> openTask,
-        Action<Action> runOnUi)
+        Action<Action> runOnUi,
+        ProjectList? projects = null,
+        Action<string>? openProject = null)
     {
+        this.projects = projects;
+        this.openProject = openProject;
         this.tasks = tasks;
         this.reminders = reminders;
         this.settings = settings;
@@ -64,6 +70,11 @@ public sealed partial class CalendarViewModel : ObservableObject
         this.openTask = openTask;
         tasks.Changed += (_, _) => runOnUi(Refresh);
         reminders.Changed += (_, _) => runOnUi(Refresh);
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Weekdays = [.. Enumerable.Range(0, 7).Select(day => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7])];
         Refresh();
     }
@@ -120,6 +131,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         DayEntries.Clear();
         if (open is not null)
         {
+            var projectById = (projects?.All() ?? []).ToDictionary(project => project.Id, StringComparer.Ordinal);
             foreach (var (task, label) in Entries(open))
             {
                 var id = task.Id;
@@ -129,7 +141,8 @@ public sealed partial class CalendarViewModel : ObservableObject
                     strings.Get(label),
                     task.PlannedTime?.ToString("t", CultureInfo.CurrentCulture) ?? string.Empty,
                     task.State == TaskState.Done,
-                    () => openTask(id)));
+                    () => openTask(id),
+                    ProjectTagViewModel.For(task, projectById, strings, openProject)));
             }
         }
 

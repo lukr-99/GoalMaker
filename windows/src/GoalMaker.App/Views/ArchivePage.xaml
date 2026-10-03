@@ -34,7 +34,13 @@
                                 </ui:Button>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding DoneText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DoneText}" FontSize="12" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                        <ContentControl Margin="0,1" VerticalAlignment="Center" Focusable="False"
+                                                        Content="{Binding Project}" ContentTemplate="{StaticResource ProjectTag}"
+                                                        Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </DockPanel>
                         </Border>

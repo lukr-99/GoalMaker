@@ -247,6 +247,14 @@ public sealed class AppGraph : IDisposable
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
+
+        // A project item's chip in a list opens its project's board (docs/lists.md).
+        void OpenProject(string id)
+        {
+            ProjectsPage.Select(id);
+            PageRequested?.Invoke(this, AppPage.Projects);
+        }
+
         void OpenWant(string title)
         {
             WantsPage.StartAdding(title);
@@ -285,7 +293,9 @@ public sealed class AppGraph : IDisposable
             () => PageRequested?.Invoke(this, AppPage.Habits),
             kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null,
             Reviews,
-            OpenReview);
+            OpenReview,
+            Projects,
+            OpenProject);
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
@@ -319,7 +329,7 @@ public sealed class AppGraph : IDisposable
         TallyPage = new TallyViewModel(
             Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
             [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
-        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally);
+        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally, Projects);
         ProjectsPage = new ProjectsViewModel(
             Projects,
             Tasks,
@@ -330,7 +340,7 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach));
         CalendarPage = new CalendarViewModel(
-            Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
+            Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, Projects, OpenProject);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
             Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
@@ -339,7 +349,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
-        Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));
+        Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive), Projects, OpenProject);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,

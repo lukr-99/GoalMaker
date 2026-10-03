@@ -25,7 +25,7 @@ run wants, the review digest, Tally and the bottom bar's lines.
 | `vectors/activity.json` | What an activity log entry did ([activity](../docs/activity.md)) | `ActivityRulesContractTest` | `ActivityRulesContractTests` |
 | `vectors/goals.json` | Goal periods, the cascade, progress, copying, pace and its order, the chain a picked goal lights, and the quick log amount ([goals](../docs/goals.md)) | `GoalRulesContractTest` | `GoalRulesContractTests` |
 | `vectors/habits.json` | Habit cadences, periods, streaks, the heatmap, rings, check-in ids, check-ins toward goals, which habits are due today and on Today, the Habits page's groups, where a habit stands today, the week's dots and Today's all done card ([habits](../docs/habits.md)) | `HabitRulesContractTest` | `HabitRulesContractTests` |
-| `vectors/stats.json` | The stats numbers and the review look back ([stats](../docs/stats.md)) | `StatsRulesContractTest` | `StatsRulesContractTests` |
+| `vectors/stats.json` | The stats numbers, project work apart and per project, and the review look back ([stats](../docs/stats.md)) | `StatsRulesContractTest` | `StatsRulesContractTests` |
 | `vectors/projects.json` | Project boards: new items, moves, order ([projects](../docs/projects.md)) | `ProjectRulesContractTest` | `ProjectRulesContractTests` |
 | `vectors/backup.json` | The export's format, what a restore refuses, and which row wins ([backup](../docs/backup.md)) | `BackupRulesContractTest` | `BackupRulesContractTests` |
 | `vectors/calendar.json` | The week and month grids and what lands on a day ([calendar](../docs/calendar.md)) | `CalendarRulesContractTest` | `CalendarRulesContractTests` |

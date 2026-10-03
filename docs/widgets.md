@@ -10,7 +10,9 @@ The tasks still open today, in the order Today lists them: top priorities first,
 time, then the rest. The header counts what is behind ("Today · 1 of 3 done"). A tap on a row finishes
 that task, so the row leaves the widget and the header moves; a tap anywhere else opens the app. A day
 with nothing planned has nothing to count: the header says only "Today", over "Nothing planned
-today." Once every task is done, the count stays and the line says "All done for today."
+today." Once every task is done, the count stays and the line says "All done for today." A project
+item names its project in small muted text after the title, as the lists' chip does
+([lists](lists.md)); renaming or deleting the project draws the widget again.
 
 ## Habits
 

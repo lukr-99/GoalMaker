@@ -9,7 +9,7 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// One task in a list: the done box, the title, and what else it says (time, the day when overdue,
-/// area, repeat, top priority, a waiting reminder). Checking it and deleting it go through the list,
+/// area, its project's chip, repeat, top priority, a waiting reminder). Checking it and deleting it go through the list,
 /// which offers undo; its menu sets and removes reminders (docs/reminders.md).
 /// </summary>
 public sealed partial class TaskRowViewModel : ObservableObject
@@ -29,8 +29,10 @@ public sealed partial class TaskRowViewModel : ObservableObject
         bool hasReminder = false,
         IReadOnlyList<ReminderChoice>? reminderChoices = null,
         Action<TaskRowViewModel>? open = null,
-        IStrings? strings = null)
+        IStrings? strings = null,
+        ProjectTagViewModel? project = null)
     {
+        Project = project;
         OpenCommand = new RelayCommand(() => open?.Invoke(this), () => open is not null);
         HasReminder = hasReminder;
         ReminderChoices = reminderChoices ?? [];
@@ -43,6 +45,7 @@ public sealed partial class TaskRowViewModel : ObservableObject
         DeleteCommand = new RelayCommand(() => delete(this));
         Status = strings is null ? string.Empty : string.Join(", ", new[]
         {
+            project?.Label,
             TopPriority ? strings.Get("Lists.TopPriority") : null,
             Repeats ? strings.Get("Lists.Repeats") : null,
             HasReminder ? strings.Get("Reminder.Waiting") : null,
@@ -67,6 +70,11 @@ public sealed partial class TaskRowViewModel : ObservableObject
 
     public bool HasArea => AreaName.Length > 0;
 
+    /// <summary>The project's chip when the task is a project item (docs/lists.md), or null.</summary>
+    public ProjectTagViewModel? Project { get; }
+
+    public bool HasProject => Project is not null;
+
     public bool Repeats => Item.Recurrence is not null;
 
     public bool TopPriority => Item.TopPriority;
@@ -80,8 +88,8 @@ public sealed partial class TaskRowViewModel : ObservableObject
     public bool HasReminder { get; }
 
     /// <summary>
-    /// What the row's icons say, for screen readers: the flag, the repeat and the bell have no
-    /// accessible text of their own, so the done box carries it as help text.
+    /// What the row's icons say, for screen readers: the project, the flag, the repeat and the bell
+    /// have no accessible text of their own there, so the done box carries it as help text.
     /// </summary>
     public string Status { get; }
 

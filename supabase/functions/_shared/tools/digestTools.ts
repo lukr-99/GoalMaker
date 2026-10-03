@@ -12,8 +12,10 @@ import type { Tool } from "./tools.ts";
 /**
  * The review digest as JSON (docs/letter.md): one period of GoalMaker in one answer, for a scheduled
  * routine that writes the owner's letter. Names stand in for ids wherever Claude would write them.
+ * `counts` says how many tasks were done and how many of them were project work, as the apps' stats
+ * count it (docs/stats.md): items of a project that is still there, so a deleted project's are other.
  */
-function digestJson(found: Digest, names: format.Names, completedOn: (task: TaskItem) => string | null) {
+export function digestJson(found: Digest, names: format.Names, completedOn: (task: TaskItem) => string | null) {
   const area = (task: TaskItem) => (task.areaId ? names.areas.get(task.areaId)?.name ?? null : null);
   const project = (task: TaskItem) => (task.projectId ? names.projects.get(task.projectId)?.name ?? null : null);
   const task = (one: TaskItem) => ({
@@ -45,8 +47,10 @@ function digestJson(found: Digest, names: format.Names, completedOn: (task: Task
     byProject.set(name, [...(byProject.get(name) ?? []), one]);
   }
   const horizon = horizonOf(found.period.kind);
+  const projectWork = found.done.filter((one) => project(one) !== null).length;
   return {
     period: found.period,
+    counts: { done: found.done.length, project_work: projectWork, other_work: found.done.length - projectWork },
     done: [...byDay].map(([day, tasks]) => ({
       day,
       tasks: tasks.map((one) => ({ id: one.id, title: one.title, area: area(one), project: project(one) })),
@@ -126,7 +130,7 @@ export const digestTools: Tool[] = [
     title: "Review digest",
     description:
       "One week, month or year of GoalMaker in one answer, as JSON, for writing the owner's letter about it (a " +
-      "scheduled routine does this) or for a review: tasks done by day, what is left, overdue and slipping, the " +
+      "scheduled routine does this) or for a review: tasks done by day and how many were project work, what is left, overdue and slipping, the " +
       "period's goals against where they should be by now, each habit's met, missed and skipped periods and its " +
       "streak, project items done, what the period's data asks about, this period's review so far and the last " +
       "period's letter, what the next period already holds, and the wants that became ready, were decided, or " +

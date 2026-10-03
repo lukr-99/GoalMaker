@@ -25,6 +25,19 @@ by id, so both apps agree.
 **The day's summary** ("2 of 5 done") counts tasks planned for today that are open or done; dropped
 and deleted ones don't count.
 
+## Project items in a list
+
+A project item is a task like any other in the lists ([projects](projects.md)), so a row says which
+project it belongs to: next to the area on the line under the title it wears a small outlined chip
+with the project's name, a lightbulb for an idea and a bug for a bug in the board's colours, and the
+board's own icon for a plain task. The chip is on Today, Tomorrow, the Inbox, the Windows Today mini
+window, the calendar's open day and the archive, and on both apps it opens that project's board. A
+screen reader hears it as "Project GoalMaker", "Idea for GoalMaker" or "Bug in GoalMaker", and the
+open action as "Open the GoalMaker board"; on the phone the row also offers that as one of its
+TalkBack actions, and on Windows the done box's help text names the project too. The Today widget
+names the project in small muted text after the title. An item of a deleted project wears no chip,
+the same way [stats](stats.md) counts it as other work.
+
 ## Filtering
 
 Any list can be narrowed to one area, one tag, or both (spec, story 9). The filter picks the tasks

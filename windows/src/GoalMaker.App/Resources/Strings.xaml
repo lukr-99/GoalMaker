@@ -260,6 +260,10 @@
     <sys:String x:Key="Lists.InboxEmpty">Inbox zero. Anything without a day or an area lands here.</sys:String>
     <sys:String x:Key="Lists.Delete">Delete task</sys:String>
     <sys:String x:Key="Lists.Repeats">Repeats</sys:String>
+    <sys:String x:Key="Lists.ProjectTask">Project {0}</sys:String>
+    <sys:String x:Key="Lists.ProjectIdea">Idea for {0}</sys:String>
+    <sys:String x:Key="Lists.ProjectBug">Bug in {0}</sys:String>
+    <sys:String x:Key="Lists.OpenProject">Open the {0} board</sys:String>
     <sys:String x:Key="Lists.TopPriority">Top priority</sys:String>
     <sys:String x:Key="Lists.Done">Done: {0}</sys:String>
     <sys:String x:Key="Lists.Deleted">Deleted: {0}</sys:String>
@@ -842,6 +846,12 @@
     <sys:String x:Key="Stats.MonthHit">{0}/{1}</sys:String>
     <sys:String x:Key="Stats.HabitMet">{0} of {1} met, best run {2}</sys:String>
     <sys:String x:Key="Stats.Streak">Periods met in a row right now</sys:String>
+    <sys:String x:Key="Stats.OnProjects">{0} on projects</sys:String>
+    <sys:String x:Key="Stats.ProjectWork">Projects {0}</sys:String>
+    <sys:String x:Key="Stats.OtherWork">Other {0}</sys:String>
+    <sys:String x:Key="Stats.WeekTip">Week of {0}: {1} done, {2} on projects</sys:String>
+    <sys:String x:Key="Stats.ByProject">By project</sys:String>
+    <sys:String x:Key="Stats.MoreProjects">and {0} more</sys:String>
 
     <!-- Reviews (docs/reviews.md) -->
     <sys:String x:Key="Nav.Reviews">Reviews</sys:String>

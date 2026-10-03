@@ -20,6 +20,78 @@
         </StackPanel>
     </DataTemplate>
 
+    <!-- The icon a project item's chip wears: an idea's lightbulb and a bug in their board colors, the board for a plain task. -->
+    <Style x:Key="GM.ProjectTagIcon" TargetType="ui:SymbolIcon">
+        <Setter Property="Symbol" Value="Board16" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ItemType}" Value="idea">
+                <Setter Property="Symbol" Value="LightbulbFilament16" />
+                <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ItemType}" Value="bug">
+                <Setter Property="Symbol" Value="Bug16" />
+                <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        A project item's chip in a task list, the calendar's day and the archive (docs/lists.md): the
+        project's name in a quiet outline, with an idea's or a bug's icon. Where the page can go to the
+        board it is a button that opens it; elsewhere it only says which project.
+    -->
+    <DataTemplate x:Key="ProjectTag" DataType="{x:Type vm:ProjectTagViewModel}">
+        <Grid>
+            <Button Command="{Binding OpenCommand}"
+                    Cursor="Hand"
+                    FocusVisualStyle="{StaticResource GM.PillFocusVisual}"
+                    ToolTip="{Binding OpenLabel}"
+                    AutomationProperties.Name="{Binding Label}"
+                    AutomationProperties.HelpText="{Binding OpenLabel}"
+                    Visibility="{Binding CanOpen, Converter={StaticResource BoolToVisibility}}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chip" Padding="6,0,7,1" CornerRadius="9" BorderThickness="1"
+                                Background="Transparent" BorderBrush="{DynamicResource GM.OutlineBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,3,0" FontSize="12" VerticalAlignment="Center" Style="{StaticResource GM.ProjectTagIcon}" />
+                                <TextBlock x:Name="Name" MaxWidth="180" VerticalAlignment="Center" FontSize="12" Text="{Binding Name}"
+                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="Name" Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Border Padding="6,0,7,1" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource GM.OutlineBrush}"
+                    AutomationProperties.Name="{Binding Label}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CanOpen}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Margin="0,0,3,0" FontSize="12" VerticalAlignment="Center" Style="{StaticResource GM.ProjectTagIcon}" />
+                    <TextBlock MaxWidth="180" VerticalAlignment="Center" FontSize="12" Text="{Binding Name}"
+                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
     <!--
         One list (Today, Tomorrow, Inbox) as ListPage shows it (docs/lists.md). Today's habits sit in a
         panel beside the tasks where the window is wide enough, and under them where it is not (a narrow
@@ -284,6 +356,12 @@
                                                                             <Ellipse Width="7" Height="7" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
                                                                             <TextBlock Text="{Binding AreaName}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
                                                                         </StackPanel>
+                                                                        <ContentControl Margin="0,1,10,1"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Focusable="False"
+                                                                                        Content="{Binding Project}"
+                                                                                        ContentTemplate="{StaticResource ProjectTag}"
+                                                                                        Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
                                                                         <ui:SymbolIcon FontSize="12"
                                                                                        Symbol="ArrowRepeatAll16"
                                                                                        Foreground="{DynamicResource GM.TextMutedBrush}"

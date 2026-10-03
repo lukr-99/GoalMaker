@@ -39,6 +39,8 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly HabitsViewModel? habitsPage;
     private readonly HabitList? habitList;
     private readonly Action? openHabits;
+    private readonly ProjectList? projects;
+    private readonly Action<string>? openProject;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -136,10 +138,14 @@ public sealed partial class ListViewModel : ObservableObject
         Action? openHabits = null,
         Action? openMini = null,
         ReviewList? reviews = null,
-        Action<string, DateOnly>? openReview = null)
+        Action<string, DateOnly>? openReview = null,
+        ProjectList? projects = null,
+        Action<string>? openProject = null)
     {
         this.reviews = reviews;
         this.openReview = openReview;
+        this.projects = projects;
+        this.openProject = openProject;
         this.openTask = openTask;
         this.goals = goals;
         this.openGoals = openGoals;
@@ -189,6 +195,11 @@ public sealed partial class ListViewModel : ObservableObject
         if (tags is not null)
         {
             tags.Changed += (_, _) => runOnUi(Refresh);
+        }
+
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
         }
 
         if (filter is not null)
@@ -302,6 +313,7 @@ public sealed partial class ListViewModel : ObservableObject
         var lists = ListRules.Lists(narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks()), today);
         ShowFilter(narrowed, areaById);
         var remindersByTask = (reminders?.All() ?? []).ToLookup(reminder => reminder.TaskId, StringComparer.Ordinal);
+        var projectById = (projects?.All() ?? []).ToDictionary(project => project.Id, StringComparer.Ordinal);
         List<TaskRowViewModel> Rows(IEnumerable<TaskItem> items, bool showDay = false) =>
             [.. items.Select(item =>
             {
@@ -317,7 +329,8 @@ public sealed partial class ListViewModel : ObservableObject
                     own.Any(reminder => reminder.State is ReminderState.Pending or ReminderState.Snoozed),
                     ReminderChoices(item, own),
                     openTask is null ? null : row => openTask(row.Item.Id),
-                    strings);
+                    strings,
+                    ProjectTagViewModel.For(item, projectById, strings, openProject));
             })];
 
         Sections.Clear();

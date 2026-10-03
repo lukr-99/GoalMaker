@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.CalendarRules
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
@@ -15,16 +16,19 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
  * The calendar (docs/calendar.md, spec story 68): a week or a month of planned tasks, deadlines and
- * reminders, with a day opening what it holds and a task moving to another day from there.
+ * reminders, with a day opening what it holds and a task moving to another day from there. A project
+ * item on the day wears its project's chip ([projects], docs/lists.md).
  */
 class CalendarViewModel(
     private val tasks: TaskList,
     reminders: ReminderList,
+    projects: ProjectList,
     private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -34,8 +38,9 @@ class CalendarViewModel(
     val uiState: StateFlow<CalendarUiState> = combine(
         tasks.watchAll().flowOn(io),
         reminders.watchAll().flowOn(io),
+        projects.watch().flowOn(io).map { it.projects },
         view,
-    ) { taskList, reminderList, showing ->
+    ) { taskList, reminderList, projectList, showing ->
         val today = today()
         val anchor = showing.anchor ?: today
         CalendarUiState(
@@ -50,6 +55,7 @@ class CalendarViewModel(
                 CalendarRules.end(showing.kind, anchor),
             ),
             selected = showing.selected,
+            projects = projectList,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState())
 

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.actionParametersOf
@@ -112,6 +113,11 @@ class TodayWidget : GlanceAppWidget() {
                     fontWeight = if (task.topPriority) FontWeight.Bold else FontWeight.Normal,
                 ),
             )
+            // A project item says which project, quietly, as the lists' chip does.
+            if (task.project.isNotEmpty()) {
+                Spacer(GlanceModifier.width(6.dp))
+                Text(task.project, maxLines = 1, style = TextStyle(color = ColorProvider(Color(skin.textMuted)), fontSize = 12.sp))
+            }
             if (task.time.isNotEmpty()) {
                 Spacer(GlanceModifier.width(6.dp))
                 Text(task.time, style = TextStyle(color = ColorProvider(Color(skin.textMuted))))
