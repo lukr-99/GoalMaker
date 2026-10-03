@@ -31,6 +31,7 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly ReminderService? reminders;
     private readonly TagList? tags;
     private readonly ListFilterState? filter;
+    private readonly ProjectList? projects;
     private readonly Action<string>? openTask;
     private readonly GoalList? goals;
     private readonly Action? openGoals;
@@ -123,7 +124,8 @@ public sealed partial class ListViewModel : ObservableObject
         HabitsViewModel? habitsPage = null,
         HabitList? habitList = null,
         Action? openHabits = null,
-        Action? openMini = null)
+        Action? openMini = null,
+        ProjectList? projects = null)
     {
         this.openTask = openTask;
         this.goals = goals;
@@ -179,6 +181,13 @@ public sealed partial class ListViewModel : ObservableObject
         if (filter is not null)
         {
             filter.Changed += (_, _) => runOnUi(Refresh);
+        }
+
+        // A project item without an area of its own counts as being in its project's (docs/lists.md).
+        this.projects = projects;
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
         }
 
         if (goals is not null && kind == ListKind.Today)
@@ -279,7 +288,9 @@ public sealed partial class ListViewModel : ObservableObject
         var areaById = areas.All().ToDictionary(area => area.Id, StringComparer.Ordinal);
         var narrowed = filter?.Current ?? ListFilter.None;
         var all = tasks.All();
-        var lists = ListRules.Lists(narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks()), today);
+        var lists = ListRules.Lists(
+            narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks(), projects?.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal)),
+            today);
         ShowFilter(narrowed, areaById);
         var remindersByTask = (reminders?.All() ?? []).ToLookup(reminder => reminder.TaskId, StringComparer.Ordinal);
         List<TaskRowViewModel> Rows(IEnumerable<TaskItem> items, bool showDay = false) =>

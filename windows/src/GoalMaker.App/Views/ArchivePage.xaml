@@ -20,6 +20,10 @@
                     <ui:SymbolIcon Symbol="Search24" />
                 </ui:TextBox.Icon>
             </ui:TextBox>
+            <!-- The area and tag filter narrows what the search finds, as on the lists. -->
+            <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                            Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                            Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
             <TextBlock Text="{Binding EmptyText}" Foreground="{DynamicResource GM.TextMutedBrush}" Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
             <ItemsControl ItemsSource="{Binding Results}" Focusable="False">
                 <ItemsControl.ItemTemplate>

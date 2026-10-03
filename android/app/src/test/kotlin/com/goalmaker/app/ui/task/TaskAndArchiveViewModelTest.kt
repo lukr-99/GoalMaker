@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.task
 
 import android.app.Application
+import android.os.Looper
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalDraft
 import com.goalmaker.app.application.planning.GoalHorizon
@@ -31,6 +32,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
@@ -62,6 +64,9 @@ class TaskAndArchiveViewModelTest {
 
     @After
     fun tearDown() = test.close()
+
+    // Lets the view model's collectors, which run on the main looper, catch up with a change.
+    private fun settle() = shadowOf(Looper.getMainLooper()).idle()
 
     private fun taskViewModel(id: String) =
         TaskViewModel(id, tasks, areas, tags, steps, goals, projects, Dispatchers.Unconfined) { LocalDate.parse("2026-09-18") }
@@ -127,12 +132,39 @@ class TaskAndArchiveViewModelTest {
         val milk = tasks.add(ComposerParser.parse("Buy milk", LocalDateTime.parse("2026-09-18T14:00")))!!
         tasks.setDone(bank.id, true)
         tasks.setDone(milk.id, true)
-        val archive = ArchiveViewModel(tasks, Dispatchers.Unconfined)
+        val archive = ArchiveViewModel(tasks, areas, tags, projects, Dispatchers.Unconfined)
 
         archive.setQuery("bank")
         assertEquals(listOf("Call the bank"), archive.results.filterNotNull().first { it.size == 1 }.map { it.title })
 
         archive.reopen(bank.id)
         assertEquals(TaskState.OPEN, tasks.find(bank.id)!!.state)
+    }
+
+    @Test
+    fun `the archive's area and tag filter narrows what the search finds`() = runTest {
+        val now = LocalDateTime.parse("2026-09-18T14:00")
+        val home = tasks.add(ComposerParser.parse("Fix the shelf @Home #errand", now))!!
+        val work = tasks.add(ComposerParser.parse("Send the invoice @Work", now))!!
+        val project = projects.add(ProjectDraft("House", areaId = areas.all().single { it.name == "Home" }.id))!!
+        val item = tasks.add(ComposerParser.parse("Paint the fence", now))!!
+        tasks.setProject(item.id, project.id, ProjectRules.TASK)
+        listOf(home, work, item).forEach { tasks.setDone(it.id, true) }
+        val archive = ArchiveViewModel(tasks, areas, tags, projects, Dispatchers.Unconfined)
+
+        archive.filterByArea(areas.all().single { it.name == "Home" }.id)
+        settle()
+        assertEquals(
+            listOf("Fix the shelf", "Paint the fence"),
+            archive.results.filterNotNull().first { it.size == 2 }.map { it.title }.sorted(),
+        )
+
+        archive.filterByTag(tags.all().single { it.name == "errand" }.id)
+        settle()
+        assertEquals(listOf("Fix the shelf"), archive.results.filterNotNull().first { it.size == 1 }.map { it.title })
+
+        archive.setQuery("invoice")
+        settle()
+        assertEquals(emptyList<String>(), archive.results.filterNotNull().first { it.isEmpty() }.map { it.title })
     }
 }

@@ -133,6 +133,11 @@
                 </StackPanel>
             </DockPanel>
 
+            <!-- The area and tag filter narrows what the grid counts and the day lists, as on the lists. -->
+            <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                            Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                            Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+
             <primitives:UniformGrid Columns="7">
                 <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[0]}" />
                 <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[1]}" />

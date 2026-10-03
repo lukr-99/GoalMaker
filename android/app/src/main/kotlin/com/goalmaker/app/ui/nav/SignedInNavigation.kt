@@ -190,7 +190,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         // lives as long as this entry, in memory only.
                         val chatViewModel = viewModel { newChat() }
                         val projectsViewModel = viewModel {
-                            ProjectsViewModel(graph.projects, graph.tasks, graph.settings, graph.io, LocalDateTime::now)
+                            ProjectsViewModel(graph.projects, graph.tasks, graph.areas, graph.tags, graph.settings, graph.io, LocalDateTime::now)
                         }
                         val placesViewModel = viewModel {
                             PlacesViewModel(
@@ -208,7 +208,16 @@ fun SignedInNavigation(graph: AppGraph) {
                         }
                         val placesState by placesViewModel.uiState.collectAsStateWithLifecycle()
                         val calendarViewModel = viewModel {
-                            CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
+                            CalendarViewModel(
+                                graph.tasks,
+                                graph.reminderList,
+                                graph.areas,
+                                graph.tags,
+                                graph.projects,
+                                graph.settings,
+                                graph.io,
+                                LocalDateTime::now,
+                            )
                         }
                         val syncStatus by graph.sync.status.collectAsStateWithLifecycle()
                         // Every place wears the same top bar actions.
@@ -298,7 +307,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                     StatsScreen(viewModel = statsViewModel, onBack = backToHub, actions = actions)
                                 }
                                 PlaceRules.ARCHIVE -> {
-                                    val archiveViewModel = viewModel(key = "archive-tab") { ArchiveViewModel(graph.tasks, graph.io) }
+                                    val archiveViewModel = viewModel(key = "archive-tab") { ArchiveViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.io) }
                                     ArchiveScreen(
                                         viewModel = archiveViewModel,
                                         onBack = backToHub,
@@ -458,7 +467,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         TaskScreen(viewModel = taskViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ArchiveKey> {
-                        val archiveViewModel = viewModel { ArchiveViewModel(graph.tasks, graph.io) }
+                        val archiveViewModel = viewModel { ArchiveViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.io) }
                         ArchiveScreen(
                             viewModel = archiveViewModel,
                             onBack = { backStack.removeLastOrNull() },

@@ -281,7 +281,8 @@ public sealed class AppGraph : IDisposable
             HabitsPage,
             Habits,
             () => PageRequested?.Invoke(this, AppPage.Habits),
-            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null);
+            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null,
+            Projects);
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
@@ -317,9 +318,11 @@ public sealed class AppGraph : IDisposable
             Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
             [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
         StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally);
-        ProjectsPage = new ProjectsViewModel(Projects, Tasks, Settings, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
+        // Projects, the calendar and the archive each keep an area and tag filter of their own (docs/lists.md).
+        ProjectsPage = new ProjectsViewModel(
+            Projects, Tasks, Areas, Tags, Settings, strings, Theme.AreaBrush, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
         CalendarPage = new CalendarViewModel(
-            Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
+            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
             Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
@@ -328,7 +331,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
-        Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));
+        Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive));
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,

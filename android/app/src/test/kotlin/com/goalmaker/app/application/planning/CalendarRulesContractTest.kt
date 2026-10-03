@@ -59,8 +59,18 @@ class CalendarRulesContractTest {
                     recurrence = task.text("recurrence"),
                     seriesId = task.text("seriesId"),
                     deleted = task["deleted"]?.jsonPrimitive?.boolean ?: false,
+                    areaId = task.text("area"),
+                    projectId = task.text("project"),
                 )
             }
+            val links = case.getValue("tasks").jsonArray.associate { element ->
+                val task = element.jsonObject
+                task.text("id")!! to task["tags"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty().toSet()
+            }
+            val projectAreas = case["projects"]?.jsonArray.orEmpty().associate { element ->
+                element.jsonObject.text("id")!! to element.jsonObject.text("area")
+            }
+            val filter = ListFilter(areaId = case.text("area"), tagId = case.text("tag"))
             val reminders = case.getValue("reminders").jsonArray.mapIndexed { index, element ->
                 val reminder = element.jsonObject
                 ReminderItem(
@@ -71,7 +81,7 @@ class CalendarRulesContractTest {
                 )
             }
 
-            val days = CalendarRules.build(tasks, reminders, case.day("from"), case.day("to"))
+            val days = CalendarRules.build(tasks, reminders, case.day("from"), case.day("to")) { filter.keeps(it, links, projectAreas) }
             val expect = case.getValue("expect").jsonObject
             assertEquals(name, expect.size, days.size)
             days.forEach { day ->

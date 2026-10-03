@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
@@ -33,9 +34,10 @@ import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.ui.theme.AppTheme
 
 /**
- * Narrows every list to an area and/or a tag (docs/lists.md, spec story 9). Each chip opens a menu;
- * a chosen filter shows its name and an x that clears it. Nothing shows when there are no areas or
- * tags to filter by.
+ * Narrows a place to an area and/or a tag (docs/lists.md, spec story 9): the lists, Projects, the
+ * calendar and the archive. Each chip opens a menu; a chosen filter shows its name and an x that
+ * clears it. Nothing shows when there are no areas or tags to filter by. [edge] is the gutter the
+ * chips scroll under, none where the row sits in a list that already has one.
  */
 @Composable
 fun ListFilterRow(
@@ -45,6 +47,7 @@ fun ListFilterRow(
     onArea: (String?) -> Unit,
     onTag: (String?) -> Unit,
     modifier: Modifier = Modifier,
+    edge: Dp = AppTheme.density.pagePadding.dp,
 ) {
     if (areas.isEmpty() && tags.isEmpty()) return
     Row(
@@ -52,7 +55,7 @@ fun ListFilterRow(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = AppTheme.density.pagePadding.dp),
+            .padding(horizontal = edge),
     ) {
         if (areas.isNotEmpty()) {
             val chosen = areas.firstOrNull { it.id == filter.areaId }
@@ -79,6 +82,11 @@ fun ListFilterRow(
         }
     }
 }
+
+/** The row for a place's [choices], inside a list that already keeps the page's gutter. */
+@Composable
+fun ListFilterRow(choices: FilterChoices, onArea: (String?) -> Unit, onTag: (String?) -> Unit, modifier: Modifier = Modifier) =
+    ListFilterRow(choices.filter, choices.areas, choices.tags, onArea, onTag, modifier, edge = 0.dp)
 
 @Composable
 private fun PickerChip(

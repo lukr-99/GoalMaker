@@ -980,6 +980,9 @@
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
     <string name="projects_pick">Choose a project</string>
+    <string name="projects_none_match">No project matches the filter.</string>
+    <string name="projects_area">Area</string>
+    <string name="projects_no_area">No area</string>
     <string name="task_project">Project</string>
     <string name="task_no_project">No project</string>
     <string name="activity_goal">goal “%1$s”</string>

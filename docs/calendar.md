@@ -35,6 +35,14 @@ Windows from the sidebar or `--open calendar`. Both draw the month as a grid of 
 that grows with what the day holds, today outlined and the day the owner picked filled; picking a day
 lists what is on it, and a task opens from there. The week view is the same grid, one row.
 
+**Filtering**: the lists' area and tag filter ([lists](lists.md#filtering)), with a filter of its
+own, sits over the grid on both apps. It narrows everything a day holds, the planned tasks,
+deadlines, repeats and reminders, so the cells' bars and the day's list show the same slice, and a
+project item without an area of its own counts as in its project's. A repeat is projected only for a
+task the filter keeps, but an occurrence the filter hides still keeps its day from being drawn as a
+repeat. Pinned by the filtered case in
+[`contracts/vectors/calendar.json`](../contracts/vectors/calendar.json).
+
 **Moving a task** is a drag: hold a planned task in the day's list and drop it on another cell, and
 it is planned for that day, moves counted like any other move ([plan tomorrow](plan-tomorrow.md)).
 The cell lights up while a task hangs over it. Deadlines and projected repeats are not dragged: a

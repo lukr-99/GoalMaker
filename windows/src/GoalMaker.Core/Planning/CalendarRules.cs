@@ -35,19 +35,26 @@ public static class CalendarRules
         return days;
     }
 
-    /// <summary>What each day from <paramref name="from"/> to <paramref name="to"/> holds, in order.</summary>
+    /// <summary>
+    /// What each day from <paramref name="from"/> to <paramref name="to"/> holds, in order. Only the
+    /// tasks <paramref name="keep"/> says yes to show, the area and tag filter (docs/calendar.md), but
+    /// every live task still keeps its day from a repeat.
+    /// </summary>
     public static IReadOnlyList<CalendarDay> Build(
         IReadOnlyList<TaskItem> tasks,
         IReadOnlyList<ReminderItem> reminders,
         DateOnly from,
-        DateOnly to)
+        DateOnly to,
+        Func<TaskItem, bool>? keep = null)
     {
+        keep ??= _ => true;
         var live = tasks.Where(task => !task.Deleted).ToList();
-        var byId = live.ToDictionary(task => task.Id, StringComparer.Ordinal);
-        var planned = live
+        var shown = live.Where(keep).ToList();
+        var byId = shown.ToDictionary(task => task.Id, StringComparer.Ordinal);
+        var planned = shown
             .Where(task => task.State != TaskState.Dropped && task.PlannedDate is not null)
             .ToLookup(task => task.PlannedDate!.Value);
-        var deadlines = live
+        var deadlines = shown
             .Where(task => task.State == TaskState.Open && task.Deadline is not null)
             .ToLookup(task => task.Deadline!.Value);
         var ringing = reminders
@@ -55,7 +62,7 @@ public static class CalendarRules
             .Where(due => due is not null)
             .GroupBy(due => DateOnly.FromDateTime(due!.Value))
             .ToDictionary(group => group.Key, group => group.Count());
-        var repeats = Repeats(live, from, to);
+        var repeats = Repeats(live, from, to, keep);
 
         var days = new List<CalendarDay>();
         for (var day = from; day <= to; day = day.AddDays(1))
@@ -73,7 +80,7 @@ public static class CalendarRules
     }
 
     // The days each repeating task would come round to inside the range, by day.
-    private static Dictionary<DateOnly, List<TaskItem>> Repeats(IReadOnlyList<TaskItem> tasks, DateOnly from, DateOnly to)
+    private static Dictionary<DateOnly, List<TaskItem>> Repeats(IReadOnlyList<TaskItem> tasks, DateOnly from, DateOnly to, Func<TaskItem, bool> keep)
     {
         // A day another occurrence of the same series is already planned for is that occurrence's, not a repeat.
         var taken = tasks
@@ -81,7 +88,7 @@ public static class CalendarRules
             .GroupBy(Occurrences.SeriesOf, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Select(task => task.PlannedDate!.Value).ToHashSet(), StringComparer.Ordinal);
         var found = new Dictionary<DateOnly, List<TaskItem>>();
-        foreach (var task in tasks.Where(task => task.State == TaskState.Open && task.Recurrence is not null && task.PlannedDate is not null))
+        foreach (var task in tasks.Where(task => task.State == TaskState.Open && task.Recurrence is not null && task.PlannedDate is not null && keep(task)))
         {
             if (Recurrence.Parse(task.Recurrence) is not { } rule)
             {
