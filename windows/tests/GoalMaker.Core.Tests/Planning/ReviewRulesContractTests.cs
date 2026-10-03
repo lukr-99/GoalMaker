@@ -29,6 +29,25 @@ public sealed class ReviewRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryJanuaryNudge()
+    {
+        foreach (var testCase in vectors.GetProperty("newYear").EnumerateArray())
+        {
+            var expect = testCase.GetProperty("expect") is { ValueKind: JsonValueKind.Object } nudge
+                ? new NewYearNudge(nudge.GetProperty("year").GetInt32(), nudge.GetProperty("review").GetBoolean(), nudge.GetProperty("goals").GetBoolean())
+                : null;
+            var dismissed = testCase.GetProperty("dismissedYear");
+            Assert.True(
+                expect == ReviewRules.NewYear(
+                    Day(testCase, "today"),
+                    testCase.GetProperty("yearGoals").GetInt32(),
+                    testCase.GetProperty("lastYearReviewed").GetBoolean(),
+                    dismissed.ValueKind == JsonValueKind.Null ? null : dismissed.GetInt32()),
+                testCase.GetProperty("name").GetString());
+        }
+    }
+
     private static DateOnly Day(JsonElement testCase, string name) =>
         DateOnly.ParseExact(testCase.GetProperty(name).GetString()!, "yyyy-MM-dd", CultureInfo.InvariantCulture);
 }

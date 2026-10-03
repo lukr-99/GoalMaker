@@ -187,6 +187,15 @@ export function standingText(habit: Habit, view: HabitView): string {
   }
 }
 
+/** The January nudge in a line: what the new year still asks for. */
+export function newYearLine(nudge: { year: number; review: boolean; goals: boolean }): string {
+  const asks = [
+    ...(nudge.review ? [`${nudge.year - 1} has no yearly review yet`] : []),
+    ...(nudge.goals ? [`${nudge.year} has no year goals yet`] : []),
+  ];
+  return `New year: ${asks.join(" and ")}.`;
+}
+
 /** `4-day streak`, `2-week streak`: a streak counts the habit's periods. */
 export function streakText(habit: Pick<Habit, "cadence">, streak: number): string {
   const period = habit.cadence === "per_week" ? "week" : habit.cadence === "per_month" ? "month" : "day";

@@ -281,7 +281,9 @@ public sealed class AppGraph : IDisposable
             HabitsPage,
             Habits,
             () => PageRequested?.Invoke(this, AppPage.Habits),
-            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null);
+            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null,
+            Reviews,
+            OpenReview);
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);

@@ -151,6 +151,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { GoalsView = value });
     }
 
+    public int? NewYearDismissed
+    {
+        get => document.NewYearDismissed;
+        set => Save(document with { NewYearDismissed = value });
+    }
+
     public IReadOnlyDictionary<string, MiniWindowState> MiniWindows
     {
         get => document.MiniWindows ?? [];

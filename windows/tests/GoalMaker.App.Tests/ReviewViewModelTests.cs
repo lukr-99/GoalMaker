@@ -172,7 +172,9 @@ public sealed class ReviewViewModelTests : IDisposable
         var opened = new List<(string Kind, DateOnly Start)>();
         var list = new ReviewsViewModel(planner.Reviews, planner.Settings, planner.Strings, planner.Time, (kind, start) => opened.Add((kind, start)), action => action());
 
-        Assert.Equal(4, list.ToWrite.Count);
+        // Last and this week, month and year.
+        Assert.Equal(6, list.ToWrite.Count);
+        Assert.Equal(["Reviews.LastYear", "Reviews.ThisYear"], list.ToWrite.Skip(4).Select(row => row.Title));
         Assert.True(list.IsEmpty);
 
         var page = Page();

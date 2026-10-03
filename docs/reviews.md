@@ -46,6 +46,26 @@ the rest of its category has been asked.
 
 Ties are broken by name, so two devices ask the same thing.
 
+## Starting a review
+
+The Reviews place on both apps offers last week, this week, last month, this month, last year and
+this year, each marked once something is written in it. A yearly review is the same guided flow as
+the others over the whole year: the look back counts the year, the goals step sets next year's
+goals, and the prompts are the ones that suit a year. It has no reminder, so finishing it records no
+ritual run.
+
+## The January nudge
+
+A new year should start with intent (spec, story 66). Through January, Today opens with a card while
+there is still something to do for the year: **Look back on 2026** when last year has no written
+yearly review, and **Set 2027 goals** when this year has no year goals yet (dropped and deleted ones
+don't count). Each button shows only while its part is left, and the card goes once both are done.
+**Not now** puts it away for the rest of the year on that device; next January it comes back. The
+rule is the `newYear` group of
+[`contracts/vectors/reviews.json`](../contracts/vectors/reviews.json), run by both apps and the
+connector, whose `get_today` adds the same line in January (it never sees Not now, which each device
+keeps to itself).
+
 ## Storage
 
 `reviews` is a synced table (Supabase migration 0008, replica migration 0004). Migration 0011 added

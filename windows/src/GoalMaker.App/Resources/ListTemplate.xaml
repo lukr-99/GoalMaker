@@ -150,6 +150,27 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <!-- The January nudge (docs/reviews.md): last year's review and this year's goals. -->
+                        <Border Margin="0,4,0,8" Padding="16,14" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}"
+                                Visibility="{Binding HasNewYear, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Sparkle24" FontSize="22" Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding NewYearTitle}" FontSize="16"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.OnHeroBrush}"
+                                               AutomationProperties.HeadingLevel="Level2" />
+                                </StackPanel>
+                                <TextBlock Margin="0,6,0,10" Text="{Binding NewYearText}" TextWrapping="Wrap" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                <WrapPanel>
+                                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="{Binding NewYearReviewText}" Command="{Binding NewYearReviewCommand}"
+                                               Visibility="{Binding NewYear.Review, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
+                                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="{Binding NewYearGoalsText}" Command="{Binding OpenGoalsCommand}"
+                                               Visibility="{Binding NewYear.Goals, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
+                                    <ui:Button Margin="0,0,0,4" Appearance="Transparent" Content="{DynamicResource NewYear.NotNow}" Command="{Binding DismissNewYearCommand}"
+                                               Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
                         <TextBlock Margin="4,8,0,8"
                                    Text="{Binding EmptyText}"
                                    FontSize="14"

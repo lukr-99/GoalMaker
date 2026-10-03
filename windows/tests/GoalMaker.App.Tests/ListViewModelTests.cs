@@ -164,7 +164,36 @@ public sealed class ListViewModelTests : IDisposable
             inbox.Sections.Single().Rows.Single().ReminderChoices.Select(choice => choice.Label));
     }
 
-    private ListViewModel List(ListKind kind, ReminderService? reminders = null)
+    [Fact]
+    public void JanuaryAsksForLastYearsReviewAndThisYearsGoalsUntilNotNow()
+    {
+        planner.Time.SetUtcNow(new DateTimeOffset(2027, 1, 5, 12, 0, 0, TimeSpan.Zero));
+        (string Kind, DateOnly Start)? opened = null;
+        var today = List(ListKind.Today, openReview: (kind, start) => opened = (kind, start));
+
+        Assert.Equal(new NewYearNudge(2027, true, true), today.NewYear);
+        Assert.Equal("NewYear.Review(2026)", today.NewYearReviewText);
+        today.NewYearReviewCommand.Execute(null);
+        Assert.Equal((ReviewRules.Yearly, new DateOnly(2026, 1, 1)), opened);
+
+        planner.Goals.Add(new GoalDraft("Run a half marathon", GoalHorizon.Year, new DateOnly(2027, 1, 1)));
+        Assert.Equal(new NewYearNudge(2027, true, false), today.NewYear);
+        Assert.Equal(string.Empty, today.NewYearGoalsText);
+
+        today.DismissNewYearCommand.Execute(null);
+        Assert.False(today.HasNewYear);
+        Assert.Equal(2027, planner.Settings.NewYearDismissed);
+    }
+
+    [Fact]
+    public void OnlyTodayAndOnlyJanuaryNudge()
+    {
+        Assert.Null(List(ListKind.Today).NewYear);
+        planner.Time.SetUtcNow(new DateTimeOffset(2027, 1, 5, 12, 0, 0, TimeSpan.Zero));
+        Assert.Null(List(ListKind.Tomorrow).NewYear);
+    }
+
+    private ListViewModel List(ListKind kind, ReminderService? reminders = null, Action<string, DateOnly>? openReview = null)
     {
         Func<DateOnly, DateOnly?> defaultDay = kind switch
         {
@@ -187,7 +216,10 @@ public sealed class ListViewModelTests : IDisposable
             () => true,
             planner.Tick,
             action => action(),
-            reminders: reminders);
+            reminders: reminders,
+            goals: planner.Goals,
+            reviews: planner.Reviews,
+            openReview: openReview);
     }
 
     // A second apart, so creation order breaks ties the way the test reads.

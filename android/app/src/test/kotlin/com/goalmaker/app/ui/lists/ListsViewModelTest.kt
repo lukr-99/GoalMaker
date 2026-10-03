@@ -15,6 +15,7 @@ import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderScheduler
 import com.goalmaker.app.application.planning.ReminderService
+import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.sync.FakeServer
@@ -58,10 +59,11 @@ class ListsViewModelTest {
     private lateinit var tasks: TaskList
     private lateinit var areas: AreaList
     private lateinit var viewModel: ListsViewModel
+    private lateinit var settings: SharedPreferencesSettingsStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     // Friday 18 September 2026, noon.
-    private val now = LocalDateTime.parse("2026-09-18T12:00")
+    private var now = LocalDateTime.parse("2026-09-18T12:00")
     private val today = LocalDate.parse("2026-09-18")
 
     @Before
@@ -75,7 +77,7 @@ class ListsViewModelTest {
         habits = HabitList(test.replica, rows, {})
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("lists-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
-        val settings = SharedPreferencesSettingsStore(preferences)
+        settings = SharedPreferencesSettingsStore(preferences)
         val reminders = ReminderService(
             reminders = ReminderList(test.replica, rows, {}),
             tasks = tasks,
@@ -98,7 +100,7 @@ class ListsViewModelTest {
             now = { Instant.parse("2026-09-18T10:00:00Z") },
             debounce = 2.seconds,
         )
-        viewModel = ListsViewModel(tasks, areas, tags, projects, GoalList(test.replica, rows, {}), habits, settings, reminders, sync, Dispatchers.Unconfined) { now }
+        viewModel = ListsViewModel(tasks, areas, tags, projects, GoalList(test.replica, rows, {}), ReviewList(test.replica, rows, {}), habits, settings, reminders, sync, Dispatchers.Unconfined) { now }
     }
 
     @After
@@ -249,6 +251,31 @@ class ListsViewModelTest {
         assertTrue(viewModel.addTask("Water the plants", NewTaskDay.TODAY, null, topPriority = false, notes = ""))
 
         assertEquals(today, tasks.all().single().plannedDate)
+    }
+
+    @Test
+    fun `January asks for last year's review and this year's goals, and Not now keeps the year`() = runTest {
+        now = LocalDateTime.parse("2027-01-05T12:00")
+
+        val nudge = loaded { it.newYear != null }.newYear!!
+        assertEquals(2027, nudge.year)
+        assertTrue(nudge.review && nudge.goals)
+
+        viewModel.dismissNewYear()
+        assertEquals(2027, settings.newYearDismissed.value)
+    }
+
+    @Test
+    fun `a January nudge put away this year stays away`() = runTest {
+        now = LocalDateTime.parse("2027-01-05T12:00")
+        settings.setNewYearDismissed(2027)
+
+        assertEquals(null, loaded { true }.newYear)
+    }
+
+    @Test
+    fun `September has no January nudge`() = runTest {
+        assertEquals(null, loaded { true }.newYear)
     }
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()

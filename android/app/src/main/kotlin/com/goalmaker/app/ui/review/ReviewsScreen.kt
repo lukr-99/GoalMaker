@@ -107,6 +107,22 @@ fun ReviewsScreen(
                     onClick = { onOpen(ReviewRules.MONTHLY, state.monthStart) },
                 )
             }
+            item("last-year") {
+                StartRow(
+                    title = stringResource(R.string.reviews_last_year),
+                    subtitle = periodText(ReviewRules.YEARLY, state.lastYearStart),
+                    done = ReviewRules.YEARLY to state.lastYearStart in written,
+                    onClick = { onOpen(ReviewRules.YEARLY, state.lastYearStart) },
+                )
+            }
+            item("this-year") {
+                StartRow(
+                    title = stringResource(R.string.reviews_this_year),
+                    subtitle = periodText(ReviewRules.YEARLY, state.yearStart),
+                    done = ReviewRules.YEARLY to state.yearStart in written,
+                    onClick = { onOpen(ReviewRules.YEARLY, state.yearStart) },
+                )
+            }
             if (state.past.isNotEmpty()) {
                 item("h-past") { SectionHeader(stringResource(R.string.reviews_past)) }
                 items(state.past, key = { it.id }) { review ->

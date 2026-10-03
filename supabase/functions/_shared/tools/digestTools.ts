@@ -2,7 +2,7 @@ import { z } from "../deps.ts";
 import { type Planner, PlannerError } from "../planner/planner.ts";
 import { reviewDigest, type ReviewWant } from "../planner/reviewDigest.ts";
 import { TRIGGER_WORDS } from "../prompts/prompts.ts";
-import { defaultPeriod, type Digest, type DigestKind, periodOf } from "../rules/digest.ts";
+import { defaultPeriod, type Digest, type DigestKind, horizonOf, periodOf } from "../rules/digest.ts";
 import { periodEnd as goalPeriodEnd } from "../rules/goals.ts";
 import type { TaskItem } from "../rules/task.ts";
 import * as format from "./format.ts";
@@ -44,7 +44,7 @@ function digestJson(found: Digest, names: format.Names, completedOn: (task: Task
     const name = project(one) ?? "a deleted project";
     byProject.set(name, [...(byProject.get(name) ?? []), one]);
   }
-  const horizon = found.period.kind === "weekly" ? "week" : "month";
+  const horizon = horizonOf(found.period.kind);
   return {
     period: found.period,
     done: [...byDay].map(([day, tasks]) => ({
@@ -124,18 +124,21 @@ export const digestTools: Tool[] = [
   {
     name: "get_review_digest",
     title: "Review digest",
-    description: "One week or month of GoalMaker in one answer, as JSON, for writing the owner's letter about it (a " +
+    description:
+      "One week, month or year of GoalMaker in one answer, as JSON, for writing the owner's letter about it (a " +
       "scheduled routine does this) or for a review: tasks done by day, what is left, overdue and slipping, the " +
       "period's goals against where they should be by now, each habit's met, missed and skipped periods and its " +
       "streak, project items done, what the period's data asks about, this period's review so far and the last " +
       "period's letter, what the next period already holds, and the wants that became ready, were decided, or " +
       "are ready next, and where the time went (Tally minutes by category, project and device, when Tally is on). " +
-      "Without a period it is the week or month holding yesterday, so a Sunday evening run and a " +
+      "Without a period it is the week, month or year holding yesterday, so a Sunday evening run and a " +
       "Monday morning run both mean the week just finishing. Pass the period's start to save_review_summary.",
     input: {
-      kind: z.enum(["weekly", "monthly"]).optional().describe("weekly or monthly; weekly by default."),
+      kind: z.enum(["weekly", "monthly", "yearly"]).optional().describe(
+        "weekly, monthly or yearly; weekly by default.",
+      ),
       period: z.string().optional().describe(
-        'Any day in the week or month, like 2026-09-14 or "today". The one holding yesterday by default.',
+        'Any day in the week, month or year, like 2026-09-14 or "today". The one holding yesterday by default.',
       ),
     },
     readOnly: true,

@@ -178,6 +178,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 tags = graph.tags,
                                 projects = graph.projects,
                                 goals = graph.goals,
+                                reviews = graph.reviews,
                                 habits = graph.habits,
                                 settings = graph.settings,
                                 reminders = graph.reminders,
@@ -244,6 +245,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                         wantTitle = title
                                         select(PlaceRules.WANTS)
                                     },
+                                    onOpenReview = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
                                 )
                                 PlaceRules.PROJECTS -> ProjectsScreen(
                                     viewModel = projectsViewModel,

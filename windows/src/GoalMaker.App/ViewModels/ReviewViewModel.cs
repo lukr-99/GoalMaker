@@ -196,7 +196,12 @@ public sealed partial class ReviewViewModel : ObservableObject
             habits.Checkins(),
             habits.Pauses(),
             today);
-        Heading = strings.Get(Kind == ReviewRules.Monthly ? "Reviews.Monthly" : "Reviews.Weekly");
+        Heading = strings.Get(Kind switch
+        {
+            ReviewRules.Yearly => "Reviews.Yearly",
+            ReviewRules.Monthly => "Reviews.Monthly",
+            _ => "Reviews.Weekly",
+        });
         PeriodText = strings.Get(
             "Goals.Range",
             Digest.PeriodStart.ToString("d MMM", CultureInfo.CurrentCulture),
@@ -317,7 +322,12 @@ public sealed partial class ReviewViewModel : ObservableObject
         SaveAnswers();
         if (Step == ReviewStep.Goals)
         {
-            rituals.Record(Kind == ReviewRules.Monthly ? RitualRunList.MonthlyReview : RitualRunList.WeeklyReview, Today());
+            // A yearly review has no reminder to quiet, so it records no ritual run.
+            if (Kind != ReviewRules.Yearly)
+            {
+                rituals.Record(Kind == ReviewRules.Monthly ? RitualRunList.MonthlyReview : RitualRunList.WeeklyReview, Today());
+            }
+
             Step = ReviewStep.Done;
             OnPropertyChanged(nameof(DoneSummary));
             return;

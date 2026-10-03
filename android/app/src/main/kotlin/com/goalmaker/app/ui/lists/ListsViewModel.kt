@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
+import com.goalmaker.app.application.planning.ReviewList
+import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.ListFilter
@@ -56,6 +58,7 @@ class ListsViewModel(
     private val tags: TagList,
     projects: ProjectList,
     goals: GoalList,
+    reviews: ReviewList,
     private val habits: HabitList,
     private val settings: SettingsStore,
     private val reminders: ReminderService,
@@ -117,7 +120,14 @@ class ListsViewModel(
     // comes back the way it was left, and starts on the tasks after a cold start.
     private val segment = MutableStateFlow(TodaySegment.TASKS)
     private val hideDoneHabits = MutableStateFlow(false)
-    private val habitView = combine(segment, hideDoneHabits, ::Pair)
+
+    // The January nudge (docs/reviews.md): last year's review and this year's goals, until both are
+    // done or the owner says Not now for the year.
+    private val newYear = combine(goals.watch().flowOn(io), reviews.watch().flowOn(io), settings.newYearDismissed, settings.dayStartHour, minutes) {
+            (all, _), reviewList, dismissed, startHour, _ ->
+        ReviewRules.newYearFor(PlanningDay.of(clock(), startHour), all, reviewList, dismissed)
+    }
+    private val habitView = combine(segment, hideDoneHabits, newYear, ::Triple)
 
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
@@ -125,7 +135,7 @@ class ListsViewModel(
         refreshing,
         goalsAndHabits,
         habitView,
-    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (shownSegment, hiding) ->
+    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (shownSegment, hiding, nudge) ->
         ListsUiState(
             lists = planning,
             refreshing = pulled,
@@ -143,6 +153,7 @@ class ListsViewModel(
             shownHabits = HabitBoard.shown(habitRows, hiding),
             habitsLeft = habitRows.count(HabitRow::left),
             habitsAllDone = HabitRules.allDone(habitRows.map(HabitRow::standing)),
+            newYear = nudge,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -152,6 +163,11 @@ class ListsViewModel(
 
     /** Completions and deletions the screen offers to undo. */
     val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
+
+    /** Puts the January nudge away until next January (docs/reviews.md). */
+    fun dismissNewYear() {
+        uiState.value.newYear?.let { settings.setNewYearDismissed(it.year) }
+    }
 
     /** The planning day the lists and the preview call "today". */
     fun today(): LocalDate = PlanningDay.of(clock(), settings.dayStartHour.value)

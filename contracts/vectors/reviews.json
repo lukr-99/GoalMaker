@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday. 'rotation': the prompt ids a review asks, from contracts/content/prompts.json: the prompts that suit the review's kind and carry no trigger, walking the categories in file order from the one after the last id in 'shown', taking from each the prompt of that category that was shown longest ago (never shown first, then file order); with 'category' the case asks that one category for one prompt instead. 'reactive': the triggered prompts the period's facts call for, in this order, each with the habit, task or goal that triggered it: a goal at least 0.2 behind 'expected' (furthest behind first), a habit missing at least half of its periods when it has two or more (most missed first), a task moved three times or more (most moves first), the habit with a streak of 7 or more (longest first), a goal at least 0.2 ahead, 'goals/none' when the period had no goals, and, for weekly and monthly reviews only, 'periods/quiet' when the done tasks are at most half the average and 'periods/busy' when they are at least one and a half times it; ties are broken by name. 'promptTexts': a prompt's text with '{period}' replaced by week, month or year and '{subject}' by the subject. 'digest': the review digest the connector's get_review_digest and review prompts are built from (docs/letter.md), run by the TypeScript rules only. Its 'periods' are the period a digest means when none is named: the one holding yesterday's planning day, from the owner's local time and the hour their day starts. Its 'week' is a small fixed week, 2026-08-17 to 2026-08-23, read on 2026-08-24, and what each section of its digest holds, by id. 'done' is in the order tasks were done; 'left' and 'earlier' are open tasks planned inside the period and before it, by day; 'overdue' is every open task planned before today; 'slipping' the left ones moved three times or more; a habit's 'missed' counts missed periods only, while the facts the triggers read count every period not met; 'finished' are project items done in the period; 'nextDeadlines' is by deadline; the wants are those whose cooldown ends in the period, those decided in it, and the undecided ones whose cooldown ends in the next one.",
+  "description": "Reviews (supabase/migrations/0008_reviews.sql). 'ids': the id every device and the connector give a review, a UUID version 5 of 'review/<owner, lowercase>/<kind>/<period start>' in 'namespace' (the ritual runs' namespace in reminders.json), so writing the same review anywhere makes one row. 'periods': the period start a review of 'kind' has for a day in it: the Monday of its week, the first of its month, or January 1. 2026-09-18 is a Friday. 'rotation': the prompt ids a review asks, from contracts/content/prompts.json: the prompts that suit the review's kind and carry no trigger, walking the categories in file order from the one after the last id in 'shown', taking from each the prompt of that category that was shown longest ago (never shown first, then file order); with 'category' the case asks that one category for one prompt instead. 'reactive': the triggered prompts the period's facts call for, in this order, each with the habit, task or goal that triggered it: a goal at least 0.2 behind 'expected' (furthest behind first), a habit missing at least half of its periods when it has two or more (most missed first), a task moved three times or more (most moves first), the habit with a streak of 7 or more (longest first), a goal at least 0.2 ahead, 'goals/none' when the period had no goals, and, for weekly and monthly reviews only, 'periods/quiet' when the done tasks are at most half the average and 'periods/busy' when they are at least one and a half times it; ties are broken by name. 'promptTexts': a prompt's text with '{period}' replaced by week, month or year and '{subject}' by the subject. 'digest': the review digest the connector's get_review_digest and review prompts are built from (docs/letter.md), run by the TypeScript rules only. Its 'periods' are the period a digest means when none is named: the one holding yesterday's planning day, from the owner's local time and the hour their day starts. Its 'week' is a small fixed week, 2026-08-17 to 2026-08-23, read on 2026-08-24, and what each section of its digest holds, by id. 'done' is in the order tasks were done; 'left' and 'earlier' are open tasks planned inside the period and before it, by day; 'overdue' is every open task planned before today; 'slipping' the left ones moved three times or more; a habit's 'missed' counts missed periods only, while the facts the triggers read count every period not met; 'finished' are project items done in the period; 'nextDeadlines' is by deadline; the wants are those whose cooldown ends in the period, those decided in it, and the undecided ones whose cooldown ends in the next one. 'newYear': the January nudge (spec story 66) for planning day 'today': nothing (null) outside January, nothing once the owner dismissed it for this year ('dismissedYear' is the year it was last dismissed, null for never), otherwise 'review' when last year has no written yearly review ('lastYearReviewed' false) and 'goals' when this year has no year goals yet ('yearGoals' counts the year goals of this year that are neither deleted nor dropped), with the 'year' it is about; nothing when neither is left to do.",
   "namespace": "b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91",
   "ids": [
     {
@@ -753,5 +753,111 @@
         ]
       }
     }
-  }
+  },
+  "newYear": [
+    {
+      "name": "early January with nothing done asks for both",
+      "today": "2027-01-03",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": null,
+      "expect": {
+        "year": 2027,
+        "review": true,
+        "goals": true
+      }
+    },
+    {
+      "name": "the first of January counts",
+      "today": "2027-01-01",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": null,
+      "expect": {
+        "year": 2027,
+        "review": true,
+        "goals": true
+      }
+    },
+    {
+      "name": "last year reviewed, no goals yet",
+      "today": "2027-01-15",
+      "yearGoals": 0,
+      "lastYearReviewed": true,
+      "dismissedYear": null,
+      "expect": {
+        "year": 2027,
+        "review": false,
+        "goals": true
+      }
+    },
+    {
+      "name": "goals set, last year not reviewed",
+      "today": "2027-01-20",
+      "yearGoals": 2,
+      "lastYearReviewed": false,
+      "dismissedYear": null,
+      "expect": {
+        "year": 2027,
+        "review": true,
+        "goals": false
+      }
+    },
+    {
+      "name": "both done: nothing",
+      "today": "2027-01-10",
+      "yearGoals": 1,
+      "lastYearReviewed": true,
+      "dismissedYear": null,
+      "expect": null
+    },
+    {
+      "name": "dismissed this year: nothing",
+      "today": "2027-01-05",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": 2027,
+      "expect": null
+    },
+    {
+      "name": "dismissed last January: it comes back",
+      "today": "2027-01-05",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": 2026,
+      "expect": {
+        "year": 2027,
+        "review": true,
+        "goals": true
+      }
+    },
+    {
+      "name": "the last day of January still asks",
+      "today": "2027-01-31",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": null,
+      "expect": {
+        "year": 2027,
+        "review": true,
+        "goals": true
+      }
+    },
+    {
+      "name": "February: nothing",
+      "today": "2027-02-01",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": null,
+      "expect": null
+    },
+    {
+      "name": "December: nothing yet",
+      "today": "2026-12-31",
+      "yearGoals": 0,
+      "lastYearReviewed": false,
+      "dismissedYear": null,
+      "expect": null
+    }
+  ]
 }

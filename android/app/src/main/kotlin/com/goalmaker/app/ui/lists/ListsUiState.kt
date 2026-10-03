@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.lists
 
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.ListFilter
+import com.goalmaker.app.application.planning.NewYearNudge
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ProjectItem
@@ -16,7 +17,8 @@ import com.goalmaker.app.ui.habits.HabitRow
  * folded section, [habits] the habits on Today, with the streak [habitMilestones] reached. Today on the
  * phone shows its tasks or its habits by [segment]; [shownHabits] are the habits without the done ones
  * while [hideDoneHabits] is on, [habitsLeft] counts the ones still to do, and [habitsAllDone] shows the
- * all done card (contracts/vectors/habits.json, standings and allDone).
+ * all done card (contracts/vectors/habits.json, standings and allDone). [newYear] is the January nudge
+ * (docs/reviews.md), null when there is nothing to nudge about.
  */
 data class ListsUiState(
     val lists: PlanningLists?,
@@ -35,4 +37,5 @@ data class ListsUiState(
     val shownHabits: List<HabitRow> = emptyList(),
     val habitsLeft: Int = 0,
     val habitsAllDone: Boolean = false,
+    val newYear: NewYearNudge? = null,
 )

@@ -12,6 +12,7 @@ import com.goalmaker.app.application.planning.Reflection
 import com.goalmaker.app.application.planning.ReviewItem
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewLookBack
+import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.RitualRunList
 import com.goalmaker.app.application.planning.TallyCategory
 import com.goalmaker.app.application.planning.TallyList
@@ -178,7 +179,8 @@ class ReviewViewModel(
             ReviewStep.REFLECT -> ReviewStep.RATE
             ReviewStep.RATE -> ReviewStep.GOALS
             ReviewStep.GOALS, ReviewStep.DONE -> {
-                viewModelScope.launch(io) { rituals.record(ritual(), today()) }
+                // A yearly review has no reminder to quiet, so it records no ritual run.
+                ritual()?.let { ritual -> viewModelScope.launch(io) { rituals.record(ritual, today()) } }
                 ReviewStep.DONE
             }
         }
@@ -212,7 +214,11 @@ class ReviewViewModel(
         }
     }
 
-    private fun ritual(): String = if (kind == "monthly") RitualRunList.MONTHLY_REVIEW else RitualRunList.WEEKLY_REVIEW
+    private fun ritual(): String? = when (kind) {
+        ReviewRules.MONTHLY -> RitualRunList.MONTHLY_REVIEW
+        ReviewRules.WEEKLY -> RitualRunList.WEEKLY_REVIEW
+        else -> null
+    }
 
     private fun write(work: (ReviewItem) -> Unit) {
         val review = uiState.value.review ?: opened.value ?: return

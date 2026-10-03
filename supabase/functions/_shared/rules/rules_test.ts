@@ -62,7 +62,7 @@ import {
   PRIORITIES,
   shows,
 } from "./projects.ts";
-import { periodStart, reviewId } from "./reviews.ts";
+import { newYear, periodStart, reviewId } from "./reviews.ts";
 import type { TaskItem, TaskState } from "./task.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -189,6 +189,13 @@ Deno.test("reviews.json: review ids and periods", async () => {
   }
   for (const vector of file.periods) {
     assertEquals(periodStart(vector.kind, vector.day), vector.start, `${vector.kind} ${vector.day}`);
+  }
+  for (const vector of file.newYear) {
+    assertEquals(
+      newYear(vector.today, vector.yearGoals, vector.lastYearReviewed, vector.dismissedYear),
+      vector.expect,
+      vector.name,
+    );
   }
 });
 
