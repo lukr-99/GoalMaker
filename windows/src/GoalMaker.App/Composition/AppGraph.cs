@@ -170,6 +170,7 @@ public sealed class AppGraph : IDisposable
         // carries the next one, and toasts show them with the same buttons as the phone.
         reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
         Rituals = new RitualRunList(replica, newRows, Sync.Request);
+        Habits = new HabitList(replica, newRows, Sync.Request);
         ReminderRows = new ReminderList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
             ReminderRows,
@@ -178,7 +179,8 @@ public sealed class AppGraph : IDisposable
             Settings,
             TimeProvider.System,
             Rituals,
-            Wants);
+            Wants,
+            Habits);
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -288,7 +290,6 @@ public sealed class AppGraph : IDisposable
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
         Goals = new GoalList(replica, newRows, Sync.Request);
-        Habits = new HabitList(replica, newRows, Sync.Request);
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits, Chat);
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits), Chat);

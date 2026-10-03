@@ -14,4 +14,6 @@ data class ReminderLook(
     val monthlyReview: LocalDate? = null,
     /** The wants that became ready, once a day at the owner's time (docs/wants.md). */
     val wants: WantsDue? = null,
+    /** The habits whose reminder rang, each still left on its planning day. */
+    val habits: List<DueHabit> = emptyList(),
 )

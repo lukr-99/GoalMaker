@@ -375,6 +375,7 @@ class AppGraph(context: Context) {
         monthlyReviewAt = { settings.monthlyReviewReminder.value },
         wants = wants,
         wantsReadyAt = { settings.wantsReadyReminder.value },
+        habits = habits,
     )
 
     private val planRequest = MutableStateFlow(false)
