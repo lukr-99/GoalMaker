@@ -1179,6 +1179,7 @@ Deno.test({
           { day: "2026-08-18", tasks: [{ id: id(11), title: "Book the dentist", area: "Health", project: null }] },
           { day: "2026-08-19", tasks: [{ id: id(12), title: "Prune the roses", area: null, project: "Garden" }] },
         ]);
+        assertEquals(week.counts, { done: 2, project_work: 1, other_work: 1 });
         assertEquals(ids(week.open.left), [id(13)]);
         assertEquals(week.open.left[0].moves, 4);
         assertEquals(ids(week.open.overdue).sort(), [id(13), id(14), id(15)].sort());
