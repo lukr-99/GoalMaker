@@ -15,6 +15,12 @@ from pathlib import Path
 from typing import Iterable, Sequence
 
 
+if sys.version_info < (3, 11):
+    sys.exit(
+        f"CodePrint tools need Python 3.11 or newer, but this is {sys.version.split()[0]}."
+    )
+
+
 MIGRATION_PATTERN = re.compile(
     r"^(?P<number>\d{4})_(?P<description>[a-z][a-z0-9_]*)\.sql$"
 )
