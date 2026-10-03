@@ -7,11 +7,12 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// One column of a project's board with the cards in it (docs/projects.md). A column can fold to a
 /// narrow strip with its name and count; Done also counts the items that left the board and lists
-/// them on request.
+/// them on request. Every column but Done has a plus that opens the new item window in it.
 /// </summary>
 public sealed partial class BoardColumnViewModel : ObservableObject
 {
     private readonly Action<BoardColumnViewModel> folded;
+    private readonly BoardColumnAdd? add;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsUnfolded))]
@@ -23,7 +24,8 @@ public sealed partial class BoardColumnViewModel : ObservableObject
     [ObservableProperty]
     private bool showsArchived;
 
-    public BoardColumnViewModel(string column, string title, string foldText, string unfoldText, bool isFolded, Action<BoardColumnViewModel> folded)
+    public BoardColumnViewModel(
+        string column, string title, string foldText, string unfoldText, bool isFolded, Action<BoardColumnViewModel> folded, BoardColumnAdd? add = null)
     {
         Column = column;
         Title = title;
@@ -31,6 +33,7 @@ public sealed partial class BoardColumnViewModel : ObservableObject
         UnfoldText = unfoldText;
         this.isFolded = isFolded;
         this.folded = folded;
+        this.add = add;
         Items.CollectionChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(IsEmpty));
@@ -49,6 +52,12 @@ public sealed partial class BoardColumnViewModel : ObservableObject
     public string FoldText { get; }
 
     public string UnfoldText { get; }
+
+    /// <summary>Whether a new item can start in this column: every column but Done.</summary>
+    public bool CanAdd => add is not null;
+
+    /// <summary>What the column's plus says to a screen reader and in its tooltip.</summary>
+    public string AddText => add?.Text ?? string.Empty;
 
     public ObservableCollection<BoardItemViewModel> Items { get; } = [];
 
@@ -71,6 +80,10 @@ public sealed partial class BoardColumnViewModel : ObservableObject
         IsFolded = !IsFolded;
         folded(this);
     }
+
+    /// <summary>Opens the new item window with this column picked.</summary>
+    [RelayCommand]
+    private void Add() => add?.Open();
 
     /// <summary>Shows or hides the list of archived items under Done.</summary>
     [RelayCommand]

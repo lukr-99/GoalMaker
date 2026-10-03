@@ -88,7 +88,8 @@ composition root creates everything
   `Composition/AppGraph` (composition root), `Shell/` (Fluent main window, tray icon with the Today
   flyout, page provider, reminder toasts, the quick-add box and its global shortcut through NHotkey,
   the sidebar's pinned places and All places (`PlaceSidebar`, `AllPlacesItem`, ADR 0014), the
-  sidebar's area and tag filters, the Today and Habits mini windows),
+  sidebar's area and tag filters, the Today and Habits mini windows, the Projects page's new item
+  window),
   `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm; the
   Places page is `PlacesPage` over `PlacesHubViewModel`, whose tiles reuse the places' own rules),
   `Startup/` (launch switches, single instance), `Theming/` (the themes over WPF UI and the tray kit), `Localization/`

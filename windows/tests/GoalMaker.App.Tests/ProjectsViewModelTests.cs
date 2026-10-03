@@ -12,6 +12,9 @@ public sealed class ProjectsViewModelTests : IDisposable
 {
     private readonly TestPlanner planner = new();
 
+    // The new item windows the page asked for, as the forms they would show.
+    private readonly List<ProjectItemFormViewModel> windows = [];
+
     public void Dispose() => planner.Dispose();
 
     [Fact]
@@ -64,28 +67,6 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ANewItemKeepsTheColumnPriorityAndNotesItWasGiven()
-    {
-        var page = WithProject();
-
-        page.NewItemType = ProjectRules.Idea;
-        Assert.Equal(ProjectRules.Backlog, page.NewItemColumn);
-        page.NewItemColumn = ProjectRules.Doing;
-        page.NewItemType = ProjectRules.Bug;
-        page.NewItemPriority = ProjectRules.High;
-        page.NewItemNotes = "Like the lists have";
-        page.NewItemTitle = "Undo on the board";
-        page.AddItemCommand.Execute(null);
-
-        var item = planner.Task("Undo on the board");
-        Assert.Equal(ProjectRules.Bug, item.ItemType);
-        Assert.Equal(ProjectRules.Doing, item.BoardColumn);
-        Assert.Equal(ProjectRules.High, item.Priority);
-        Assert.Equal("Like the lists have", item.Notes);
-        Assert.Equal(string.Empty, page.NewItemNotes);
-    }
-
-    [Fact]
     public void UndoingAMoveToDonePutsTheCardBackOpen()
     {
         var page = WithProject();
@@ -106,10 +87,11 @@ public sealed class ProjectsViewModelTests : IDisposable
     public void UndoingTakingAnItemOutPutsItBackWhereItWas()
     {
         var page = WithProject();
-        page.NewItemType = ProjectRules.Bug;
-        page.NewItemColumn = ProjectRules.Doing;
-        page.NewItemTitle = "Cache the release feed";
-        page.AddItemCommand.Execute(null);
+        Column(page, "doing").AddCommand.Execute(null);
+        var form = windows[^1];
+        form.ItemType = ProjectRules.Bug;
+        form.Title = "Cache the release feed";
+        form.Create();
 
         Column(page, "doing").Items[0].RemoveCommand.Execute(null);
         Assert.Null(planner.Task("Cache the release feed").ProjectId);
@@ -391,5 +373,5 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     private ProjectsViewModel Page() =>
-        new(planner.Projects, planner.Tasks, planner.Settings, planner.Strings, _ => { }, action => action(), planner.Time);
+        new(planner.Projects, planner.Tasks, planner.Settings, planner.Strings, _ => { }, action => action(), planner.Time, windows.Add);
 }
