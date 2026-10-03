@@ -123,7 +123,7 @@ npx supabase config push --project-ref <project ref>
 ```
 
 The diff should show the SMTP settings and the two templates and nothing else. The templates'
-subject leads with the code ("{{ .Token }} is your GoalMaker code", see [sign-in](../sign-in.md)); a
+subject carries the code ("Your GoalMaker verification code is {{ .Token }}", see [sign-in](../sign-in.md)); a
 project set up before 2026-10-03 still says "Your GoalMaker sign-in code" until the next `config push`. Send yourself a code
 from a release build afterwards: it should carry six digits, not a link.
 

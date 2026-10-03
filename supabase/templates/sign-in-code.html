@@ -2,7 +2,7 @@
 <!--
   GoalMaker's sign-in code email (docs/sign-in.md), from CodePrint's one-time code template
   (templates/email/one-time-code.html). Supabase Auth fills {{ .Token }} and {{ .Email }}; the subject in
-  supabase/config.toml leads with the code too, so a phone's notification shows it and mail apps that
+  supabase/config.toml carries the code too, so a phone's notification shows it and mail apps that
   read codes offer to copy it. Tables and inline styles, because mail clients ignore most CSS.
 -->
 <html lang="en">
@@ -11,7 +11,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
-  <title>{{ .Token }} is your GoalMaker code</title>
+  <title>Your GoalMaker verification code is {{ .Token }}</title>
   <style>
     @media (prefers-color-scheme: dark) {
       .page { background: #111310 !important; }
@@ -24,7 +24,7 @@
 </head>
 <body style="margin:0;padding:0;background:#F2F2EF;">
   <!-- The line a notification and an inbox preview show first: the code, before anything else. -->
-  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your GoalMaker sign-in code is {{ .Token }}. It works for 10 minutes.</div>
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your GoalMaker verification code is {{ .Token }}. It works for 10 minutes.</div>
   <table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F2F2EF" style="background:#F2F2EF;">
     <tr>
       <td align="center" style="padding:32px 16px;">
@@ -32,7 +32,7 @@
           <tr>
             <td style="padding:28px 28px 8px 28px;font-family:Archivo,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
               <div style="display:inline-block;background:#0A0A0A;color:#D6FF3A;font-weight:900;font-style:italic;font-size:18px;line-height:36px;width:36px;text-align:center;border-radius:8px;">G</div>
-              <h1 class="text" style="margin:20px 0 8px 0;font-size:22px;line-height:28px;font-weight:800;color:#0A0A0A;">Your sign-in code</h1>
+              <h1 class="text" style="margin:20px 0 8px 0;font-size:22px;line-height:28px;font-weight:800;color:#0A0A0A;">Your verification code</h1>
               <p class="muted" style="margin:0;font-size:15px;line-height:22px;color:#5A5A56;">Type it in GoalMaker, or copy it: GoalMaker takes a copied code by itself when you go back to it.</p>
             </td>
           </tr>

@@ -243,14 +243,15 @@ otp_expiry = 600
 # sender_name = "Admin"
 
 # GoalMaker signs in with a 6-digit code, so both templates show {{ .Token }} instead of a link, and the
-# subject leads with it so a phone's notification shows the code and mail apps can offer to copy it.
+# subject carries it ("Your GoalMaker verification code is ...") so a phone's notification shows the code and
+# mail apps that look for verification codes can offer to copy it.
 # The cloud project needs the same templates; see docs/setup/cloud-supabase.md.
 [auth.email.template.magic_link]
-subject = "{{ .Token }} is your GoalMaker code"
+subject = "Your GoalMaker verification code is {{ .Token }}"
 content_path = "./supabase/templates/sign-in-code.html"
 
 [auth.email.template.confirmation]
-subject = "{{ .Token }} is your GoalMaker code"
+subject = "Your GoalMaker verification code is {{ .Token }}"
 content_path = "./supabase/templates/sign-in-code.html"
 
 # Uncomment to customize notification email template
@@ -450,7 +451,9 @@ enroll_enabled = true
 verify_enabled = true
 
 [remotes.production.auth.email]
-enable_signup = false
+# The Email provider itself: false here turns sign-in by email off for everyone ("Email logins are
+# disabled"). New accounts are closed by [remotes.production.auth] enable_signup above, not here.
+enable_signup = true
 enable_confirmations = true
 double_confirm_changes = true
 secure_password_change = false
@@ -483,11 +486,11 @@ sender_name = "GoalMaker"
 
 # The sign-in code, the same template the local stack uses (supabase/templates/sign-in-code.html).
 [remotes.production.auth.email.template.magic_link]
-subject = "{{ .Token }} is your GoalMaker code"
+subject = "Your GoalMaker verification code is {{ .Token }}"
 content_path = "./supabase/templates/sign-in-code.html"
 
 [remotes.production.auth.email.template.confirmation]
-subject = "{{ .Token }} is your GoalMaker code"
+subject = "Your GoalMaker verification code is {{ .Token }}"
 content_path = "./supabase/templates/sign-in-code.html"
 
 [remotes.production.storage.analytics]

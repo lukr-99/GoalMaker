@@ -12,10 +12,12 @@ the code, and the app is yours on that device until you sign out.
 ## The code email
 
 The email ([supabase/templates/sign-in-code.html](../supabase/templates/sign-in-code.html), from
-CodePrint's one-time code template) puts the code where it is seen first: its subject is "482913 is
-your GoalMaker code", so the phone's notification shows the code without opening the mail and mail
-apps that look for codes (Gmail's "Copy code") offer to copy it, and its hidden first line repeats it
-for inbox previews. In the email the code is one run of digits that one tap selects.
+CodePrint's one-time code template) puts the code where it is seen first: its subject is "Your
+GoalMaker verification code is 482913", so the phone's notification shows the code without opening
+the mail, and its hidden first line repeats it for inbox previews. The wording is the one mail apps
+look for when they offer to copy a code (Gmail's "Copy code"), though whether they do is theirs to
+decide: Gmail is warier of a shared sender like `onboarding@resend.dev` than of a verified domain of
+one's own. In the email the code is one run of digits that one tap selects.
 
 A copied code goes in by itself: when the sign-in screen comes back to the front on the code step
 with nothing typed yet, both apps read the clipboard and fill the code if the text holds exactly one
