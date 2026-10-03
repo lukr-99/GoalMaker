@@ -51,51 +51,23 @@
             <!-- The title and the day, then one toolbar line: the area and tag pickers on the left, the sync
                  state and Plan tomorrow on the right, all centered on the same line. -->
             <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                <controls:HeadlineText Title="{Binding Title}" FontSize="40" />
-                <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                <DockPanel Margin="0,14,0,0" LastChildFill="False">
-                    <ui:Button DockPanel.Dock="Right"
-                               VerticalAlignment="Center"
-                               Appearance="Primary"
-                               Content="{DynamicResource Plan.Title}"
-                               Command="{Binding OpenPlanCommand}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="CalendarEdit24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <ui:Button DockPanel.Dock="Right"
-                               Margin="0,0,8,0"
-                               VerticalAlignment="Center"
-                               Padding="8,6"
-                               Appearance="Transparent"
-                               Command="{Binding OpenMiniCommand}"
-                               ToolTip="{DynamicResource Mini.OpenThis}"
-                               AutomationProperties.Name="{DynamicResource Mini.OpenThis}">
-                        <ui:Button.Style>
-                            <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                <Setter Property="Visibility" Value="{Binding HasMini, Converter={StaticResource BoolToVisibility}}" />
-                                <Style.Triggers>
-                                    <!-- The mini window draws this same template; it does not offer to open itself. -->
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Tag}" Value="mini">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ui:Button.Style>
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="PictureInPictureEnter20" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <TextBlock DockPanel.Dock="Right"
-                               Margin="0,0,16,0"
-                               VerticalAlignment="Center"
-                               Text="{Binding SyncText}"
-                               FontSize="13"
-                               Foreground="{DynamicResource GM.TextMutedBrush}" />
-                    <StackPanel DockPanel.Dock="Left"
-                                Orientation="Horizontal"
-                                DataContext="{Binding Filters}"
-                                Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+                <controls:HeadlineText Title="{Binding Title}" FontSize="40" Visibility="{DynamicResource GM.ListHeadlineVisibility}" />
+                <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                <!-- Tab takes them in the order they read: the pickers, then the sync state, the mini window and
+                     Plan tomorrow. Where the list is narrow (a mini window, large text) the right-hand group
+                     moves under the pickers instead of running over them. -->
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <WrapPanel HorizontalAlignment="Left"
+                               DataContext="{Binding Filters}"
+                               Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
                         <ComboBox MinWidth="160"
                                   VerticalAlignment="Center"
                                   ItemsSource="{Binding AreaChoices}"
@@ -139,8 +111,57 @@
                                    Content="{DynamicResource Lists.ClearFilter}"
                                    Command="{Binding ClearCommand}"
                                    Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
+                    </WrapPanel>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Tag, ElementName=ListRoot}" Value="stacked">
+                                        <Setter Property="Grid.Row" Value="1" />
+                                        <Setter Property="Grid.Column" Value="0" />
+                                        <Setter Property="Grid.ColumnSpan" Value="2" />
+                                        <Setter Property="Margin" Value="0,8,0,0" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Margin="0,0,16,0"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding SyncText}"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <ui:Button Margin="0,0,8,0"
+                                   VerticalAlignment="Center"
+                                   Padding="8,6"
+                                   Appearance="Transparent"
+                                   Command="{Binding OpenMiniCommand}"
+                                   ToolTip="{DynamicResource Mini.OpenThis}"
+                                   AutomationProperties.Name="{DynamicResource Mini.OpenThis}">
+                            <ui:Button.Style>
+                                <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                    <Setter Property="Visibility" Value="{Binding HasMini, Converter={StaticResource BoolToVisibility}}" />
+                                    <Style.Triggers>
+                                        <!-- The mini window draws this same template; it does not offer to open itself. -->
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Tag}" Value="mini">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:Button.Style>
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="PictureInPictureEnter20" />
+                            </ui:Button.Icon>
+                        </ui:Button>
+                        <ui:Button VerticalAlignment="Center"
+                                   Appearance="Primary"
+                                   Content="{DynamicResource Plan.Title}"
+                                   Command="{Binding OpenPlanCommand}">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="CalendarEdit24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
             </StackPanel>
 
             <Grid Grid.Row="1">
@@ -225,8 +246,10 @@
                                                                 </ContextMenu.ItemContainerStyle>
                                                             </ContextMenu>
                                                         </Border.ContextMenu>
-                                                        <DockPanel VerticalAlignment="Center">
+                                                        <!-- Tab reads the row left to right: the done box, then Delete, then Open. -->
+                                                        <DockPanel VerticalAlignment="Center" KeyboardNavigation.TabNavigation="Local">
                                                             <ui:Button DockPanel.Dock="Right"
+                                                                       TabIndex="2"
                                                                        Appearance="Transparent"
                                                                        BorderThickness="0"
                                                                        Padding="6"
@@ -236,6 +259,7 @@
                                                                 <ui:SymbolIcon Symbol="Open24" />
                                                             </ui:Button>
                                                             <ui:Button DockPanel.Dock="Right"
+                                                                       TabIndex="1"
                                                                        Appearance="Transparent"
                                                                        BorderThickness="0"
                                                                        Padding="6"
@@ -261,6 +285,7 @@
                                                                        Foreground="{DynamicResource GM.AccentBrush}"
                                                                        Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                                                             <CheckBox VerticalAlignment="Center"
+                                                                      TabIndex="0"
                                                                       Foreground="{DynamicResource GM.TextBrush}"
                                                                       IsChecked="{Binding IsDone}"
                                                                       AutomationProperties.Name="{Binding Title}"

@@ -32,6 +32,13 @@ public partial class MainWindow
         Places = graph.Places;
         motionReduced = graph.Theme.MotionReduced;
         InitializeComponent();
+        // Everything under the title bar grows with Windows' text size; the title bar keeps the size of
+        // every other window's.
+        foreach (var part in ((System.Windows.Controls.Grid)Content).Children.OfType<FrameworkElement>().Where(part => System.Windows.Controls.Grid.GetRow(part) == 1))
+        {
+            graph.TextScale.Follow(part);
+        }
+
         settings = graph.Settings;
         plan = graph.Plan;
         graph.PageRequested += (_, page) => Open(page);

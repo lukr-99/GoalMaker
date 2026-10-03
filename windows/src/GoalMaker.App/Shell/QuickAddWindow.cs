@@ -6,6 +6,7 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
 using GoalMaker.App.Localization;
+using GoalMaker.App.Theming;
 using GoalMaker.App.ViewModels;
 
 namespace GoalMaker.App.Shell;
@@ -15,6 +16,8 @@ namespace GoalMaker.App.Shell;
 /// whatever app is in front, without bringing GoalMaker's window up. Enter saves the line and closes
 /// the box; Escape or a click elsewhere closes it. Either way the keyboard goes back where it was. With
 /// the quick chat switched on (M7), Enter sends the line instead and the box stays open for the answer.
+/// Tab goes round the switch, the line and the round button, and the box grows with Windows' text size
+/// (M6-05).
 /// </summary>
 public sealed class QuickAddWindow : Window
 {
@@ -22,11 +25,14 @@ public sealed class QuickAddWindow : Window
 
     // The clear space around the box where its shadow falls.
     private const double FrameMargin = 16;
+    private readonly TextScale textScale;
+    private readonly TextBlock hint;
     private IntPtr previous;
     private bool quitting;
 
-    public QuickAddWindow(ComposerViewModel composer, IStrings strings)
+    public QuickAddWindow(ComposerViewModel composer, IStrings strings, TextScale textScale)
     {
+        this.textScale = textScale;
         Title = strings.Get("QuickAdd.Title");
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
@@ -41,7 +47,7 @@ public sealed class QuickAddWindow : Window
         SetResourceReference(ForegroundProperty, "GM.TextBrush");
 
         // The hint says what Enter does now, and how to flip the quick chat's switch (M7).
-        var hint = new TextBlock { FontSize = 12, Margin = new Thickness(6, 0, 6, 10), TextWrapping = TextWrapping.Wrap };
+        hint = new TextBlock { FontSize = 12, Margin = new Thickness(6, 0, 6, 10), TextWrapping = TextWrapping.Wrap };
         hint.SetResourceReference(TextBlock.ForegroundProperty, "GM.TextMutedBrush");
         void ShowHint() => hint.Text = composer.IsChat
             ? strings.Get("QuickAdd.ChatHint")
@@ -78,7 +84,9 @@ public sealed class QuickAddWindow : Window
         frame.SetResourceReference(Border.BorderBrushProperty, "CardStrokeColorDefaultBrush");
         frame.SetResourceReference(TextElement.FontFamilyProperty, "GM.BodyFont");
         frame.SetResourceReference(TextElement.ForegroundProperty, "GM.TextBrush");
-        Content = new Grid { Children = { shadow, frame } };
+        var content = new Grid { Children = { shadow, frame } };
+        Content = content;
+        textScale.Follow(content);
 
         composer.Added += (_, _) => Dismiss();
         PreviewKeyDown += (_, e) =>
@@ -99,11 +107,22 @@ public sealed class QuickAddWindow : Window
         var front = ForegroundWindow.Current();
         previous = front == own ? previous : front;
         var area = SystemParameters.WorkArea;
+        Width = TextScale.Grow(BoxWidth + (2 * FrameMargin), textScale.Factor, area.Width);
         Left = area.Left + ((area.Width - Width) / 2);
         Top = area.Top + (area.Height / 5);
         Show();
         Activate();
-        Dispatcher.BeginInvoke(() => FirstTextBox(this)?.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+        Dispatcher.BeginInvoke(
+            () =>
+            {
+                if (FirstTextBox(this) is { } box)
+                {
+                    // A reader hears the hint with the line, since the keyboard lands there and not on it.
+                    System.Windows.Automation.AutomationProperties.SetHelpText(box, hint.Text);
+                    box.Focus();
+                }
+            },
+            System.Windows.Threading.DispatcherPriority.Input);
     }
 
     /// <summary>Lets the window close for good when GoalMaker quits; until then closing only hides it.</summary>

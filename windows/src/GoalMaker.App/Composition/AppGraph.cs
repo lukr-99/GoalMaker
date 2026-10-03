@@ -228,6 +228,7 @@ public sealed class AppGraph : IDisposable
         });
 
         Theme = new ThemeApplier(design, appResources, ContractResources.Logo());
+        TextScale = new TextScale(runOnUi);
         // A dev build against the local stack reads the code the stack caught (docs/sign-in.md).
         var mailbox = build.IsDevBuild ? DevSignIn.MailboxOf(backend.Url) : null;
         Func<string, CancellationToken, Task<string?>>? devCode =
@@ -479,6 +480,9 @@ public sealed class AppGraph : IDisposable
 
     public ThemeApplier Theme { get; }
 
+    /// <summary>Windows' text size, which the main window, the mini windows, the flyout and the quick-add box follow.</summary>
+    public TextScale TextScale { get; }
+
     /// <summary>The filter the three lists share (docs/lists.md).</summary>
     public ListFilterState Filter { get; } = new();
 
@@ -631,6 +635,7 @@ public sealed class AppGraph : IDisposable
         tick.Dispose();
         _ = changeFeed.DisposeAsync().AsTask();
         Theme.Dispose();
+        TextScale.Dispose();
         Sync.Dispose();
         replica.Dispose();
         signatureKey?.Dispose();

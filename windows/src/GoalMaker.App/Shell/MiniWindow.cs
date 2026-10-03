@@ -2,9 +2,11 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using GoalMaker.App.Localization;
 using GoalMaker.App.Startup;
+using GoalMaker.App.Theming;
 using GoalMaker.Core.Settings;
 using Wpf.Ui.Controls;
 
@@ -15,27 +17,47 @@ namespace GoalMaker.App.Shell;
 /// desktop while working, with the same view models as the main window, so ticking a task or checking
 /// a habit in here is the same act. It remembers where it was, how big it was and whether it was
 /// pinned on top, and closing it leaves the app running in the tray.
+/// <para>
+/// By keyboard (M6-05): it opens with the keyboard on Today's first task or the first habit's check-in
+/// (<see cref="MiniWindowContent.IsStart"/>), Tab goes round the title bar's buttons and the content in
+/// the order they read, Esc closes it once the composer has cleared its line or a picker has closed,
+/// and closing hands the keyboard back to the window that had it. It grows with Windows' text size
+/// (<see cref="TextScale"/>).
+/// </para>
 /// </summary>
 public sealed class MiniWindow : Window
 {
-    private readonly MiniPage page;
-    private readonly ISettingsStore settings;
-    private readonly Wpf.Ui.Controls.Button pin;
+    // The smallest a mini window gets at normal text: room for Today's header with its pickers, a task
+    // and the composer, so no control is ever below the edge.
+    private const double SmallestWidth = 260;
+    private const double SmallestHeight = 320;
 
-    public MiniWindow(MiniWindowContent content, IStrings strings, ISettingsStore settings, Action openApp)
+    private readonly MiniWindowContent content;
+    private readonly ISettingsStore settings;
+    private readonly IStrings strings;
+    private readonly TextScale textScale;
+    private readonly Wpf.Ui.Controls.Button pin;
+    private readonly ContentControl host;
+    private IntPtr previous;
+    private bool started;
+    private bool handBack;
+
+    public MiniWindow(MiniWindowContent content, IStrings strings, ISettingsStore settings, TextScale textScale, Action openApp)
     {
-        page = content.Page;
+        this.content = content;
         this.settings = settings;
-        Title = strings.Get($"Mini.{page}");
+        this.strings = strings;
+        this.textScale = textScale;
+        Title = strings.Get($"Mini.{content.Page}");
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.CanResizeWithGrip;
         ShowInTaskbar = false;
         // What the list template looks at to leave out what only the main window needs.
         Tag = "mini";
-        Width = DefaultSize.Width;
-        Height = DefaultSize.Height;
-        MinWidth = 260;
-        MinHeight = 220;
+        var area = SystemParameters.WorkArea;
+        Width = TextScale.Grow(DefaultSize.Width, textScale.Factor, area.Width);
+        Height = TextScale.Grow(DefaultSize.Height, textScale.Factor, area.Height);
+        FitSmallest();
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         SetResourceReference(BackgroundProperty, "GM.BackgroundBrush");
         SetResourceReference(FontFamilyProperty, "GM.BodyFont");
@@ -80,7 +102,7 @@ public sealed class MiniWindow : Window
         barFrame.SetResourceReference(Border.BackgroundProperty, "GM.SurfaceBrush");
         barFrame.SetResourceReference(Border.BorderBrushProperty, "GM.OutlineBrush");
 
-        var host = new ContentControl
+        host = new ContentControl
         {
             Content = content.ViewModel,
             Focusable = false,
@@ -96,9 +118,17 @@ public sealed class MiniWindow : Window
         layout.Children.Add(host);
         var frame = new Border { Child = layout, BorderThickness = new Thickness(1) };
         frame.SetResourceReference(Border.BorderBrushProperty, "GM.OutlineBrush");
+        // Room for the list in a small window (M6-05): the title bar already names it, so the page's big
+        // headline goes, and the page keeps a narrower margin.
+        frame.Resources["GM.ListHeadlineVisibility"] = Visibility.Collapsed;
+        frame.Resources["GM.PagePadding"] = new Thickness(12);
         Content = frame;
+        textScale.Follow(frame);
+        textScale.Changed += OnTextScaleChanged;
 
-        PreviewKeyDown += (_, e) =>
+        // On the way up, so the composer clears its line and an open picker closes first; the Esc after
+        // that closes the window.
+        KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape)
             {
@@ -106,18 +136,53 @@ public sealed class MiniWindow : Window
                 Close();
             }
         };
+        ContentRendered += (_, _) => StartKeyboard();
         Restore();
     }
 
     /// <summary>The size a mini window opens at the first time, before it has been moved or resized.</summary>
     public static Size DefaultSize { get; } = new(380, 560);
 
-    private string Remembered => page.ToString().ToLowerInvariant();
+    private string Remembered => content.Name;
+
+    /// <summary>
+    /// Puts the window up with the keyboard in it, or brings it back if it is already open. The window
+    /// that had the keyboard before gets it back when this one closes.
+    /// </summary>
+    public void Present()
+    {
+        var own = new WindowInteropHelper(this).Handle;
+        var front = ForegroundWindow.Current();
+        if (own == IntPtr.Zero || front != own)
+        {
+            previous = front;
+        }
+
+        Show();
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Activate();
+    }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         Save();
+        // Only a window that has the keyboard hands it on; one closed from elsewhere leaves it be.
+        handBack = IsActive;
         base.OnClosing(e);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        textScale.Changed -= OnTextScaleChanged;
+        base.OnClosed(e);
+        if (handBack)
+        {
+            ForegroundWindow.Restore(previous);
+        }
     }
 
     // The title bar's buttons all look the same: an icon, no background, and a name for a reader.
@@ -130,14 +195,47 @@ public sealed class MiniWindow : Window
         AutomationProperties.SetName(button, name);
     }
 
-    // Pinned: the window stays above other apps and the button shows it (spec, story 80).
+    // Pinned: the window stays above other apps, and the button shows it and says what it would do now.
     private void SetPinned(bool pinned)
     {
         Topmost = pinned;
         pin.Icon = new SymbolIcon { Symbol = pinned ? SymbolRegular.PinOff24 : SymbolRegular.Pin24, FontSize = 14 };
         pin.Appearance = pinned ? ControlAppearance.Secondary : ControlAppearance.Transparent;
+        var name = strings.Get(pinned ? "Mini.Unpin" : "Mini.Pin");
+        pin.ToolTip = name;
+        AutomationProperties.SetName(pin, name);
         Save();
     }
+
+    // The first time the window shows, the keyboard goes where the window is for; after that WPF puts
+    // it back where it was each time the window comes up again.
+    private void StartKeyboard()
+    {
+        if (started)
+        {
+            return;
+        }
+
+        started = true;
+        if (KeyboardStart.Find(host, content.IsStart) is { } start)
+        {
+            start.Focus();
+        }
+        else
+        {
+            host.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+        }
+    }
+
+    // Large text: the window gets no smaller than its smallest at normal text, grown with the text.
+    private void FitSmallest()
+    {
+        var area = SystemParameters.WorkArea;
+        MinWidth = TextScale.Grow(SmallestWidth, textScale.Factor, area.Width);
+        MinHeight = TextScale.Grow(SmallestHeight, textScale.Factor, area.Height);
+    }
+
+    private void OnTextScaleChanged(object? sender, EventArgs e) => FitSmallest();
 
     private void Restore()
     {

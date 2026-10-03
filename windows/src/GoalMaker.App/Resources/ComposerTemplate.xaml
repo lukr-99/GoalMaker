@@ -270,8 +270,19 @@
                         BorderThickness="1.5"
                         BorderBrush="Transparent"
                         Background="{DynamicResource GM.SurfaceVariantBrush}">
-                    <DockPanel>
-                        <ItemsControl DockPanel.Dock="Top"
+                    <!-- In reading order, which is also the order Tab takes: the chips' remove buttons, the
+                         switch, the line, then the round button. -->
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ItemsControl Grid.ColumnSpan="3"
                                       Margin="8,4,0,2"
                                       Focusable="False"
                                       ItemsSource="{Binding Chips}"
@@ -334,23 +345,10 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <!-- The plus (an empty line opens the full form) that turns into the send arrow as you type. -->
-                        <ui:Button x:Name="Action"
-                                   DockPanel.Dock="Right"
-                                   Width="34"
-                                   Height="34"
-                                   Padding="0"
-                                   VerticalAlignment="Center"
-                                   Appearance="Primary"
-                                   CornerRadius="17"
-                                   Command="{Binding PressCommand}"
-                                   ToolTip="{Binding ButtonName}"
-                                   AutomationProperties.Name="{Binding ButtonName}">
-                            <controls:AddSendGlyph IsSend="{Binding ShowsSend}" />
-                        </ui:Button>
                         <!-- The switch between quick-add and chat; it says why when chat can't be used. -->
                         <ToggleButton x:Name="Switch"
-                                      DockPanel.Dock="Left"
+                                      Grid.Row="1"
+                                      Grid.Column="0"
                                       Margin="0,0,2,0"
                                       VerticalAlignment="Center"
                                       Style="{StaticResource GM.ChatSwitch}"
@@ -362,6 +360,8 @@
                                       AutomationProperties.HelpText="{Binding Chat.SwitchHelp}"
                                       Visibility="{Binding HasChat, Converter={StaticResource BoolToVisibility}}" />
                         <ui:TextBox x:Name="Entry"
+                                    Grid.Row="1"
+                                    Grid.Column="1"
                                     Margin="2,0,6,0"
                                     VerticalAlignment="Center"
                                     BorderThickness="0"
@@ -370,6 +370,7 @@
                                     FontSize="14"
                                     PlaceholderText="{Binding Placeholder}"
                                     Text="{Binding Line, UpdateSourceTrigger=PropertyChanged}"
+                                    controls:EscapeRuns.Command="{Binding ClearCommand}"
                                     AutomationProperties.Name="{Binding Placeholder}">
                             <!-- No box or underline inside the pill: the pill is the text box. -->
                             <ui:TextBox.Resources>
@@ -382,10 +383,24 @@
                             </ui:TextBox.Resources>
                             <ui:TextBox.InputBindings>
                                 <KeyBinding Key="Enter" Command="{Binding SendCommand}" />
-                                <KeyBinding Key="Escape" Command="{Binding ClearCommand}" />
                             </ui:TextBox.InputBindings>
                         </ui:TextBox>
-                    </DockPanel>
+                        <!-- The plus (an empty line opens the full form) that turns into the send arrow as you type. -->
+                        <ui:Button x:Name="Action"
+                                   Grid.Row="1"
+                                   Grid.Column="2"
+                                   Width="34"
+                                   Height="34"
+                                   Padding="0"
+                                   VerticalAlignment="Center"
+                                   Appearance="Primary"
+                                   CornerRadius="17"
+                                   Command="{Binding PressCommand}"
+                                   ToolTip="{Binding ButtonName}"
+                                   AutomationProperties.Name="{Binding ButtonName}">
+                            <controls:AddSendGlyph IsSend="{Binding ShowsSend}" />
+                        </ui:Button>
+                    </Grid>
                 </Border>
             </Grid>
         </StackPanel>

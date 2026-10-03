@@ -1,3 +1,6 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using GoalMaker.App.Startup;
 using GoalMaker.App.ViewModels;
 
@@ -18,4 +21,14 @@ public sealed record MiniWindowContent(MiniPage Page, object ViewModel, string T
 
     /// <summary>The name this window's place and pin are kept under.</summary>
     public string Name => Page.ToString().ToLowerInvariant();
+
+    /// <summary>
+    /// Whether the keyboard starts on <paramref name="element"/> when the window opens (M6-05): a task's
+    /// done box on Today, a habit's check-in on Habits. With none of those, it starts in the composer.
+    /// </summary>
+    public bool IsStart(DependencyObject element) => Page switch
+    {
+        MiniPage.Habits => element is ButtonBase { DataContext: HabitRowViewModel },
+        _ => element is CheckBox { DataContext: TaskRowViewModel },
+    };
 }

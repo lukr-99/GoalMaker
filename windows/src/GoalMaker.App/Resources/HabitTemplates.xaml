@@ -384,18 +384,21 @@
             <Border CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.SurfaceBrush}" Opacity="0.45" />
             <Border CornerRadius="{DynamicResource GM.CardCorner}" BorderThickness="1" BorderBrush="{DynamicResource GM.OutlineBrush}" Opacity="0.35" />
             <StackPanel Margin="12">
+                <!-- Hide done, then Open: in a group, so Tab takes them in the order they read. -->
                 <DockPanel Margin="2,0,0,10">
-                    <ui:Button DockPanel.Dock="Right"
-                               Margin="4,0,0,0"
-                               Padding="6"
-                               Appearance="Transparent"
-                               Command="{Binding OpenHabitsCommand}"
-                               ToolTip="{DynamicResource Habits.Open}"
-                               AutomationProperties.Name="{DynamicResource Habits.Open}">
-                        <ui:SymbolIcon Symbol="Open24" />
-                    </ui:Button>
-                    <ToggleButton DockPanel.Dock="Right" Style="{StaticResource HideDoneChip}" Content="{Binding HideDoneText}" IsChecked="{Binding HideDoneHabits}" />
-                    <TextBlock VerticalAlignment="Center" Text="{Binding HabitsHeader}" FontSize="11"
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <ToggleButton Style="{StaticResource HideDoneChip}" Content="{Binding HideDoneText}" IsChecked="{Binding HideDoneHabits}" />
+                        <ui:Button Margin="4,0,0,0"
+                                   Padding="6"
+                                   VerticalAlignment="Center"
+                                   Appearance="Transparent"
+                                   Command="{Binding OpenHabitsCommand}"
+                                   ToolTip="{DynamicResource Habits.Open}"
+                                   AutomationProperties.Name="{DynamicResource Habits.Open}">
+                            <ui:SymbolIcon Symbol="Open24" />
+                        </ui:Button>
+                    </StackPanel>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding HabitsHeader}" FontSize="11" TextWrapping="Wrap"
                                FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.AccentBrush}" />
                 </DockPanel>
                 <ContentControl Focusable="False" ContentTemplate="{StaticResource HabitsAllDone}" Content="{Binding}"
