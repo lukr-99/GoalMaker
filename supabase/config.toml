@@ -242,14 +242,15 @@ otp_expiry = 600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# GoalMaker signs in with a 6-digit code, so both templates show {{ .Token }} instead of a link.
+# GoalMaker signs in with a 6-digit code, so both templates show {{ .Token }} instead of a link, and the
+# subject leads with it so a phone's notification shows the code and mail apps can offer to copy it.
 # The cloud project needs the same templates; see docs/setup/cloud-supabase.md.
 [auth.email.template.magic_link]
-subject = "Your GoalMaker sign-in code"
+subject = "{{ .Token }} is your GoalMaker code"
 content_path = "./supabase/templates/sign-in-code.html"
 
 [auth.email.template.confirmation]
-subject = "Your GoalMaker sign-in code"
+subject = "{{ .Token }} is your GoalMaker code"
 content_path = "./supabase/templates/sign-in-code.html"
 
 # Uncomment to customize notification email template
@@ -482,11 +483,11 @@ sender_name = "GoalMaker"
 
 # The sign-in code, the same template the local stack uses (supabase/templates/sign-in-code.html).
 [remotes.production.auth.email.template.magic_link]
-subject = "Your GoalMaker sign-in code"
+subject = "{{ .Token }} is your GoalMaker code"
 content_path = "./supabase/templates/sign-in-code.html"
 
 [remotes.production.auth.email.template.confirmation]
-subject = "Your GoalMaker sign-in code"
+subject = "{{ .Token }} is your GoalMaker code"
 content_path = "./supabase/templates/sign-in-code.html"
 
 [remotes.production.storage.analytics]

@@ -32,12 +32,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.autofill.ContentType
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.contentType
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.GoalMakerLogo
 import com.goalmaker.app.R
@@ -139,6 +144,10 @@ private fun EmailStep(state: SignInUiState, viewModel: SignInViewModel) {
 
 @Composable
 private fun CodeStep(state: SignInUiState, viewModel: SignInViewModel) {
+    // Back from the mail app with the code copied from its notification, the code goes in by itself.
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.takeCopiedCode(clipboard.getText()?.text) }
     Text(
         text = stringResource(R.string.sign_in_code_sent, state.email.trim()),
         style = MaterialTheme.typography.bodyLarge,
@@ -152,10 +161,14 @@ private fun CodeStep(state: SignInUiState, viewModel: SignInViewModel) {
         textStyle = MaterialTheme.typography.headlineMedium,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { viewModel.verifyCode() }),
-        modifier = Modifier.fillMaxWidth(),
+        // Autofill services that read codes from messages can offer this one.
+        modifier = Modifier.fillMaxWidth().semantics { contentType = ContentType.SmsOtpCode },
     )
     PrimaryAction(label = stringResource(R.string.sign_in_verify), busy = state.busy, onClick = viewModel::verifyCode)
     Column {
+        TextButton(onClick = { viewModel.pasteCode(clipboard.getText()?.text) }, enabled = !state.busy) {
+            Text(stringResource(R.string.sign_in_paste_code))
+        }
         TextButton(onClick = viewModel::sendCode, enabled = !state.busy) {
             Text(stringResource(R.string.sign_in_resend))
         }
@@ -191,6 +204,7 @@ private fun errorText(error: SignInError): String = when (error) {
     SignInError.INVALID_EMAIL -> stringResource(R.string.sign_in_error_email)
     SignInError.INVALID_CODE -> stringResource(R.string.sign_in_error_code)
     SignInError.WRONG_CODE -> stringResource(R.string.sign_in_error_wrong_code)
+    SignInError.NO_CODE_COPIED -> stringResource(R.string.sign_in_error_no_code_copied)
     SignInError.TOO_MANY_REQUESTS -> stringResource(R.string.sign_in_error_rate)
     SignInError.OFFLINE -> stringResource(R.string.sign_in_error_offline)
     // The server's own words say nothing anyone can act on (docs/problems.md).

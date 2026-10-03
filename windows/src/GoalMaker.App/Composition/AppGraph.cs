@@ -235,7 +235,7 @@ public sealed class AppGraph : IDisposable
         var mailbox = build.IsDevBuild ? DevSignIn.MailboxOf(backend.Url) : null;
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
-        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode);
+        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode, ReadClipboardText);
         Shell = new ShellViewModel(Auth, SignIn, Problems, Updates, runOnUi);
         Places = new PlacesViewModel(Settings, strings);
 
@@ -1020,6 +1020,19 @@ public sealed class AppGraph : IDisposable
     }
 
     // The Reviews page opens one period's review on the review page.
+    // The clipboard's text for the sign-in code, or null; another app holding the clipboard open is no error.
+    private static string? ReadClipboardText()
+    {
+        try
+        {
+            return System.Windows.Clipboard.ContainsText() ? System.Windows.Clipboard.GetText() : null;
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            return null;
+        }
+    }
+
     private void OpenReview(string kind, DateOnly periodStart)
     {
         Review.Open(kind, periodStart);

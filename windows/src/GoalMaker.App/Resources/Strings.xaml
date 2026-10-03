@@ -45,12 +45,14 @@
     <sys:String x:Key="SignIn.CodeSent">We sent a code to {0}. It works for 10 minutes.</sys:String>
     <sys:String x:Key="SignIn.Verify">Sign in</sys:String>
     <sys:String x:Key="SignIn.Resend">Send a new code</sys:String>
+    <sys:String x:Key="SignIn.PasteCode">Paste the code</sys:String>
     <sys:String x:Key="SignIn.DevAccount">Sign in as {0}</sys:String>
     <sys:String x:Key="SignIn.FillCode">Fill it in from the local mailbox</sys:String>
     <sys:String x:Key="SignIn.UseAnotherEmail">Use another email</sys:String>
     <sys:String x:Key="SignIn.SessionEnded">Your session ended. Sign in with the same email and your waiting changes will sync.</sys:String>
     <sys:String x:Key="SignIn.Error.InvalidEmail">Enter a valid email address.</sys:String>
     <sys:String x:Key="SignIn.Error.InvalidCode">Enter the 6 digits from the email.</sys:String>
+    <sys:String x:Key="SignIn.Error.NoCodeCopied">No code was copied. Copy the six digits from the email, or type them.</sys:String>
     <sys:String x:Key="SignIn.Error.WrongCode">That code is wrong or has expired. Try again or send a new one.</sys:String>
     <sys:String x:Key="SignIn.Error.TooManyRequests">Too many attempts. Wait a minute, then try again.</sys:String>
     <sys:String x:Key="SignIn.Error.Offline">No connection to GoalMaker's server. Check your internet and try again.</sys:String>

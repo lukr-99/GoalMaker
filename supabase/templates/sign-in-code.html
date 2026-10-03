@@ -1,4 +1,56 @@
-<h2>Your GoalMaker sign-in code</h2>
-<p>Enter this code in GoalMaker to sign in:</p>
-<p style="font-size: 32px; font-weight: 700; letter-spacing: 8px;">{{ .Token }}</p>
-<p>The code works for 10 minutes. If you didn't ask for it, ignore this email.</p>
+<!DOCTYPE html>
+<!--
+  GoalMaker's sign-in code email (docs/sign-in.md), from CodePrint's one-time code template
+  (templates/email/one-time-code.html). Supabase Auth fills {{ .Token }} and {{ .Email }}; the subject in
+  supabase/config.toml leads with the code too, so a phone's notification shows it and mail apps that
+  read codes offer to copy it. Tables and inline styles, because mail clients ignore most CSS.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>{{ .Token }} is your GoalMaker code</title>
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .page { background: #111310 !important; }
+      .card { background: #1B1D19 !important; }
+      .text { color: #F5F5F2 !important; }
+      .muted { color: #A4A79D !important; }
+      .code { background: #D6FF3A !important; color: #0A0A0A !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#F2F2EF;">
+  <!-- The line a notification and an inbox preview show first: the code, before anything else. -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your GoalMaker sign-in code is {{ .Token }}. It works for 10 minutes.</div>
+  <table role="presentation" class="page" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F2F2EF" style="background:#F2F2EF;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" class="card" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#FFFFFF" style="max-width:480px;background:#FFFFFF;border-radius:12px;">
+          <tr>
+            <td style="padding:28px 28px 8px 28px;font-family:Archivo,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              <div style="display:inline-block;background:#0A0A0A;color:#D6FF3A;font-weight:900;font-style:italic;font-size:18px;line-height:36px;width:36px;text-align:center;border-radius:8px;">G</div>
+              <h1 class="text" style="margin:20px 0 8px 0;font-size:22px;line-height:28px;font-weight:800;color:#0A0A0A;">Your sign-in code</h1>
+              <p class="muted" style="margin:0;font-size:15px;line-height:22px;color:#5A5A56;">Type it in GoalMaker, or copy it: GoalMaker takes a copied code by itself when you go back to it.</p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:24px 28px;">
+              <!-- One run of digits, so tapping it selects the whole code. -->
+              <div class="code" style="display:inline-block;background:#0A0A0A;color:#D6FF3A;border-radius:8px;padding:14px 22px;font-family:'Cascadia Mono',Consolas,'Roboto Mono',Menlo,monospace;font-size:36px;line-height:40px;font-weight:700;letter-spacing:10px;user-select:all;-webkit-user-select:all;">{{ .Token }}</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 28px 28px 28px;font-family:Archivo,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+              <p class="muted" style="margin:0 0 12px 0;font-size:14px;line-height:20px;color:#5A5A56;">The code works for 10 minutes and only once.</p>
+              <p class="muted" style="margin:0;font-size:13px;line-height:19px;color:#5A5A56;">Someone asked to sign in to GoalMaker as {{ .Email }}. If it wasn't you, ignore this email: nobody gets in without the code.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

@@ -9,6 +9,23 @@ the code, and the app is yours on that device until you sign out.
 1. The app asks Supabase Auth for a code for the address. A first sign-in creates the account.
 2. The code goes in. Six digits verify themselves, so there is nothing to press.
 
+## The code email
+
+The email ([supabase/templates/sign-in-code.html](../supabase/templates/sign-in-code.html), from
+CodePrint's one-time code template) puts the code where it is seen first: its subject is "482913 is
+your GoalMaker code", so the phone's notification shows the code without opening the mail and mail
+apps that look for codes (Gmail's "Copy code") offer to copy it, and its hidden first line repeats it
+for inbox previews. In the email the code is one run of digits that one tap selects.
+
+A copied code goes in by itself: when the sign-in screen comes back to the front on the code step
+with nothing typed yet, both apps read the clipboard and fill the code if the text holds exactly one
+(the Android phone says it pasted, as Android does for any app). **Paste the code** does the same on
+demand and says so when nothing was copied. What counts as the code is the `find` group of
+[`contracts/vectors/sign-in-code.json`](../contracts/vectors/sign-in-code.json): one standalone
+six-digit run, split once as 123 456 at most, never part of a longer number, a date, a time or a phone
+number, and nothing when two different codes are there. On Android the code box also says it takes a
+one-time code, so autofill services that read codes can offer it.
+
 A session is kept on the device and refreshed in the background. A refresh that fails because the
 device is offline changes nothing: the app stays signed in and tries again later. A refresh the
 server refuses (the token is gone, the project was reset), or a 401 that a fresh session doesn't

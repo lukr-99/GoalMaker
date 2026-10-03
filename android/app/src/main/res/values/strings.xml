@@ -16,9 +16,11 @@
     <string name="sign_in_fill_code">Fill it in from the local mailbox</string>
     <string name="sign_in_use_other_email">Use another email</string>
     <string name="sign_in_resend">Send a new code</string>
+    <string name="sign_in_paste_code">Paste the code</string>
     <string name="sign_in_error_email">Enter a valid email address.</string>
     <string name="sign_in_error_code">Enter the 6 digits from the email.</string>
     <string name="sign_in_error_wrong_code">That code is wrong or has expired. Try again or send a new one.</string>
+    <string name="sign_in_error_no_code_copied">No code was copied. Copy the six digits from the email, or type them.</string>
     <string name="sign_in_error_rate">Too many attempts. Wait a minute, then try again.</string>
     <string name="sign_in_error_offline">No connection to GoalMaker\'s server. Check your internet and try again.</string>
     <string name="startup_failed_title">GoalMaker cannot start</string>
