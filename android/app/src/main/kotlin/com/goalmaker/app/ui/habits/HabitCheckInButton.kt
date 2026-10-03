@@ -8,7 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Undo
@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -82,7 +83,7 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .size(width = 52.dp, height = 48.dp)
+            .sizeIn(minWidth = 52.dp, minHeight = 48.dp)
             .alpha(if (row.canCheckIn) 1f else 0.5f)
             .clip(shape)
             .background(fill, shape)
@@ -117,8 +118,14 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
         when {
             row.skipped -> Icon(Icons.AutoMirrored.Outlined.Undo, contentDescription = null, tint = colors.textMuted)
             row.failed -> Icon(Icons.Outlined.Close, contentDescription = null, tint = colors.danger)
-            !checkMeasure && habit.measure == HabitRules.COUNT ->
-                Text("+1", style = AppTheme.type.number.merge(MaterialTheme.typography.titleSmall), fontWeight = FontWeight.Bold, color = content)
+            // The button's name already says "Add one", so the mark isn't read again.
+            !checkMeasure && habit.measure == HabitRules.COUNT -> Text(
+                "+1",
+                style = AppTheme.type.number.merge(MaterialTheme.typography.titleSmall),
+                fontWeight = FontWeight.Bold,
+                color = content,
+                modifier = Modifier.clearAndSetSemantics {},
+            )
             on && checkMeasure -> Icon(Icons.Outlined.Check, contentDescription = null, tint = content)
             row.isLimit && checkMeasure && row.value >= 1.0 -> Icon(Icons.Outlined.Check, contentDescription = null, tint = colors.danger)
             on -> Icon(Icons.Outlined.Check, contentDescription = null, tint = content)

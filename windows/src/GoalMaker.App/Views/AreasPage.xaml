@@ -89,9 +89,9 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <DockPanel Margin="0,8,0,0">
+                    <DockPanel Margin="0,8,0,0" KeyboardNavigation.TabNavigation="Local">
                         <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Areas.AddArea}" Command="{Binding AddAreaCommand}" />
-                        <ui:TextBox PlaceholderText="{DynamicResource Areas.NewArea}"
+                        <ui:TextBox TabIndex="0" PlaceholderText="{DynamicResource Areas.NewArea}"
                                     MaxLength="60"
                                     Text="{Binding NewAreaName, UpdateSourceTrigger=PropertyChanged}"
                                     AutomationProperties.Name="{DynamicResource Areas.NewArea}">
@@ -110,12 +110,12 @@
                     <ItemsControl ItemsSource="{Binding ArchivedAreas}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:ArchivedAreaRowViewModel}">
-                                <DockPanel Margin="0,0,0,8">
+                                <DockPanel Margin="0,0,0,8" KeyboardNavigation.TabNavigation="Local">
                                     <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
                                                ToolTip="{DynamicResource Areas.DeleteArea}" AutomationProperties.Name="{DynamicResource Areas.DeleteArea}">
                                         <ui:SymbolIcon Symbol="Delete24" />
                                     </ui:Button>
-                                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Areas.Restore}" Command="{Binding RestoreCommand}" />
+                                    <ui:Button DockPanel.Dock="Right" TabIndex="0" Margin="8,0,0,0" Content="{DynamicResource Areas.Restore}" Command="{Binding RestoreCommand}" />
                                     <Ellipse Width="12" Height="12" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
                                     <TextBlock VerticalAlignment="Center" Text="{Binding Label}" Foreground="{DynamicResource GM.TextMutedBrush}" />
                                 </DockPanel>
@@ -135,20 +135,20 @@
                     <ItemsControl ItemsSource="{Binding Tags}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:TagRowViewModel}">
-                                <DockPanel Margin="0,0,0,8">
+                                <DockPanel Margin="0,0,0,8" KeyboardNavigation.TabNavigation="Local">
                                     <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
                                                ToolTip="{DynamicResource Areas.DeleteTag}" AutomationProperties.Name="{DynamicResource Areas.DeleteTag}">
                                         <ui:SymbolIcon Symbol="Delete24" />
                                     </ui:Button>
                                     <TextBlock DockPanel.Dock="Left" Margin="0,0,4,0" VerticalAlignment="Center" Text="#" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                                    <TextBox MaxLength="40" Text="{Binding Name}" AutomationProperties.Name="{DynamicResource Areas.Name}" />
+                                    <TextBox TabIndex="0" MaxLength="40" Text="{Binding Name}" AutomationProperties.Name="{DynamicResource Areas.Name}" />
                                 </DockPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <DockPanel Margin="0,8,0,0">
+                    <DockPanel Margin="0,8,0,0" KeyboardNavigation.TabNavigation="Local">
                         <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Areas.AddTag}" Command="{Binding AddTagCommand}" />
-                        <ui:TextBox PlaceholderText="{DynamicResource Areas.NewTag}"
+                        <ui:TextBox TabIndex="0" PlaceholderText="{DynamicResource Areas.NewTag}"
                                     MaxLength="41"
                                     Text="{Binding NewTagName, UpdateSourceTrigger=PropertyChanged}"
                                     AutomationProperties.Name="{DynamicResource Areas.NewTag}">

@@ -57,16 +57,18 @@ public partial class App : Application
         window = new MainWindow(graph);
         graph.Theme.Attach(window);
         graph.Theme.Apply(graph.Settings.Appearance);
-        quickAdd = new QuickAddWindow(graph.QuickAdd, strings);
+        quickAdd = new QuickAddWindow(graph.QuickAdd, strings, graph.TextScale);
         var menu = TrayMenu.Build(
             strings,
             () => FromTray(ShowMainWindow),
             SummonQuickAdd,
             page => FromTray(() => ShowMini(page)),
             Quit);
+        var flyout = new TrayFlyout(graph.TrayFlyout);
+        graph.TextScale.Follow(flyout);
         tray = new TrayIcon(
             build.IsDevBuild ? strings.Get("App.Name") + " (dev)" : strings.Get("App.Name"),
-            new TrayFlyout(graph.TrayFlyout),
+            flyout,
             graph.TrayFlyout.Refresh,
             ShowMainWindow,
             menu);
@@ -145,18 +147,12 @@ public partial class App : Application
         if (!miniWindows.TryGetValue(page, out var mini))
         {
             var content = MiniWindowContent.For(page, graph.Today, graph.HabitsPage);
-            mini = new MiniWindow(content, new ResourceStrings(this), graph.Settings, ShowMainWindow);
+            mini = new MiniWindow(content, new ResourceStrings(this), graph.Settings, graph.TextScale, ShowMainWindow);
             mini.Closed += (_, _) => miniWindows.Remove(page);
             miniWindows[page] = mini;
         }
 
-        mini.Show();
-        if (mini.WindowState == WindowState.Minimized)
-        {
-            mini.WindowState = WindowState.Normal;
-        }
-
-        mini.Activate();
+        mini.Present();
     }
 
     private void SummonQuickAdd()

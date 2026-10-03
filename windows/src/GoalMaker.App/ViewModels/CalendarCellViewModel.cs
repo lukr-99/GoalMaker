@@ -10,9 +10,16 @@ public sealed class CalendarCellViewModel(
     bool isToday,
     bool inPeriod,
     bool isSelected,
-    Action open)
+    Action open,
+    string? automationName = null)
 {
     public DateOnly Day { get; } = day;
+
+    /// <summary>
+    /// The cell as a screen reader says it (M6-05): the date, whether it is today or open, and what is
+    /// on it, since the number and the bar alone say little.
+    /// </summary>
+    public string AutomationName { get; } = automationName ?? day.ToString("D", System.Globalization.CultureInfo.CurrentCulture);
 
     /// <summary>The day of the month, which is all a cell has room for.</summary>
     public string Label { get; } = label;

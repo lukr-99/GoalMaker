@@ -111,7 +111,7 @@
                        AutomationProperties.LiveSetting="Polite"
                        Visibility="{Binding HasAdded, Converter={StaticResource BoolToVisibility}}" />
 
-            <DockPanel Margin="0,16,0,0">
+            <DockPanel Margin="0,16,0,0" KeyboardNavigation.TabNavigation="Local">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <ui:Button Command="{Binding CancelCommand}"
                                Content="{DynamicResource ProjectItem.Cancel}"
@@ -122,7 +122,8 @@
                                Content="{DynamicResource ProjectItem.Add}"
                                AutomationProperties.Name="{DynamicResource ProjectItem.Add}" />
                 </StackPanel>
-                <CheckBox VerticalAlignment="Center"
+                <CheckBox TabIndex="0"
+                          VerticalAlignment="Center"
                           IsChecked="{Binding AddAnother}"
                           Content="{DynamicResource ProjectItem.AddAnother}"
                           AutomationProperties.Name="{DynamicResource ProjectItem.AddAnother}" />

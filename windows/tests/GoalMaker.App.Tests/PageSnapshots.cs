@@ -147,7 +147,7 @@ public sealed class PageSnapshots
         var composer = new ComposerViewModel(
             planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, _ => null, action => action());
         composer.NewTaskTitle = "Look up train times tomorrow 9:00 #travel";
-        var box = new Shell.QuickAddWindow(composer, strings);
+        var box = new Shell.QuickAddWindow(composer, strings, new TextScale(action => action(), readSystem: false));
         var content = (FrameworkElement)box.Content;
         box.Content = null;
         Save(content, folder, "quick-add", new Size(592, 190));
@@ -173,7 +173,7 @@ public sealed class PageSnapshots
         _ = chat.SendAsync("move buy milk to Friday");
 
         var composer = Composer(_ => null);
-        var box = new Shell.QuickAddWindow(composer, strings);
+        var box = new Shell.QuickAddWindow(composer, strings, new TextScale(action => action(), readSystem: false));
         var content = (FrameworkElement)box.Content;
         box.Content = null;
         Save(content, folder, "quick-chat", new Size(592, 460));
@@ -191,7 +191,7 @@ public sealed class PageSnapshots
             {
                 theme.Apply(Appearance.Default with { ThemeId = id, Mode = mode });
                 var look = $"{id}-{mode}".ToLowerInvariant();
-                var themed = new Shell.QuickAddWindow(Composer(_ => null), strings);
+                var themed = new Shell.QuickAddWindow(Composer(_ => null), strings, new TextScale(action => action(), readSystem: false));
                 var themedContent = (FrameworkElement)themed.Content;
                 themed.Content = null;
                 Save(themedContent, folder, $"quick-chat-{look}", new Size(592, 460));

@@ -30,9 +30,9 @@
                     <DataTemplate DataType="{x:Type vm:ArchiveRowViewModel}">
                         <Border Margin="{DynamicResource GM.RowGap}" Padding="12,6" MinHeight="{DynamicResource GM.RowMinHeight}"
                                 CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
-                            <DockPanel VerticalAlignment="Center">
+                            <DockPanel VerticalAlignment="Center" KeyboardNavigation.TabNavigation="Local">
                                 <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Archive.Reopen}" Command="{Binding ReopenCommand}" />
-                                <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding OpenCommand}"
+                                <ui:Button DockPanel.Dock="Right" TabIndex="0" Padding="6" Appearance="Transparent" Command="{Binding OpenCommand}"
                                            ToolTip="{DynamicResource Lists.OpenTask}" AutomationProperties.Name="{DynamicResource Lists.OpenTask}">
                                     <ui:SymbolIcon Symbol="Open24" />
                                 </ui:Button>

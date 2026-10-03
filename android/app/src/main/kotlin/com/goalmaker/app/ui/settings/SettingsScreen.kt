@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -322,7 +321,7 @@ private fun SectionChips(sections: List<SettingsSection>, current: SettingsSecti
                     borderColor = AppTheme.colors.outline,
                     selectedBorderColor = AppTheme.colors.primary,
                 ),
-                modifier = Modifier.height(32.dp).semantics { contentDescription = jumpTo },
+                modifier = Modifier.semantics { contentDescription = jumpTo },
             )
         }
     }

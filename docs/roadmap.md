@@ -126,8 +126,10 @@ Issues: `.scratch/m8-letter-tally-wants/`.
 From M6's close-out (2026-09-28):
 
 - Postponing an update, and refusing a bad manifest shown on a real device
-- The rest of the accessibility pass: keyboard reach on Windows (mini windows, tray flyout,
-  quick-add), Android focus order and the composer's chips, both apps at the largest text size
+- The rest of the accessibility pass (done 2026-10-03): keyboard reach on Windows (mini windows,
+  tray flyout, quick-add), Android focus order and the composer's chips, both apps at the largest
+  text size. The per-screen checklist, with what is still open, is
+  [docs/design/accessibility.md](design/accessibility.md)
 - Hardening: a full disk, sync under pressure (a device off for weeks, two devices on one row, the
   purge crossing a pull)
 - Habit reminders with check-in from the notification

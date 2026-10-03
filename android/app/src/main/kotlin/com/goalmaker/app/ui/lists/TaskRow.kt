@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,7 +65,8 @@ import kotlinx.coroutines.launch
  * [project]'s chip, repeat, top priority, a waiting reminder). Checking it plays the check, a haptic
  * and the optional tick, then the row leaves. Swiping it away deletes it; both offer undo. A tap
  * opens the task's details, a long press its reminders (docs/reminders.md), the chip the project's
- * board ([onOpenProject]). TalkBack gets delete, remind and open the board as actions.
+ * board ([onOpenProject]). TalkBack reads the row as one item with delete, remind and open the board
+ * as its actions, and the checkbox, named by the title, as its own control (M6-05).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -98,6 +100,7 @@ fun TaskRow(
     val deleteLabel = stringResource(R.string.lists_delete, task.title)
     val remindLabel = stringResource(R.string.reminder_add)
     val openProjectLabel = project?.let { stringResource(R.string.lists_open_project, it.name) }
+    val doneLabel = stringResource(R.string.lists_done_box, task.title)
     SwipeToDismissBox(
         state = dismiss,
         enableDismissFromStartToEnd = false,
@@ -108,21 +111,23 @@ fun TaskRow(
         },
         // Only while a swipe is under way: the row also lifts off when it grows into the task's details.
         backgroundContent = { if (dismiss.dismissDirection == SwipeToDismissBoxValue.EndToStart) DeleteBackground() },
-        modifier = modifier.semantics {
-            customActions = listOfNotNull(
-                CustomAccessibilityAction(deleteLabel) { onDelete(); true },
-                CustomAccessibilityAction(remindLabel) { onRemind(); true },
-                if (openProjectLabel != null && onOpenProject != null) CustomAccessibilityAction(openProjectLabel) { onOpenProject(); true } else null,
-            )
-        },
+        modifier = modifier,
     ) {
+        // The tap target is the item a screen reader stops on, so the actions live there too.
         Surface(
             color = AppTheme.colors.surface,
             shape = AppTheme.shapes.row,
             modifier = Modifier
                 .sharedTaskBounds(task.id, AppTheme.shapes.row, details = false)
                 .fillMaxWidth()
-                .combinedClickable(onLongClick = onRemind, onClick = onOpen),
+                .combinedClickable(onLongClick = onRemind, onClick = onOpen)
+                .semantics {
+                    customActions = listOfNotNull(
+                        CustomAccessibilityAction(deleteLabel) { onDelete(); true },
+                        CustomAccessibilityAction(remindLabel) { onRemind(); true },
+                        if (openProjectLabel != null && onOpenProject != null) CustomAccessibilityAction(openProjectLabel) { onOpenProject(); true } else null,
+                    )
+                },
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -139,13 +144,13 @@ fun TaskRow(
                             if (sound) tick()
                         }
                     },
+                    modifier = Modifier.semantics { contentDescription = doneLabel },
                 )
-                // The title and what is under it are one thing to read, not three (M6-05).
+                // The row's tap merges the title, what is under it and the time into one thing to read (M6-05).
                 Column(
                     Modifier
                         .weight(1f)
-                        .padding(vertical = 10.dp)
-                        .semantics(mergeDescendants = true) {},
+                        .padding(vertical = 10.dp),
                 ) {
                     Text(task.title, style = MaterialTheme.typography.bodyLarge, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     TaskDetails(task, area, showDay, project = project, onOpenProject = onOpenProject)
@@ -153,7 +158,7 @@ fun TaskRow(
                 if (reminded) {
                     Icon(
                         Icons.Outlined.Notifications,
-                        contentDescription = remindLabel,
+                        contentDescription = stringResource(R.string.lists_reminded),
                         tint = AppTheme.colors.textMuted,
                         modifier = Modifier.size(16.dp),
                     )

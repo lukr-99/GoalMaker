@@ -120,6 +120,43 @@ public sealed partial class CalendarViewModel : ObservableObject
     /// <summary>What the day the owner picked holds.</summary>
     public ObservableCollection<CalendarEntryViewModel> DayEntries { get; } = [];
 
+    /// <summary>
+    /// What a reader says for a day's cell: "Saturday, 3 October 2026, today, 2 planned, 1 due", or that
+    /// nothing is on it. The same parts, in the same order, as the phone's cell.
+    /// </summary>
+    private string CellName(CalendarDay day, bool isToday, bool isOpen)
+    {
+        var parts = new List<string> { day.Day.ToString("D", CultureInfo.CurrentCulture) };
+        if (isToday)
+        {
+            parts.Add(strings.Get("Calendar.CellToday"));
+        }
+
+        if (isOpen)
+        {
+            parts.Add(strings.Get("Calendar.CellOpen"));
+        }
+
+        void Count(int count, string key)
+        {
+            if (count > 0)
+            {
+                parts.Add(count == 1 ? strings.Get(key + "One") : strings.Get(key, count));
+            }
+        }
+
+        Count(day.Planned.Count, "Calendar.CellPlanned");
+        Count(day.Deadlines.Count, "Calendar.CellDue");
+        Count(day.Repeats.Count, "Calendar.CellRepeats");
+        Count(day.Reminders, "Calendar.CellReminders");
+        if (day.Empty)
+        {
+            parts.Add(strings.Get("Calendar.CellEmpty"));
+        }
+
+        return string.Join(", ", parts);
+    }
+
     public void Refresh()
     {
         var today = Today();
@@ -145,7 +182,8 @@ public sealed partial class CalendarViewModel : ObservableObject
                 date == today,
                 Kind == CalendarRules.Week || date.Month == shown.Month,
                 date == selected,
-                () => Open(date)));
+                () => Open(date),
+                CellName(day, date == today, date == selected)));
         }
 
         Period = Kind == CalendarRules.Month

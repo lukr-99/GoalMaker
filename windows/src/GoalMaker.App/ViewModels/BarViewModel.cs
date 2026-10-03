@@ -19,7 +19,7 @@ public abstract partial class BarViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsPlus), nameof(ShowsSend), nameof(ButtonName))]
-    [NotifyCanExecuteChangedFor(nameof(SendCommand), nameof(PressCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendCommand), nameof(PressCommand), nameof(ClearCommand))]
     private string line = string.Empty;
 
     [ObservableProperty]
@@ -179,8 +179,13 @@ public abstract partial class BarViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(HasForm))]
     private void OpenForm() => OpenFormWith(IsChat ? string.Empty : Line.Trim());
 
-    /// <summary>Esc: an empty line.</summary>
-    [RelayCommand]
+    private bool HasLine() => Line.Length > 0;
+
+    /// <summary>
+    /// Esc: an empty line. On a line that is already empty there is nothing to do, and Esc is left to
+    /// the window (Controls/EscapeRuns), so a second Esc closes a mini window (M6-05).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasLine))]
     private void Clear() => Line = string.Empty;
 
     /// <summary>For a form opened with the line: once it saves, the line is done with.</summary>

@@ -109,8 +109,10 @@ the arrow. The bar's chips on Wants, Habits and Goals only show what will be sav
 remove button. Opened on top of Today rather than as a tab, Habits and Goals keep their own quick
 chat thread while they are open.
 
-On Windows Enter adds (or sends to the chat), Esc clears, and Ctrl+N opens the full form, filled
-in with what the line says so far. The plus opens the new task form over the list, the want panel at
+On Windows Enter adds (or sends to the chat), Esc clears (on a line that is already empty it is left
+to the window, so a second Esc closes a mini window), and Ctrl+N opens the full form, filled
+in with what the line says so far. Tab takes the chips' remove buttons, the chat switch, the line and
+the round button in that order, as they show. The plus opens the new task form over the list, the want panel at
 the top of Wants, or the habit or goal editor over the page. The quick-add box and Plan tomorrow keep their send-only bar.
 
 ## Adding on Wants, Habits and Goals

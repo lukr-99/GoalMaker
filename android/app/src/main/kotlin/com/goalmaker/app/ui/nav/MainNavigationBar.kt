@@ -43,6 +43,7 @@ fun MainNavigationBar(pins: List<String>, current: String, placesCount: Int, onS
                 colors = colors,
             )
         }
+        val title = stringResource(R.string.places_title)
         val waiting = if (placesCount > 0) pluralStringResource(R.plurals.places_waiting, placesCount, placesCount) else null
         NavigationBarItem(
             selected = onHub,
@@ -51,18 +52,21 @@ fun MainNavigationBar(pins: List<String>, current: String, placesCount: Int, onS
                 BadgedBox(
                     badge = {
                         if (waiting != null) {
-                            Badge(
-                                containerColor = AppTheme.colors.accent,
-                                contentColor = AppTheme.colors.onAccent,
-                                modifier = Modifier.semantics { contentDescription = waiting },
-                            ) { Text(placesCount.toString()) }
+                            Badge(containerColor = AppTheme.colors.accent, contentColor = AppTheme.colors.onAccent) { Text(placesCount.toString()) }
                         }
                     },
                 ) {
                     Icon(Icons.Outlined.Apps, contentDescription = null)
                 }
             },
-            label = { Text(stringResource(R.string.places_title), maxLines = 1) },
+            // The bar reads only an item's label, never its icon, so the count is said with the label.
+            label = {
+                Text(
+                    title,
+                    maxLines = 1,
+                    modifier = Modifier.semantics { if (waiting != null) contentDescription = "$title, $waiting" },
+                )
+            },
             colors = colors,
         )
     }

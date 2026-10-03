@@ -51,7 +51,7 @@
                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        AllowDrop="True" DragOver="OnCellDragOver" Drop="OnCellDrop"
-                       AutomationProperties.Name="{Binding Day}">
+                       AutomationProperties.Name="{Binding AutomationName}">
                 <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center">
@@ -120,7 +120,7 @@
 
         <StackPanel Grid.Column="0" Margin="0,0,16,0">
             <controls:HeadlineText Title="{DynamicResource Calendar.Title}" FontSize="32" />
-            <DockPanel Margin="0,8,0,12">
+            <DockPanel Margin="0,8,0,12" KeyboardNavigation.TabNavigation="Local">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <ui:Button Padding="8,4" Appearance="Transparent" Command="{Binding BackCommand}"
                                ToolTip="{DynamicResource Calendar.Back}" AutomationProperties.Name="{DynamicResource Calendar.Back}">
@@ -136,9 +136,9 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Period}" FontSize="16" FontFamily="{DynamicResource GM.BodyStrongFont}"
                                VerticalAlignment="Center" />
-                    <ui:Button Style="{StaticResource WeekButton}" Command="{Binding ShowCommand}"
+                    <ui:Button Style="{StaticResource WeekButton}" TabIndex="0" Command="{Binding ShowCommand}"
                                CommandParameter="week" Content="{DynamicResource Calendar.Week}" />
-                    <ui:Button Style="{StaticResource MonthButton}" Command="{Binding ShowCommand}"
+                    <ui:Button Style="{StaticResource MonthButton}" TabIndex="1" Command="{Binding ShowCommand}"
                                CommandParameter="month" Content="{DynamicResource Calendar.Month}" />
                 </StackPanel>
             </DockPanel>
