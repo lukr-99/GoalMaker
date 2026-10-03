@@ -260,10 +260,10 @@
                         </StackPanel>
                     </DockPanel>
                     <!-- A reminder on the days it is still left (docs/reminders.md). -->
-                    <DockPanel Margin="0,12,0,0">
+                    <DockPanel Margin="0,12,0,0" KeyboardNavigation.TabNavigation="Local">
                         <ui:ToggleSwitch DockPanel.Dock="Right" Margin="16,0,0,0" VerticalAlignment="Center" IsChecked="{Binding RemindOn}"
                                          AutomationProperties.Name="{DynamicResource Habits.Remind}" />
-                        <ui:TextBox DockPanel.Dock="Right" Width="80" MaxLength="5" VerticalAlignment="Center"
+                        <ui:TextBox DockPanel.Dock="Right" TabIndex="0" Width="80" MaxLength="5" VerticalAlignment="Center"
                                     Text="{Binding RemindText, UpdateSourceTrigger=PropertyChanged}"
                                     IsEnabled="{Binding RemindOn}"
                                     AutomationProperties.Name="{DynamicResource Habits.RemindAt}" />

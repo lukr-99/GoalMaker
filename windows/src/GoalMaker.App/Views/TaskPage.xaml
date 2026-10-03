@@ -125,9 +125,9 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <DockPanel Margin="0,4,0,0">
+                        <DockPanel Margin="0,4,0,0" KeyboardNavigation.TabNavigation="Local">
                             <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Task.AddTag}" Command="{Binding AddTagCommand}" />
-                            <ui:TextBox PlaceholderText="{DynamicResource Task.NewTag}" MaxLength="41" Text="{Binding NewTagName, UpdateSourceTrigger=PropertyChanged}"
+                            <ui:TextBox TabIndex="0" PlaceholderText="{DynamicResource Task.NewTag}" MaxLength="41" Text="{Binding NewTagName, UpdateSourceTrigger=PropertyChanged}"
                                         AutomationProperties.Name="{DynamicResource Task.NewTag}">
                                 <ui:TextBox.InputBindings>
                                     <KeyBinding Key="Enter" Command="{Binding AddTagCommand}" />
@@ -143,8 +143,8 @@
                         <ItemsControl ItemsSource="{Binding Steps}" Focusable="False">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type vm:StepRowViewModel}">
-                                    <DockPanel Margin="0,0,0,6">
-                                        <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" IsChecked="{Binding Done}" AutomationProperties.Name="{Binding Title}" />
+                                    <DockPanel Margin="0,0,0,6" KeyboardNavigation.TabNavigation="Local">
+                                        <CheckBox DockPanel.Dock="Left" TabIndex="0" VerticalAlignment="Center" IsChecked="{Binding Done}" AutomationProperties.Name="{Binding Title}" />
                                         <StackPanel DockPanel.Dock="Right" Margin="8,0,0,0" Orientation="Horizontal">
                                             <ui:Button Padding="6" Appearance="Transparent" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}"
                                                        ToolTip="{DynamicResource Task.StepUp}" AutomationProperties.Name="{DynamicResource Task.StepUp}">
@@ -159,14 +159,14 @@
                                                 <ui:SymbolIcon Symbol="Delete24" />
                                             </ui:Button>
                                         </StackPanel>
-                                        <TextBox MaxLength="300" Text="{Binding Title}" AutomationProperties.Name="{DynamicResource Task.StepTitle}" />
+                                        <TextBox TabIndex="1" MaxLength="300" Text="{Binding Title}" AutomationProperties.Name="{DynamicResource Task.StepTitle}" />
                                     </DockPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <DockPanel Margin="0,4,0,0">
+                        <DockPanel Margin="0,4,0,0" KeyboardNavigation.TabNavigation="Local">
                             <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Task.AddStep}" Command="{Binding AddStepCommand}" />
-                            <ui:TextBox PlaceholderText="{DynamicResource Task.NewStep}" MaxLength="300" Text="{Binding NewStepTitle, UpdateSourceTrigger=PropertyChanged}"
+                            <ui:TextBox TabIndex="0" PlaceholderText="{DynamicResource Task.NewStep}" MaxLength="300" Text="{Binding NewStepTitle, UpdateSourceTrigger=PropertyChanged}"
                                         AutomationProperties.Name="{DynamicResource Task.NewStep}">
                                 <ui:TextBox.InputBindings>
                                     <KeyBinding Key="Enter" Command="{Binding AddStepCommand}" />

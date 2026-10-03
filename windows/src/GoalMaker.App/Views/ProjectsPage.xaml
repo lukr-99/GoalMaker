@@ -193,14 +193,14 @@
                     </StackPanel>
                 </ui:Button>
                 <StackPanel MinWidth="200" Visibility="{Binding IsUnfolded, Converter={StaticResource BoolToVisibility}}">
-                    <DockPanel Margin="0,0,0,6">
+                    <DockPanel Margin="0,0,0,6" KeyboardNavigation.TabNavigation="Local">
                         <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent" VerticalAlignment="Center"
                                    Command="{Binding FoldCommand}" ToolTip="{Binding FoldText}"
                                    AutomationProperties.Name="{Binding FoldText}">
                             <ui:SymbolIcon Symbol="ChevronLeft24" FontSize="12" />
                         </ui:Button>
                         <!-- A new item in this column, in the new item window; Done has none. -->
-                        <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent" VerticalAlignment="Center"
+                        <ui:Button DockPanel.Dock="Right" TabIndex="0" Padding="4" Appearance="Transparent" VerticalAlignment="Center"
                                    Command="{Binding AddCommand}" ToolTip="{Binding AddText}"
                                    AutomationProperties.Name="{Binding AddText}"
                                    Visibility="{Binding CanAdd, Converter={StaticResource BoolToVisibility}}">

@@ -106,15 +106,15 @@
                         <StackPanel Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}">
                             <ui:TextBox Margin="0,10,0,8" Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}"
                                         PlaceholderText="{DynamicResource Wants.NoteOptional}" AutomationProperties.Name="{DynamicResource Wants.NoteOptional}" />
-                            <DockPanel>
+                            <DockPanel KeyboardNavigation.TabNavigation="Local">
                                 <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Content="{DynamicResource Wants.EditOne}" Command="{Binding EditCommand}" />
                                 <StackPanel Orientation="Horizontal">
-                                    <ui:Button Appearance="Primary" Command="{Binding BuyCommand}" Margin="0,0,8,0" Content="{DynamicResource Wants.Buy}">
+                                    <ui:Button Appearance="Primary" TabIndex="0" Command="{Binding BuyCommand}" Margin="0,0,8,0" Content="{DynamicResource Wants.Buy}">
                                         <ui:Button.Icon>
                                             <ui:SymbolIcon Symbol="Checkmark20" />
                                         </ui:Button.Icon>
                                     </ui:Button>
-                                    <ui:Button Appearance="Secondary" Command="{Binding DropCommand}" Content="{DynamicResource Wants.Drop}" />
+                                    <ui:Button Appearance="Secondary" TabIndex="1" Command="{Binding DropCommand}" Content="{DynamicResource Wants.Drop}" />
                                 </StackPanel>
                             </DockPanel>
                         </StackPanel>
