@@ -17,6 +17,7 @@ public sealed partial class SignInViewModel : ObservableObject
     private readonly SignInWatch watch;
     private readonly IStrings strings;
     private readonly Func<string, CancellationToken, Task<string?>>? devCode;
+    private readonly Func<string?>? readClipboard;
     private string? signedInEmail;
 
     // The mail lands within a second or so on a local stack; after this the owner types it.
@@ -50,8 +51,10 @@ public sealed partial class SignInViewModel : ObservableObject
         SignInWatch watch,
         IStrings strings,
         string? devBackend,
-        Func<string, CancellationToken, Task<string?>>? devCode = null)
+        Func<string, CancellationToken, Task<string?>>? devCode = null,
+        Func<string?>? readClipboard = null)
     {
+        this.readClipboard = readClipboard;
         this.auth = auth;
         this.watch = watch;
         this.strings = strings;
@@ -214,6 +217,36 @@ public sealed partial class SignInViewModel : ObservableObject
     }
 
     partial void OnEmailChanged(string value) => ErrorText = string.Empty;
+
+    /// <summary>
+    /// The code the owner copied, taken when the window comes back from the mail app (docs/sign-in.md):
+    /// only on the code step with nothing typed yet, and only when the clipboard holds exactly one code
+    /// (contracts/vectors/sign-in-code.json, 'find'). True when it took one.
+    /// </summary>
+    public bool TakeCopiedCode()
+    {
+        if (!IsCodeStep || IsBusy || Code.Length > 0 || readClipboard?.Invoke() is not { } text || SignInCode.Find(text) is not { } found)
+        {
+            return false;
+        }
+
+        Code = found.Value;
+        return true;
+    }
+
+    /// <summary>Paste: the code on the clipboard, or a line saying there was none.</summary>
+    [RelayCommand]
+    private void PasteCode()
+    {
+        if (readClipboard?.Invoke() is { } text && SignInCode.Find(text) is { } found)
+        {
+            Code = found.Value;
+        }
+        else
+        {
+            ErrorText = strings.Get("SignIn.Error.NoCodeCopied");
+        }
+    }
 
     partial void OnCodeChanged(string value)
     {

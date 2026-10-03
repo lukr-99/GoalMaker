@@ -81,6 +81,7 @@ internal fun HabitDialog(
     var unit by remember { mutableStateOf(habit.unit.orEmpty()) }
     var goalId by remember { mutableStateOf(habit.goalId) }
     var showOnToday by remember { mutableStateOf(habit.showOnToday) }
+    var remindAt by remember { mutableStateOf(habit.remindAt) }
     var refused by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
@@ -229,6 +230,7 @@ internal fun HabitDialog(
                     checked = showOnToday,
                     onCheckedChange = { showOnToday = it },
                 )
+                HabitRemindField(remindAt, onChange = { remindAt = it })
                 if (goals.isNotEmpty()) GoalField(goals.firstOrNull { it.id == goalId }, goals, onPick = { goalId = it })
                 if (refused) {
                     Text(stringResource(R.string.habits_invalid), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.danger)
@@ -250,6 +252,7 @@ internal fun HabitDialog(
                     emoji = emoji,
                     goalId = goalId,
                     showOnToday = showOnToday,
+                    remindAt = remindAt,
                 )
                 scope.launch { if (onSave(draft)) onDismiss() else refused = true }
             }) { Text(stringResource(R.string.habits_save)) }

@@ -7,6 +7,7 @@ import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -149,6 +150,38 @@ class TallyTrackerTest {
 
         assertEquals(listOf("study" to 50), minutes(day))
         assertNull(tally.totals(day, day).single().project)
+    }
+
+    @Test
+    fun `the stretches for the place are this phone's own, sorted with the rules as they are now`() {
+        usage.add(YOUTUBE, "2026-09-27T03:00:00Z", "2026-09-27T05:00:00Z")
+        usage.add(YOUTUBE, "2026-09-28T10:00:00Z", "2026-09-28T10:50:00Z")
+        usage.add("com.whatsapp", "2026-09-28T11:00:00Z", "2026-09-28T11:20:00Z")
+
+        assertEquals(
+            listOf(
+                TallyStretch(LocalDateTime.parse("2026-09-28T10:00"), LocalDateTime.parse("2026-09-28T10:50"), YOUTUBE, null, "video"),
+                TallyStretch(LocalDateTime.parse("2026-09-28T11:00"), LocalDateTime.parse("2026-09-28T11:20"), "com.whatsapp", null, "chat"),
+            ),
+            tracker.stretches(day, day),
+        )
+        assertEquals("read from the day's start to now", Instant.parse("2026-09-28T04:00:00Z") to now, usage.reads.last())
+
+        // A rule made in the place sorts the same stretches at once.
+        tally.addRule(TallyRule(TallyRules.APP, "com.whatsapp", TallyRules.ANDROID, "work"))
+        assertEquals(listOf("video", "work"), tracker.stretches(day, day).map(TallyStretch::category))
+        assertEquals("nothing is written", emptyList<Any>(), tally.totals(day, day))
+
+        tracker.turn(false)
+        assertEquals(emptyList<TallyStretch>(), tracker.stretches(day, day))
+    }
+
+    @Test
+    fun `an app's name is what the phone calls it`() {
+        usage.names[YOUTUBE] = "YouTube"
+
+        assertEquals("YouTube", tracker.appName(YOUTUBE))
+        assertNull(tracker.appName("com.example.gone"))
     }
 
     private fun minutes(day: LocalDate) = tally.totals(day, day).map { it.category to it.minutes }

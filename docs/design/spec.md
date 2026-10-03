@@ -13,7 +13,8 @@ source of truth for numbers and colors.
 - **One layout, four looks.** Themes change colors, fonts, corners and the style of big numbers.
   They never move things around or change behavior.
 - **Readable first.** Every text and control pair meets WCAG AA in every theme and mode; layouts
-  follow the system text size and are tested at the largest setting.
+  follow the system text size and are tested at the largest setting. What each screen does for a
+  screen reader, the keyboard and large text is in [accessibility](accessibility.md).
 
 ## Themes
 

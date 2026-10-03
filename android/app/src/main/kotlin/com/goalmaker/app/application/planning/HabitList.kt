@@ -3,6 +3,8 @@ package com.goalmaker.app.application.planning
 import com.goalmaker.app.application.sync.Replica
 import com.goalmaker.app.domain.sync.SyncedTable
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -67,12 +69,12 @@ class HabitList(
 
     /**
      * Adds [amount] to [day]'s value (a check sets it to 1) and returns the new value; a check-in that
-     * said skipped counts again. Null when the habit is gone or the amount isn't positive.
+     * said skipped or failed counts again. Null when the habit is gone or the amount isn't positive.
      */
     fun checkIn(habitId: String, day: LocalDate, amount: Double = 1.0): Double? {
         val habit = find(habitId) ?: return null
         if (amount <= 0.0 || !amount.isFinite()) return null
-        val before = checkinOn(habitId, day)?.takeUnless(HabitCheckin::skipped)?.value ?: 0.0
+        val before = checkinOn(habitId, day)?.takeUnless { it.skipped || it.failed }?.value ?: 0.0
         val value = if (habit.measure == HabitRules.CHECK) 1.0 else before + amount
         write(habitId, day, value, skipped = false)
         return value
@@ -86,7 +88,7 @@ class HabitList(
         val habit = find(habitId) ?: return false
         return when (habit.measure) {
             HabitRules.CHECK -> {
-                val checked = (checkinOn(habitId, day)?.takeUnless(HabitCheckin::skipped)?.value ?: 0.0) >= 1.0
+                val checked = (checkinOn(habitId, day)?.takeUnless { it.skipped || it.failed }?.value ?: 0.0) >= 1.0
                 write(habitId, day, if (checked) 0.0 else 1.0, skipped = false)
                 true
             }
@@ -107,6 +109,16 @@ class HabitList(
         if (find(habitId) == null) return false
         val value = checkinOn(habitId, day)?.value ?: 0.0
         write(habitId, day, if (skipped) 0.0 else value, skipped)
+        return true
+    }
+
+    /**
+     * Marks the period holding [day] failed: the owner says it won't happen, so it is missed at once and
+     * stops asking. Taking the fail back leaves the day empty again.
+     */
+    fun fail(habitId: String, day: LocalDate, failed: Boolean = true): Boolean {
+        if (find(habitId) == null) return false
+        write(habitId, day, 0.0, skipped = false, failed = failed)
         return true
     }
 
@@ -143,9 +155,9 @@ class HabitList(
     private fun checkinOn(habitId: String, day: LocalDate): HabitCheckin? =
         replica.get(CHECKINS, HabitRules.checkinId(habitId, day))?.let(::toCheckin)?.takeUnless(HabitCheckin::deleted)
 
-    private fun write(habitId: String, day: LocalDate, value: Double, skipped: Boolean) {
+    private fun write(habitId: String, day: LocalDate, value: Double, skipped: Boolean, failed: Boolean = false) {
         val id = HabitRules.checkinId(habitId, day)
-        val fields = mapOf("value" to JsonPrimitive(value), "skipped" to JsonPrimitive(skipped))
+        val fields = mapOf("value" to JsonPrimitive(value), "skipped" to JsonPrimitive(skipped), "failed" to JsonPrimitive(failed))
         val existing = replica.get(CHECKINS, id)
         val row = if (existing != null) {
             JsonObject(existing + fields + (SyncedTable.DELETED_AT to JsonNull))
@@ -202,6 +214,7 @@ class HabitList(
         "unit" to (draft.unit?.let(::JsonPrimitive) ?: JsonNull),
         "goal_id" to (draft.goalId?.let(::JsonPrimitive) ?: JsonNull),
         "show_on_today" to JsonPrimitive(draft.showOnToday),
+        "remind_at" to (draft.remindAt?.format(TIME)?.let(::JsonPrimitive) ?: JsonNull),
     )
 
     private fun change(table: String, id: String, edit: (MutableMap<String, JsonElement>) -> Unit): Boolean {
@@ -231,6 +244,8 @@ class HabitList(
         // A row from before 0020 has no value, and every habit showed then.
         showOnToday = (row["show_on_today"] as? JsonPrimitive)?.let { it.booleanOrNull ?: it.intOrNull?.let { value -> value != 0 } } ?: true,
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
+        // A row from before 0022 has no value, and no habit reminded then.
+        remindAt = row.text("remind_at")?.let(LocalTime::parse),
         deleted = row.text(SyncedTable.DELETED_AT) != null,
     )
 
@@ -240,6 +255,8 @@ class HabitList(
         day = row.text("day")?.let(LocalDate::parse) ?: LocalDate.ofEpochDay(0),
         value = (row["value"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         skipped = (row["skipped"] as? JsonPrimitive)?.let { it.booleanOrNull ?: (it.intOrNull == 1) } ?: false,
+        // A row from before Supabase migration 0021 has no value, and nothing was failed then.
+        failed = (row["failed"] as? JsonPrimitive)?.let { it.booleanOrNull ?: (it.intOrNull == 1) } ?: false,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
     )
 
@@ -258,6 +275,7 @@ class HabitList(
         const val MAX_NAME = 100
         const val MAX_EMOJI = 16
         const val MAX_UNIT = 20
+        val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
         val ORDER = compareBy<HabitItem> { it.archived }
             .thenBy(HabitItem::position)
             .thenBy { it.name.lowercase(Locale.ROOT) }

@@ -71,9 +71,10 @@ object HabitRules {
 
     /**
      * Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit, a
-     * day nobody logged is met, because nothing was had. Skipped never meets a day.
+     * day nobody logged is met, because nothing was had. Skipped and failed never meet a day.
      */
     fun dayMet(habit: HabitItem, checkin: HabitCheckin?): Boolean {
+        if (checkin != null && !checkin.deleted && checkin.failed) return false
         if (isLimit(habit)) return checkin == null || checkin.deleted || (!checkin.skipped && !isOver(habit, checkin.value))
         if (checkin == null || checkin.deleted || checkin.skipped) return false
         return if (habit.measure == CHECK) checkin.value >= 1.0 else checkin.value >= (habit.target ?: Double.MAX_VALUE)
@@ -94,7 +95,7 @@ object HabitRules {
             return when {
                 pauses.any { !it.deleted && !it.from.isAfter(end) && (it.until == null || !it.until.isBefore(start)) } -> HabitPeriodState.PAUSED
                 inPeriod.any { it.skipped } -> HabitPeriodState.SKIPPED
-                inPeriod.any { isOver(habit, it.value) } -> HabitPeriodState.MISSED
+                inPeriod.any { it.failed || isOver(habit, it.value) } -> HabitPeriodState.MISSED
                 !end.isBefore(today) -> HabitPeriodState.OPEN
                 else -> HabitPeriodState.MET
             }
@@ -103,6 +104,7 @@ object HabitRules {
             inPeriod.count { dayMet(habit, it) } >= required(habit) -> HabitPeriodState.MET
             pauses.any { !it.deleted && !it.from.isAfter(end) && (it.until == null || !it.until.isBefore(start)) } -> HabitPeriodState.PAUSED
             inPeriod.any { it.skipped } -> HabitPeriodState.SKIPPED
+            inPeriod.any { it.failed } -> HabitPeriodState.MISSED
             !end.isBefore(today) -> HabitPeriodState.OPEN
             else -> HabitPeriodState.MISSED
         }
@@ -141,6 +143,7 @@ object HabitRules {
         if (pauses.any { !it.deleted && !it.from.isAfter(day) && (it.until == null || !it.until.isBefore(day)) }) return HabitHeat.Paused
         val checkin = checkins.firstOrNull { !it.deleted && it.day == day }
         if (checkin?.skipped == true) return HabitHeat.Skipped
+        if (checkin?.failed == true) return if (isLimit(habit)) HabitHeat.Over else HabitHeat.Share(0.0)
         val value = checkin?.value ?: 0.0
         // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
         if (isLimit(habit)) return if (isOver(habit, value)) HabitHeat.Over else HabitHeat.Share(1.0 - share(habit, value))
@@ -157,6 +160,7 @@ object HabitRules {
         }
         if (!isDue(habit, today)) return null
         val checkin = checkins.firstOrNull { !it.deleted && !it.skipped && it.day == today }
+        if (checkin?.failed == true) return 0.0
         return share(habit, checkin?.value ?: 0.0)
     }
 
@@ -168,7 +172,7 @@ object HabitRules {
     }
 
     /**
-     * Where [habit] stands on [today]: none, paused, skipped, a limit (never done or left), done (the ring is
+     * Where [habit] stands on [today]: none, paused, skipped, failed, a limit (never done or left), done (the ring is
      * full, or a weekly or monthly habit's check-in today meets its day) or left.
      */
     fun standing(habit: HabitItem, today: LocalDate, checkins: List<HabitCheckin>, pauses: List<HabitPause>): HabitStanding {
@@ -177,6 +181,7 @@ object HabitRules {
         val start = periodStart(habit, today)
         val end = periodEnd(habit, start)
         if (checkins.any { !it.deleted && it.skipped && !it.day.isBefore(start) && !it.day.isAfter(end) }) return HabitStanding.SKIPPED
+        if (checkins.any { !it.deleted && it.failed && !it.day.isBefore(start) && !it.day.isAfter(end) }) return HabitStanding.FAILED
         if (isLimit(habit)) return HabitStanding.LIMIT
         if ((ring(habit, today, checkins) ?: 0.0) >= 1.0) return HabitStanding.DONE
         val todays = checkins.firstOrNull { !it.deleted && it.day == today }
@@ -190,6 +195,7 @@ object HabitRules {
         if (pauses.any { covers(it, day, day) }) return HabitDot.PAUSED
         val checkin = checkins.firstOrNull { !it.deleted && it.day == day }
         if (checkin?.skipped == true) return HabitDot.SKIPPED
+        if (checkin?.failed == true) return if (isLimit(habit)) HabitDot.OVER else HabitDot.MISSED
         if (isLimit(habit)) {
             return when {
                 checkin != null && isOver(habit, checkin.value) -> HabitDot.OVER
@@ -226,7 +232,7 @@ object HabitRules {
             .map(HabitItem::id)
             .toSet()
         return checkins
-            .filter { !it.deleted && !it.skipped && it.habitId in serving && !it.day.isBefore(goal.periodStart) && !it.day.isAfter(end) }
+            .filter { !it.deleted && !it.skipped && !it.failed && it.habitId in serving && !it.day.isBefore(goal.periodStart) && !it.day.isAfter(end) }
             .map(HabitCheckin::value)
     }
 

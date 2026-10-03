@@ -77,11 +77,13 @@ public sealed class AppGraph : IDisposable
         Action<Action> runOnUi,
         Action shutdownApp,
         Action restartApp,
-        bool signIn = false)
+        bool signIn = false,
+        AppDataPaths? paths = null)
     {
         this.runOnUi = runOnUi;
         this.strings = strings;
-        Paths = new AppDataPaths(build.IsDevBuild);
+        // The build's own folder; the start-up smoke test passes a throwaway one.
+        Paths = paths ?? new AppDataPaths(build.IsDevBuild);
         Paths.EnsureRoot();
         Paths.ClearUpdates();
         Settings = new JsonSettingsStore(Paths.Settings);
@@ -170,6 +172,7 @@ public sealed class AppGraph : IDisposable
         // carries the next one, and toasts show them with the same buttons as the phone.
         reminderTimer = new TimerReminderScheduler(TimeProvider.System, () => runOnUi(LookAtReminders));
         Rituals = new RitualRunList(replica, newRows, Sync.Request);
+        Habits = new HabitList(replica, newRows, Sync.Request);
         ReminderRows = new ReminderList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
             ReminderRows,
@@ -178,7 +181,8 @@ public sealed class AppGraph : IDisposable
             Settings,
             TimeProvider.System,
             Rituals,
-            Wants);
+            Wants,
+            Habits);
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -228,11 +232,12 @@ public sealed class AppGraph : IDisposable
         });
 
         Theme = new ThemeApplier(design, appResources, ContractResources.Logo());
+        TextScale = new TextScale(runOnUi);
         // A dev build against the local stack reads the code the stack caught (docs/sign-in.md).
         var mailbox = build.IsDevBuild ? DevSignIn.MailboxOf(backend.Url) : null;
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
-        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode);
+        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode, ReadClipboardText);
         Shell = new ShellViewModel(Auth, SignIn, Problems, Updates, runOnUi);
         Places = new PlacesViewModel(Settings, strings);
 
@@ -245,6 +250,14 @@ public sealed class AppGraph : IDisposable
 
         // Each list's composer puts a line without a day on the list's own day (docs/composer.md).
         void OpenPlan() => PageRequested?.Invoke(this, AppPage.Plan);
+
+        // A project item's chip in a list opens its project's board (docs/lists.md).
+        void OpenProject(string id)
+        {
+            ProjectsPage.Select(id);
+            PageRequested?.Invoke(this, AppPage.Projects);
+        }
+
         void OpenWant(string title)
         {
             WantsPage.StartAdding(title);
@@ -281,12 +294,15 @@ public sealed class AppGraph : IDisposable
             HabitsPage,
             Habits,
             () => PageRequested?.Invoke(this, AppPage.Habits),
-            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null);
+            kind == ListKind.Today ? () => OpenMini(MiniPage.Today) : null,
+            Reviews,
+            OpenReview,
+            Projects,
+            OpenProject);
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
         Goals = new GoalList(replica, newRows, Sync.Request);
-        Habits = new HabitList(replica, newRows, Sync.Request);
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits, Chat);
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits), Chat);
@@ -315,11 +331,23 @@ public sealed class AppGraph : IDisposable
         Wants.Changed += (_, _) => runOnUi(SettleReminders);
         TallyPage = new TallyViewModel(
             Tally, tallyDefaults, Projects, Settings, strings, TimeProvider.System, Theme.SwatchBrush,
-            [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally);
-        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally);
-        ProjectsPage = new ProjectsViewModel(Projects, Tasks, Settings, strings, id => OpenTask(id, AppPage.Projects), runOnUi, TimeProvider.System);
+            [.. design.AreaColors.Select(color => color.Id)], runOnUi, SwitchTally, TallyTracker.Stretches, TallyTracker.Recount);
+        StatsPage = new StatsViewModel(Tasks, Goals, Habits, Reviews, Settings, strings, TimeProvider.System, runOnUi, Wants, Tally, NameTally, Projects);
+        // Projects, the calendar and the archive each keep an area and tag filter of their own (docs/lists.md).
+        ProjectsPage = new ProjectsViewModel(
+            Projects,
+            Tasks,
+            Areas,
+            Tags,
+            Settings,
+            strings,
+            Theme.AreaBrush,
+            id => OpenTask(id, AppPage.Projects),
+            runOnUi,
+            TimeProvider.System,
+            form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach));
         CalendarPage = new CalendarViewModel(
-            Tasks, ReminderRows, Settings, strings, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi);
+            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject, HabitsPage, Habits);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
             Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
@@ -328,7 +356,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
-        Archive = new ArchiveViewModel(Tasks, strings, runOnUi, id => OpenTask(id, AppPage.Archive));
+        Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive), OpenProject);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,
@@ -468,6 +496,9 @@ public sealed class AppGraph : IDisposable
     public TaskList Tasks { get; }
 
     public ThemeApplier Theme { get; }
+
+    /// <summary>Windows' text size, which the main window, the mini windows, the flyout and the quick-add box follow.</summary>
+    public TextScale TextScale { get; }
 
     /// <summary>The filter the three lists share (docs/lists.md).</summary>
     public ListFilterState Filter { get; } = new();
@@ -621,6 +652,7 @@ public sealed class AppGraph : IDisposable
         tick.Dispose();
         _ = changeFeed.DisposeAsync().AsTask();
         Theme.Dispose();
+        TextScale.Dispose();
         Sync.Dispose();
         replica.Dispose();
         signatureKey?.Dispose();
@@ -722,6 +754,15 @@ public sealed class AppGraph : IDisposable
             var byId = Wants.All().ToDictionary(want => want.Id);
             toasts.ShowWants(ready, [.. ready.WantIds.Where(byId.ContainsKey).Select(id => byId[id].Title)]);
         }
+
+        if (look.Habits is { Count: > 0 } habits)
+        {
+            var checkins = Habits.Checkins();
+            foreach (var due in habits)
+            {
+                toasts.ShowHabit(due, [.. checkins.Where(checkin => checkin.HabitId == due.Habit.Id)]);
+            }
+        }
     }
 
     private void SettleReminders()
@@ -743,6 +784,10 @@ public sealed class AppGraph : IDisposable
         }
 
         ClearStaleWants();
+        foreach (var (habitId, habitDay) in toasts.ShownHabits().Where(shown => Reminders.HabitStale(shown.HabitId, shown.Day)))
+        {
+            toasts.ClearHabit(habitId, habitDay);
+        }
     }
 
     // A wants toast goes once every want it names was decided, here or on the other device.
@@ -781,6 +826,12 @@ public sealed class AppGraph : IDisposable
         if (activation.Action == ToastAction.Wants)
         {
             WindowRequested?.Invoke(this, AppPage.Wants);
+            return;
+        }
+
+        if (activation.Habit() is { HabitId.Length: > 0 } habit)
+        {
+            OnHabitToast(activation.Action, habit.HabitId, habit.Day);
             return;
         }
 
@@ -825,6 +876,30 @@ public sealed class AppGraph : IDisposable
         }
 
         toasts.Clear(activation.ReminderId);
+    }
+
+    // A habit reminder's buttons check in or skip; its body opens the Habits page, and an amount's Log
+    // opens it on the log panel. Whatever was clicked, the toast goes.
+    private void OnHabitToast(ToastAction action, string habitId, DateOnly day)
+    {
+        switch (action)
+        {
+            case ToastAction.HabitCheckIn:
+                Reminders.CheckInHabit(habitId, day);
+                break;
+            case ToastAction.HabitSkip:
+                Reminders.SkipHabit(habitId, day);
+                break;
+            case ToastAction.HabitLog when Habits.Find(habitId) is { } habit:
+                HabitsPage.StartLog(habit);
+                WindowRequested?.Invoke(this, AppPage.Habits);
+                break;
+            default:
+                WindowRequested?.Invoke(this, AppPage.Habits);
+                break;
+        }
+
+        toasts.ClearHabit(habitId, day);
     }
 
     // Tally follows the switch on its page at once; switching it off writes what it has.
@@ -947,6 +1022,19 @@ public sealed class AppGraph : IDisposable
     }
 
     // The Reviews page opens one period's review on the review page.
+    // The clipboard's text for the sign-in code, or null; another app holding the clipboard open is no error.
+    private static string? ReadClipboardText()
+    {
+        try
+        {
+            return System.Windows.Clipboard.ContainsText() ? System.Windows.Clipboard.GetText() : null;
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            return null;
+        }
+    }
+
     private void OpenReview(string kind, DateOnly periodStart)
     {
         Review.Open(kind, periodStart);

@@ -72,6 +72,34 @@ class TallyTracker(
         return days
     }
 
+    /**
+     * What this phone's own history says was in front from the start of the planning day [from] to the
+     * end of [to] (or now), each stretch sorted with the owner's rules and the shipped ones as they are
+     * now: the Tally place's hours and apps (docs/tally.md). None while Tally is off or usage access
+     * isn't granted. Nothing read here is kept or synced.
+     */
+    fun stretches(from: LocalDate, to: LocalDate): List<TallyStretch> {
+        if (!settings.tallyOn.value || !usage.granted()) return emptyList()
+        val zone = zone()
+        val startHour = settings.dayStartHour.value
+        val since = from.atTime(startHour, 0).atZone(zone).toInstant()
+        val until = minOf(now(), to.plusDays(1).atTime(startHour, 0).atZone(zone).toInstant())
+        if (!until.isAfter(since)) return emptyList()
+        val own = tally.rules()
+        return usage.foreground(since, until).orEmpty().map { stretch ->
+            TallyStretch(
+                start = LocalDateTime.ofInstant(stretch.start, zone),
+                end = LocalDateTime.ofInstant(stretch.end, zone),
+                app = stretch.app,
+                title = null,
+                category = TallyRules.sortSample(TallySample(TallyRules.ANDROID, stretch.app), own, defaults).category,
+            )
+        }
+    }
+
+    /** The name an app shows under its icon, or null when the phone doesn't know it. */
+    fun appName(app: String): String? = usage.appName(app)
+
     private companion object {
         // Android keeps about a week of usage events.
         val HISTORY: Duration = Duration.ofDays(7)

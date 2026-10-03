@@ -20,6 +20,132 @@
         </StackPanel>
     </DataTemplate>
 
+    <!-- The icon a project item's chip wears: an idea's lightbulb and a bug in their board colors, the board for a plain task. -->
+    <Style x:Key="GM.ProjectTagIcon" TargetType="ui:SymbolIcon">
+        <Setter Property="Symbol" Value="Board16" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding ItemType}" Value="idea">
+                <Setter Property="Symbol" Value="LightbulbFilament16" />
+                <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ItemType}" Value="bug">
+                <Setter Property="Symbol" Value="Bug16" />
+                <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!--
+        A project item's chip in a task list, the calendar's day and the archive (docs/lists.md): the
+        project's name in a quiet outline, with an idea's or a bug's icon. Where the page can go to the
+        board it is a button that opens it; elsewhere it only says which project.
+    -->
+    <DataTemplate x:Key="ProjectTag" DataType="{x:Type vm:ProjectTagViewModel}">
+        <Grid>
+            <Button Command="{Binding OpenCommand}"
+                    Cursor="Hand"
+                    FocusVisualStyle="{StaticResource GM.PillFocusVisual}"
+                    ToolTip="{Binding OpenLabel}"
+                    AutomationProperties.Name="{Binding Label}"
+                    AutomationProperties.HelpText="{Binding OpenLabel}"
+                    Visibility="{Binding CanOpen, Converter={StaticResource BoolToVisibility}}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chip" Padding="6,0,7,1" CornerRadius="9" BorderThickness="1"
+                                Background="Transparent" BorderBrush="{DynamicResource GM.OutlineBrush}">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,3,0" FontSize="12" VerticalAlignment="Center" Style="{StaticResource GM.ProjectTagIcon}" />
+                                <TextBlock x:Name="Name" MaxWidth="180" VerticalAlignment="Center" FontSize="12" Text="{Binding Name}"
+                                           TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="Name" Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chip" Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+            <Border Padding="6,0,7,1" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource GM.OutlineBrush}"
+                    AutomationProperties.Name="{Binding Label}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CanOpen}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Margin="0,0,3,0" FontSize="12" VerticalAlignment="Center" Style="{StaticResource GM.ProjectTagIcon}" />
+                    <TextBlock MaxWidth="180" VerticalAlignment="Center" FontSize="12" Text="{Binding Name}"
+                               TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DataTemplate>
+
+    <!--
+        The area and tag pickers with Show everything (docs/lists.md): above the lists, and over Projects,
+        the calendar and the archive, each with a filter of its own. A chosen area or tag is outlined in
+        the accent, so a narrowed place is plain to see.
+    -->
+    <DataTemplate x:Key="ListFilters" DataType="{x:Type vm:ListFiltersViewModel}">
+        <WrapPanel Orientation="Horizontal"
+                    Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+            <ComboBox MinWidth="160"
+                      VerticalAlignment="Center"
+                      ItemsSource="{Binding AreaChoices}"
+                      SelectedItem="{Binding SelectedArea}"
+                      ItemTemplate="{StaticResource FilterChoice}"
+                      AutomationProperties.Name="{DynamicResource Lists.FilterArea}"
+                      Visibility="{Binding HasAreas, Converter={StaticResource BoolToVisibility}}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAreaChosen}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
+            <ComboBox MinWidth="140"
+                      Margin="8,0,0,0"
+                      VerticalAlignment="Center"
+                      ItemsSource="{Binding TagChoices}"
+                      SelectedItem="{Binding SelectedTag}"
+                      ItemTemplate="{StaticResource FilterChoice}"
+                      AutomationProperties.Name="{DynamicResource Lists.FilterTag}"
+                      Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsTagChosen}" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="BorderThickness" Value="2" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
+            <ui:Button Margin="8,0,0,0"
+                       VerticalAlignment="Center"
+                       Appearance="Transparent"
+                       Content="{DynamicResource Lists.ClearFilter}"
+                       Command="{Binding ClearCommand}"
+                       Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
+        </WrapPanel>
+    </DataTemplate>
+
     <!--
         One list (Today, Tomorrow, Inbox) as ListPage shows it (docs/lists.md). Today's habits sit in a
         panel beside the tasks where the window is wide enough, and under them where it is not (a narrow
@@ -51,96 +177,74 @@
             <!-- The title and the day, then one toolbar line: the area and tag pickers on the left, the sync
                  state and Plan tomorrow on the right, all centered on the same line. -->
             <StackPanel Grid.Row="0" Margin="0,0,0,12">
-                <controls:HeadlineText Title="{Binding Title}" FontSize="40" />
-                <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                <DockPanel Margin="0,14,0,0" LastChildFill="False">
-                    <ui:Button DockPanel.Dock="Right"
-                               VerticalAlignment="Center"
-                               Appearance="Primary"
-                               Content="{DynamicResource Plan.Title}"
-                               Command="{Binding OpenPlanCommand}">
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="CalendarEdit24" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <ui:Button DockPanel.Dock="Right"
-                               Margin="0,0,8,0"
-                               VerticalAlignment="Center"
-                               Padding="8,6"
-                               Appearance="Transparent"
-                               Command="{Binding OpenMiniCommand}"
-                               ToolTip="{DynamicResource Mini.OpenThis}"
-                               AutomationProperties.Name="{DynamicResource Mini.OpenThis}">
-                        <ui:Button.Style>
-                            <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
-                                <Setter Property="Visibility" Value="{Binding HasMini, Converter={StaticResource BoolToVisibility}}" />
+                <controls:HeadlineText Title="{Binding Title}" FontSize="40" Visibility="{DynamicResource GM.ListHeadlineVisibility}" />
+                <TextBlock Margin="0,4,0,0" Text="{Binding Subtitle}" FontSize="14" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                <!-- Tab takes them in the order they read: the pickers, then the sync state, the mini window and
+                     Plan tomorrow. Where the list is narrow (a mini window, large text) the right-hand group
+                     moves under the pickers instead of running over them. -->
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ContentControl HorizontalAlignment="Left"
+                                    Focusable="False"
+                                    Content="{Binding Filters}"
+                                    ContentTemplate="{StaticResource ListFilters}" />
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Right" Orientation="Horizontal">
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
                                 <Style.Triggers>
-                                    <!-- The mini window draws this same template; it does not offer to open itself. -->
-                                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Tag}" Value="mini">
-                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    <DataTrigger Binding="{Binding Tag, ElementName=ListRoot}" Value="stacked">
+                                        <Setter Property="Grid.Row" Value="1" />
+                                        <Setter Property="Grid.Column" Value="0" />
+                                        <Setter Property="Grid.ColumnSpan" Value="2" />
+                                        <Setter Property="Margin" Value="0,8,0,0" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </ui:Button.Style>
-                        <ui:Button.Icon>
-                            <ui:SymbolIcon Symbol="PictureInPictureEnter20" />
-                        </ui:Button.Icon>
-                    </ui:Button>
-                    <TextBlock DockPanel.Dock="Right"
-                               Margin="0,0,16,0"
-                               VerticalAlignment="Center"
-                               Text="{Binding SyncText}"
-                               FontSize="13"
-                               Foreground="{DynamicResource GM.TextMutedBrush}" />
-                    <StackPanel DockPanel.Dock="Left"
-                                Orientation="Horizontal"
-                                DataContext="{Binding Filters}"
-                                Visibility="{Binding HasAny, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
-                        <ComboBox MinWidth="160"
-                                  VerticalAlignment="Center"
-                                  ItemsSource="{Binding AreaChoices}"
-                                  SelectedItem="{Binding SelectedArea}"
-                                  ItemTemplate="{StaticResource FilterChoice}"
-                                  AutomationProperties.Name="{DynamicResource Lists.FilterArea}"
-                                  Visibility="{Binding HasAreas, Converter={StaticResource BoolToVisibility}}">
-                            <ComboBox.Style>
-                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsAreaChosen}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
-                                            <Setter Property="BorderThickness" Value="2" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ComboBox.Style>
-                        </ComboBox>
-                        <ComboBox MinWidth="140"
-                                  Margin="8,0,0,0"
-                                  VerticalAlignment="Center"
-                                  ItemsSource="{Binding TagChoices}"
-                                  SelectedItem="{Binding SelectedTag}"
-                                  ItemTemplate="{StaticResource FilterChoice}"
-                                  AutomationProperties.Name="{DynamicResource Lists.FilterTag}"
-                                  Visibility="{Binding HasTags, Converter={StaticResource BoolToVisibility}}">
-                            <ComboBox.Style>
-                                <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsTagChosen}" Value="True">
-                                            <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
-                                            <Setter Property="BorderThickness" Value="2" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ComboBox.Style>
-                        </ComboBox>
-                        <ui:Button Margin="8,0,0,0"
+                        </StackPanel.Style>
+                        <TextBlock Margin="0,0,16,0"
                                    VerticalAlignment="Center"
+                                   Text="{Binding SyncText}"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <ui:Button Margin="0,0,8,0"
+                                   VerticalAlignment="Center"
+                                   Padding="8,6"
                                    Appearance="Transparent"
-                                   Content="{DynamicResource Lists.ClearFilter}"
-                                   Command="{Binding ClearCommand}"
-                                   Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVisibility}}" />
+                                   Command="{Binding OpenMiniCommand}"
+                                   ToolTip="{DynamicResource Mini.OpenThis}"
+                                   AutomationProperties.Name="{DynamicResource Mini.OpenThis}">
+                            <ui:Button.Style>
+                                <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                    <Setter Property="Visibility" Value="{Binding HasMini, Converter={StaticResource BoolToVisibility}}" />
+                                    <Style.Triggers>
+                                        <!-- The mini window draws this same template; it does not offer to open itself. -->
+                                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType={x:Type Window}}, Path=Tag}" Value="mini">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ui:Button.Style>
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="PictureInPictureEnter20" />
+                            </ui:Button.Icon>
+                        </ui:Button>
+                        <ui:Button VerticalAlignment="Center"
+                                   Appearance="Primary"
+                                   Content="{DynamicResource Plan.Title}"
+                                   Command="{Binding OpenPlanCommand}">
+                            <ui:Button.Icon>
+                                <ui:SymbolIcon Symbol="CalendarEdit24" />
+                            </ui:Button.Icon>
+                        </ui:Button>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
             </StackPanel>
 
             <Grid Grid.Row="1">
@@ -150,6 +254,27 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <!-- The January nudge (docs/reviews.md): last year's review and this year's goals. -->
+                        <Border Margin="0,4,0,8" Padding="16,14" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}"
+                                Visibility="{Binding HasNewYear, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Symbol="Sparkle24" FontSize="22" Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center" Text="{Binding NewYearTitle}" FontSize="16"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.OnHeroBrush}"
+                                               AutomationProperties.HeadingLevel="Level2" />
+                                </StackPanel>
+                                <TextBlock Margin="0,6,0,10" Text="{Binding NewYearText}" TextWrapping="Wrap" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                <WrapPanel>
+                                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="{Binding NewYearReviewText}" Command="{Binding NewYearReviewCommand}"
+                                               Visibility="{Binding NewYear.Review, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
+                                    <ui:Button Margin="0,0,8,4" Appearance="Primary" Content="{Binding NewYearGoalsText}" Command="{Binding OpenGoalsCommand}"
+                                               Visibility="{Binding NewYear.Goals, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
+                                    <ui:Button Margin="0,0,0,4" Appearance="Transparent" Content="{DynamicResource NewYear.NotNow}" Command="{Binding DismissNewYearCommand}"
+                                               Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
                         <TextBlock Margin="4,8,0,8"
                                    Text="{Binding EmptyText}"
                                    FontSize="14"
@@ -204,8 +329,10 @@
                                                                 </ContextMenu.ItemContainerStyle>
                                                             </ContextMenu>
                                                         </Border.ContextMenu>
-                                                        <DockPanel VerticalAlignment="Center">
+                                                        <!-- Tab reads the row left to right: the done box, then Delete, then Open. -->
+                                                        <DockPanel VerticalAlignment="Center" KeyboardNavigation.TabNavigation="Local">
                                                             <ui:Button DockPanel.Dock="Right"
+                                                                       TabIndex="2"
                                                                        Appearance="Transparent"
                                                                        BorderThickness="0"
                                                                        Padding="6"
@@ -215,6 +342,7 @@
                                                                 <ui:SymbolIcon Symbol="Open24" />
                                                             </ui:Button>
                                                             <ui:Button DockPanel.Dock="Right"
+                                                                       TabIndex="1"
                                                                        Appearance="Transparent"
                                                                        BorderThickness="0"
                                                                        Padding="6"
@@ -240,6 +368,7 @@
                                                                        Foreground="{DynamicResource GM.AccentBrush}"
                                                                        Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                                                             <CheckBox VerticalAlignment="Center"
+                                                                      TabIndex="0"
                                                                       Foreground="{DynamicResource GM.TextBrush}"
                                                                       IsChecked="{Binding IsDone}"
                                                                       AutomationProperties.Name="{Binding Title}"
@@ -263,6 +392,12 @@
                                                                             <Ellipse Width="7" Height="7" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
                                                                             <TextBlock Text="{Binding AreaName}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
                                                                         </StackPanel>
+                                                                        <ContentControl Margin="0,1,10,1"
+                                                                                        VerticalAlignment="Center"
+                                                                                        Focusable="False"
+                                                                                        Content="{Binding Project}"
+                                                                                        ContentTemplate="{StaticResource ProjectTag}"
+                                                                                        Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
                                                                         <ui:SymbolIcon FontSize="12"
                                                                                        Symbol="ArrowRepeatAll16"
                                                                                        Foreground="{DynamicResource GM.TextMutedBrush}"

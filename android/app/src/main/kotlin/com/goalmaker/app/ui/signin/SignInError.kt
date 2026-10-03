@@ -5,6 +5,9 @@ enum class SignInError {
     INVALID_EMAIL,
     INVALID_CODE,
     WRONG_CODE,
+
+    /** Paste found no code in what was copied. */
+    NO_CODE_COPIED,
     TOO_MANY_REQUESTS,
     OFFLINE,
     OTHER,

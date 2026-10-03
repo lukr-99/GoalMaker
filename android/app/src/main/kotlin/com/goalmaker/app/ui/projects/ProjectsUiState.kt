@@ -6,23 +6,28 @@ import com.goalmaker.app.application.planning.ProjectMilestone
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.domain.settings.BoardView
+import com.goalmaker.app.ui.lists.FilterChoices
 
 /**
  * The Projects screen: the owner's projects, and the board of the one being looked at.
  * [openCounts] is how many items each project still has waiting, by project id, so the picker
  * says where the work is without opening every board. [madeBy] is what the who-made-it switch is set
- * to, and the board holds only the items it shows. [archived] are the done items that left the board,
- * most recently finished first. [view] and [collapsed] are how this phone shows the board.
+ * to, and the board holds only the items it shows. [filter] is the area and tag filter, which narrows
+ * [projects] and the board; [anyProject] says whether there are projects at all, filtered away or not.
+ * [archived] are the done items that left the board, most recently finished first. [view] and
+ * [collapsed] are how this phone shows the board.
  */
 data class ProjectsUiState(
     val loaded: Boolean = false,
     val projects: List<ProjectItem> = emptyList(),
+    val anyProject: Boolean = false,
     val selected: ProjectItem? = null,
     val board: List<ProjectColumn> = emptyList(),
     val archived: List<TaskItem> = emptyList(),
     val milestones: List<ProjectMilestone> = emptyList(),
     val openCounts: Map<String, Int> = emptyMap(),
     val madeBy: String = ProjectRules.EVERYONE,
+    val filter: FilterChoices = FilterChoices(),
     val view: BoardView = BoardView.COLUMNS,
     val collapsed: Set<String> = setOf(ProjectRules.DONE),
 ) {

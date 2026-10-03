@@ -35,7 +35,29 @@ Windows from the sidebar or `--open calendar`. Both draw the month as a grid of 
 that grows with what the day holds, today outlined and the day the owner picked filled; picking a day
 lists what is on it, and a task opens from there. The week view is the same grid, one row.
 
+**Filtering**: the lists' area and tag filter ([lists](lists.md#filtering)), with a filter of its
+own, sits over the grid on both apps. It narrows everything a day holds, the planned tasks,
+deadlines, repeats and reminders, so the cells' bars and the day's list show the same slice, and a
+project item without an area of its own counts as in its project's. A repeat is projected only for a
+task the filter keeps, but an occurrence the filter hides still keeps its day from being drawn as a
+repeat. Pinned by the filtered case in
+[`contracts/vectors/calendar.json`](../contracts/vectors/calendar.json).
+
 **Moving a task** is a drag: hold a planned task in the day's list and drop it on another cell, and
 it is planned for that day, moves counted like any other move ([plan tomorrow](plan-tomorrow.md)).
 The cell lights up while a task hangs over it. Deadlines and projected repeats are not dragged: a
 deadline belongs to its task and a repeat has no row of its own yet.
+
+## Putting a day right
+
+The open day is also where a day gone by is put right (the owner's board item "able to finish
+task/habits in retrospective from calendar"):
+
+- **Tasks:** a planned task or a deadline on the open day has a done box. Ticking it off on a day
+  gone by stamps that day's noon as when it was done, so the stats and the archive count it on that
+  day; on today or a day to come it is done now. Unticking opens it again. A repeat has no row of its
+  own yet, so it has no box.
+- **Habits:** on today or a day gone by, the day lists every habit due on it as a card, the way Today
+  shows them, read as of that day. Its button and menu check in, add one, log an amount, skip, fail or
+  clear on that day, so a run that was never logged still counts toward the streak. A day to come
+  lists none.

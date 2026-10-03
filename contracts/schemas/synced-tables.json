@@ -306,6 +306,11 @@
           "required": true
         },
         {
+          "name": "remind_at",
+          "kind": "time",
+          "required": false
+        },
+        {
           "name": "created_at",
           "kind": "timestamp",
           "required": true
@@ -352,6 +357,11 @@
         },
         {
           "name": "skipped",
+          "kind": "boolean",
+          "required": true
+        },
+        {
+          "name": "failed",
           "kind": "boolean",
           "required": true
         },

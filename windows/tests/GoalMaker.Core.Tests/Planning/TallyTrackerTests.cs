@@ -54,7 +54,7 @@ public sealed class TallyTrackerTests : IDisposable
         tracker.Stop();
 
         Assert.Equal(
-            [(At(10, 0), At(10, 2), VsCode, "coding"), (At(10, 2), At(10, 5), Chrome, "work")],
+            [(At(10, 0), At(10, 2), VsCode, "coding"), (At(10, 2), At(10, 5), Chrome, "email")],
             Entries().Select(entry => (entry.Start, entry.End, entry.App, entry.Category)));
     }
 
@@ -239,6 +239,40 @@ public sealed class TallyTrackerTests : IDisposable
         var entries = Entries();
         Assert.NotEqual("games", entries[0].Category);
         Assert.Equal("games", entries[1].Category);
+    }
+
+    [Fact]
+    public void ThePageReadsThisPcsOwnStretchesTheOpenOneIncludedAndWritesNothing()
+    {
+        source.Window = new ForegroundApp(Chrome, "Lo-fi beats - YouTube - Google Chrome");
+        tracker.Start();
+        Pass(TimeSpan.FromMinutes(10));
+        source.Switch(new ForegroundApp(VsCode, GoalMakerTitle));
+        Pass(TimeSpan.FromMinutes(5));
+
+        Assert.Equal(
+            [(At(10, 0), At(10, 10), Chrome, "video"), (At(10, 10), At(10, 15), VsCode, "coding")],
+            tracker.Stretches(Today, Today).Select(stretch => (stretch.Start, stretch.End, stretch.App, stretch.Category)));
+        Assert.Equal("Lo-fi beats - YouTube - Google Chrome", tracker.Stretches(Today, Today)[0].Title);
+        Assert.Empty(tracker.Stretches(Today.AddDays(1), Today.AddDays(1)));
+        Assert.Empty(tally.Days(Today, Today));
+    }
+
+    [Fact]
+    public void ARuleMadeOnThePageSortsTodayAgainAtOnceAndTheLogKeepsWhatItSaw()
+    {
+        source.Window = new ForegroundApp(Chrome, "Lo-fi beats - YouTube - Google Chrome");
+        tracker.Start();
+        Pass(TimeSpan.FromMinutes(10));
+        tracker.Flush();
+        Assert.Equal([("video", 10)], tally.Days(Today, Today).Select(day => (day.Category, day.Minutes)));
+
+        tally.AddRule(new TallyRule(TallyRules.Title, "lo-fi", TallyRules.Windows, "music"));
+        tracker.Recount();
+
+        Assert.Equal([("music", 10)], tally.Days(Today, Today).Select(day => (day.Category, day.Minutes)));
+        Assert.Equal(["music"], tracker.Stretches(Today, Today).Select(stretch => stretch.Category).Distinct());
+        Assert.Equal("video", Entries()[0].Category);
     }
 
     private static DateTime At(int hour, int minute, int second = 0) => new(2026, 9, 30, hour, minute, second);

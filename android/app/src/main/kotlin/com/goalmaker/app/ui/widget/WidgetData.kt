@@ -10,11 +10,11 @@ import java.time.LocalDateTime
 /** What the widgets read: the replica through the app's own lists, on the caller's thread. */
 object WidgetData {
     /** The replica tables the widgets read; a change to any of them draws the widgets again. */
-    val TABLES = listOf("tasks", "habits", "habit_checkins", "habit_pauses", "goals", "goal_entries")
+    val TABLES = listOf("tasks", "habits", "habit_checkins", "habit_pauses", "goals", "goal_entries", "projects")
 
     fun today(context: Context): List<WidgetTask> {
         val graph = (context.applicationContext as GoalMakerApplication).graph
-        return WidgetContent.today(graph.tasks.all(), day(context))
+        return WidgetContent.today(graph.tasks.all(), day(context), projects = graph.projects.all())
     }
 
     fun doneToday(context: Context): Pair<Int, Int> {

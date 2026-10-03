@@ -81,6 +81,31 @@ class SignInViewModelTest {
     }
 
     @Test
+    fun `a code copied from the email's notification goes in by itself, once`() {
+        val viewModel = SignInViewModel(auth)
+        viewModel.onEmailChange("me@example.com")
+        assertFalse(viewModel.takeCopiedCode("482913 is your GoalMaker code"))
+
+        viewModel.sendCode()
+        assertFalse(viewModel.takeCopiedCode("Sent 2026-10-03 at 10:30"))
+        assertTrue(viewModel.takeCopiedCode("482913 is your GoalMaker code"))
+        assertEquals(listOf("me@example.com" to "482913"), auth.verified)
+    }
+
+    @Test
+    fun `paste takes the code, or says nothing was copied`() {
+        auth.verifyResult = AuthResult.WrongOrExpiredCode
+        val viewModel = SignInViewModel(auth)
+        viewModel.onEmailChange("me@example.com")
+        viewModel.sendCode()
+
+        viewModel.pasteCode("hello")
+        assertEquals(SignInError.NO_CODE_COPIED, viewModel.uiState.value.error)
+        viewModel.pasteCode("Your sign-in code is 482 913.")
+        assertEquals(listOf("me@example.com" to "482913"), auth.verified)
+    }
+
+    @Test
     fun `a wrong code clears the field and explains`() {
         auth.verifyResult = AuthResult.WrongOrExpiredCode
         val viewModel = SignInViewModel(auth)

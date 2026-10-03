@@ -132,7 +132,7 @@ class TallyViewModelTest {
 
         val state = viewModel.uiState.first { it.loaded && it.weekMinutes > 0 }
 
-        val today = state.today!!
+        val today = state.day!!
         assertEquals(120, today.minutes)
         assertEquals(
             listOf(TallySlice("coding", "Coding", "blue", 90), TallySlice("video", "Video", "red", 30)),
@@ -154,7 +154,7 @@ class TallyViewModelTest {
         viewModel.showKind(TallyRules.PHONE)
         shadowOf(Looper.getMainLooper()).idle()
         val phone = viewModel.uiState.first { it.filter == TallyFilter(kind = TallyRules.PHONE) }
-        assertEquals(30, phone.today!!.minutes)
+        assertEquals(30, phone.day!!.minutes)
         assertEquals(100, phone.weekMinutes)
         assertEquals("the phone never links time to a project", emptyList<TallyProjectTime>(), phone.projects)
         assertEquals(listOf("video", "chat"), phone.chips.map(TallySlice::category))
@@ -193,8 +193,8 @@ class TallyViewModelTest {
         assertEquals(chess.id, TallyRules.sortSample(TallySample(TallyRules.ANDROID, "org.lichess.mobileapp"), tally.rules(), defaults.rules).category)
 
         tally.rewrite(WEDNESDAY, listOf(TallyTotal(WEDNESDAY, chess.id, null, 25)))
-        val state = viewModel.uiState.first { it.loaded && it.rules.size == 2 && (it.today?.minutes ?: 0) > 0 }
-        assertEquals(listOf(TallySlice(chess.id, "Chess", "teal", 25)), state.today!!.slices)
+        val state = viewModel.uiState.first { it.loaded && it.rules.size == 2 && (it.day?.minutes ?: 0) > 0 }
+        assertEquals(listOf(TallySlice(chess.id, "Chess", "teal", 25)), state.day!!.slices)
         assertEquals("Chess", state.nameOf(state.rules.first().category))
         assertEquals(listOf("Chess"), state.own.map { it.name })
         assertEquals("the owner's categories come before the shipped ones", "Chess", state.categories.first().name)
@@ -211,7 +211,7 @@ class TallyViewModelTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         val edited = viewModel.uiState.first { state -> state.own.any { it.name == "Board games" } && state.rules.any { it.match == TallyRules.TITLE } }
-        assertEquals(listOf(TallySlice(chess.id, "Board games", "green", 25)), edited.today!!.slices)
+        assertEquals(listOf(TallySlice(chess.id, "Board games", "green", 25)), edited.day!!.slices)
         assertEquals(listOf(TallyRule(TallyRules.TITLE, "lichess", TallyRules.WINDOWS, chess.id, id = rule.id)), edited.rules)
 
         viewModel.deleteCategory(chess.id)
@@ -219,8 +219,80 @@ class TallyViewModelTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         val deleted = viewModel.uiState.first { it.own.isEmpty() && it.rules.isEmpty() }
-        assertEquals("the time stays, with no name, so the place calls it a removed category", "", deleted.today!!.slices.single().name)
-        assertEquals(25, deleted.today!!.minutes)
+        assertEquals("the time stays, with no name, so the place calls it a removed category", "", deleted.day!!.slices.single().name)
+        assertEquals(25, deleted.day!!.minutes)
+    }
+
+    @Test
+    fun `a day of the week shows closer up, and picking it again goes back to today`() = runTest {
+        seedWeek()
+        viewModel.uiState.first { it.loaded && it.weekMinutes > 0 }
+
+        viewModel.showDay(MONDAY)
+        shadowOf(Looper.getMainLooper()).idle()
+        val monday = viewModel.uiState.first { it.day?.day == MONDAY }
+        assertFalse(monday.isToday)
+        assertEquals(0, monday.dayIndex)
+        assertEquals(70, monday.day!!.minutes)
+        assertEquals(listOf("video" to 50, "chat" to 20), monday.day!!.slices.map { it.category to it.minutes })
+
+        viewModel.showDay(MONDAY)
+        shadowOf(Looper.getMainLooper()).idle()
+        val back = viewModel.uiState.first { it.day?.day == WEDNESDAY }
+        assertTrue(back.isToday)
+        assertEquals(2, back.dayIndex)
+    }
+
+    @Test
+    fun `this phone's own hours and apps show once it counts, and the chips narrow them`() = runTest {
+        usage.names["com.google.android.youtube"] = "YouTube"
+        usage.add("com.whatsapp", "2026-09-30T11:00:00Z", "2026-09-30T11:10:00Z")
+        usage.add("com.google.android.youtube", "2026-09-28T09:00:00Z", "2026-09-28T09:15:00Z")
+        assertFalse("off, the phone shows none of its own", viewModel.uiState.first { it.loaded }.counting)
+
+        viewModel.setOn(true)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val state = viewModel.uiState.first { it.counting && it.apps.isNotEmpty() }
+        assertEquals(listOf("video" to 30, "chat" to 10), state.apps.map { it.category to it.minutes })
+        assertEquals(TallyAppRow("com.google.android.youtube", "YouTube", 30), state.apps.first().apps.single())
+        assertEquals("a name the phone doesn't know is the package", TallyAppRow("com.whatsapp", "com.whatsapp", 10), state.apps.last().apps.single())
+        assertEquals(24, state.hours.size)
+        assertEquals(4, state.hours.first().hour)
+        assertEquals(
+            listOf(10 to listOf("video" to 1800), 11 to listOf("chat" to 600)),
+            state.hours.filter { it.seconds > 0 }.map { hour -> hour.hour to hour.parts.map { it.category to it.seconds } },
+        )
+
+        viewModel.showApps(TallyAppScope.WEEK)
+        shadowOf(Looper.getMainLooper()).idle()
+        val week = viewModel.uiState.first { it.appScope == TallyAppScope.WEEK }
+        assertEquals(listOf("video" to 45, "chat" to 10), week.apps.map { it.category to it.minutes })
+
+        viewModel.showCategory("chat")
+        shadowOf(Looper.getMainLooper()).idle()
+        val chat = viewModel.uiState.first { it.filter.category == "chat" }
+        assertEquals(listOf("chat"), chat.apps.map(TallyAppGroup::category))
+        assertEquals(600, chat.hours.sumOf(TallyHourBar::seconds))
+
+        viewModel.showKind(TallyRules.PC)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue("the PC's apps stay on the PC", viewModel.uiState.first { it.filter.kind == TallyRules.PC }.otherDevice)
+    }
+
+    @Test
+    fun `make a rule under an app sorts it again at once`() = runTest {
+        viewModel.setOn(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf("video" to 30), tally.totals(WEDNESDAY, WEDNESDAY).map { it.category to it.minutes })
+
+        val rule = viewModel.ruleFor("com.google.android.youtube", "video")
+        assertEquals(TallyRule(TallyRules.APP, "com.google.android.youtube", TallyRules.ANDROID, "video"), rule)
+        assertNotNull(viewModel.addRule(rule.copy(category = "study")))
+
+        assertEquals(listOf("study" to 30), tally.totals(WEDNESDAY, WEDNESDAY).map { it.category to it.minutes })
+        val state = viewModel.uiState.first { it.apps.any { group -> group.category == "study" } }
+        assertEquals(listOf("study"), state.apps.map(TallyAppGroup::category))
     }
 
     /** Monday and Wednesday on this phone, Tuesday and Wednesday on the PC (one project on Wednesday). */

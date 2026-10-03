@@ -29,5 +29,9 @@ Searching splits the query on spaces. A task matches when **every** word is foun
 title or its notes, as part of a word or whole, ignoring case and accents: `mleko` finds
 "Koupit mléko" and `Zavolát` finds "Zavolat do banky". An empty query shows every done task.
 
+The lists' area and tag filter ([lists](lists.md#filtering)) narrows what the search finds, with a
+filter of its own under the search box on both apps; a project item without an area of its own
+counts as in its project's.
+
 Reopening a task from the archive makes it open again on its planned day. A repeating task takes
 back the next occurrence it made, if that one is still open ([repeating](repeating.md)).

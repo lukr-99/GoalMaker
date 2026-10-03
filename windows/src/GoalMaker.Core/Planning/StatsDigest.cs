@@ -14,8 +14,17 @@ public sealed record StatsDigest
 
     public IReadOnlyList<Rating> Ratings { get; init; } = [];
 
+    /// <summary>The project work over the weeks on show, per project, most first.</summary>
+    public IReadOnlyList<ProjectDone> ByProject { get; init; } = [];
+
     /// <summary>Tasks finished over the weeks on show.</summary>
     public int Done => Weeks.Sum(week => week.Done);
+
+    /// <summary>How many of them were project work: items of a project that is still there.</summary>
+    public int ProjectWork => Weeks.Sum(week => week.Project);
+
+    /// <summary>And how many were everything else.</summary>
+    public int OtherWork => Done - ProjectWork;
 
     /// <summary>What that works out at a week.</summary>
     public double PerWeek => Weeks.Count == 0 ? 0 : (double)Done / Weeks.Count;
@@ -40,8 +49,17 @@ public sealed record StatsDigest
     /// <summary>Whether there is nothing to show yet, so the screen can say so instead of drawing empty charts.</summary>
     public bool Empty => Done == 0 && GoalsTotal == 0 && Habits.Count == 0 && Ratings.Count == 0;
 
-    /// <summary>One column of the tasks chart: the Monday it starts on and what was finished that week.</summary>
-    public sealed record Week(DateOnly Start, int Done);
+    /// <summary>
+    /// One column of the tasks chart: the Monday it starts on, what was finished that week and how
+    /// much of it was project work.
+    /// </summary>
+    public sealed record Week(DateOnly Start, int Done, int Project = 0)
+    {
+        public int Other => Done - Project;
+    }
+
+    /// <summary>One project's finished items over the weeks on show.</summary>
+    public sealed record ProjectDone(string Id, string Name, int Done);
 
     /// <summary>One column of the goals chart: the first of the month, the goals it held and how many were hit.</summary>
     public sealed record Month(DateOnly Start, int Hit, int Total)

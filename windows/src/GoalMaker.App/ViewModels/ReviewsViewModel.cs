@@ -46,6 +46,7 @@ public sealed partial class ReviewsViewModel : ObservableObject
         var today = Today();
         var week = ReviewRules.PeriodStart(ReviewRules.Weekly, today);
         var month = ReviewRules.PeriodStart(ReviewRules.Monthly, today);
+        var year = ReviewRules.PeriodStart(ReviewRules.Yearly, today);
         var written = reviews.All().Where(review => review.Written).ToList();
         bool Done(string kind, DateOnly start) => written.Any(review => review.Kind == kind && review.PeriodStart == start);
 
@@ -56,6 +57,8 @@ public sealed partial class ReviewsViewModel : ObservableObject
             (ReviewRules.Weekly, week, "Reviews.ThisWeek"),
             (ReviewRules.Monthly, ReviewLookBack.PreviousStart(ReviewRules.Monthly, month), "Reviews.LastMonth"),
             (ReviewRules.Monthly, month, "Reviews.ThisMonth"),
+            (ReviewRules.Yearly, ReviewLookBack.PreviousStart(ReviewRules.Yearly, year), "Reviews.LastYear"),
+            (ReviewRules.Yearly, year, "Reviews.ThisYear"),
         })
         {
             ToWrite.Add(new ReviewStartViewModel(

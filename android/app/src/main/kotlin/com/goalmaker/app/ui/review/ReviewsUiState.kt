@@ -4,8 +4,8 @@ import com.goalmaker.app.application.planning.ReviewItem
 import java.time.LocalDate
 
 /**
- * The Reviews screen: the periods a review can be written for (this week and month, and the ones just
- * gone), and the reviews already written, with the first line of each one's letter by review id.
+ * The Reviews screen: the periods a review can be written for (this week, month and year, and the ones
+ * just gone), and the reviews already written, with the first line of each one's letter by review id.
  */
 data class ReviewsUiState(
     val loaded: Boolean = false,
@@ -13,6 +13,8 @@ data class ReviewsUiState(
     val monthStart: LocalDate = LocalDate.MIN,
     val lastWeekStart: LocalDate = LocalDate.MIN,
     val lastMonthStart: LocalDate = LocalDate.MIN,
+    val yearStart: LocalDate = LocalDate.MIN,
+    val lastYearStart: LocalDate = LocalDate.MIN,
     val past: List<ReviewItem> = emptyList(),
     val letters: Map<String, String> = emptyMap(),
 )

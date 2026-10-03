@@ -147,7 +147,7 @@ public sealed class PageSnapshots
         var composer = new ComposerViewModel(
             planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, _ => null, action => action());
         composer.NewTaskTitle = "Look up train times tomorrow 9:00 #travel";
-        var box = new Shell.QuickAddWindow(composer, strings);
+        var box = new Shell.QuickAddWindow(composer, strings, new TextScale(action => action(), readSystem: false));
         var content = (FrameworkElement)box.Content;
         box.Content = null;
         Save(content, folder, "quick-add", new Size(592, 190));
@@ -173,7 +173,7 @@ public sealed class PageSnapshots
         _ = chat.SendAsync("move buy milk to Friday");
 
         var composer = Composer(_ => null);
-        var box = new Shell.QuickAddWindow(composer, strings);
+        var box = new Shell.QuickAddWindow(composer, strings, new TextScale(action => action(), readSystem: false));
         var content = (FrameworkElement)box.Content;
         box.Content = null;
         Save(content, folder, "quick-chat", new Size(592, 460));
@@ -191,7 +191,7 @@ public sealed class PageSnapshots
             {
                 theme.Apply(Appearance.Default with { ThemeId = id, Mode = mode });
                 var look = $"{id}-{mode}".ToLowerInvariant();
-                var themed = new Shell.QuickAddWindow(Composer(_ => null), strings);
+                var themed = new Shell.QuickAddWindow(Composer(_ => null), strings, new TextScale(action => action(), readSystem: false));
                 var themedContent = (FrameworkElement)themed.Content;
                 themed.Content = null;
                 Save(themedContent, folder, $"quick-chat-{look}", new Size(592, 460));
@@ -273,7 +273,7 @@ public sealed class PageSnapshots
         planner.Tasks.SetDone(planner.Task("Call the bank").Id, true);
         planner.Time.Advance(TimeSpan.FromHours(2));
         planner.Tasks.SetDone(planner.Task("Buy milk").Id, true);
-        var archive = new ArchiveViewModel(planner.Tasks, strings, action => action(), _ => { });
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, strings, _ => null, action => action(), _ => { });
         Save(new ArchivePage(archive), folder, "archive");
     });
 
@@ -638,6 +638,125 @@ public sealed class PageSnapshots
     });
 
     [Fact(Explicit = true)]
+    public void ProjectWorkInTheListsAndStats() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        Add(planner, "Fix the build 9:00 +GoalMaker", Today);
+        Add(planner, "Dark widget @Home +GoalMaker", Today);
+        Add(planner, "Crash on start ! +GoalMaker", Today);
+        Add(planner, "Prune the roses +Garden", Today);
+        Add(planner, "Buy milk @Home", Today);
+        planner.Tasks.SetItemType(planner.Task("Dark widget").Id, ProjectRules.Idea);
+        planner.Tasks.SetItemType(planner.Task("Crash on start").Id, ProjectRules.Bug);
+        using var theme = Theme(planner);
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time, theme.AreaBrush,
+            () => true, planner.Tick, action => action(), projects: planner.Projects, openProject: _ => { });
+        Save(new TodayPage(today), folder, "project-chips-today");
+
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time, _ => { }, action => action(), _ => { });
+        calendar.Open(Today);
+        Save(new CalendarPage(calendar), folder, "project-chips-calendar", new Size(1000, 620));
+
+        foreach (var title in new[] { "Fix the build", "Prune the roses", "Buy milk" })
+        {
+            planner.Tasks.SetDone(planner.Task(title).Id, true);
+        }
+
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, strings, theme.AreaBrush, action => action(), _ => { }, _ => { });
+        Save(new ArchivePage(archive), folder, "project-chips-archive");
+
+        // A few weeks of finished work, some of it for projects, for the stats page.
+        foreach (var (back, project, count) in new[] { (1, "+GoalMaker", 3), (1, string.Empty, 2), (3, "+Garden", 2), (3, string.Empty, 4), (5, "+GoalMaker", 1) })
+        {
+            for (var index = 0; index < count; index++)
+            {
+                Add(planner, $"Week {back} thing {index} {project}", null);
+                var task = planner.Tasks.All().Last();
+                planner.Tasks.SetDone(task.Id, true);
+                var row = planner.Replica.Get("tasks", task.Id)!;
+                row["completed_at"] = JsonValue.Create($"{Today.AddDays(-7 * back):yyyy-MM-dd}T18:00:00.000000Z");
+                planner.Replica.Queue("tasks", row);
+            }
+        }
+
+        var stats = new StatsViewModel(
+            planner.Tasks, planner.Goals, planner.Habits, planner.Reviews, planner.Settings, strings, planner.Time, action => action(),
+            projects: planner.Projects);
+        Save(new StatsPage(stats), folder, "stats-project-work", new Size(900, 900));
+    });
+
+    /// <summary>The 2026-10-03 backlog: a failed habit, a habit's reminder, a day put right, the January card, the year rows and the code paste.</summary>
+    [Fact(Explicit = true)]
+    public void BacklogChanges() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Dark });
+
+        var read = planner.Habits.Add(new HabitDraft("Read", Today.AddDays(-30)) { Emoji = "📖", RemindAt = new TimeOnly(21, 0) })!;
+        var run = planner.Habits.Add(new HabitDraft("Run", Today.AddDays(-30)) { Emoji = "🏃", Cadence = HabitRules.PerWeek, Times = 3 })!;
+        var water = planner.Habits.Add(new HabitDraft("Water", Today.AddDays(-30)) { Emoji = "💧", Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;
+        for (var back = 1; back <= 9; back++)
+        {
+            planner.Habits.CheckIn(read.Id, Today.AddDays(-back));
+        }
+
+        planner.Habits.Fail(read.Id, Today);
+        planner.Habits.CheckIn(run.Id, Today.AddDays(-2));
+        planner.Habits.CheckIn(water.Id, Today, 3);
+        Add(planner, "Call the bank 9:00", Today);
+        Add(planner, "Water the plants", Today);
+
+        var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action());
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action(), habitsPage: habits, habitList: planner.Habits,
+            goals: planner.Goals, reviews: planner.Reviews);
+        Save(new TodayPage(today), folder, "backlog-today-failed-habit", new Size(1100, 760));
+        Save(new HabitsPage(habits), folder, "backlog-habits-failed", new Size(1100, 1300));
+        habits.Editor.OpenEdit(read);
+        Save(new HabitsPage(habits), folder, "backlog-habit-form-reminder", new Size(1100, 1100));
+        habits.Editor.IsOpen = false;
+
+        // A day gone by, put right: its habits as cards, its tasks with a done box.
+        var monday = Today.AddDays(-4);
+        Add(planner, "File the receipts", monday);
+        Add(planner, "Pay the rent", monday);
+        planner.Tasks.FinishOn(planner.Task("Pay the rent").Id, monday, Today, TimeZoneInfo.Utc);
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time,
+            _ => { }, action => action(), habitsPage: habits, habitList: planner.Habits);
+        calendar.Open(monday);
+        Save(new CalendarPage(calendar), folder, "backlog-calendar-day-gone-by", new Size(1100, 900));
+
+        // January: the card on Today, and the year rows on Reviews.
+        planner.Time.SetUtcNow(new DateTimeOffset(2027, 1, 5, 12, 0, 0, TimeSpan.Zero));
+        today.Refresh();
+        Save(new TodayPage(today), folder, "backlog-today-january", new Size(1100, 760));
+        var reviews = new ReviewsViewModel(planner.Reviews, planner.Settings, strings, planner.Time, (_, _) => { }, action => action());
+        Save(new ReviewsPage(reviews), folder, "backlog-reviews-year-rows", new Size(900, 760));
+
+        // The code step after Paste found nothing on the clipboard.
+        var auth = new SnapshotAuth();
+        var signIn = new SignInViewModel(
+            auth, new SignInWatch(auth, planner.Settings, () => DateTimeOffset.Now), strings, devBackend: null, readClipboard: () => "hello")
+        {
+            Email = "me@example.com",
+        };
+        signIn.SendCodeCommand.Execute(null);
+        signIn.PasteCodeCommand.Execute(null);
+        Save(new SignInView { DataContext = signIn }, folder, "backlog-sign-in-paste", new Size(900, 700));
+    });
+
+    [Fact(Explicit = true)]
     public void CalendarPage_() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();
@@ -651,7 +770,7 @@ public sealed class PageSnapshots
             ("Pack the gym bag 7:00", Today.AddDays(1)),
             ("Book the dentist", Today.AddDays(4)),
             ("Read about sourdough", Today.AddDays(4)),
-            ("Fix the bike", Today.AddDays(4)),
+            ("Fix the bike @Home", Today.AddDays(4)),
         })
         {
             var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
@@ -662,7 +781,7 @@ public sealed class PageSnapshots
         planner.Tasks.SetRecurrence(planner.Task("Water the plants").Id, "FREQ=DAILY");
 
         var calendar = new CalendarViewModel(
-            planner.Tasks, planner.Reminders, planner.Settings, strings, planner.Time, _ => { }, action => action());
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, _ => null, planner.Time, _ => { }, action => action());
         calendar.Open(Today);
         Save(new CalendarPage(calendar), folder, "calendar", new Size(1000, 620));
     });
@@ -673,7 +792,9 @@ public sealed class PageSnapshots
         using var planner = new TestPlanner();
         var strings = new ResourceStrings(Application.Current);
         using var theme = Theme(planner);
-        var projects = new ProjectsViewModel(planner.Projects, planner.Tasks, planner.Settings, strings, _ => { }, action => action(), planner.Time);
+        var windows = new List<ProjectItemFormViewModel>();
+        var projects = new ProjectsViewModel(
+            planner.Projects, planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, _ => null, _ => { }, action => action(), planner.Time, windows.Add);
         projects.NewCommand.Execute(null);
         projects.ProjectName = "GoalMaker";
         projects.ProjectDescription = "The planner on the phone and the PC.";
@@ -700,6 +821,8 @@ public sealed class PageSnapshots
         var shared = planner.Replica.Get("tasks", planner.Task("Share to GoalMaker").Id)!;
         shared["made_by"] = ProjectRules.Claude;
         planner.Replica.Put("tasks", shared);
+        // An area, so the area and tag filter shows over the board.
+        planner.Areas.FindOrCreate("Work");
         // A paused and a finished project, so the list shows every status's mark.
         planner.Projects.Add(new ProjectDraft("Relay") { Status = ProjectRules.Paused });
         planner.Projects.Add(new ProjectDraft("Treeline") { Status = ProjectRules.Finished });
@@ -727,6 +850,26 @@ public sealed class PageSnapshots
         // Done folded to its strip, so the other columns take the room.
         done.FoldCommand.Execute(null);
         Save(new ProjectsPage(projects), folder, "projects-folded", new Size(1100, 700));
+
+        // The new item window, from Doing's plus, with a milestone to pick and one item already added.
+        planner.Projects.AddMilestone(planner.Projects.All().Single(project => project.Name == "GoalMaker").Id, "M5");
+        projects.Columns.Single(column => column.Column == ProjectRules.Doing).AddCommand.Execute(null);
+        var form = windows[^1];
+        form.AddAnother = true;
+        form.Title = "Drag cards between columns";
+        form.Create();
+        form.ItemType = ProjectRules.Bug;
+        form.Priority = ProjectRules.High;
+        form.Title = "A card dropped on a folded column vanishes until the board is opened again";
+        form.Deadline = new DateTime(2026, 9, 30);
+        form.Notes = "Seen on Windows only.\n\n- fold Done\n- drop a card on its strip";
+        var window = new ProjectItemWindow(form);
+        var content = (FrameworkElement)window.Content;
+        window.Content = null;
+        content.DataContext = form;
+        content.Width = window.Width;
+        Save(content, folder, "project-item-window", new Size(window.Width, 680));
+        window.Close();
     });
 
     [Fact(Explicit = true)]
@@ -839,12 +982,29 @@ public sealed class PageSnapshots
         planner.Tally.AddRule(new TallyRule(TallyRules.Folder, "GoalMaker", TallyRules.Windows, "coding", project.Id));
         using var theme = Theme(planner);
         var defaults = ContractResources.TallyDefaults();
+        // This PC's own log for today, for the hours and the apps.
+        var friday = week.AddDays(4);
+        List<TallyStretch> local =
+        [
+            new(friday.ToDateTime(new TimeOnly(8, 30)), friday.ToDateTime(new TimeOnly(9, 45)), "code.exe", "Tally.cs - GoalMaker - Visual Studio Code", "coding"),
+            new(friday.ToDateTime(new TimeOnly(9, 45)), friday.ToDateTime(new TimeOnly(10, 10)), "chrome.exe", "Lo-fi beats - YouTube - Google Chrome", "video"),
+            new(friday.ToDateTime(new TimeOnly(10, 10)), friday.ToDateTime(new TimeOnly(10, 30)), "chrome.exe", "r/androiddev - Reddit - Google Chrome", "social"),
+            new(friday.ToDateTime(new TimeOnly(11, 0)), friday.ToDateTime(new TimeOnly(12, 30)), "code.exe", "main.py - Thesis - Visual Studio Code", "study"),
+            new(friday.ToDateTime(new TimeOnly(13, 0)), friday.ToDateTime(new TimeOnly(13, 40)), "slack.exe", "general - Slack", "chat"),
+            new(friday.ToDateTime(new TimeOnly(13, 40)), friday.ToDateTime(new TimeOnly(14, 0)), "spotify.exe", "Spotify Premium", "music"),
+        ];
         var tally = new TallyViewModel(
             planner.Tally, defaults, planner.Projects, planner.Settings, strings, planner.Time, theme.SwatchBrush,
-            [.. ContractResources.Themes().AreaColors.Select(color => color.Id)], action => action());
+            [.. ContractResources.Themes().AreaColors.Select(color => color.Id)], action => action(), stretches: (_, _) => local);
+        tally.Apps[0].IsExpanded = true;
+        tally.Apps[1].IsExpanded = true;
         var page = new TallyPage(tally);
-        Save(page, folder, "tally-wide", new Size(1100, 1500));
-        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 1700));
+        Save(page, folder, "tally-wide", new Size(1100, 2300));
+        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 2600));
+
+        tally.ShowDay(week.AddDays(2));
+        Save(new TallyPage(tally), folder, "tally-a-day-picked", new Size(1100, 1200));
+        tally.ShowDay(week.AddDays(2));
 
         tally.Choose(TallyRules.Phone);
         tally.AddRuleCommand.Execute(null);

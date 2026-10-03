@@ -4,9 +4,11 @@
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
              Width="340"
+             KeyboardNavigation.TabNavigation="Cycle"
              FontFamily="{DynamicResource GM.BodyFont}"
              Foreground="{DynamicResource GM.TextBrush}">
-    <!-- Today at a glance from the tray (spec, story 79). -->
+    <!-- Today at a glance from the tray (spec, story 79). Tab goes round the tasks and the two buttons
+         in the order they read, and stays inside until Esc closes it (Shell/TrayIcon). -->
     <Border Padding="16,14"
             CornerRadius="12"
             BorderThickness="1"
@@ -58,11 +60,7 @@
                        Visibility="{Binding HasMore, Converter={StaticResource BoolToVisibility}}" />
 
             <DockPanel Margin="0,12,0,0">
-                <ui:Button DockPanel.Dock="Right"
-                           Appearance="Primary"
-                           Content="{DynamicResource Tray.Open}"
-                           Command="{Binding OpenAppCommand}" />
-                <ui:Button HorizontalAlignment="Left"
+                <ui:Button DockPanel.Dock="Left"
                            Appearance="Secondary"
                            Content="{DynamicResource Tray.QuickAdd}"
                            Command="{Binding QuickAddCommand}">
@@ -70,6 +68,10 @@
                         <ui:SymbolIcon Symbol="Add24" />
                     </ui:Button.Icon>
                 </ui:Button>
+                <ui:Button HorizontalAlignment="Right"
+                           Appearance="Primary"
+                           Content="{DynamicResource Tray.Open}"
+                           Command="{Binding OpenAppCommand}" />
             </DockPanel>
         </StackPanel>
     </Border>

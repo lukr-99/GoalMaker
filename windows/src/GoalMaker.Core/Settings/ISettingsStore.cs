@@ -58,6 +58,9 @@ public interface ISettingsStore
     /// <summary>How the Goals page shows the goals on this PC (docs/goals.md); the ladder unless changed.</summary>
     GoalsView GoalsView { get; set; }
 
+    /// <summary>The year the January nudge was last put away with Not now on this PC (docs/reviews.md); null for never.</summary>
+    int? NewYearDismissed { get; set; }
+
     /// <summary>Dev builds only: another Supabase project to use from the next app start.</summary>
     BackendEnvironment? BackendOverride { get; set; }
 

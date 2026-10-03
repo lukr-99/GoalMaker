@@ -42,7 +42,8 @@ import kotlinx.coroutines.launch
 
 /**
  * Adds a Tally rule of the owner's own, or edits or deletes [initial] (docs/tally.md): what it matches (an app, a window title or an
- * editor's folder), the pattern, where it applies and the category it sorts into. Titles and folders
+ * editor's folder), the pattern, where it applies and the category it sorts into. An [initial] without
+ * an id is a new rule already filled in, as Make a rule under an app starts one. Titles and folders
  * exist only on the PC, so those rules can't be for Android alone. The owner's rules come before the
  * shipped ones, so the next count sorts by it.
  */
@@ -80,7 +81,7 @@ internal fun TallyRuleSheet(viewModel: TallyViewModel, initial: TallyRule?, cate
                 .padding(bottom = 16.dp)
                 .navigationBarsPadding(),
         ) {
-            ScreenTitle(stringResource(if (initial == null) R.string.tally_rule_add else R.string.tally_rule_edit))
+            ScreenTitle(stringResource(if (initial?.id == null) R.string.tally_rule_add else R.string.tally_rule_edit))
             Text(stringResource(R.string.tally_rule_match), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(TallyRules.APP, TallyRules.TITLE, TallyRules.FOLDER).forEach { value ->

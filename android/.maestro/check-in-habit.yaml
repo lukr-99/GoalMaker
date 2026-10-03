@@ -1,0 +1,26 @@
+# A habit added from the Habits bar is checked in with its card's button.
+appId: com.goalmaker.app.debug
+name: Check in a habit
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Add a task…"
+    timeout: 60000
+- tapOn: "Places"
+- tapOn: "Habits"
+- extendedWaitUntil:
+    visible: "Add a habit: Swim 2 times a week"
+    timeout: 15000
+- tapOn: "Add a habit: Swim 2 times a week"
+- inputText: "read every day"
+- hideKeyboard
+- tapOn: "Add habit"
+- extendedWaitUntil:
+    visible: "Check in Read"
+    timeout: 15000
+- tapOn: "Check in Read"
+- extendedWaitUntil:
+    visible: "Take back Read"
+    timeout: 15000
+- assertVisible: "Every day · Done today"

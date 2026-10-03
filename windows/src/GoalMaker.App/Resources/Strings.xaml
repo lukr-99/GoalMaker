@@ -45,12 +45,14 @@
     <sys:String x:Key="SignIn.CodeSent">We sent a code to {0}. It works for 10 minutes.</sys:String>
     <sys:String x:Key="SignIn.Verify">Sign in</sys:String>
     <sys:String x:Key="SignIn.Resend">Send a new code</sys:String>
+    <sys:String x:Key="SignIn.PasteCode">Paste the code</sys:String>
     <sys:String x:Key="SignIn.DevAccount">Sign in as {0}</sys:String>
     <sys:String x:Key="SignIn.FillCode">Fill it in from the local mailbox</sys:String>
     <sys:String x:Key="SignIn.UseAnotherEmail">Use another email</sys:String>
     <sys:String x:Key="SignIn.SessionEnded">Your session ended. Sign in with the same email and your waiting changes will sync.</sys:String>
     <sys:String x:Key="SignIn.Error.InvalidEmail">Enter a valid email address.</sys:String>
     <sys:String x:Key="SignIn.Error.InvalidCode">Enter the 6 digits from the email.</sys:String>
+    <sys:String x:Key="SignIn.Error.NoCodeCopied">No code was copied. Copy the six digits from the email, or type them.</sys:String>
     <sys:String x:Key="SignIn.Error.WrongCode">That code is wrong or has expired. Try again or send a new one.</sys:String>
     <sys:String x:Key="SignIn.Error.TooManyRequests">Too many attempts. Wait a minute, then try again.</sys:String>
     <sys:String x:Key="SignIn.Error.Offline">No connection to GoalMaker's server. Check your internet and try again.</sys:String>
@@ -260,6 +262,10 @@
     <sys:String x:Key="Lists.InboxEmpty">Inbox zero. Anything without a day or an area lands here.</sys:String>
     <sys:String x:Key="Lists.Delete">Delete task</sys:String>
     <sys:String x:Key="Lists.Repeats">Repeats</sys:String>
+    <sys:String x:Key="Lists.ProjectTask">Project {0}</sys:String>
+    <sys:String x:Key="Lists.ProjectIdea">Idea for {0}</sys:String>
+    <sys:String x:Key="Lists.ProjectBug">Bug in {0}</sys:String>
+    <sys:String x:Key="Lists.OpenProject">Open the {0} board</sys:String>
     <sys:String x:Key="Lists.TopPriority">Top priority</sys:String>
     <sys:String x:Key="Lists.Done">Done: {0}</sys:String>
     <sys:String x:Key="Lists.Deleted">Deleted: {0}</sys:String>
@@ -616,6 +622,7 @@
     <sys:String x:Key="Mini.Habits">Habits</sys:String>
     <sys:String x:Key="Mini.OpenThis">Open this in a mini window</sys:String>
     <sys:String x:Key="Mini.Pin">Keep on top</sys:String>
+    <sys:String x:Key="Mini.Unpin">Stop keeping on top</sys:String>
     <sys:String x:Key="Mini.Open">Open GoalMaker</sys:String>
     <sys:String x:Key="Mini.Close">Close</sys:String>
     <sys:String x:Key="Tray.MiniToday">Today mini window</sys:String>
@@ -678,6 +685,19 @@
     <sys:String x:Key="Habits.SkipWeek">Skip this week</sys:String>
     <sys:String x:Key="Habits.SkipMonth">Skip this month</sys:String>
     <sys:String x:Key="Habits.Unskip">Undo the skip</sys:String>
+    <sys:String x:Key="Habits.LogTitleOn">Log {0} on {1}</sys:String>
+    <sys:String x:Key="Calendar.Habits">Habits</sys:String>
+    <sys:String x:Key="Habits.Remind">Remind me</sys:String>
+    <sys:String x:Key="Habits.RemindAt">Reminder time</sys:String>
+    <sys:String x:Key="Habits.RemindHint">On the days it is still left, with Check in and Skip on the notification.</sys:String>
+    <sys:String x:Key="HabitReminder.Left">Still to do today</sys:String>
+    <sys:String x:Key="HabitReminder.CheckIn">Check in</sys:String>
+    <sys:String x:Key="HabitReminder.AddOne">+1</sys:String>
+    <sys:String x:Key="HabitReminder.Log">Log</sys:String>
+    <sys:String x:Key="Habits.FailDay">Fail today</sys:String>
+    <sys:String x:Key="Habits.FailWeek">Fail this week</sys:String>
+    <sys:String x:Key="Habits.FailMonth">Fail this month</sys:String>
+    <sys:String x:Key="Habits.Unfail">Undo the fail</sys:String>
     <sys:String x:Key="Habits.Pause">Pause</sys:String>
     <sys:String x:Key="Habits.Resume">Resume</sys:String>
     <sys:String x:Key="Habits.Archive">Archive</sys:String>
@@ -687,6 +707,7 @@
     <sys:String x:Key="Habits.StreakMonths">{0}-month streak</sys:String>
     <sys:String x:Key="Habits.Paused">Paused</sys:String>
     <sys:String x:Key="Habits.Skipped">Skipped</sys:String>
+    <sys:String x:Key="Habits.Failed">Failed</sys:String>
     <sys:String x:Key="Habits.NotDue">Not today</sys:String>
     <sys:String x:Key="Habits.Done">Done today</sys:String>
     <sys:String x:Key="Habits.NotYet">Not yet today</sys:String>
@@ -696,6 +717,14 @@
     <sys:String x:Key="Habits.LimitUnit">{0} of at most {1} {2} today</sys:String>
     <sys:String x:Key="Habits.NoneToday">None today</sys:String>
     <sys:String x:Key="Habits.OverToday">Over the line today</sys:String>
+    <sys:String x:Key="Habits.DoneOnDay">Done</sys:String>
+    <sys:String x:Key="Habits.NotYetOnDay">Not done</sys:String>
+    <sys:String x:Key="Habits.ValueOnDay">{0} of {1}</sys:String>
+    <sys:String x:Key="Habits.ValueUnitOnDay">{0} of {1} {2}</sys:String>
+    <sys:String x:Key="Habits.LimitOnDay">{0} of at most {1}</sys:String>
+    <sys:String x:Key="Habits.LimitUnitOnDay">{0} of at most {1} {2}</sys:String>
+    <sys:String x:Key="Habits.NoneTodayOnDay">None</sys:String>
+    <sys:String x:Key="Habits.OverTodayOnDay">Over the line</sys:String>
     <sys:String x:Key="Habits.MetWeek">{0} of {1} this week</sys:String>
     <sys:String x:Key="Habits.MetMonth">{0} of {1} this month</sys:String>
     <sys:String x:Key="Habits.Serves">Serves {0}</sys:String>
@@ -725,6 +754,7 @@
     <sys:String x:Key="Habits.LogOn">Log an amount on {0}</sys:String>
     <sys:String x:Key="Habits.TakeBack">Take back {0}</sys:String>
     <sys:String x:Key="Habits.UnskipOn">Undo the skip on {0}</sys:String>
+    <sys:String x:Key="Habits.UnfailOn">Undo the fail on {0}</sys:String>
     <sys:String x:Key="Habits.MenuCheckIn">Check in</sys:String>
     <sys:String x:Key="Habits.MenuTakeBack">Take back today's check-in</sys:String>
     <sys:String x:Key="Habits.MenuAddOne">Add one</sys:String>
@@ -745,6 +775,18 @@
     <sys:String x:Key="Calendar.Repeat">Repeats</sys:String>
     <sys:String x:Key="Calendar.Reminders">{0} reminders ring</sys:String>
     <sys:String x:Key="Calendar.DragHint">Drag onto another day to move it</sys:String>
+    <!-- A day cell as a screen reader says it, after the date (M6-05). -->
+    <sys:String x:Key="Calendar.CellToday">today</sys:String>
+    <sys:String x:Key="Calendar.CellOpen">open</sys:String>
+    <sys:String x:Key="Calendar.CellEmpty">nothing on it</sys:String>
+    <sys:String x:Key="Calendar.CellPlannedOne">1 planned</sys:String>
+    <sys:String x:Key="Calendar.CellPlanned">{0} planned</sys:String>
+    <sys:String x:Key="Calendar.CellDueOne">1 due</sys:String>
+    <sys:String x:Key="Calendar.CellDue">{0} due</sys:String>
+    <sys:String x:Key="Calendar.CellRepeatsOne">1 repeating</sys:String>
+    <sys:String x:Key="Calendar.CellRepeats">{0} repeating</sys:String>
+    <sys:String x:Key="Calendar.CellRemindersOne">1 reminder</sys:String>
+    <sys:String x:Key="Calendar.CellReminders">{0} reminders</sys:String>
 
     <!-- Projects (docs/projects.md) -->
     <sys:String x:Key="Nav.Projects">Projects</sys:String>
@@ -784,6 +826,8 @@
     <sys:String x:Key="Projects.Normal">Normal</sys:String>
     <sys:String x:Key="Projects.Low">Low</sys:String>
     <sys:String x:Key="Projects.MadeBy">Made by</sys:String>
+    <sys:String x:Key="Projects.NoneMatch">No project matches the filter.</sys:String>
+    <sys:String x:Key="Projects.Area">Area</sys:String>
     <sys:String x:Key="Projects.MadeByAll">Everyone</sys:String>
     <sys:String x:Key="Projects.MadeByOwner">Me</sys:String>
     <sys:String x:Key="Projects.MadeByClaude">Claude</sys:String>
@@ -799,6 +843,19 @@
     <sys:String x:Key="Projects.ArchiveNever">Never</sys:String>
     <sys:String x:Key="Projects.Fold">Fold {0}</sys:String>
     <sys:String x:Key="Projects.Unfold">Unfold {0}</sys:String>
+    <sys:String x:Key="Projects.NewItem">New item</sys:String>
+    <sys:String x:Key="Projects.NewItemHelp">Write a fuller item in its own window (Ctrl+N)</sys:String>
+    <sys:String x:Key="Projects.AddTo">Add an item to {0}</sys:String>
+    <sys:String x:Key="ProjectItem.Heading">New item in {0}</sys:String>
+    <sys:String x:Key="ProjectItem.TitleMissing">An item needs a title.</sys:String>
+    <sys:String x:Key="ProjectItem.Milestone">Milestone</sys:String>
+    <sys:String x:Key="ProjectItem.NoMilestone">No milestone</sys:String>
+    <sys:String x:Key="ProjectItem.NotesHint">Light Markdown works here, as in any task's notes.</sys:String>
+    <sys:String x:Key="ProjectItem.Keys">Enter adds from the title, Ctrl+Enter from anywhere. Esc closes.</sys:String>
+    <sys:String x:Key="ProjectItem.AddAnother">Add another after this one</sys:String>
+    <sys:String x:Key="ProjectItem.Add">Add item</sys:String>
+    <sys:String x:Key="ProjectItem.Cancel">Cancel</sys:String>
+    <sys:String x:Key="ProjectItem.Added">Added: {0}</sys:String>
 
     <!-- Stats (docs/stats.md) -->
     <sys:String x:Key="Nav.Stats">Stats</sys:String>
@@ -820,6 +877,12 @@
     <sys:String x:Key="Stats.MonthHit">{0}/{1}</sys:String>
     <sys:String x:Key="Stats.HabitMet">{0} of {1} met, best run {2}</sys:String>
     <sys:String x:Key="Stats.Streak">Periods met in a row right now</sys:String>
+    <sys:String x:Key="Stats.OnProjects">{0} on projects</sys:String>
+    <sys:String x:Key="Stats.ProjectWork">Projects {0}</sys:String>
+    <sys:String x:Key="Stats.OtherWork">Other {0}</sys:String>
+    <sys:String x:Key="Stats.WeekTip">Week of {0}: {1} done, {2} on projects</sys:String>
+    <sys:String x:Key="Stats.ByProject">By project</sys:String>
+    <sys:String x:Key="Stats.MoreProjects">and {0} more</sys:String>
 
     <!-- Reviews (docs/reviews.md) -->
     <sys:String x:Key="Nav.Reviews">Reviews</sys:String>
@@ -839,11 +902,21 @@
     <sys:String x:Key="Reviews.Hint">A quarter of an hour at the end of a week or a month: what happened, what is left, and what comes next.</sys:String>
     <sys:String x:Key="Reviews.Weekly">Weekly review</sys:String>
     <sys:String x:Key="Reviews.Monthly">Monthly review</sys:String>
+    <sys:String x:Key="Reviews.Yearly">Yearly review</sys:String>
     <sys:String x:Key="Reviews.ToWrite">Write a review</sys:String>
     <sys:String x:Key="Reviews.ThisWeek">This week</sys:String>
     <sys:String x:Key="Reviews.LastWeek">Last week</sys:String>
     <sys:String x:Key="Reviews.ThisMonth">This month</sys:String>
     <sys:String x:Key="Reviews.LastMonth">Last month</sys:String>
+    <sys:String x:Key="Reviews.ThisYear">This year</sys:String>
+    <sys:String x:Key="Reviews.LastYear">Last year</sys:String>
+    <sys:String x:Key="NewYear.Title">{0} is here</sys:String>
+    <sys:String x:Key="NewYear.Both">Look back on {0} before it fades, then set what {1} is for.</sys:String>
+    <sys:String x:Key="NewYear.ReviewOnly">{1} has its goals. Look back on {0} while you still remember it.</sys:String>
+    <sys:String x:Key="NewYear.GoalsOnly">{0} is reviewed. Set what {1} is for.</sys:String>
+    <sys:String x:Key="NewYear.Review">Look back on {0}</sys:String>
+    <sys:String x:Key="NewYear.Goals">Set {0} goals</sys:String>
+    <sys:String x:Key="NewYear.NotNow">Not now</sys:String>
     <sys:String x:Key="Reviews.Start">Start</sys:String>
     <sys:String x:Key="Reviews.Read">Read</sys:String>
     <sys:String x:Key="Reviews.Written">Written</sys:String>
@@ -973,12 +1046,28 @@
     <sys:String x:Key="Tally.Empty">No time counted this week yet. Turn Tally on above for this PC; the phone's minutes show here once it counts too.</sys:String>
     <sys:String x:Key="Tally.Today">TODAY</sys:String>
     <sys:String x:Key="Tally.NothingToday">Nothing counted today.</sys:String>
+    <sys:String x:Key="Tally.NothingThatDay">Nothing counted that day.</sys:String>
+    <sys:String x:Key="Tally.ShowToday">Back to today</sys:String>
+    <sys:String x:Key="Tally.TodayChoice">Today</sys:String>
+    <sys:String x:Key="Tally.WeekHint">Click a day to see it closer up.</sys:String>
+    <sys:String x:Key="Tally.ByHour">BY THE HOUR ON THIS PC</sys:String>
+    <sys:String x:Key="Tally.HoursNone">Nothing counted on this PC that day.</sys:String>
+    <sys:String x:Key="Tally.HoursSpoken">By the hour: {0}</sys:String>
+    <sys:String x:Key="Tally.HourTip">{0}: {1}</sys:String>
+    <sys:String x:Key="Tally.Apps">APPS ON THIS PC</sys:String>
+    <sys:String x:Key="Tally.AppsWeek">This week</sys:String>
+    <sys:String x:Key="Tally.AppsOnlyHere">Only this PC's own apps, sites and folders show here. The record of apps never leaves the PC, so the phone shows its own.</sys:String>
+    <sys:String x:Key="Tally.AppsNone">No apps counted on this PC then.</sys:String>
+    <sys:String x:Key="Tally.AppsPhone">The phone's apps stay on the phone. Open Tally there to see them.</sys:String>
+    <sys:String x:Key="Tally.ShowApps">Show or hide its apps</sys:String>
+    <sys:String x:Key="Tally.MakeRule">Make a rule</sys:String>
+    <sys:String x:Key="Tally.MakeRuleFor">Make a rule for {0}</sys:String>
     <sys:String x:Key="Tally.ThisWeek">THIS WEEK</sys:String>
     <sys:String x:Key="Tally.WeekTotal">{0} this week</sys:String>
     <sys:String x:Key="Tally.BarTip">{0}: {1}</sys:String>
     <sys:String x:Key="Tally.Projects">PROJECTS THIS WEEK</sys:String>
     <sys:String x:Key="Tally.Rules">YOUR RULES</sys:String>
-    <sys:String x:Key="Tally.RulesNone">None yet. Your rules come before the shipped ones, from the next count on.</sys:String>
+    <sys:String x:Key="Tally.RulesNone">None yet. Your rules come before the shipped ones and sort today's time again at once. Make a rule under an app to start one.</sys:String>
     <sys:String x:Key="Tally.Categories">YOUR CATEGORIES</sys:String>
     <sys:String x:Key="Tally.CategoriesNone">None yet. The shipped ones, like Coding and Video, are always there.</sys:String>
     <sys:String x:Key="Tally.AddRule">Add a rule</sys:String>

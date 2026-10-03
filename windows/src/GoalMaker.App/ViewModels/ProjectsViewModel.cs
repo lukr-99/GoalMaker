@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
+using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Sync;
@@ -14,9 +16,14 @@ namespace GoalMaker.App.ViewModels;
 /// the one on show, Backlog to Done. An item is a task, so moving a card writes through
 /// <see cref="TaskList"/> and the item turns up in Today when it has a day. The who-made-it switch
 /// shows every item, only the owner's, or only Claude's. Moving an item to Done or taking it out of
-/// the project can be undone for five seconds, as on the lists. Done items leave the board the
+/// the project can be undone for five seconds, as on the lists. An area and tag filter of its own
+/// narrows the project list and the board the way it narrows the lists: an item without an area of its
+/// own counts as being in its project's, and a project stays listed while its own area is the one
+/// chosen (no tag chosen) or the filter keeps one of its items. Done items leave the board the
 /// project's number of days after the planning day they were finished, or when archived by hand, and
 /// Done counts them and lists them with a way back. Any column folds to a strip, remembered in settings.
+/// A new item goes in from the quick line above the board (a title and its type), or from the new item
+/// window, which the New item button, a column's plus and Ctrl+N open with every field.
 /// </summary>
 public sealed partial class ProjectsViewModel : ObservableObject
 {
@@ -27,20 +34,24 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private const double StripWidth = 48;
     private static readonly TimeSpan UndoFor = TimeSpan.FromSeconds(5);
     private static readonly int[] ArchiveDays = [7, 14, 30, 90];
+    private static readonly IReadOnlySet<string> NoTags = new HashSet<string>();
     private readonly ProjectList projects;
     private readonly TaskList tasks;
+    private readonly AreaList areas;
+    private readonly TagList tags;
+    private readonly ListFilterState filter = new();
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly Action<string> openTask;
+    private readonly Action<ProjectItemFormViewModel> openItemWindow;
     private readonly Action<Action> runOnUi;
     private readonly TimeProvider time;
     private string? chosen;
     private Action? undo;
     private ITimer? undoTimer;
 
-    // The new item's column follows its type, an idea starting in the backlog, until one is picked.
-    private bool columnPicked;
-    private bool columnFollowing;
+    // Whether the new item window stays open for the next item, as it was last left.
+    private bool addAnother;
 
     [ObservableProperty]
     private bool isEmpty;
@@ -76,15 +87,6 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private string newItemType = ProjectRules.Task;
 
     [ObservableProperty]
-    private string newItemColumn = ProjectRules.Todo;
-
-    [ObservableProperty]
-    private string newItemPriority = ProjectRules.Normal;
-
-    [ObservableProperty]
-    private string newItemNotes = string.Empty;
-
-    [ObservableProperty]
     private string undoText = string.Empty;
 
     [ObservableProperty]
@@ -93,18 +95,45 @@ public sealed partial class ProjectsViewModel : ObservableObject
     [ObservableProperty]
     private string madeByFilter = ProjectRules.Everyone;
 
+    [ObservableProperty]
+    private bool isFilteredAway;
+
+    [ObservableProperty]
+    private IReadOnlyList<ChoiceViewModel> projectAreaChoices = [];
+
+    [ObservableProperty]
+    private ChoiceViewModel? projectArea;
+
+    /// <param name="openItemWindow">Shows the new item window over the main window for the form given.</param>
     public ProjectsViewModel(
-        ProjectList projects, TaskList tasks, ISettingsStore settings, IStrings strings, Action<string> openTask, Action<Action> runOnUi, TimeProvider time)
+        ProjectList projects,
+        TaskList tasks,
+        AreaList areas,
+        TagList tags,
+        ISettingsStore settings,
+        IStrings strings,
+        Func<string, Brush?> areaBrush,
+        Action<string> openTask,
+        Action<Action> runOnUi,
+        TimeProvider time,
+        Action<ProjectItemFormViewModel> openItemWindow)
     {
         this.projects = projects;
         this.tasks = tasks;
+        this.areas = areas;
+        this.tags = tags;
         this.settings = settings;
         this.strings = strings;
         this.openTask = openTask;
+        this.openItemWindow = openItemWindow;
         this.runOnUi = runOnUi;
         this.time = time;
         projects.Changed += (_, _) => runOnUi(Refresh);
         tasks.Changed += (_, _) => runOnUi(Refresh);
+        areas.Changed += (_, _) => runOnUi(Refresh);
+        tags.Changed += (_, _) => runOnUi(Refresh);
+        filter.Changed += (_, _) => runOnUi(Refresh);
+        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
         var folded = settings.FoldedBoardColumns;
         Columns =
         [
@@ -112,7 +141,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
             {
                 var title = strings.Get(ColumnKey(column));
                 return new BoardColumnViewModel(
-                    column, title, strings.Get("Projects.Fold", title), strings.Get("Projects.Unfold", title), folded.Contains(column), Folded);
+                    column,
+                    title,
+                    strings.Get("Projects.Fold", title),
+                    strings.Get("Projects.Unfold", title),
+                    folded.Contains(column),
+                    Folded,
+                    column == ProjectRules.Done ? null : new BoardColumnAdd(strings.Get("Projects.AddTo", title), () => OpenItemWindow(column)));
             }),
         ];
         ItemTypes =
@@ -135,13 +170,16 @@ public sealed partial class ProjectsViewModel : ObservableObject
         Refresh();
     }
 
-    /// <summary>The owner's projects, active ones first.</summary>
+    /// <summary>The area and tag pickers over the board.</summary>
+    public ListFiltersViewModel Filters { get; }
+
+    /// <summary>The owner's projects the filter keeps, active ones first.</summary>
     public ObservableCollection<ProjectRowViewModel> Projects { get; } = [];
 
     /// <summary>The four columns of the project on show.</summary>
     public IReadOnlyList<BoardColumnViewModel> Columns { get; }
 
-    /// <summary>The kinds an item can be, for the picker beside the new item box.</summary>
+    /// <summary>The kinds an item can be, for the picker beside the quick line and in the new item window.</summary>
     public IReadOnlyList<ChoiceViewModel> ItemTypes { get; }
 
     /// <summary>The columns a new item can start in; Done is not one of them.</summary>
@@ -174,11 +212,15 @@ public sealed partial class ProjectsViewModel : ObservableObject
     public void Refresh()
     {
         var all = projects.All();
-        chosen = all.Any(project => project.Id == chosen) ? chosen : all.FirstOrDefault()?.Id;
-
         var everyItem = tasks.All();
+        var narrowed = filter.Current;
+        var links = tags.TagLinks();
+        var byProject = everyItem.Where(task => task.ProjectId is not null).ToLookup(task => task.ProjectId!, StringComparer.Ordinal);
+        var listed = all.Where(project => narrowed.KeepsProject(project.AreaId, byProject[project.Id], links)).ToList();
+        chosen = listed.Any(project => project.Id == chosen) ? chosen : listed.FirstOrDefault()?.Id;
+
         Projects.Clear();
-        foreach (var project in all)
+        foreach (var project in listed)
         {
             var id = project.Id;
             var own = everyItem.Where(task => task.ProjectId == id).ToList();
@@ -200,7 +242,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var days = shown?.ArchiveAfterDays;
         var items = chosen is null
             ? []
-            : everyItem.Where(task => task.ProjectId == chosen && ProjectRules.Shows(MadeByFilter, task.MadeBy)).ToList();
+            : byProject[chosen]
+                .Where(task => ProjectRules.Shows(MadeByFilter, task.MadeBy) && narrowed.Matches(task, links.GetValueOrDefault(task.Id) ?? NoTags, shown?.AreaId))
+                .ToList();
         var onBoard = items
             .Where(task => ProjectRules.OnBoard(task.State, CompletedOn(task), days, task.BoardArchivedAt is not null, today))
             .ToList();
@@ -238,11 +282,12 @@ public sealed partial class ProjectsViewModel : ObservableObject
             ProjectFolder = shown?.LocalFolder ?? string.Empty;
             ProjectStatus = shown?.Status ?? ProjectRules.Active;
             ShowArchiveChoices(shown is null ? ProjectRules.DefaultArchiveAfterDays : shown.ArchiveAfterDays);
+            ShowAreaChoices(shown?.AreaId);
         }
 
         IsEmpty = all.Count == 0;
-        OnPropertyChanged(nameof(HasProject));
-        OnPropertyChanged(nameof(ShowsProject));
+        IsFilteredAway = all.Count > 0 && listed.Count == 0;
+        NotifyProjectShown();
     }
 
     /// <summary>Shows a project's board.</summary>
@@ -264,9 +309,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ProjectFolder = string.Empty;
         ProjectStatus = ProjectRules.Active;
         ShowArchiveChoices(ProjectRules.DefaultArchiveAfterDays);
+        ShowAreaChoices(filter.Current.AreaId);
         IsEditing = true;
-        OnPropertyChanged(nameof(HasProject));
-        OnPropertyChanged(nameof(ShowsProject));
+        NotifyProjectShown();
     }
 
     /// <summary>Opens the project on show for editing.</summary>
@@ -277,12 +322,15 @@ public sealed partial class ProjectsViewModel : ObservableObject
     [RelayCommand]
     public void Save()
     {
+        // The notes are not on this form, so an edit keeps the ones the project has.
         var draft = new ProjectDraft(ProjectName)
         {
             Description = ProjectDescription,
+            AreaId = ProjectArea?.Id,
             Status = ProjectStatus,
             RepositoryUrl = ProjectRepository,
             LocalFolder = ProjectFolder,
+            Notes = chosen is { } current ? projects.Get(current)?.Notes ?? string.Empty : string.Empty,
         };
         if (chosen is { } id)
         {
@@ -323,43 +371,94 @@ public sealed partial class ProjectsViewModel : ObservableObject
         }
     }
 
-    /// <summary>Adds an item to the project on show, in the column and at the priority chosen, with its notes.</summary>
+    /// <summary>Adds the quick line's item to the project on show: its title and type, in the column the type calls for.</summary>
     [RelayCommand(CanExecute = nameof(CanAddItem))]
     public void AddItem()
     {
-        if (chosen is not { } projectId || tasks.Add(NewItemTitle) is not { } task)
+        if (chosen is { } projectId && Add(projectId, new ProjectItemDraft(NewItemTitle, NewItemType, ProjectRules.ColumnFor(NewItemType), ProjectRules.Normal)))
         {
-            return;
+            NewItemTitle = string.Empty;
         }
-
-        tasks.SetProject(task.Id, projectId, NewItemType);
-        tasks.SetBoardColumn(task.Id, NewItemColumn);
-        tasks.SetPriority(task.Id, NewItemPriority);
-        if (!string.IsNullOrWhiteSpace(NewItemNotes))
-        {
-            tasks.SetNotes(task.Id, NewItemNotes.Trim());
-        }
-
-        NewItemTitle = string.Empty;
-        NewItemNotes = string.Empty;
-        Refresh();
     }
 
     private bool CanAddItem() => !string.IsNullOrWhiteSpace(NewItemTitle) && chosen is not null;
 
-    partial void OnNewItemTypeChanged(string value)
+    /// <summary>
+    /// Opens the new item window for the project on show, in <paramref name="column"/> when a column's
+    /// plus opened it, or with the column following the type. What the quick line holds moves into
+    /// the window, and leaves the line once it has gone in.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    public void OpenItemWindow(string? column)
     {
-        if (columnPicked)
+        if (chosen is not { } projectId || projects.Get(projectId) is not { } project)
         {
             return;
         }
 
-        columnFollowing = true;
-        NewItemColumn = ProjectRules.ColumnFor(value);
-        columnFollowing = false;
+        var carried = NewItemTitle;
+        var choices = new ProjectItemChoices(
+            ItemTypes,
+            NewItemColumns,
+            Priorities,
+            [.. projects.MilestonesOf(projectId).Select(milestone => new ChoiceViewModel(milestone.Id, milestone.Name))]);
+        var form = new ProjectItemFormViewModel(
+            strings,
+            project.Name,
+            choices,
+            new ProjectItemStart(carried.Trim(), NewItemType, column),
+            addAnother,
+            draft =>
+            {
+                if (!Add(projectId, draft))
+                {
+                    return false;
+                }
+
+                if (carried.Length > 0 && NewItemTitle == carried)
+                {
+                    NewItemTitle = string.Empty;
+                }
+
+                return true;
+            });
+        form.Finished += (_, _) => addAnother = form.AddAnother;
+        openItemWindow(form);
     }
 
-    partial void OnNewItemColumnChanged(string value) => columnPicked |= !columnFollowing;
+    // Every new item goes in here, from the quick line or the window: the task with its day and notes,
+    // then its project fields, as the board's rules want them (docs/projects.md).
+    private bool Add(string projectId, ProjectItemDraft draft)
+    {
+        var line = new ComposerDraft(draft.Title, draft.PlannedDay, null, [], null, null, false, false, null, null, []);
+        if (tasks.Add(line, draft.Notes.Trim()) is not { } task)
+        {
+            return false;
+        }
+
+        tasks.SetProject(task.Id, projectId, draft.ItemType);
+        tasks.SetBoardColumn(task.Id, draft.Column);
+        tasks.SetPriority(task.Id, draft.Priority);
+        if (draft.MilestoneId is { } milestone)
+        {
+            tasks.SetMilestone(task.Id, milestone);
+        }
+
+        if (draft.Deadline is { } deadline)
+        {
+            tasks.SetDeadline(task.Id, deadline);
+        }
+
+        Refresh();
+        return true;
+    }
+
+    private void NotifyProjectShown()
+    {
+        OnPropertyChanged(nameof(HasProject));
+        OnPropertyChanged(nameof(ShowsProject));
+        OpenItemWindowCommand.NotifyCanExecuteChanged();
+    }
 
     // Moving to Done can be taken back, to the column the item came from.
     private void Move(TaskItem item, string column)
@@ -453,6 +552,20 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
         ArchiveChoices.Add(new ChoiceViewModel(Never, strings.Get("Projects.ArchiveNever")));
         ProjectArchiveAfter = days?.ToString(CultureInfo.InvariantCulture) ?? Never;
+    }
+
+    // No area and the areas not archived, and the project's own area even when it is archived, so an
+    // edit never loses it.
+    private void ShowAreaChoices(string? areaId)
+    {
+        ProjectAreaChoices =
+        [
+            new ChoiceViewModel(null, strings.Get("Task.NoArea")),
+            .. areas.All()
+                .Where(area => !area.Archived || area.Id == areaId)
+                .Select(area => new ChoiceViewModel(area.Id, area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name)),
+        ];
+        ProjectArea = ProjectAreaChoices.FirstOrDefault(choice => choice.Id == areaId) ?? ProjectAreaChoices[0];
     }
 
     // A column folded or opened: every board remembers it, and the board's narrowest width follows.

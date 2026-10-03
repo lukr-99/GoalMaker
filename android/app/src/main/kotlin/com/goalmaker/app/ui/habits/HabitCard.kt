@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -33,7 +34,6 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.HabitRules
@@ -64,7 +64,7 @@ fun HabitCard(
     val colors = AppTheme.colors
     val more = stringResource(R.string.habits_more, habit.name)
     val skipLabel = stringResource(skipText(habit))
-    val canSkip = !habit.archived && row.canCheckIn && !row.skipped
+    val canSkip = !habit.archived && row.canCheckIn && !row.skipped && !row.failed
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -82,15 +82,16 @@ fun HabitCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             EmojiTile(row)
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                // The name, the streak and where today stands read as one line (M6-05).
-                Column(Modifier.semantics(mergeDescendants = true) {}) {
+                // The card's tap merges the name, the streak and where today stands into one item to read
+                // (M6-05); the check-in button and the menu stay their own controls.
+                Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             habit.name,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = if (row.done) colors.textMuted else colors.text,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false),
                         )
@@ -105,13 +106,13 @@ fun HabitCard(
                         status,
                         style = MaterialTheme.typography.bodySmall,
                         fontStyle = if (row.skipped) FontStyle.Italic else FontStyle.Normal,
-                        color = if (row.isOver) colors.danger else colors.textMuted,
+                        color = if (row.isOver || row.failed) colors.danger else colors.textMuted,
                     )
                     if (full) {
                         row.goalTitle?.let { Text(stringResource(R.string.habits_serves, it), style = MaterialTheme.typography.bodySmall, color = colors.textMuted) }
                     }
                 }
-                if (row.canCheckIn && !row.skipped) HabitProgress(row)
+                if (row.canCheckIn && !row.skipped && !row.failed) HabitProgress(row)
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                     HabitWeekDots(row.dots, today, Modifier.weight(1f, fill = false))
                     if (full && !habit.showOnToday && !habit.archived) NotOnToday(Modifier.padding(start = 8.dp))
@@ -139,7 +140,8 @@ private fun EmojiTile(row: HabitRow) {
     ) {
         val emoji = row.habit.emoji
         if (emoji != null) {
-            Text(emoji, fontSize = 20.sp)
+            // A picture on the tile, so it keeps its size when the system's text grows.
+            Text(emoji, fontSize = with(LocalDensity.current) { 20.dp.toSp() })
         } else {
             Text(
                 row.habit.name.take(1).uppercase(),
@@ -187,6 +189,13 @@ private fun NotOnToday(modifier: Modifier = Modifier) {
             .border(1.dp, AppTheme.colors.outline.copy(alpha = 0.6f), RoundedCornerShape(50))
             .padding(horizontal = 8.dp, vertical = 2.dp),
     )
+}
+
+/** What failing a habit's period is called: today, this week or this month. */
+internal fun failText(habit: HabitItem): Int = when (habit.cadence) {
+    HabitRules.PER_WEEK -> R.string.habits_fail_week
+    HabitRules.PER_MONTH -> R.string.habits_fail_month
+    else -> R.string.habits_fail_day
 }
 
 /** What skipping a habit's period is called: today, this week or this month. */

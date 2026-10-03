@@ -274,6 +274,14 @@ Deno.test({
           select skipped from public.habit_checkins where habit_id = ${habitId} and day = '2026-09-17'`;
         assertEquals(rest.skipped, true);
 
+        const failed = await client.tool("fail_habit", { id: habitId, day: "2026-09-16" });
+        assertStringIncludes(failed.text, "Water failed on 2026-09-16.");
+        const [slip] = await sql`
+          select value, skipped, failed from public.habit_checkins where habit_id = ${habitId} and day = '2026-09-16'`;
+        assertEquals(slip, { value: 0, skipped: false, failed: true });
+        const again = await client.tool("check_in_habit", { id: habitId, day: "2026-09-16", amount: 2 });
+        assertStringIncludes(again.text, "at 2 glasses");
+
         const strangers = await client.tool("check_in_habit", { id: "c0ffee00-0000-4000-8000-0000000000ff" });
         assert(strangers.isError, strangers.text);
       });
@@ -1171,6 +1179,7 @@ Deno.test({
           { day: "2026-08-18", tasks: [{ id: id(11), title: "Book the dentist", area: "Health", project: null }] },
           { day: "2026-08-19", tasks: [{ id: id(12), title: "Prune the roses", area: null, project: "Garden" }] },
         ]);
+        assertEquals(week.counts, { done: 2, project_work: 1, other_work: 1 });
         assertEquals(ids(week.open.left), [id(13)]);
         assertEquals(week.open.left[0].moves, 4);
         assertEquals(ids(week.open.overdue).sort(), [id(13), id(14), id(15)].sort());

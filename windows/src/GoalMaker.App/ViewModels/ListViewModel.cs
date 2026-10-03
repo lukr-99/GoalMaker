@@ -31,12 +31,16 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly ReminderService? reminders;
     private readonly TagList? tags;
     private readonly ListFilterState? filter;
+    private readonly ProjectList? projects;
     private readonly Action<string>? openTask;
     private readonly GoalList? goals;
     private readonly Action? openGoals;
+    private readonly ReviewList? reviews;
+    private readonly Action<string, DateOnly>? openReview;
     private readonly HabitsViewModel? habitsPage;
     private readonly HabitList? habitList;
     private readonly Action? openHabits;
+    private readonly Action<string>? openProject;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -58,6 +62,15 @@ public sealed partial class ListViewModel : ObservableObject
 
     [ObservableProperty]
     private bool hasWeekGoals;
+
+    /// <summary>The January nudge on Today (docs/reviews.md), null when there is nothing to nudge about.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNewYear))]
+    [NotifyPropertyChangedFor(nameof(NewYearTitle))]
+    [NotifyPropertyChangedFor(nameof(NewYearText))]
+    [NotifyPropertyChangedFor(nameof(NewYearReviewText))]
+    [NotifyPropertyChangedFor(nameof(NewYearGoalsText))]
+    private NewYearNudge? newYear;
 
     /// <summary>Whether this week's goals are unfolded under Today; they start folded (design spec, Today).</summary>
     [ObservableProperty]
@@ -123,8 +136,16 @@ public sealed partial class ListViewModel : ObservableObject
         HabitsViewModel? habitsPage = null,
         HabitList? habitList = null,
         Action? openHabits = null,
-        Action? openMini = null)
+        Action? openMini = null,
+        ReviewList? reviews = null,
+        Action<string, DateOnly>? openReview = null,
+        ProjectList? projects = null,
+        Action<string>? openProject = null)
     {
+        this.reviews = reviews;
+        this.openReview = openReview;
+        this.projects = projects;
+        this.openProject = openProject;
         this.openTask = openTask;
         this.goals = goals;
         this.openGoals = openGoals;
@@ -176,6 +197,13 @@ public sealed partial class ListViewModel : ObservableObject
             tags.Changed += (_, _) => runOnUi(Refresh);
         }
 
+        // A project item without an area of its own counts as being in its project's (docs/lists.md), and
+        // wears its project's chip.
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         if (filter is not null)
         {
             filter.Changed += (_, _) => runOnUi(Refresh);
@@ -189,6 +217,11 @@ public sealed partial class ListViewModel : ObservableObject
         if (habitList is not null && kind == ListKind.Today)
         {
             habitList.Changed += (_, _) => runOnUi(Refresh);
+        }
+
+        if (reviews is not null && kind == ListKind.Today)
+        {
+            reviews.Changed += (_, _) => runOnUi(Refresh);
         }
 
         sync.StatusChanged += (_, status) => runOnUi(() => ShowSync(status));
@@ -279,9 +312,12 @@ public sealed partial class ListViewModel : ObservableObject
         var areaById = areas.All().ToDictionary(area => area.Id, StringComparer.Ordinal);
         var narrowed = filter?.Current ?? ListFilter.None;
         var all = tasks.All();
-        var lists = ListRules.Lists(narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks()), today);
+        var lists = ListRules.Lists(
+            narrowed.IsEmpty || tags is null ? all : narrowed.Apply(all, tags.TagLinks(), projects?.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal)),
+            today);
         ShowFilter(narrowed, areaById);
         var remindersByTask = (reminders?.All() ?? []).ToLookup(reminder => reminder.TaskId, StringComparer.Ordinal);
+        var projectById = (projects?.All() ?? []).ToDictionary(project => project.Id, StringComparer.Ordinal);
         List<TaskRowViewModel> Rows(IEnumerable<TaskItem> items, bool showDay = false) =>
             [.. items.Select(item =>
             {
@@ -297,7 +333,8 @@ public sealed partial class ListViewModel : ObservableObject
                     own.Any(reminder => reminder.State is ReminderState.Pending or ReminderState.Snoozed),
                     ReminderChoices(item, own),
                     openTask is null ? null : row => openTask(row.Item.Id),
-                    strings);
+                    strings,
+                    ProjectTagViewModel.For(item, projectById, strings, openProject));
             })];
 
         Sections.Clear();
@@ -327,6 +364,8 @@ public sealed partial class ListViewModel : ObservableObject
                     HasWeekGoals = WeekGoals.Count > 0;
                     WeekGoalsHeader = Upper(strings.Get("Goals.WeekCount", WeekGoals.Count(row => row.IsHit), WeekGoals.Count));
                 }
+
+                NewYear = goals is null || reviews is null ? null : ReviewRules.NewYearFor(today, goals.All(), reviews.All(), settings.NewYearDismissed);
 
                 var date = today.ToString("dddd d MMMM", CultureInfo.CurrentCulture);
                 var summary = lists.Summary.Total == 0 ? date : strings.Get("Lists.TodaySummary", date, lists.Summary.Done, lists.Summary.Total);
@@ -358,6 +397,45 @@ public sealed partial class ListViewModel : ObservableObject
 
     [RelayCommand]
     private void OpenGoals() => openGoals?.Invoke();
+
+    public bool HasNewYear => NewYear is not null;
+
+    public string NewYearTitle => NewYear is { } nudge ? strings.Get("NewYear.Title", nudge.Year) : string.Empty;
+
+    public string NewYearText => NewYear switch
+    {
+        { Review: true, Goals: true } nudge => strings.Get("NewYear.Both", nudge.Year - 1, nudge.Year),
+        { Review: true } nudge => strings.Get("NewYear.ReviewOnly", nudge.Year - 1, nudge.Year),
+        { } nudge => strings.Get("NewYear.GoalsOnly", nudge.Year - 1, nudge.Year),
+        _ => string.Empty,
+    };
+
+    /// <summary>"Look back on 2026", empty when last year is reviewed.</summary>
+    public string NewYearReviewText => NewYear is { Review: true } nudge ? strings.Get("NewYear.Review", nudge.Year - 1) : string.Empty;
+
+    /// <summary>"Set 2027 goals", empty when this year has goals.</summary>
+    public string NewYearGoalsText => NewYear is { Goals: true } nudge ? strings.Get("NewYear.Goals", nudge.Year) : string.Empty;
+
+    /// <summary>Last year's yearly review, from the January nudge.</summary>
+    [RelayCommand]
+    private void NewYearReview()
+    {
+        if (NewYear is { } nudge)
+        {
+            openReview?.Invoke(ReviewRules.Yearly, new DateOnly(nudge.Year - 1, 1, 1));
+        }
+    }
+
+    /// <summary>Puts the January nudge away until next January (docs/reviews.md).</summary>
+    [RelayCommand]
+    private void DismissNewYear()
+    {
+        if (NewYear is { } nudge)
+        {
+            settings.NewYearDismissed = nudge.Year;
+            NewYear = null;
+        }
+    }
 
     [RelayCommand]
     private void OpenHabits() => openHabits?.Invoke();

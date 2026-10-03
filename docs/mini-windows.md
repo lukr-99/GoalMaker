@@ -26,6 +26,18 @@ A launch that only asks for a mini window leaves the main window where it was, s
 Today on the desktop without the whole app coming up. Launching GoalMaker again never makes a second
 copy: the running instance takes the switches over a named pipe and answers them (story 83).
 
+## By keyboard and at large text
+
+A mini window opens with the keyboard on Today's first task or the first habit's check-in (on the
+composer when Today is empty). Tab goes round the title bar's Keep on top, Open GoalMaker and Close,
+then the window's content in the order it reads; Esc closes the window once the composer's line is
+empty and no picker is open, and the window that had the keyboard before gets it back.
+
+Both follow Windows' text size (Settings, Accessibility, Text size): the content scales as a whole
+and the window grows with it, as far as the screen allows. A mini window leaves out the list's big
+headline, since its title bar names the list, and gets no smaller than Today's header, a task and
+the composer need, so nothing is ever below its edge.
+
 ## What they remember
 
 Each window keeps its own place, its size and whether it was pinned, under its own name in the

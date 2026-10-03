@@ -49,10 +49,13 @@ object HabitBoard {
         .filter { HabitRules.onToday(it, today, data.pausesOf(it.id)) }
         .map { row(it, data, today, emptyMap(), heat = false) }
 
-    /** Every habit due today, the ones kept off Today too: what the Places hub counts. */
-    fun due(data: HabitData, today: LocalDate): List<HabitRow> = data.habits
+    /**
+     * Every habit due today, the ones kept off Today too: what the Places hub counts. The calendar asks
+     * for another day's with [onDay], read as of that day.
+     */
+    fun due(data: HabitData, today: LocalDate, onDay: Boolean = false): List<HabitRow> = data.habits
         .filter { HabitRules.dueToday(it, today, data.pausesOf(it.id)) }
-        .map { row(it, data, today, emptyMap(), heat = false) }
+        .map { row(it, data, today, emptyMap(), heat = false).copy(onDay = onDay) }
 
     /**
      * The Habits screen's groups in order, Every day, Weekly and Limits (contracts/vectors/habits.json,
@@ -68,7 +71,8 @@ object HabitBoard {
 
     /** Today's count, how far the day has got and the longest streak, for the summary card. */
     fun summary(rows: List<HabitRow>): HabitSummary {
-        val asking = rows.filter { it.standing == HabitStanding.DONE || it.standing == HabitStanding.LEFT }
+        // A failed habit asked something of today and didn't get it, so it counts against the day.
+        val asking = rows.filter { it.standing == HabitStanding.DONE || it.standing == HabitStanding.LEFT || it.standing == HabitStanding.FAILED }
         return HabitSummary(
             done = asking.count(HabitRow::done),
             total = asking.size,
@@ -105,6 +109,8 @@ object HabitBoard {
             value = checkins.firstOrNull { it.day == today && !it.skipped }?.value ?: 0.0,
             met = inPeriod.count { HabitRules.dayMet(habit, it) },
             skipped = inPeriod.any { it.skipped },
+            // A skip comes before a fail, as the standing reads them.
+            failed = inPeriod.none { it.skipped } && inPeriod.any { it.failed },
             paused = pauses.any { !it.from.isAfter(today) && (it.until == null || !it.until.isBefore(today)) },
             goalTitle = habit.goalId?.let(goalTitles::get),
             heatStart = heatStart,

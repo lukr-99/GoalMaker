@@ -51,7 +51,7 @@
                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        AllowDrop="True" DragOver="OnCellDragOver" Drop="OnCellDrop"
-                       AutomationProperties.Name="{Binding Day}">
+                       AutomationProperties.Name="{Binding AutomationName}">
                 <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center">
@@ -84,7 +84,13 @@
 
         <!-- One line of what a day holds. -->
         <DataTemplate x:Key="DayEntry" DataType="{x:Type vm:CalendarEntryViewModel}">
-            <ui:Button Margin="0,0,0,6" Padding="12,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+            <DockPanel Margin="0,0,0,6">
+            <!-- Ticks the task off on the open day (docs/calendar.md); a repeat has no row to tick yet. -->
+            <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" Margin="4,0,0,0" MinWidth="0"
+                      IsChecked="{Binding Done, Mode=OneWay}" Command="{Binding ToggleDoneCommand}"
+                      AutomationProperties.Name="{Binding Title}"
+                      Visibility="{Binding CanTick, Converter={StaticResource BoolToVisibility}}" />
+            <ui:Button Padding="12,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        PreviewMouseLeftButtonDown="OnEntryPressed" PreviewMouseMove="OnEntryMove"
                        ToolTip="{DynamicResource Calendar.DragHint}">
@@ -96,8 +102,12 @@
                                    Foreground="{DynamicResource GM.TextMutedBrush}"
                                    Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
+                    <ContentControl Margin="0,4,0,0" HorizontalAlignment="Left" Focusable="False"
+                                    Content="{Binding Project}" ContentTemplate="{StaticResource ProjectTag}"
+                                    Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </ui:Button>
+            </DockPanel>
         </DataTemplate>
     </Page.Resources>
 
@@ -110,7 +120,7 @@
 
         <StackPanel Grid.Column="0" Margin="0,0,16,0">
             <controls:HeadlineText Title="{DynamicResource Calendar.Title}" FontSize="32" />
-            <DockPanel Margin="0,8,0,12">
+            <DockPanel Margin="0,8,0,12" KeyboardNavigation.TabNavigation="Local">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <ui:Button Padding="8,4" Appearance="Transparent" Command="{Binding BackCommand}"
                                ToolTip="{DynamicResource Calendar.Back}" AutomationProperties.Name="{DynamicResource Calendar.Back}">
@@ -126,12 +136,17 @@
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Period}" FontSize="16" FontFamily="{DynamicResource GM.BodyStrongFont}"
                                VerticalAlignment="Center" />
-                    <ui:Button Style="{StaticResource WeekButton}" Command="{Binding ShowCommand}"
+                    <ui:Button Style="{StaticResource WeekButton}" TabIndex="0" Command="{Binding ShowCommand}"
                                CommandParameter="week" Content="{DynamicResource Calendar.Week}" />
-                    <ui:Button Style="{StaticResource MonthButton}" Command="{Binding ShowCommand}"
+                    <ui:Button Style="{StaticResource MonthButton}" TabIndex="1" Command="{Binding ShowCommand}"
                                CommandParameter="month" Content="{DynamicResource Calendar.Month}" />
                 </StackPanel>
             </DockPanel>
+
+            <!-- The area and tag filter narrows what the grid counts and the day lists, as on the lists. -->
+            <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                            Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                            Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
 
             <primitives:UniformGrid Columns="7">
                 <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[0]}" />
@@ -161,6 +176,12 @@
                                Margin="0,0,0,8" TextWrapping="Wrap" />
                     <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Calendar.DayEmpty}"
                                Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- The open day's habits, checked in, skipped or failed on that day (docs/calendar.md). -->
+                    <StackPanel Margin="0,0,0,8" Visibility="{Binding HasDayHabits, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{DynamicResource Calendar.Habits}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                   Foreground="{DynamicResource GM.AccentBrush}" Margin="0,0,0,6" />
+                        <ItemsControl ItemsSource="{Binding DayHabits}" ItemTemplate="{StaticResource HabitCard}" Focusable="False" />
+                    </StackPanel>
                     <ItemsControl ItemsSource="{Binding DayEntries}" ItemTemplate="{StaticResource DayEntry}" Focusable="False" />
                     <TextBlock Text="{Binding DayReminders}" FontSize="11" Margin="0,4,0,0"
                                Foreground="{DynamicResource GM.TextMutedBrush}"

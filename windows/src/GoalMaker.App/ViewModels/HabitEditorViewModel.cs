@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Settings;
 
 namespace GoalMaker.App.ViewModels;
 
@@ -57,6 +58,14 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     /// <summary>Off keeps the habit off Today and the tray; it still counts everywhere else.</summary>
     [ObservableProperty]
     private bool showOnToday = true;
+
+    /// <summary>On, the habit reminds at <see cref="RemindText"/> on the days it is still left (docs/reminders.md).</summary>
+    [ObservableProperty]
+    private bool remindOn;
+
+    /// <summary>The reminder's time as typed, "20:00"; one that isn't a time keeps the habit from saving.</summary>
+    [ObservableProperty]
+    private string remindText = "20:00";
 
     [ObservableProperty]
     private string unit = string.Empty;
@@ -183,8 +192,10 @@ public sealed partial class HabitEditorViewModel : ObservableObject
             Emoji = Emoji,
             GoalId = Goal?.Id,
             ShowOnToday = ShowOnToday,
+            RemindAt = RemindOn ? SettingsFieldRules.Time(RemindText) : null,
         };
-        var saved = habitId is null ? habits.Add(draft) is not null : habits.Update(habitId, draft);
+        // A reminder time that is not a time keeps the habit from saving, as a bad target does.
+        var saved = (!RemindOn || draft.RemindAt is not null) && (habitId is null ? habits.Add(draft) is not null : habits.Update(habitId, draft));
         if (saved)
         {
             IsOpen = false;
@@ -240,6 +251,8 @@ public sealed partial class HabitEditorViewModel : ObservableObject
         TargetText = habit.Target is { } target ? HabitRowViewModel.Amount(target) : string.Empty;
         Unit = habit.Unit ?? string.Empty;
         ShowOnToday = habit.ShowOnToday;
+        RemindOn = habit.RemindAt is not null;
+        RemindText = SettingsFieldRules.Format(habit.RemindAt ?? new TimeOnly(20, 0));
         var mask = habit.Weekdays ?? 31;
         foreach (var day in Days)
         {

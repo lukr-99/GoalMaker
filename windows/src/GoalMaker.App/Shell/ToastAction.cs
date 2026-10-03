@@ -27,4 +27,16 @@ public enum ToastAction
 
     /// <summary>The wants toast's body: opens the Wants page.</summary>
     Wants,
+
+    /// <summary>A habit reminder's body: opens the Habits page.</summary>
+    Habit,
+
+    /// <summary>A habit reminder's Check in, or +1 on a count.</summary>
+    HabitCheckIn,
+
+    /// <summary>A habit reminder's skip of the period that holds its day.</summary>
+    HabitSkip,
+
+    /// <summary>An amount habit's Log: opens the Habits page on its log panel.</summary>
+    HabitLog,
 }

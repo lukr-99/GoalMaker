@@ -271,6 +271,8 @@ public sealed class AutoUpdateCheckTests : IDisposable
 
         public GoalsView GoalsView { get; set; }
 
+        public int? NewYearDismissed { get; set; }
+
         public Core.Backend.BackendEnvironment? BackendOverride { get; set; }
 
         public WindowPlacement? MainWindowPlacement { get; set; }

@@ -66,6 +66,21 @@ class TaskListTest {
     }
 
     @Test
+    fun `finishing on a day gone by stamps that day's noon, and today stamps now`() {
+        val list = tasks()
+        val old = list.add("Pay the rent")!!
+        val fresh = list.add("Water the plants")!!
+        val prague = java.time.ZoneId.of("Europe/Prague")
+
+        list.finishOn(old.id, LocalDate.parse("2026-09-15"), LocalDate.parse("2026-09-18"), prague)
+        list.finishOn(fresh.id, LocalDate.parse("2026-09-18"), LocalDate.parse("2026-09-18"), prague)
+
+        assertEquals("2026-09-15T10:00:00.000000Z", test.replica.get("tasks", old.id)!!.text("completed_at"))
+        assertEquals(LocalDate.parse("2026-09-15"), ProjectRules.completedOn(list.all().first { it.id == old.id }, prague, 4))
+        assertEquals("2026-09-18T12:00:00.000000Z", test.replica.get("tasks", fresh.id)!!.text("completed_at"))
+    }
+
+    @Test
     fun `blank titles and signed-out adds are ignored`() {
         assertNull(tasks().add("   "))
         assertNull(tasks().add(draft("tomorrow #run")))

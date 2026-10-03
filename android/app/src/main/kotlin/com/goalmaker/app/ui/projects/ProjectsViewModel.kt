@@ -2,9 +2,11 @@ package com.goalmaker.app.ui.projects
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
+import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
@@ -12,6 +14,7 @@ import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.sync.SyncRules
+import com.goalmaker.app.ui.lists.PlaceFilter
 import com.goalmaker.app.ui.lists.UndoEvent
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -30,7 +33,9 @@ import kotlinx.coroutines.launch
 /**
  * The Projects screen (docs/projects.md, spec stories 43 to 50): the owner's projects and the board
  * of the one being looked at. An item is a task, so moving it around the board writes to [tasks]. The
- * who-made-it switch shows every item, only the owner's, or only Claude's. A done item leaves the board
+ * who-made-it switch shows every item, only the owner's, or only Claude's. The area and tag filter
+ * narrows the project list and the board the way it narrows the lists (docs/projects.md): an item
+ * without an area of its own counts as being in its project's. A done item leaves the board
  * the project's number of days after the planning day it was finished, by [clock] and the owner's day
  * start, or when it is archived by hand. Finishing an item, archiving it and taking one out of the
  * project can be undone, as on the lists. How the board shows, as columns or a list, and which list
@@ -39,6 +44,8 @@ import kotlinx.coroutines.launch
 class ProjectsViewModel(
     private val projects: ProjectList,
     private val tasks: TaskList,
+    areas: AreaList,
+    tags: TagList,
     private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
@@ -46,6 +53,7 @@ class ProjectsViewModel(
 ) : ViewModel() {
     private val chosen = MutableStateFlow<String?>(null)
     private val madeBy = MutableStateFlow(ProjectRules.EVERYONE)
+    private val filter = PlaceFilter(areas, tags, io)
     private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
 
     /** What the board offers to take back: an item moved to Done, archived, or taken out of the project. */
@@ -55,26 +63,32 @@ class ProjectsViewModel(
         projects.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
         chosen,
-        madeBy,
+        combine(madeBy, filter.choices, ::Pair),
         settings.dayStartHour,
-    ) { data, taskList, selectedId, filter, startHour ->
-        val selected = data.find(selectedId) ?: data.projects.firstOrNull()
+    ) { data, taskList, selectedId, (maker, choices), startHour ->
+        val narrowed = choices.filter
+        val items = taskList.filterNot { it.deleted }.groupBy { it.projectId }
+        val listed = data.projects.filter { narrowed.keepsProject(it.areaId, items[it.id].orEmpty(), choices.links) }
+        val selected = listed.firstOrNull { it.id == selectedId } ?: listed.firstOrNull()
         val today = PlanningDay.of(clock(), startHour)
         val (onBoard, offBoard) = if (selected == null) {
             emptyList<TaskItem>() to emptyList()
         } else {
-            taskList.filter { !it.deleted && it.projectId == selected.id && ProjectRules.shows(filter, it.madeBy) }
+            items[selected.id].orEmpty()
+                .filter { ProjectRules.shows(maker, it.madeBy) && narrowed.matches(it, choices.links[it.id].orEmpty(), selected.areaId) }
                 .partition { ProjectRules.onBoard(it, selected, today, zone(), startHour) }
         }
         ProjectsUiState(
             loaded = true,
-            projects = data.projects,
+            projects = listed,
+            anyProject = data.projects.isNotEmpty(),
             selected = selected,
             board = if (selected == null) emptyList() else ProjectRules.board(onBoard),
             archived = offBoard.sortedWith(
                 compareByDescending<TaskItem> { task -> task.completedAt?.let(SyncRules::instantOf) }.thenBy(TaskItem::id),
             ),
-            madeBy = filter,
+            madeBy = maker,
+            filter = choices,
             milestones = selected?.let { data.milestonesOf(it.id) }.orEmpty(),
             openCounts = taskList.filterNot { it.deleted }
                 .filter { it.projectId != null && it.boardColumn != ProjectRules.DONE }
@@ -96,6 +110,12 @@ class ProjectsViewModel(
     fun showMadeBy(filter: String) {
         madeBy.value = filter
     }
+
+    /** Narrows the projects and the board to an area, or stops narrowing by area when [areaId] is null. */
+    fun filterByArea(areaId: String?) = filter.byArea(areaId)
+
+    /** Narrows the projects and the board to a tag, or stops narrowing by tag when [tagId] is null. */
+    fun filterByTag(tagId: String?) = filter.byTag(tagId)
 
     /** Shows the board as columns behind tabs or as a list; this phone remembers it. */
     fun showView(view: BoardView) = settings.setBoardView(view)

@@ -25,4 +25,6 @@ public sealed record HabitDraft(string Name, DateOnly StartsOn)
     public string? GoalId { get; init; }
 
     public bool ShowOnToday { get; init; } = true;
+
+    public TimeOnly? RemindAt { get; init; }
 }

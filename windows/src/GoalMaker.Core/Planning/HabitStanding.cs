@@ -12,6 +12,9 @@ public enum HabitStanding
     /// <summary>The period holding today is skipped.</summary>
     Skipped,
 
+    /// <summary>The period holding today is failed: neither done nor left, so it holds nothing up.</summary>
+    Failed,
+
     /// <summary>A limit: never done and never left, so it never reads as not done.</summary>
     Limit,
 

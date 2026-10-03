@@ -20,21 +20,31 @@
                     <ui:SymbolIcon Symbol="Search24" />
                 </ui:TextBox.Icon>
             </ui:TextBox>
+            <!-- The area and tag filter narrows what the search finds, as on the lists. -->
+            <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                            Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                            Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
             <TextBlock Text="{Binding EmptyText}" Foreground="{DynamicResource GM.TextMutedBrush}" Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
             <ItemsControl ItemsSource="{Binding Results}" Focusable="False">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:ArchiveRowViewModel}">
                         <Border Margin="{DynamicResource GM.RowGap}" Padding="12,6" MinHeight="{DynamicResource GM.RowMinHeight}"
                                 CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
-                            <DockPanel VerticalAlignment="Center">
+                            <DockPanel VerticalAlignment="Center" KeyboardNavigation.TabNavigation="Local">
                                 <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Archive.Reopen}" Command="{Binding ReopenCommand}" />
-                                <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding OpenCommand}"
+                                <ui:Button DockPanel.Dock="Right" TabIndex="0" Padding="6" Appearance="Transparent" Command="{Binding OpenCommand}"
                                            ToolTip="{DynamicResource Lists.OpenTask}" AutomationProperties.Name="{DynamicResource Lists.OpenTask}">
                                     <ui:SymbolIcon Symbol="Open24" />
                                 </ui:Button>
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding DoneText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DoneText}" FontSize="12" Margin="0,0,10,0" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                        <ContentControl Margin="0,1" VerticalAlignment="Center" Focusable="False"
+                                                        Content="{Binding Project}" ContentTemplate="{StaticResource ProjectTag}"
+                                                        Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </DockPanel>
                         </Border>

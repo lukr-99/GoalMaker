@@ -126,7 +126,7 @@ public sealed class TaskDetailViewModelTests : IDisposable
         planner.Tasks.SetDone(bank.Id, true);
         planner.Tasks.SetDone(milk.Id, true);
         var openedTasks = new List<string>();
-        var archive = new ArchiveViewModel(planner.Tasks, planner.Strings, action => action(), openedTasks.Add);
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Strings, _ => null, action => action(), openedTasks.Add);
 
         archive.Query = "bank";
         Assert.Equal(["Call the bank"], archive.Results.Select(row => row.Title));
@@ -135,6 +135,50 @@ public sealed class TaskDetailViewModelTests : IDisposable
 
         Assert.Equal([bank.Id], openedTasks);
         Assert.Equal(TaskState.Open, planner.Tasks.Find(bank.Id)!.State);
+        Assert.True(archive.IsEmpty);
+        Assert.Equal("Archive.NoMatch", archive.EmptyText);
+    }
+
+    [Fact]
+    public void ADoneProjectItemInTheArchiveWearsItsProjectsChip()
+    {
+        var item = Add("Fix the build +GoalMaker");
+        var milk = Add("Buy milk");
+        planner.Tasks.SetDone(item.Id, true);
+        planner.Tasks.SetDone(milk.Id, true);
+        var opened = new List<string>();
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Strings, _ => null, action => action(), _ => { }, opened.Add);
+
+        var row = archive.Results.Single(result => result.Title == "Fix the build");
+        Assert.True(row.HasProject);
+        Assert.Equal("Lists.ProjectTask(GoalMaker)", row.Project!.Label);
+        Assert.False(archive.Results.Single(result => result.Title == "Buy milk").HasProject);
+        row.Project.OpenCommand.Execute(null);
+        Assert.Equal([planner.Projects.Find("GoalMaker")!.Id], opened);
+    }
+
+    [Fact]
+    public void TheArchivesAreaAndTagFilterNarrowsWhatTheSearchFinds()
+    {
+        var shelf = Add("Fix the shelf @Home #errand");
+        var invoice = Add("Send the invoice @Work");
+        var fence = Add("Paint the fence");
+        var house = planner.Projects.Add(new ProjectDraft("House") { AreaId = planner.Areas.Find("Home")!.Id })!;
+        planner.Tasks.SetProject(fence.Id, house.Id, ProjectRules.Task);
+        foreach (var task in new[] { shelf, invoice, fence })
+        {
+            planner.Tasks.SetDone(task.Id, true);
+        }
+
+        var archive = new ArchiveViewModel(planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Strings, _ => null, action => action(), _ => { });
+
+        archive.Filters.SelectedArea = archive.Filters.AreaChoices.Single(area => area.Label == "Home");
+        Assert.Equal(["Fix the shelf", "Paint the fence"], archive.Results.Select(row => row.Title).Order());
+
+        archive.Filters.SelectedTag = archive.Filters.TagChoices.Single(tag => tag.Label == "#errand");
+        Assert.Equal(["Fix the shelf"], archive.Results.Select(row => row.Title));
+
+        archive.Query = "invoice";
         Assert.True(archive.IsEmpty);
         Assert.Equal("Archive.NoMatch", archive.EmptyText);
     }

@@ -11,10 +11,13 @@ import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.ReminderScheduler
 import com.goalmaker.app.application.planning.ReminderService
+import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.sync.FakeServer
@@ -22,6 +25,8 @@ import com.goalmaker.app.application.sync.SyncCoordinator
 import com.goalmaker.app.application.sync.SyncEngine
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
+import com.goalmaker.app.domain.composer.ComposerDraft
+import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.domain.planning.QuietHours
 import java.time.Instant
 import java.time.LocalDate
@@ -36,6 +41,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -57,11 +63,13 @@ class ListsViewModelTest {
     private lateinit var habits: HabitList
     private lateinit var tasks: TaskList
     private lateinit var areas: AreaList
+    private lateinit var projects: ProjectList
     private lateinit var viewModel: ListsViewModel
+    private lateinit var settings: SharedPreferencesSettingsStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
 
     // Friday 18 September 2026, noon.
-    private val now = LocalDateTime.parse("2026-09-18T12:00")
+    private var now = LocalDateTime.parse("2026-09-18T12:00")
     private val today = LocalDate.parse("2026-09-18")
 
     @Before
@@ -70,12 +78,12 @@ class ListsViewModelTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T10:00:00Z") })
         areas = AreaList(test.replica, rows, listOf("violet"), {})
         val tags = TagList(test.replica, rows, {})
-        val projects = ProjectList(test.replica, rows, {})
+        projects = ProjectList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         habits = HabitList(test.replica, rows, {})
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("lists-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
-        val settings = SharedPreferencesSettingsStore(preferences)
+        settings = SharedPreferencesSettingsStore(preferences)
         val reminders = ReminderService(
             reminders = ReminderList(test.replica, rows, {}),
             tasks = tasks,
@@ -98,13 +106,27 @@ class ListsViewModelTest {
             now = { Instant.parse("2026-09-18T10:00:00Z") },
             debounce = 2.seconds,
         )
-        viewModel = ListsViewModel(tasks, areas, tags, projects, GoalList(test.replica, rows, {}), habits, settings, reminders, sync, Dispatchers.Unconfined) { now }
+        viewModel = ListsViewModel(tasks, areas, tags, projects, GoalList(test.replica, rows, {}), ReviewList(test.replica, rows, {}), habits, settings, reminders, sync, Dispatchers.Unconfined) { now }
     }
 
     @After
     fun tearDown() {
         scope.cancel()
         test.close()
+    }
+
+    @Test
+    fun `an area filter keeps a project item without an area when its project is in the area`() = runTest {
+        val work = areas.findOrCreate("Work")!!
+        val project = projects.add(ProjectDraft("GoalMaker", areaId = work.id))!!
+        val item = tasks.add(ComposerDraft(title = "Ship the board", plannedDate = today))!!
+        tasks.setProject(item.id, project.id, ProjectRules.TASK)
+        tasks.add(ComposerDraft(title = "Water plants", plannedDate = today))
+
+        viewModel.filterByArea(work.id)
+
+        val state = loaded { it.filter.areaId == work.id }
+        assertEquals(listOf("Ship the board"), state.lists!!.todaySections.more.map { it.title })
     }
 
     @Test
@@ -249,6 +271,56 @@ class ListsViewModelTest {
         assertTrue(viewModel.addTask("Water the plants", NewTaskDay.TODAY, null, topPriority = false, notes = ""))
 
         assertEquals(today, tasks.all().single().plannedDate)
+    }
+
+    @Test
+    fun `January asks for last year's review and this year's goals, and Not now keeps the year`() = runTest {
+        now = LocalDateTime.parse("2027-01-05T12:00")
+
+        val nudge = loaded { it.newYear != null }.newYear!!
+        assertEquals(2027, nudge.year)
+        assertTrue(nudge.review && nudge.goals)
+
+        viewModel.dismissNewYear()
+        assertEquals(2027, settings.newYearDismissed.value)
+    }
+
+    @Test
+    fun `a January nudge put away this year stays away`() = runTest {
+        now = LocalDateTime.parse("2027-01-05T12:00")
+        settings.setNewYearDismissed(2027)
+
+        assertEquals(null, loaded { true }.newYear)
+    }
+
+    @Test
+    fun `September has no January nudge`() = runTest {
+        assertEquals(null, loaded { true }.newYear)
+    }
+
+    @Test
+    fun `a project item's row wears its project's chip`() = runTest {
+        planToday("Fix the build +GoalMaker")
+        planToday("Buy milk")
+
+        val state = loaded { it.projects.isNotEmpty() && it.lists!!.todaySections.more.size == 2 }
+        val rows = state.lists!!.todaySections.more
+        assertEquals("GoalMaker", state.projectOf(rows.single { it.title == "Fix the build" })?.name)
+        assertNull(state.projectOf(rows.single { it.title == "Buy milk" }))
+    }
+
+    @Test
+    fun `an item of a deleted project wears no chip`() = runTest {
+        planToday("Fix the build +GoalMaker")
+        projects.delete(projects.find("GoalMaker")!!.id)
+
+        val state = loaded { it.lists!!.todaySections.more.isNotEmpty() }
+        assertNull(state.projectOf(state.lists!!.todaySections.more.single()))
+    }
+
+    private fun planToday(line: String) {
+        val task = tasks.add(ComposerParser.parse(line, now))!!
+        tasks.plan(task.id, today)
     }
 
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()

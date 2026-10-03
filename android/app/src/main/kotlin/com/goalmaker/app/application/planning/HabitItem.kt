@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.planning
 
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * A habit as the screens and rules see it (docs/habits.md). [cadence] is daily, weekdays, per_week or
@@ -8,7 +9,8 @@ import java.time.LocalDate
  * month needs. [measure] is check, count or amount; [target] and [unit] belong to a count or an amount.
  * [direction] is at_least (the target is something to reach) or at_most (it is a limit: going over breaks
  * the day), which only a daily or weekday habit can be. [showOnToday] false keeps it off Today and the
- * widgets; it still counts everywhere else.
+ * widgets; it still counts everywhere else. [remindAt] is the local time it reminds on the days it is
+ * still left (docs/reminders.md), null for no reminder.
  */
 data class HabitItem(
     val id: String,
@@ -25,6 +27,7 @@ data class HabitItem(
     val goalId: String? = null,
     val archived: Boolean = false,
     val showOnToday: Boolean = true,
+    val remindAt: LocalTime? = null,
     val position: Double = 0.0,
     val deleted: Boolean = false,
 )

@@ -12,6 +12,9 @@ public sealed class ProjectsViewModelTests : IDisposable
 {
     private readonly TestPlanner planner = new();
 
+    // The new item windows the page asked for, as the forms they would show.
+    private readonly List<ProjectItemFormViewModel> windows = [];
+
     public void Dispose() => planner.Dispose();
 
     [Fact]
@@ -64,28 +67,6 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void ANewItemKeepsTheColumnPriorityAndNotesItWasGiven()
-    {
-        var page = WithProject();
-
-        page.NewItemType = ProjectRules.Idea;
-        Assert.Equal(ProjectRules.Backlog, page.NewItemColumn);
-        page.NewItemColumn = ProjectRules.Doing;
-        page.NewItemType = ProjectRules.Bug;
-        page.NewItemPriority = ProjectRules.High;
-        page.NewItemNotes = "Like the lists have";
-        page.NewItemTitle = "Undo on the board";
-        page.AddItemCommand.Execute(null);
-
-        var item = planner.Task("Undo on the board");
-        Assert.Equal(ProjectRules.Bug, item.ItemType);
-        Assert.Equal(ProjectRules.Doing, item.BoardColumn);
-        Assert.Equal(ProjectRules.High, item.Priority);
-        Assert.Equal("Like the lists have", item.Notes);
-        Assert.Equal(string.Empty, page.NewItemNotes);
-    }
-
-    [Fact]
     public void UndoingAMoveToDonePutsTheCardBackOpen()
     {
         var page = WithProject();
@@ -106,10 +87,11 @@ public sealed class ProjectsViewModelTests : IDisposable
     public void UndoingTakingAnItemOutPutsItBackWhereItWas()
     {
         var page = WithProject();
-        page.NewItemType = ProjectRules.Bug;
-        page.NewItemColumn = ProjectRules.Doing;
-        page.NewItemTitle = "Cache the release feed";
-        page.AddItemCommand.Execute(null);
+        Column(page, "doing").AddCommand.Execute(null);
+        var form = windows[^1];
+        form.ItemType = ProjectRules.Bug;
+        form.Title = "Cache the release feed";
+        form.Create();
 
         Column(page, "doing").Items[0].RemoveCommand.Execute(null);
         Assert.Null(planner.Task("Cache the release feed").ProjectId);
@@ -381,6 +363,92 @@ public sealed class ProjectsViewModelTests : IDisposable
     private static BoardColumnViewModel Column(ProjectsViewModel page, string column) =>
         page.Columns.Single(candidate => candidate.Column == column);
 
+    [Fact]
+    public void AnAreaKeepsItsProjectsAndAnItemWithoutOneTakesItsProjects()
+    {
+        var page = TwoAreas();
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Work");
+
+        Assert.Equal(["GoalMaker"], page.Projects.Select(project => project.Name));
+        Assert.Equal(["Ship the board"], Column(page, "todo").Items.Select(item => item.Title));
+    }
+
+    [Fact]
+    public void AnItemsOwnAreaKeepsItsProjectListedUnderThatArea()
+    {
+        var page = TwoAreas();
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Home");
+        page.Select(page.Projects.Single(project => project.Name == "GoalMaker").Id);
+
+        Assert.Equal(["GoalMaker", "House"], page.Projects.Select(project => project.Name).Order());
+        Assert.Equal(["Order a shelf"], Column(page, "todo").Items.Select(item => item.Title));
+    }
+
+    [Fact]
+    public void ATagKeepsTheProjectsHoldingATaggedItem()
+    {
+        var page = TwoAreas();
+
+        page.Filters.SelectedTag = page.Filters.TagChoices.Single(tag => tag.Label == "#errand");
+
+        Assert.Equal(["House"], page.Projects.Select(project => project.Name));
+        Assert.Equal(["Buy paint"], Column(page, "todo").Items.Select(item => item.Title));
+
+        page.Filters.ClearCommand.Execute(null);
+        Assert.Equal(2, page.Projects.Count);
+    }
+
+    [Fact]
+    public void AFilterThatHidesEveryProjectSaysSo()
+    {
+        var page = TwoAreas();
+        planner.Areas.FindOrCreate("Garden");
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Garden");
+
+        Assert.Empty(page.Projects);
+        Assert.False(page.HasProject);
+        Assert.True(page.IsFilteredAway);
+        Assert.False(page.IsEmpty);
+    }
+
+    [Fact]
+    public void EditingAProjectKeepsItsNotesAndSetsItsArea()
+    {
+        var work = planner.Areas.FindOrCreate("Work")!;
+        var project = planner.Projects.Add(new ProjectDraft("GoalMaker") { Notes = "Ship by spring." })!;
+        var page = Page();
+
+        page.EditCommand.Execute(null);
+        page.ProjectArea = page.ProjectAreaChoices.Single(choice => choice.Id == work.Id);
+        page.SaveCommand.Execute(null);
+
+        Assert.Equal("Ship by spring.", planner.Projects.Get(project.Id)!.Notes);
+        Assert.Equal(work.Id, planner.Projects.Get(project.Id)!.AreaId);
+    }
+
+    // A Work project with an item of its own and one filed under Home, and a Home project with an errand.
+    private ProjectsViewModel TwoAreas()
+    {
+        var work = planner.Areas.FindOrCreate("Work")!;
+        var home = planner.Areas.FindOrCreate("Home")!;
+        var goalMaker = planner.Projects.Add(new ProjectDraft("GoalMaker") { AreaId = work.Id })!;
+        var house = planner.Projects.Add(new ProjectDraft("House") { AreaId = home.Id })!;
+        TaskItem Item(string title, string project)
+        {
+            var task = planner.Tasks.Add(title)!;
+            planner.Tasks.SetProject(task.Id, project, ProjectRules.Task);
+            return task;
+        }
+
+        Item("Ship the board", goalMaker.Id);
+        planner.Tasks.SetArea(Item("Order a shelf", goalMaker.Id).Id, home.Id);
+        planner.Tasks.SetTags(Item("Buy paint", house.Id).Id, ["errand"]);
+        return Page();
+    }
+
     private ProjectsViewModel WithProject()
     {
         var page = Page();
@@ -391,5 +459,5 @@ public sealed class ProjectsViewModelTests : IDisposable
     }
 
     private ProjectsViewModel Page() =>
-        new(planner.Projects, planner.Tasks, planner.Settings, planner.Strings, _ => { }, action => action(), planner.Time);
+        new(planner.Projects, planner.Tasks, planner.Areas, planner.Tags, planner.Settings, planner.Strings, _ => null, _ => { }, action => action(), planner.Time, windows.Add);
 }

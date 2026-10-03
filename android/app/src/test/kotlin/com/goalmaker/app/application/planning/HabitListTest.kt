@@ -110,6 +110,31 @@ class HabitListTest {
     }
 
     @Test
+    fun `a fail empties the day, and checking in or skipping takes it back`() {
+        val water = habits.add(HabitDraft("Water", today, measure = HabitRules.COUNT, target = 8.0))!!
+        habits.checkIn(water.id, today, 3.0)
+
+        assertTrue(habits.fail(water.id, today))
+        habits.read().checkinsOf(water.id).single().let { checkin ->
+            assertTrue(checkin.failed)
+            assertEquals(0.0, checkin.value, 1e-9)
+        }
+        assertEquals(HabitStanding.FAILED, HabitRules.standing(water, today, habits.read().checkinsOf(water.id), emptyList()))
+
+        // A glass after the fail starts the day again from nothing.
+        assertEquals(1.0, habits.checkIn(water.id, today)!!, 1e-9)
+        assertFalse(habits.read().checkinsOf(water.id).single().failed)
+
+        assertTrue(habits.fail(water.id, today))
+        assertTrue(habits.skip(water.id, today))
+        habits.read().checkinsOf(water.id).single().let { checkin -> assertTrue(checkin.skipped && !checkin.failed) }
+
+        assertTrue(habits.fail(water.id, today))
+        assertTrue(habits.fail(water.id, today, failed = false))
+        assertEquals(HabitStanding.LEFT, HabitRules.standing(water, today, habits.read().checkinsOf(water.id), emptyList()))
+    }
+
+    @Test
     fun `a pause ends the day before the habit resumes, and one resumed the same day goes away`() {
         val read = habits.add(HabitDraft("Read", today))!!
 

@@ -99,6 +99,22 @@ class UsageStatsSource(private val context: Context) : UsageSource {
         return stretches
     }
 
+    override fun appName(app: String): String? {
+        val packages = context.packageManager
+        return try {
+            val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packages.getApplicationInfo(app, PackageManager.ApplicationInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                packages.getApplicationInfo(app, 0)
+            }
+            packages.getApplicationLabel(info).toString().trim().takeIf(String::isNotEmpty)
+        } catch (_: PackageManager.NameNotFoundException) {
+            // Uninstalled since.
+            null
+        }
+    }
+
     /**
      * What counts as no app at all: every installed launcher, the system's bars, and home activities
      * that aren't a launcher, such as the Settings app's FallbackHome, which shows while the phone

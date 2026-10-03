@@ -20,4 +20,7 @@
     -->
     <sys:Double x:Key="GM.PageWidth">760</sys:Double>
     <sys:Double x:Key="GM.WidePageWidth">1040</sys:Double>
+
+    <!-- Whether a list shows its big headline; a mini window, whose title already names the list, sets its own. -->
+    <Visibility x:Key="GM.ListHeadlineVisibility">Visible</Visibility>
 </ResourceDictionary>

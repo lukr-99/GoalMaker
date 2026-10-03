@@ -8,6 +8,7 @@ import com.goalmaker.app.application.planning.HabitData
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.ListRules
+import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.goals.GoalBoard
 import java.time.LocalDate
@@ -20,15 +21,20 @@ object WidgetContent {
     /** At most this many rows fit a widget before it asks the owner to open the app. */
     const val ROWS = 8
 
-    /** What is still open today, in the order Today shows it: top priorities, then by time, then the rest. */
-    fun today(tasks: List<TaskItem>, today: LocalDate, rows: Int = ROWS): List<WidgetTask> {
+    /**
+     * What is still open today, in the order Today shows it: top priorities, then by time, then the
+     * rest, a project item with its project's name from [projects] (the ones that are not deleted).
+     */
+    fun today(tasks: List<TaskItem>, today: LocalDate, rows: Int = ROWS, projects: List<ProjectItem> = emptyList()): List<WidgetTask> {
         val sections = ListRules.lists(tasks, today).todaySections
+        val names = projects.filterNot(ProjectItem::deleted).associate { it.id to it.name }
         return (sections.priorities + sections.scheduled + sections.more).take(rows).map { task ->
             WidgetTask(
                 id = task.id,
                 title = task.title,
                 time = task.plannedTime?.toString().orEmpty(),
                 topPriority = task.topPriority,
+                project = task.projectId?.let(names::get).orEmpty(),
             )
         }
     }

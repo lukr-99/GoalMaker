@@ -100,6 +100,9 @@ class HabitsViewModel(
     /** Skips today's period (sick, travelling) or takes the skip back. */
     fun skip(id: String, skipped: Boolean) = write { habits.skip(id, today(), skipped) }
 
+    /** Fails today's period (it won't happen: missed now, the streak ends) or takes the fail back. */
+    fun fail(id: String, failed: Boolean) = write { habits.fail(id, today(), failed) }
+
     fun pause(id: String) = write { habits.pause(id, today()) }
 
     fun resume(id: String) = write { habits.resume(id, today()) }

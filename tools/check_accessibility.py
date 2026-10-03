@@ -9,6 +9,11 @@ And every Android control can be reached: a Scaffold's bottomBar slot adds no wi
 bar built from a Row or a Column has to keep clear of the system navigation bar itself. Material's
 NavigationBar and BottomAppBar already do.
 
+And Tab on Windows reads the way the screen does: WPF's Tab follows the order controls are written
+in, and a DockPanel draws a child docked Right or Bottom away from where it is written, so such a
+child that does something, written before another one that does, makes Tab jump. The panel then
+sets KeyboardNavigation.TabNavigation="Local" and gives the controls TabIndex in reading order.
+
 Run from anywhere: python tools/check_accessibility.py
 """
 
@@ -18,6 +23,7 @@ import glob
 import io
 import re
 import sys
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -130,18 +136,64 @@ def bottom_bars() -> list[str]:
     return found
 
 
+# What Tab stops on, by element name (ui:Button and Button alike).
+TAB_STOP = re.compile(
+    r"(Button|ToggleButton|ToggleSwitch|TextBox|ComboBox|CheckBox|RadioButton|HyperlinkButton|Slider"
+    r"|DatePicker|ListBox|NumberBox|AutoSuggestBox)$"
+)
+
+
+def name(element: ElementTree.Element) -> str:
+    """An element's own name, without its namespace."""
+    return element.tag.rsplit("}", 1)[-1]
+
+
+def attribute(element: ElementTree.Element, suffix: str) -> str | None:
+    """The value of the attribute whose name ends with [suffix] (attached properties come namespaced)."""
+    return next((value for key, value in element.attrib.items() if key.rsplit("}", 1)[-1] == suffix), None)
+
+
+def stops_tab(element: ElementTree.Element) -> bool:
+    """Whether Tab stops on [element] or on anything inside it."""
+    for inner in element.iter():
+        if "." not in name(inner) and TAB_STOP.search(name(inner)) and attribute(inner, "IsTabStop") != "False":
+            return True
+    return False
+
+
+def tab_order() -> list[str]:
+    found = []
+    for path in sorted(glob.glob(str(ROOT / "windows/src/**/*.xaml"), recursive=True)):
+        if "obj" in Path(path).relative_to(ROOT).parts:
+            continue
+        for panel in ElementTree.parse(path).iter():
+            if name(panel) != "DockPanel" or attribute(panel, "KeyboardNavigation.TabNavigation"):
+                continue
+            children = [child for child in panel if "." not in name(child)]
+            for index, child in enumerate(children):
+                if attribute(child, "DockPanel.Dock") not in ("Right", "Bottom") or not stops_tab(child):
+                    continue
+                if any(stops_tab(later) for later in children[index + 1 :]):
+                    found.append(f"{Path(path).relative_to(ROOT).as_posix()} {name(child)} docked "
+                                 f"{attribute(child, 'DockPanel.Dock')} comes before a control it is drawn after")
+    return found
+
+
 def main() -> int:
     unnamed = windows() + android()
     hidden = bottom_bars()
-    for problem in unnamed + hidden:
+    jumps = tab_order()
+    for problem in unnamed + hidden + jumps:
         print(problem)
     if unnamed:
         print(f"{len(unnamed)} control(s) a screen reader cannot name")
     if hidden:
         print(f"{len(hidden)} bottom bar(s) the system navigation bar can cover")
-    if unnamed or hidden:
+    if jumps:
+        print(f"{len(jumps)} DockPanel(s) where Tab does not read the way the screen does")
+    if unnamed or hidden or jumps:
         return 1
-    print("every control has something to read and keeps clear of the system bars")
+    print("every control has something to read, keeps clear of the system bars and is reached by Tab in reading order")
     return 0
 
 

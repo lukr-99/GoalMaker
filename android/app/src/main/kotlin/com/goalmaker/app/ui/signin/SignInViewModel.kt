@@ -51,6 +51,25 @@ class SignInViewModel(
         if (digits.length == SignInCode.LENGTH) verifyCode()
     }
 
+    /**
+     * The code in what the owner copied ([text], the clipboard), taken the moment the screen comes back
+     * from the mail app (docs/sign-in.md): only on the code step with nothing typed yet, and only when
+     * the text holds exactly one code (contracts/vectors/sign-in-code.json, 'find'). True when it took one.
+     */
+    fun takeCopiedCode(text: String?): Boolean {
+        val current = state.value
+        if (current.step != SignInStep.CODE || current.busy || current.code.isNotEmpty()) return false
+        val code = text?.let(SignInCode::find) ?: return false
+        onCodeChange(code.value)
+        return true
+    }
+
+    /** Paste: the code in what was copied, or a line saying there was none. */
+    fun pasteCode(text: String?) {
+        val code = text?.let(SignInCode::find) ?: return state.update { it.copy(error = SignInError.NO_CODE_COPIED) }
+        onCodeChange(code.value)
+    }
+
     fun sendCode() {
         val email = EmailAddress.parse(state.value.email)
             ?: return state.update { it.copy(error = SignInError.INVALID_EMAIL) }

@@ -19,8 +19,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * The reviews already written and the ones waiting (docs/reviews.md): last week's and last month's
- * review can be started or picked up here, and any past one read back.
+ * The reviews already written and the ones waiting (docs/reviews.md): last week's, last month's and
+ * last year's review can be started or picked up here, and any past one read back.
  */
 class ReviewsViewModel(
     private val reviews: ReviewList,
@@ -36,6 +36,8 @@ class ReviewsViewModel(
             monthStart = ReviewRules.periodStart(ReviewRules.MONTHLY, today),
             lastWeekStart = ReviewLookBack.previousStart(ReviewRules.WEEKLY, ReviewRules.periodStart(ReviewRules.WEEKLY, today)),
             lastMonthStart = ReviewLookBack.previousStart(ReviewRules.MONTHLY, ReviewRules.periodStart(ReviewRules.MONTHLY, today)),
+            yearStart = ReviewRules.periodStart(ReviewRules.YEARLY, today),
+            lastYearStart = ReviewLookBack.previousStart(ReviewRules.YEARLY, ReviewRules.periodStart(ReviewRules.YEARLY, today)),
             past = all.filter(ReviewItem::written),
             letters = all.mapNotNull { review -> ReviewRules.letterPreview(review.summary)?.let { review.id to it } }.toMap(),
         )

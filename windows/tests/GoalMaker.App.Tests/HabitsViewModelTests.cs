@@ -151,6 +151,29 @@ public sealed class HabitsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void TheFormSetsAReminderTimeAndRefusesOneThatIsNotATime()
+    {
+        var page = Page();
+        page.NewHabitCommand.Execute(null);
+        Assert.False(page.Editor.RemindOn);
+        page.Editor.Name = "Stretch";
+        page.Editor.RemindOn = true;
+        page.Editor.RemindText = "25:00";
+        page.Editor.SaveCommand.Execute(null);
+        Assert.Empty(planner.Habits.All());
+
+        page.Editor.RemindText = "21:15";
+        page.Editor.SaveCommand.Execute(null);
+        Assert.Equal(new TimeOnly(21, 15), planner.Habits.All().Single().RemindAt);
+
+        page.Editor.OpenEdit(planner.Habits.All().Single());
+        Assert.Equal((true, "21:15"), (page.Editor.RemindOn, page.Editor.RemindText));
+        page.Editor.RemindOn = false;
+        page.Editor.SaveCommand.Execute(null);
+        Assert.Null(planner.Habits.All().Single().RemindAt);
+    }
+
+    [Fact]
     public void AHabitKeptOffTodayStaysOnThePageAndIsStillDue()
     {
         planner.Habits.Add(new HabitDraft("Read", Today));

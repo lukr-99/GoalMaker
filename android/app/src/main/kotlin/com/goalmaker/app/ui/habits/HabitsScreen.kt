@@ -63,11 +63,19 @@ import kotlinx.coroutines.launch
  * or its menu opens the sheet where skipping lives. A streak reaching a milestone gets confetti unless
  * motion is reduced. The bottom bar (docs/composer.md) adds a habit from a typed line, or opens the
  * form filled in when no name is left; its plus opens the empty form, and its switch turns it into
- * the quick [chat].
+ * the quick [chat]. A habit reminder's Log arrives as [logRequest], the id of the habit whose log
+ * dialog opens once the habits are read; [onLogRequestSeen] settles it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() -> Unit)?, actions: @Composable () -> Unit = {}) {
+fun HabitsScreen(
+    viewModel: HabitsViewModel,
+    chat: ChatViewModel,
+    onBack: (() -> Unit)?,
+    actions: @Composable () -> Unit = {},
+    logRequest: String? = null,
+    onLogRequestSeen: () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scope = rememberCoroutineScope()
@@ -86,6 +94,12 @@ fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() ->
         editing = HabitItem("", "", state.today)
     }
 
+    LaunchedEffect(logRequest, state.loaded) {
+        if (logRequest == null || !state.loaded) return@LaunchedEffect
+        state.active.firstOrNull { it.habit.id == logRequest }?.let { logging = it.habit }
+        onLogRequestSeen()
+    }
+
     val reduceMotion = AppTheme.reduceMotion
     var seen by remember { mutableStateOf<Set<String>?>(null) }
     var bursts by remember { mutableIntStateOf(0) }
@@ -96,11 +110,12 @@ fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() ->
         if (before != null && !reduceMotion && !before.containsAll(state.milestones)) bursts++
     }
 
-    // The card's button: undo a skip, ask an amount for its value, or check in or add one.
+    // The card's button: undo a skip or a fail, ask an amount for its value, or check in or add one.
     fun checkIn(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
         when {
             row.skipped -> viewModel.skip(row.habit.id, false)
+            row.failed -> viewModel.fail(row.habit.id, false)
             else -> scope.launch { if (!viewModel.tap(row.habit.id)) logging = row.habit }
         }
     }
@@ -233,6 +248,7 @@ fun HabitsScreen(viewModel: HabitsViewModel, chat: ChatViewModel, onBack: (() ->
                 onCheckIn = { checkIn(row) },
                 onLog = { logging = row.habit },
                 onSkip = { skipped -> viewModel.skip(id, skipped) },
+                onFail = { failed -> viewModel.fail(id, failed) },
                 onClear = { viewModel.clearToday(id) },
                 onPause = { viewModel.pause(id) },
                 onResume = { viewModel.resume(id) },

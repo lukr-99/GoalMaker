@@ -1,5 +1,9 @@
 package com.goalmaker.app.ui.nav
 
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.activity.compose.BackHandler
@@ -12,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -125,6 +130,14 @@ fun SignedInNavigation(graph: AppGraph) {
             graph.wantsOpened()
         }
     }
+    // A habit reminder opens the Habits place, pinned or not.
+    val habitsRequested by graph.habitsRequested.collectAsState()
+    LaunchedEffect(habitsRequested) {
+        if (habitsRequested) {
+            select(PlaceRules.HABITS)
+            graph.habitsOpened()
+        }
+    }
     // The Goals and Motivation widgets open the Goals place, pinned or not.
     val goalsRequested by graph.goalsRequested.collectAsState()
     LaunchedEffect(goalsRequested) {
@@ -145,6 +158,7 @@ fun SignedInNavigation(graph: AppGraph) {
     val motion = AppTheme.motion
     val reduced = AppTheme.reduceMotion
     val transitions = remember(motion, reduced) { NavTransitions(motion, reduced) }
+    val context = LocalContext.current
     // The bottom bar's quick chat (docs/composer.md). Goals and Habits opened on top of Today keep a
     // thread of their own, for as long as they are open.
     val newChat = {
@@ -178,6 +192,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 tags = graph.tags,
                                 projects = graph.projects,
                                 goals = graph.goals,
+                                reviews = graph.reviews,
                                 habits = graph.habits,
                                 settings = graph.settings,
                                 reminders = graph.reminders,
@@ -190,7 +205,12 @@ fun SignedInNavigation(graph: AppGraph) {
                         // lives as long as this entry, in memory only.
                         val chatViewModel = viewModel { newChat() }
                         val projectsViewModel = viewModel {
-                            ProjectsViewModel(graph.projects, graph.tasks, graph.settings, graph.io, LocalDateTime::now)
+                            ProjectsViewModel(graph.projects, graph.tasks, graph.areas, graph.tags, graph.settings, graph.io, LocalDateTime::now)
+                        }
+                        // A project item's chip in a list opens its project's board (docs/lists.md).
+                        val openProject: (String) -> Unit = { id ->
+                            projectsViewModel.select(id)
+                            select(PlaceRules.PROJECTS)
                         }
                         val placesViewModel = viewModel {
                             PlacesViewModel(
@@ -208,7 +228,17 @@ fun SignedInNavigation(graph: AppGraph) {
                         }
                         val placesState by placesViewModel.uiState.collectAsStateWithLifecycle()
                         val calendarViewModel = viewModel {
-                            CalendarViewModel(graph.tasks, graph.reminderList, graph.settings, graph.io, LocalDateTime::now)
+                            CalendarViewModel(
+                                graph.tasks,
+                                graph.reminderList,
+                                graph.areas,
+                                graph.tags,
+                                graph.projects,
+                                graph.habits,
+                                graph.settings,
+                                graph.io,
+                                LocalDateTime::now,
+                            )
                         }
                         val syncStatus by graph.sync.status.collectAsStateWithLifecycle()
                         // Every place wears the same top bar actions.
@@ -244,6 +274,8 @@ fun SignedInNavigation(graph: AppGraph) {
                                         wantTitle = title
                                         select(PlaceRules.WANTS)
                                     },
+                                    onOpenReview = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                                    onOpenProject = openProject,
                                 )
                                 PlaceRules.PROJECTS -> ProjectsScreen(
                                     viewModel = projectsViewModel,
@@ -256,12 +288,22 @@ fun SignedInNavigation(graph: AppGraph) {
                                     onOpenTask = { id -> backStack.add(TaskKey(id)) },
                                     actions = actions,
                                     onBack = backToHub,
+                                    onOpenProject = openProject,
                                 )
                                 PlaceRules.HABITS -> {
                                     val habitsViewModel = viewModel(key = "habits-tab") {
                                         HabitsViewModel(graph.habits, graph.goals, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
                                     }
-                                    HabitsScreen(viewModel = habitsViewModel, chat = chatViewModel, onBack = backToHub, actions = actions)
+                                    // A habit reminder's Log opens the habit's log dialog here.
+                                    val logRequest by graph.habitLogRequested.collectAsState()
+                                    HabitsScreen(
+                                        viewModel = habitsViewModel,
+                                        chat = chatViewModel,
+                                        onBack = backToHub,
+                                        actions = actions,
+                                        logRequest = logRequest,
+                                        onLogRequestSeen = graph::habitLogOpened,
+                                    )
                                 }
                                 PlaceRules.GOALS -> {
                                     val goalsViewModel = viewModel(key = "goals-tab") {
@@ -287,6 +329,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                             goals = graph.goals,
                                             habits = graph.habits,
                                             reviews = graph.reviews,
+                                            projects = graph.projects,
                                             wants = graph.wants,
                                             tally = graph.tally,
                                             tallyCategories = graph.tallyDefaults.categories,
@@ -298,12 +341,13 @@ fun SignedInNavigation(graph: AppGraph) {
                                     StatsScreen(viewModel = statsViewModel, onBack = backToHub, actions = actions)
                                 }
                                 PlaceRules.ARCHIVE -> {
-                                    val archiveViewModel = viewModel(key = "archive-tab") { ArchiveViewModel(graph.tasks, graph.io) }
+                                    val archiveViewModel = viewModel(key = "archive-tab") { ArchiveViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.io) }
                                     ArchiveScreen(
                                         viewModel = archiveViewModel,
                                         onBack = backToHub,
                                         onOpenTask = { id -> backStack.add(TaskKey(id)) },
                                         actions = actions,
+                                        onOpenProject = openProject,
                                     )
                                 }
                                 PlaceRules.WANTS -> {
@@ -356,6 +400,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 goals = graph.goals,
                                 habits = graph.habits,
                                 reviews = graph.reviews,
+                                projects = graph.projects,
                                 wants = graph.wants,
                                 tally = graph.tally,
                                 tallyCategories = graph.tallyDefaults.categories,
@@ -424,6 +469,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 restartApp = graph.restartApp,
                                 unlockAvailability = graph.deviceUnlock::availability,
                                 appLockTurned = graph.appLock::turned,
+                                importantDnd = graph.reminderNotifications::importantThroughDnd,
                             )
                         }
                         // The Areas and tags section shows the areas in use and the tags, read as the manager reads them.
@@ -441,6 +487,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onProblemsRead = graph.problems::read,
                             updateRequest = updateRequested,
                             onUpdateRequestHandled = graph::updateRequestHandled,
+                            onOpenDndSettings = { state -> openSystemPage(context, graph.reminderNotifications.dndSettings(state)) },
                         )
                     }
                     entry<ConnectorKey> {
@@ -458,7 +505,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         TaskScreen(viewModel = taskViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ArchiveKey> {
-                        val archiveViewModel = viewModel { ArchiveViewModel(graph.tasks, graph.io) }
+                        val archiveViewModel = viewModel { ArchiveViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.io) }
                         ArchiveScreen(
                             viewModel = archiveViewModel,
                             onBack = { backStack.removeLastOrNull() },
@@ -472,5 +519,14 @@ fun SignedInNavigation(graph: AppGraph) {
                 },
             )
         }
+    }
+}
+
+// A system settings page, or the phone's Settings where a maker left that page out.
+private fun openSystemPage(context: Context, page: Intent) {
+    try {
+        context.startActivity(page)
+    } catch (_: ActivityNotFoundException) {
+        context.startActivity(Intent(Settings.ACTION_SETTINGS))
     }
 }

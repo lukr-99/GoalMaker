@@ -28,10 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
 import com.goalmaker.app.ui.theme.AppTheme
@@ -55,9 +58,9 @@ fun EmojiField(emoji: String, onChange: (String) -> Unit, modifier: Modifier = M
                 .semantics { contentDescription = label },
         ) {
             if (emoji.isEmpty()) {
-                Text("🙂", style = MaterialTheme.typography.titleMedium, color = AppTheme.colors.textMuted)
+                Text("🙂", style = picture(MaterialTheme.typography.titleMedium, 16.dp), color = AppTheme.colors.textMuted)
             } else {
-                Text(emoji, style = MaterialTheme.typography.headlineSmall)
+                Text(emoji, style = picture(MaterialTheme.typography.headlineSmall, 24.dp))
             }
         }
         Column(Modifier.weight(1f).padding(start = 12.dp)) {
@@ -106,7 +109,7 @@ private fun EmojiPicker(onPick: (String) -> Unit, onDismiss: () -> Unit) {
                                     .clickable { onPick(emoji) }
                                     .semantics { contentDescription = emoji },
                             ) {
-                                Text(emoji, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                                Text(emoji, style = picture(MaterialTheme.typography.titleLarge, 22.dp), textAlign = TextAlign.Center)
                             }
                         }
                     }
@@ -141,3 +144,12 @@ private val EMOJI: List<Pair<Int, List<String>>> = listOf(
     R.string.emoji_group_work to listOf("💻", "📊", "📌", "📅", "✉️", "📞", "🧹", "🛠️", "💰", "🧾", "🚀", "🎯"),
     R.string.emoji_group_life to listOf("🏠", "👨‍👩‍👧", "🐕", "🌍", "☀️", "🌙", "🔥", "⭐", "❤️", "🙏", "🍳", "🛒"),
 )
+
+/** An emoji here is a picture in a fixed box: it keeps its size when the system's text grows. */
+@Composable
+private fun picture(style: TextStyle, size: Dp): TextStyle = with(LocalDensity.current) {
+    style.copy(fontSize = size.toSp(), lineHeight = (size * PICTURE_LINE).toSp())
+}
+
+// An emoji's line height to its size, about what the type scale gives it.
+private const val PICTURE_LINE = 1.3f

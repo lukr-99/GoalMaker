@@ -7,7 +7,8 @@ namespace GoalMaker.Core.Planning;
 /// arms the timer for the next one, says which notifications on screen went stale, and settles a
 /// reminder the owner handled. The time of the last look stays in the settings, so each reminder is
 /// shown once. The evening Plan tomorrow reminder shares the one timer: it rings at the time in the
-/// settings unless the ritual already ran that planning day.
+/// settings unless the ritual already ran that planning day, and so do the habits that remind, on the days
+/// they are still left (<see cref="HabitReminder"/>).
 /// </summary>
 public sealed class ReminderService
 {
@@ -18,6 +19,7 @@ public sealed class ReminderService
     private readonly TimeProvider time;
     private readonly RitualRunList? rituals;
     private readonly WantList? wants;
+    private readonly HabitList? habits;
 
     public ReminderService(
         ReminderList reminders,
@@ -26,9 +28,11 @@ public sealed class ReminderService
         ISettingsStore settings,
         TimeProvider time,
         RitualRunList? rituals = null,
-        WantList? wants = null)
+        WantList? wants = null,
+        HabitList? habits = null)
     {
         this.wants = wants;
+        this.habits = habits;
         this.reminders = reminders;
         this.tasks = tasks;
         this.scheduler = scheduler;
@@ -60,7 +64,45 @@ public sealed class ReminderService
         var weekly = ReviewDue(RitualRunList.WeeklyReview, settings.WeeklyReviewReminder, since, now);
         var monthly = ReviewDue(RitualRunList.MonthlyReview, settings.MonthlyReviewReminder, since, now);
         var ready = wants is null ? null : WantReminder.Due(settings.WantsReadyReminder, settings.DayStartHour, wants.All(), since, now);
-        return new ReminderLook(due, planDay, weekly, monthly, ready);
+        var dueHabits = new List<DueHabit>();
+        if (habits is not null)
+        {
+            var (checkins, pauses) = (habits.Checkins(), habits.Pauses());
+            foreach (var habit in habits.All())
+            {
+                if (HabitReminder.Due(habit, Own(checkins, habit.Id), Own(pauses, habit.Id), settings.DayStartHour, since, now) is { } day)
+                {
+                    dueHabits.Add(new DueHabit(habit, day));
+                }
+            }
+        }
+
+        return new ReminderLook(due, planDay, weekly, monthly, ready, dueHabits);
+    }
+
+    /// <summary>Whether the reminder on screen for a habit on planning <paramref name="day"/> has to go: the habit is no longer left, or the day moved on.</summary>
+    public bool HabitStale(string habitId, DateOnly day)
+    {
+        if (habits?.All().FirstOrDefault(habit => habit.Id == habitId) is not { } habit)
+        {
+            return true;
+        }
+
+        return HabitReminder.Stale(habit, day, Own(habits.Checkins(), habitId), Own(habits.Pauses(), habitId), settings.DayStartHour, Now);
+    }
+
+    /// <summary>Check in from a habit's toast: a check is met, a count gets one more (an amount opens the app).</summary>
+    public void CheckInHabit(string habitId, DateOnly day)
+    {
+        habits?.CheckIn(habitId, day);
+        Rearm();
+    }
+
+    /// <summary>Skip from a habit's toast: its period that holds <paramref name="day"/> neither counts nor breaks the streak.</summary>
+    public void SkipHabit(string habitId, DateOnly day)
+    {
+        habits?.Skip(habitId, day);
+        Rearm();
     }
 
     /// <summary>Which of the notifications on screen (<paramref name="shown"/>, by reminder id) have to go.</summary>
@@ -174,6 +216,12 @@ public sealed class ReminderService
 
     private IReadOnlySet<DateOnly> Ran(string ritual) => rituals?.Ran(ritual) ?? new HashSet<DateOnly>();
 
+    private static List<HabitCheckin> Own(IReadOnlyList<HabitCheckin> checkins, string habitId) =>
+        [.. checkins.Where(checkin => checkin.HabitId == habitId)];
+
+    private static List<HabitPause> Own(IReadOnlyList<HabitPause> pauses, string habitId) =>
+        [.. pauses.Where(pause => pause.HabitId == habitId)];
+
     private static string KindOf(string ritual) => ritual == RitualRunList.MonthlyReview ? ReviewRules.Monthly : ReviewRules.Weekly;
 
     private DateOnly? ReviewDue(string ritual, TimeOnly? time, DateTime since, DateTime now) => rituals is null
@@ -193,7 +241,17 @@ public sealed class ReminderService
         var weekly = ReviewNext(RitualRunList.WeeklyReview, settings.WeeklyReviewReminder, now);
         var monthly = ReviewNext(RitualRunList.MonthlyReview, settings.MonthlyReviewReminder, now);
         var ready = wants is null ? null : WantReminder.Next(settings.WantsReadyReminder, settings.DayStartHour, wants.All(), now);
-        var next = new[] { task, ritual, weekly, monthly, ready }.Where(moment => moment is not null).Min();
+        DateTime? habit = null;
+        if (habits is not null)
+        {
+            var (checkins, pauses) = (habits.Checkins(), habits.Pauses());
+            habit = habits.All()
+                .Select(one => HabitReminder.Next(one, Own(checkins, one.Id), Own(pauses, one.Id), settings.DayStartHour, now))
+                .Where(moment => moment is not null)
+                .Min();
+        }
+
+        var next = new[] { task, ritual, weekly, monthly, ready, habit }.Where(moment => moment is not null).Min();
         if (next is { } at)
         {
             scheduler.ArmAt(at);

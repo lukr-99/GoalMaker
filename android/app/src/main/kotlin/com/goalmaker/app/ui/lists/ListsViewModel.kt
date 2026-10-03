@@ -5,9 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
+import com.goalmaker.app.application.planning.ReviewList
+import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
-import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReminderItem
@@ -40,7 +41,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -56,6 +56,7 @@ class ListsViewModel(
     private val tags: TagList,
     projects: ProjectList,
     goals: GoalList,
+    reviews: ReviewList,
     private val habits: HabitList,
     private val settings: SettingsStore,
     private val reminders: ReminderService,
@@ -77,17 +78,15 @@ class ListsViewModel(
 
     // The filter the owner chose, kept while they switch lists (docs/lists.md); one whose area or tag
     // was deleted meanwhile falls away instead of hiding everything.
-    private val chosenFilter = MutableStateFlow(ListFilter.NONE)
-    private val filter = combine(chosenFilter, areas.watch().flowOn(io), tags.watch().flowOn(io)) { chosen, areaList, tagList ->
-        ListFilter(
-            areaId = chosen.areaId?.takeIf { id -> areaList.any { it.id == id && !it.archived } },
-            tagId = chosen.tagId?.takeIf { id -> tagList.any { it.id == id } },
-        )
-    }
+    private val filter = PlaceFilter(areas, tags, io)
 
-    private val lists = combine(tasks.watchAll().flowOn(io), tags.watchLinks().flowOn(io), filter, settings.dayStartHour, minutes) {
-            all, links, narrowed, startHour, _ ->
-        ListRules.lists(narrowed.apply(all, links), PlanningDay.of(clock(), startHour)) to narrowed
+    // A project item without an area of its own counts as being in its project's area.
+    private val projectAreas = projects.watch().flowOn(io).map { data -> data.projects.associate { it.id to it.areaId } }
+
+    private val lists = combine(tasks.watchAll().flowOn(io), filter.choices, projectAreas, settings.dayStartHour, minutes) {
+            all, choices, areasOfProjects, startHour, _ ->
+        val narrowed = choices.filter
+        ListRules.lists(narrowed.apply(all, choices.links, areasOfProjects), PlanningDay.of(clock(), startHour)) to narrowed
     }
 
     // The tasks with a reminder still to come, so a row can show it without reading the table again.
@@ -117,7 +116,14 @@ class ListsViewModel(
     // comes back the way it was left, and starts on the tasks after a cold start.
     private val segment = MutableStateFlow(TodaySegment.TASKS)
     private val hideDoneHabits = MutableStateFlow(false)
-    private val habitView = combine(segment, hideDoneHabits, ::Pair)
+
+    // The January nudge (docs/reviews.md): last year's review and this year's goals, until both are
+    // done or the owner says Not now for the year.
+    private val newYear = combine(goals.watch().flowOn(io), reviews.watch().flowOn(io), settings.newYearDismissed, settings.dayStartHour, minutes) {
+            (all, _), reviewList, dismissed, startHour, _ ->
+        ReviewRules.newYearFor(PlanningDay.of(clock(), startHour), all, reviewList, dismissed)
+    }
+    private val habitView = combine(segment, hideDoneHabits, newYear, ::Triple)
 
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
@@ -125,7 +131,7 @@ class ListsViewModel(
         refreshing,
         goalsAndHabits,
         habitView,
-    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (shownSegment, hiding) ->
+    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (shownSegment, hiding, nudge) ->
         ListsUiState(
             lists = planning,
             refreshing = pulled,
@@ -143,6 +149,7 @@ class ListsViewModel(
             shownHabits = HabitBoard.shown(habitRows, hiding),
             habitsLeft = habitRows.count(HabitRow::left),
             habitsAllDone = HabitRules.allDone(habitRows.map(HabitRow::standing)),
+            newYear = nudge,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -152,6 +159,11 @@ class ListsViewModel(
 
     /** Completions and deletions the screen offers to undo. */
     val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
+
+    /** Puts the January nudge away until next January (docs/reviews.md). */
+    fun dismissNewYear() {
+        uiState.value.newYear?.let { settings.setNewYearDismissed(it.year) }
+    }
 
     /** The planning day the lists and the preview call "today". */
     fun today(): LocalDate = PlanningDay.of(clock(), settings.dayStartHour.value)
@@ -219,6 +231,11 @@ class ListsViewModel(
         viewModelScope.launch(io) { habits.skip(id, today(), skipped) }
     }
 
+    /** Fails a habit's period holding today (it won't happen: missed now, the streak ends) or takes the fail back. */
+    fun failHabit(id: String, failed: Boolean) {
+        viewModelScope.launch(io) { habits.fail(id, today(), failed) }
+    }
+
     /** Clears today's value of a habit, for a check-in made by mistake. */
     fun clearHabit(id: String) {
         viewModelScope.launch(io) { habits.setValue(id, today(), 0.0) }
@@ -240,10 +257,10 @@ class ListsViewModel(
     }
 
     /** Narrows every list to an area, or stops narrowing by area when [areaId] is null. */
-    fun filterByArea(areaId: String?) = chosenFilter.update { it.copy(areaId = areaId) }
+    fun filterByArea(areaId: String?) = filter.byArea(areaId)
 
     /** Narrows every list to a tag, or stops narrowing by tag when [tagId] is null. */
-    fun filterByTag(tagId: String?) = chosenFilter.update { it.copy(tagId = tagId) }
+    fun filterByTag(tagId: String?) = filter.byTag(tagId)
 
     /** The reminders already on a task, for the sheet that edits them. */
     suspend fun remindersOf(taskId: String): List<ReminderItem> = withContext(io) { reminders.on(taskId) }

@@ -18,6 +18,25 @@ public sealed class ReminderServiceTests : IDisposable
     public void Dispose() => planner.Dispose();
 
     [Fact]
+    public void AHabitRemindsAtItsTimeWhileItIsLeftAndACheckInFromTheToastSettlesIt()
+    {
+        var habits = new ReminderService(planner.Reminders, planner.Tasks, scheduler, planner.Settings, planner.Time, habits: planner.Habits);
+        planner.Settings.PlanTomorrowReminder = null;
+        var read = planner.Habits.Add(new HabitDraft("Read", new DateOnly(2026, 9, 1)) { RemindAt = new TimeOnly(19, 30) })!;
+        Assert.Empty(habits.CatchUp().Habits!);
+        Assert.Equal(new DateTime(2026, 9, 18, 19, 30, 0), scheduler.ArmedAt);
+
+        planner.Time.Advance(TimeSpan.FromHours(5) + TimeSpan.FromMinutes(31));
+        var due = habits.CatchUp().Habits!.Single();
+        Assert.Equal(("Read", new DateOnly(2026, 9, 18)), (due.Habit.Name, due.Day));
+        Assert.False(habits.HabitStale(read.Id, due.Day));
+
+        habits.CheckInHabit(read.Id, due.Day);
+        Assert.True(habits.HabitStale(read.Id, due.Day));
+        Assert.Equal(new DateTime(2026, 9, 19, 19, 30, 0), scheduler.ArmedAt);
+    }
+
+    [Fact]
     public void AReminderKeepsItsLocalTimeThroughTheReplicaAndIsArmed()
     {
         var task = Add("Take the bread out");
