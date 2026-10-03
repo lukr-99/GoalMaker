@@ -92,7 +92,7 @@ composition root creates everything
   window),
   `Controls/MarkdownView` (task notes), `Views/` and `ViewModels/` (CommunityToolkit.Mvvm; the
   Places page is `PlacesPage` over `PlacesHubViewModel`, whose tiles reuse the places' own rules),
-  `Startup/` (launch switches, single instance), `Theming/` (the themes over WPF UI and the tray kit), `Localization/`
+  `Startup/` (launch switches, single instance), `Theming/` (the themes over WPF UI and the tray kit, and `TextScale`, which follows Windows' text size), `Localization/`
   (all copy in `Resources/Strings.xaml`), `Diagnostics/CrashLog`. Settings is the tray kit's settings
   page (`Views/SettingsPage` over `SettingsViewModel`): section cards, the section list, the jump and
   scroll hints and the rows are the kit's; `ViewModels/SettingsPageRules` asks the kit's rules the
