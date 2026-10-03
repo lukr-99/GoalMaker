@@ -450,7 +450,9 @@ enroll_enabled = true
 verify_enabled = true
 
 [remotes.production.auth.email]
-enable_signup = false
+# The Email provider itself: false here turns sign-in by email off for everyone ("Email logins are
+# disabled"). New accounts are closed by [remotes.production.auth] enable_signup above, not here.
+enable_signup = true
 enable_confirmations = true
 double_confirm_changes = true
 secure_password_change = false
