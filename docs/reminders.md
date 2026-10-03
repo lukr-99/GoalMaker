@@ -117,6 +117,42 @@ ritual, and **Not today**, which records the day as skipped. Reaching the ritual
 records it as done. On Android it has its own notification channel, so the owner can silence it
 apart from task reminders.
 
+## Habit reminders
+
+A habit can remind at a time of day the owner sets in its form (**Remind me**, 20:00 until changed;
+`habits.remind_at`, a local time, null for none). It rings once per planning day at that time, the way
+the Plan tomorrow reminder does (00:30 with a 04:00 day start still belongs to the evening before),
+and quiet hours don't move it. It rings only while the habit is still **left** that day
+([habits](habits.md#where-a-habit-stands-today)): a habit done, skipped, failed, paused, not due or
+not started yet stays quiet, and a limit never reminds. Pinned by the `habitReminders` and
+`habitReminderStale` groups of
+[`contracts/vectors/reminders.json`](../contracts/vectors/reminders.json).
+
+Each habit due gets a notification of its own: its emoji and name, and where it stands, "Still to do
+today" for a check, "4 of 8 glasses today" for a count or an amount, "1 of 3 this week" for a weekly
+or monthly habit. Its buttons, the same words on both apps:
+
+| Habit | Buttons |
+|---|---|
+| a check | **Check in**, which checks it in for the day |
+| a count | **+1**, which adds one to the day's value |
+| an amount | **Log**, which opens the app on the Habits page with the habit's log asking for the value |
+| any | **Skip today**, **Skip this week** or **Skip this month**, which skips the period holding the day |
+
+Clicking the notification itself opens the Habits page. A button writes the day's one check-in like
+the card's button does, so it syncs like any other, arms the next alarm and takes the notification
+down. Swiping it away writes nothing.
+
+The habit reminders share the device's one alarm, so the next of all the reminders is the one armed.
+On **Android** they have their own notification channel, **Habits** (id `habits`), so the owner can
+silence habit reminders apart from task reminders; the other channels keep their ids. Each
+notification is tagged with the habit's id and its planning day. On **Windows** the toast uses the
+default scenario, like the Plan tomorrow toast, and its buttons carry the habit's id and day.
+
+After every sync a device takes down each habit reminder that has gone stale: the habit was checked
+in, skipped, failed or paused here or on the other device so it is no longer left, its reminder was
+switched off, it was deleted, or the planning day moved on.
+
 ## Two devices
 
 Handling a reminder writes its state (`dismissed`, `done`, or `snoozed` with a time), which syncs
