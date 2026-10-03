@@ -388,6 +388,16 @@ class AppGraph(context: Context) {
     /** True while the wants notification asked for the Wants place and it isn't on screen yet. */
     val wantsRequested: StateFlow<Boolean> = wantsRequest.asStateFlow()
 
+    private val habitsRequest = MutableStateFlow(false)
+
+    /** True while a habit reminder asked for the Habits place and it isn't on screen yet. */
+    val habitsRequested: StateFlow<Boolean> = habitsRequest.asStateFlow()
+
+    private val habitLogRequest = MutableStateFlow<String?>(null)
+
+    /** The habit whose log dialog a habit reminder's Log asked for, until the Habits place opens it. */
+    val habitLogRequested: StateFlow<String?> = habitLogRequest.asStateFlow()
+
     private val goalsRequest = MutableStateFlow(false)
 
     /** True while a home screen widget asked for the Goals place and it isn't on screen yet (docs/widgets.md). */
@@ -442,6 +452,9 @@ class AppGraph(context: Context) {
                     .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
                     .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
                 clearStaleWants()
+                reminderNotifications.shownHabits()
+                    .filter { (habitId, day) -> reminders.habitStale(habitId, day) }
+                    .forEach { (habitId, day) -> reminderNotifications.clearHabit(habitId, day) }
             }
         }
         scope.launch {
@@ -614,6 +627,26 @@ class AppGraph(context: Context) {
         goalsRequest.value = true
     }
 
+    /**
+     * The owner opened the app from a habit reminder: the Habits place opens, on the habit's log dialog
+     * when that was its Log, and the reminder goes (a button that opens the app doesn't take it down).
+     */
+    fun openedForHabits(habitId: String?, day: LocalDate?, log: Boolean) {
+        if (log) habitLogRequest.value = habitId
+        habitsRequest.value = true
+        if (habitId != null && day != null) reminderNotifications.clearHabit(habitId, day)
+    }
+
+    /** The Habits place is on screen, so the request is settled. */
+    fun habitsOpened() {
+        habitsRequest.value = false
+    }
+
+    /** The Habits place opened the log dialog a habit reminder asked for, or found no such habit. */
+    fun habitLogOpened() {
+        habitLogRequest.value = null
+    }
+
     /** The Goals place is on screen, so the request is settled. */
     fun goalsOpened() {
         goalsRequest.value = false
@@ -621,7 +654,8 @@ class AppGraph(context: Context) {
 
     /**
      * Shows everything a look found: the task reminders, the evening Plan tomorrow, the review
-     * reminders and the wants that became ready. The alarm and a sign-in both come through here.
+     * reminders, the wants that became ready and the habits still left at their reminder time. The
+     * alarm and a sign-in both come through here.
      */
     fun show(look: ReminderLook) {
         look.reminders.forEach(reminderNotifications::show)
@@ -647,6 +681,10 @@ class AppGraph(context: Context) {
         look.wants?.let { due ->
             val byId = wants.all().associateBy { it.id }
             reminderNotifications.showWants(due, due.wantIds.mapNotNull { byId[it]?.title })
+        }
+        if (look.habits.isNotEmpty()) {
+            val data = habits.read()
+            look.habits.forEach { due -> reminderNotifications.showHabit(due, data.checkinsOf(due.habit.id)) }
         }
     }
 
