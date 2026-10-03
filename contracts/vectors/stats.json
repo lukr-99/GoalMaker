@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Stats and the review look back (docs/stats.md, docs/reviews.md). 'weeks': tasks finished in each of the last 'count' weeks, oldest first, the last one holding 'today'; a week runs Monday to Sunday and a task counts on the day of its 'completedAt', deleted and unfinished ones never; 'done' is the window's total and 'best' the start of the fullest week (the earliest when two tie, null when nothing was done). 'months': the goals of each of the last 'count' months, oldest first: every month goal whose period starts in it and that is not deleted or dropped, and how many of those are hit (goals.json 'progress', with the check-ins of the habits that serve a numeric goal counted in, habits.json 'goalAmounts'). 'habits': how each habit did over the last 'weeks' weeks: 'periods' is its periods overlapping the window that are not none, 'met' how many were met, 'streak' the run counted back from 'today' and 'best' the longest run of met periods inside the window, where a missed period ends a run and paused, skipped and open ones are passed over (habits.json 'states' and 'streaks'); archived habits are left out and the rest keep their input order. 'ratings': the mood and energy of the last 'count' reviews of 'kind' that rated either, oldest first, deleted ones left out. 'lookBack': what a review of 'kind' opens with: the tasks finished in the period day by day against the period before, the fullest day (the earliest when two tie), the area that carried it (the most finished tasks, by smallest id when two tie), the goals of the period's own horizon that overlap it, every habit that is not archived, the tasks still open that were planned inside it, and the facts the reactive prompts read (reviews.json 'reactive'); 'days' counts from the period's first day to 'today' or its end, whichever comes first, and 'expected' is how much of the period has gone by. 2026-09-18 is a Friday.",
+  "description": "Stats and the review look back (docs/stats.md, docs/reviews.md). 'weeks': tasks finished in each of the last 'count' weeks, oldest first, the last one holding 'today'; a week runs Monday to Sunday and a task counts on the day of its 'completedAt', deleted and unfinished ones never; 'done' is the window's total and 'best' the start of the fullest week (the earliest when two tie, null when nothing was done). A finished task is project work when its 'projectId' names one of the case's 'projects' that is not deleted; an item of a deleted project, or of a project not there at all, is other work. Each week's 'project' counts its project work (absent means 0) and the case's 'project' the window's; 'byProject' is the window's project work per project, the projects with none left out, most first, ties keeping the order 'projects' gives them (the project list's own order). 'months': the goals of each of the last 'count' months, oldest first: every month goal whose period starts in it and that is not deleted or dropped, and how many of those are hit (goals.json 'progress', with the check-ins of the habits that serve a numeric goal counted in, habits.json 'goalAmounts'). 'habits': how each habit did over the last 'weeks' weeks: 'periods' is its periods overlapping the window that are not none, 'met' how many were met, 'streak' the run counted back from 'today' and 'best' the longest run of met periods inside the window, where a missed period ends a run and paused, skipped and open ones are passed over (habits.json 'states' and 'streaks'); archived habits are left out and the rest keep their input order. 'ratings': the mood and energy of the last 'count' reviews of 'kind' that rated either, oldest first, deleted ones left out. 'lookBack': what a review of 'kind' opens with: the tasks finished in the period day by day against the period before, the fullest day (the earliest when two tie), the area that carried it (the most finished tasks, by smallest id when two tie), the goals of the period's own horizon that overlap it, every habit that is not archived, the tasks still open that were planned inside it, and the facts the reactive prompts read (reviews.json 'reactive'); 'days' counts from the period's first day to 'today' or its end, whichever comes first, and 'expected' is how much of the period has gone by. 2026-09-18 is a Friday.",
   "weeks": [
     {
       "name": "four weeks of finished tasks, the deleted and the open ones left out",
@@ -157,6 +157,267 @@
       ],
       "done": 1,
       "best": "2026-09-14"
+    },
+    {
+      "name": "project work counts apart: done items of a live project are project work, the rest and a deleted project's items are other",
+      "today": "2026-09-18",
+      "count": 3,
+      "projects": [
+        {
+          "id": "p2",
+          "name": "Garden",
+          "deleted": false
+        },
+        {
+          "id": "p1",
+          "name": "GoalMaker",
+          "deleted": false
+        },
+        {
+          "id": "p3",
+          "name": "Old site",
+          "deleted": true
+        },
+        {
+          "id": "p5",
+          "name": "Bike",
+          "deleted": false
+        },
+        {
+          "id": "p4",
+          "name": "Shed",
+          "deleted": false
+        },
+        {
+          "id": "p6",
+          "name": "Quiet",
+          "deleted": false
+        }
+      ],
+      "tasks": [
+        {
+          "id": "t1",
+          "title": "t1",
+          "state": "done",
+          "completedAt": "2026-09-16T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p1"
+        },
+        {
+          "id": "t2",
+          "title": "t2",
+          "state": "done",
+          "completedAt": "2026-09-15T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p1"
+        },
+        {
+          "id": "t3",
+          "title": "t3",
+          "state": "done",
+          "completedAt": "2026-09-14T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p2"
+        },
+        {
+          "id": "t4",
+          "title": "t4",
+          "state": "done",
+          "completedAt": "2026-09-14T12:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": null
+        },
+        {
+          "id": "t5",
+          "title": "t5",
+          "state": "done",
+          "completedAt": "2026-09-08T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p2"
+        },
+        {
+          "id": "t6",
+          "title": "t6",
+          "state": "done",
+          "completedAt": "2026-09-09T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p3"
+        },
+        {
+          "id": "t7",
+          "title": "t7",
+          "state": "done",
+          "completedAt": "2026-09-01T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p2"
+        },
+        {
+          "id": "t8",
+          "title": "t8",
+          "state": "done",
+          "completedAt": "2026-08-20T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p1"
+        },
+        {
+          "id": "t9",
+          "title": "t9",
+          "state": "open",
+          "completedAt": null,
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p1"
+        },
+        {
+          "id": "t10",
+          "title": "t10",
+          "state": "done",
+          "completedAt": "2026-09-10T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": true,
+          "projectId": "p1"
+        },
+        {
+          "id": "t11",
+          "title": "t11",
+          "state": "done",
+          "completedAt": "2026-09-02T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p1"
+        },
+        {
+          "id": "t12",
+          "title": "t12",
+          "state": "done",
+          "completedAt": "2026-09-17T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p1"
+        },
+        {
+          "id": "t13",
+          "title": "t13",
+          "state": "done",
+          "completedAt": "2026-09-03T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p4"
+        },
+        {
+          "id": "t14",
+          "title": "t14",
+          "state": "done",
+          "completedAt": "2026-09-04T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p5"
+        },
+        {
+          "id": "t15",
+          "title": "t15",
+          "state": "done",
+          "completedAt": "2026-09-11T10:00:00Z",
+          "areaId": null,
+          "goalId": null,
+          "plannedDate": null,
+          "movedCount": 0,
+          "deleted": false,
+          "projectId": "p9"
+        }
+      ],
+      "expect": [
+        {
+          "start": "2026-08-31",
+          "done": 4,
+          "project": 4
+        },
+        {
+          "start": "2026-09-07",
+          "done": 3,
+          "project": 1
+        },
+        {
+          "start": "2026-09-14",
+          "done": 5,
+          "project": 4
+        }
+      ],
+      "done": 12,
+      "project": 9,
+      "best": "2026-09-14",
+      "byProject": [
+        {
+          "id": "p1",
+          "name": "GoalMaker",
+          "done": 4
+        },
+        {
+          "id": "p2",
+          "name": "Garden",
+          "done": 3
+        },
+        {
+          "id": "p5",
+          "name": "Bike",
+          "done": 1
+        },
+        {
+          "id": "p4",
+          "name": "Shed",
+          "done": 1
+        }
+      ]
     }
   ],
   "months": [

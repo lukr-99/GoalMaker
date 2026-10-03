@@ -46,7 +46,12 @@ class StatsRulesContractTest {
             completedAt = task.text("completedAt"),
             goalId = task.text("goalId"),
             movedCount = task.count("movedCount") ?: 0,
+            projectId = task.text("projectId"),
         )
+    }
+
+    private fun JsonObject.projects() = rows("projects").map { project ->
+        ProjectItem(id = project.text("id")!!, name = project.text("name") ?: "", deleted = project.flag("deleted"))
     }
 
     private fun JsonObject.goals() = rows("goals").map { goal ->
@@ -101,16 +106,25 @@ class StatsRulesContractTest {
     fun `every week of finished tasks`() {
         vectors.cases("weeks").forEach { case ->
             val name = case.text("name")
-            val weeks = StatsRules.weeks(case.tasks(), case.day("today"), case.count("count")!!)
+            val weeks = StatsRules.weeks(case.tasks(), case.day("today"), case.count("count")!!, case.projects())
             val expect = case.rows("expect")
             assertEquals(name, expect.size, weeks.size)
             expect.forEachIndexed { index, week ->
                 assertEquals("$name week ${week.text("start")}", week.day("start"), weeks[index].start)
                 assertEquals("$name week ${week.text("start")}", week.count("done"), weeks[index].done)
+                assertEquals("$name project ${week.text("start")}", week.count("project") ?: 0, weeks[index].project)
             }
-            val digest = StatsDigest(weeks = weeks)
+            val byProject = StatsRules.byProject(case.tasks(), case.projects(), case.day("today"), case.count("count")!!)
+            val digest = StatsDigest(weeks = weeks, byProject = byProject)
             assertEquals("$name total", case.count("done"), digest.done)
+            assertEquals("$name project", case.count("project") ?: 0, digest.projectWork)
+            assertEquals("$name other", (case.count("done") ?: 0) - (case.count("project") ?: 0), digest.otherWork)
             assertEquals("$name best", case.text("best")?.let(LocalDate::parse), digest.bestWeek?.start)
+            assertEquals(
+                "$name by project",
+                case.rows("byProject").map { Triple(it.text("id"), it.text("name"), it.count("done")) },
+                byProject.map { Triple(it.id, it.name, it.done) },
+            )
         }
     }
 
