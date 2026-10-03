@@ -51,7 +51,7 @@
                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        AllowDrop="True" DragOver="OnCellDragOver" Drop="OnCellDrop"
-                       AutomationProperties.Name="{Binding Day}">
+                       AutomationProperties.Name="{Binding AutomationName}">
                 <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center">

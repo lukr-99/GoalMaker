@@ -755,6 +755,18 @@
     <sys:String x:Key="Calendar.Repeat">Repeats</sys:String>
     <sys:String x:Key="Calendar.Reminders">{0} reminders ring</sys:String>
     <sys:String x:Key="Calendar.DragHint">Drag onto another day to move it</sys:String>
+    <!-- A day cell as a screen reader says it, after the date (M6-05). -->
+    <sys:String x:Key="Calendar.CellToday">today</sys:String>
+    <sys:String x:Key="Calendar.CellOpen">open</sys:String>
+    <sys:String x:Key="Calendar.CellEmpty">nothing on it</sys:String>
+    <sys:String x:Key="Calendar.CellPlannedOne">1 planned</sys:String>
+    <sys:String x:Key="Calendar.CellPlanned">{0} planned</sys:String>
+    <sys:String x:Key="Calendar.CellDueOne">1 due</sys:String>
+    <sys:String x:Key="Calendar.CellDue">{0} due</sys:String>
+    <sys:String x:Key="Calendar.CellRepeatsOne">1 repeating</sys:String>
+    <sys:String x:Key="Calendar.CellRepeats">{0} repeating</sys:String>
+    <sys:String x:Key="Calendar.CellRemindersOne">1 reminder</sys:String>
+    <sys:String x:Key="Calendar.CellReminders">{0} reminders</sys:String>
 
     <!-- Projects (docs/projects.md) -->
     <sys:String x:Key="Nav.Projects">Projects</sys:String>
