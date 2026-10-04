@@ -25,7 +25,9 @@
     "wants",
     "tally_categories",
     "tally_rules",
-    "tally_days"
+    "tally_days",
+    "life_goals",
+    "life_goal_pictures"
   ],
   "checks": [
     {

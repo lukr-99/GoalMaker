@@ -1271,6 +1271,126 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "life_goals",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "title",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "why",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "by_date",
+          "kind": "date",
+          "required": false
+        },
+        {
+          "name": "area_id",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "status",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "closed_at",
+          "kind": "timestamp",
+          "required": false
+        },
+        {
+          "name": "position",
+          "kind": "real",
+          "required": true
+        },
+        {
+          "name": "made_by",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
+    },
+    {
+      "name": "life_goal_pictures",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "life_goal_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "position",
+          "kind": "real",
+          "required": true
+        },
+        {
+          "name": "width",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "height",
+          "kind": "integer",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
     }
   ]
 }
