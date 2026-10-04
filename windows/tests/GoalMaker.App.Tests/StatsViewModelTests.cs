@@ -128,6 +128,79 @@ public sealed class StatsViewModelTests : IDisposable
             page.TallyLegend.Select(segment => (segment.Name, segment.Value)));
     }
 
+    [Fact]
+    public void ProjectWorkIsCountedApartAndPerProject()
+    {
+        var app = planner.Projects.Add(new ProjectDraft("GoalMaker"))!;
+        var garden = planner.Projects.Add(new ProjectDraft("Garden"))!;
+        Done("Fix the build", WeekStart, app.Id);
+        Done("Ship it", WeekStart, app.Id);
+        Done("Prune the roses", WeekStart.AddDays(-7), garden.Id);
+        Done("Groceries", WeekStart);
+        var page = Page();
+
+        Assert.Equal("4", page.DoneValue);
+        Assert.True(page.HasProjectWork);
+        Assert.Equal("Stats.OnProjects(3)", page.DoneOnProjects);
+        Assert.Equal("Stats.ProjectWork(3)", page.ProjectWorkLegend);
+        Assert.Equal("Stats.OtherWork(1)", page.OtherWorkLegend);
+        Assert.Equal(1d, page.Weeks[^1].Fraction);
+        Assert.Equal(2d / 3, page.Weeks[^1].ProjectFraction, 6);
+        Assert.True(page.Weeks[^2].HasProject);
+        Assert.False(page.Weeks[0].HasProject);
+        Assert.Equal(
+            [("GoalMaker", "2", 1d), ("Garden", "1", 0.5)],
+            page.ByProject.Select(row => (row.Name, row.Value, row.Fraction)));
+        Assert.False(page.HasMoreProjects);
+    }
+
+    [Fact]
+    public void WithoutProjectWorkTheChartStaysAsItWas()
+    {
+        Done("Groceries", WeekStart);
+        var page = Page();
+
+        Assert.False(page.HasProjectWork);
+        Assert.Equal(string.Empty, page.DoneOnProjects);
+        Assert.False(page.Weeks[^1].HasProject);
+        Assert.Empty(page.ByProject);
+    }
+
+    [Fact]
+    public void ADeletedProjectsItemsCountAsOtherWork()
+    {
+        var old = planner.Projects.Add(new ProjectDraft("Old site"))!;
+        Done("Take it down", WeekStart, old.Id);
+        var page = Page();
+        Assert.True(page.HasProjectWork);
+
+        planner.Projects.Delete(old.Id);
+
+        Assert.False(page.HasProjectWork);
+        Assert.Equal("1", page.DoneValue);
+        Assert.Empty(page.ByProject);
+    }
+
+    [Fact]
+    public void ByProjectListsTheBusiestFewAndCountsTheRest()
+    {
+        for (var index = 0; index <= StatsRules.TopProjects; index++)
+        {
+            var project = planner.Projects.Add(new ProjectDraft($"Project {index}"))!;
+            for (var item = 0; item <= index; item++)
+            {
+                Done($"Item {index}.{item}", WeekStart, project.Id);
+            }
+        }
+
+        var page = Page();
+
+        Assert.Equal(StatsRules.TopProjects, page.ByProject.Count);
+        Assert.Equal($"Project {StatsRules.TopProjects}", page.ByProject[0].Name);
+        Assert.True(page.HasMoreProjects);
+        Assert.Equal("Stats.MoreProjects(1)", page.MoreProjects);
+    }
+
     private StatsViewModel Page()
     {
         planner.Time.SetUtcNow(new DateTimeOffset(2026, 9, 18, 14, 0, 0, TimeSpan.Zero));
@@ -143,15 +216,21 @@ public sealed class StatsViewModelTests : IDisposable
             action => action(),
             planner.Wants,
             planner.Tally,
-            own => new TallyLabels(defaults, own, planner.Strings, _ => null));
+            own => new TallyLabels(defaults, own, planner.Strings, _ => null),
+            planner.Projects);
     }
 
     private TaskItem Add(string title) => planner.Tasks.Add(ComposerParser.Parse(title, planner.Time.GetLocalNow().DateTime))!;
 
     // A task finished on a given day: the server stamps completed_at, so the test writes it too.
-    private void Done(string title, DateOnly day)
+    private void Done(string title, DateOnly day, string? projectId = null)
     {
         var task = Add(title);
+        if (projectId is not null)
+        {
+            planner.Tasks.SetProject(task.Id, projectId);
+        }
+
         planner.Tasks.SetDone(task.Id, true);
         if (planner.Replica.Get("tasks", task.Id) is { } row)
         {

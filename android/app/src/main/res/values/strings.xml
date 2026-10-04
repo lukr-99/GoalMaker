@@ -16,9 +16,11 @@
     <string name="sign_in_fill_code">Fill it in from the local mailbox</string>
     <string name="sign_in_use_other_email">Use another email</string>
     <string name="sign_in_resend">Send a new code</string>
+    <string name="sign_in_paste_code">Paste the code</string>
     <string name="sign_in_error_email">Enter a valid email address.</string>
     <string name="sign_in_error_code">Enter the 6 digits from the email.</string>
     <string name="sign_in_error_wrong_code">That code is wrong or has expired. Try again or send a new one.</string>
+    <string name="sign_in_error_no_code_copied">No code was copied. Copy the six digits from the email, or type them.</string>
     <string name="sign_in_error_rate">Too many attempts. Wait a minute, then try again.</string>
     <string name="sign_in_error_offline">No connection to GoalMaker\'s server. Check your internet and try again.</string>
     <string name="startup_failed_title">GoalMaker cannot start</string>
@@ -135,6 +137,12 @@
     <string name="lists_inbox_empty">Inbox zero. Anything without a day or an area lands here.</string>
     <string name="lists_delete">Delete %1$s</string>
     <string name="lists_repeats">Repeats</string>
+    <string name="lists_project_task">Project %1$s</string>
+    <string name="lists_project_idea">Idea for %1$s</string>
+    <string name="lists_project_bug">Bug in %1$s</string>
+    <string name="lists_open_project">Open the %1$s board</string>
+    <string name="lists_done_box">%1$s done</string>
+    <string name="lists_reminded">Reminder set</string>
     <string name="lists_done_message">Done: %1$s</string>
     <string name="lists_deleted_message">Deleted: %1$s</string>
     <string name="lists_undo">Undo</string>
@@ -148,7 +156,10 @@
     <string name="composer_soon">coming soon</string>
     <string name="composer_opens_plan">opens Plan tomorrow</string>
     <string name="composer_unknown_command">unknown command</string>
-    <string name="composer_remove">Remove %1$s</string>
+    <!-- Read after a preview chip's label by a screen reader, since a tap on the chip takes it out. -->
+    <string name="composer_remove">Remove</string>
+    <!-- Read before a preview chip that says what the line still lacks. -->
+    <string name="composer_warning">Warning</string>
 
     <!-- Quick chat in the composer (spec, "Quick chat (M7)") -->
     <string name="chat_mode">Chat</string>
@@ -341,6 +352,13 @@
     <string name="settings_reminder_time">Time</string>
     <string name="settings_quiet_hours_start_hint">Ordinary reminders wait from this time.</string>
     <string name="settings_quiet_hours_end_hint">Ordinary reminders come back at this time.</string>
+    <string name="settings_important_dnd">Important reminders in Do Not Disturb</string>
+    <string name="settings_important_dnd_allowed">Allowed: an important reminder rings even while Do Not Disturb is on.</string>
+    <string name="settings_important_dnd_not_allowed">Do Not Disturb silences them. To let them ring, turn on Override Do Not Disturb for Important reminders.</string>
+    <string name="settings_important_dnd_channel_off">Important reminders are switched off on this phone.</string>
+    <string name="settings_important_dnd_notifications_off">GoalMaker\'s notifications are off, so no reminder rings.</string>
+    <string name="settings_important_dnd_allow">Allow</string>
+    <string name="settings_important_dnd_change">Change</string>
     <string name="settings_time_invalid">Use a time like 22:00.</string>
     <string name="settings_check_now">Check now</string>
     <string name="settings_update_check_hint">GoalMaker also checks once a day on its own.</string>
@@ -651,6 +669,27 @@
     <string name="habits_skip_week">Skip this week</string>
     <string name="habits_skip_month">Skip this month</string>
     <string name="habits_unskip">Undo the skip</string>
+    <string name="habits_remind">Remind me</string>
+    <string name="habits_remind_hint">On the days it is still left, with Check in and Skip on the notification.</string>
+    <string name="habits_remind_at">At %1$s</string>
+    <!-- A habit's reminder notification (docs/reminders.md). -->
+    <string name="habit_reminder_channel">Habits</string>
+    <string name="habit_reminder_channel_description">Habits still left at the time you set on them.</string>
+    <string name="habit_reminder_left">Still to do today</string>
+    <string name="habit_reminder_check_in">Check in</string>
+    <string name="habit_reminder_add_one">+1</string>
+    <string name="habit_reminder_log">Log</string>
+    <string name="new_year_title">%1$d is here</string>
+    <string name="new_year_both">Look back on %1$d before it fades, then set what %2$d is for.</string>
+    <string name="new_year_review_only">%2$d has its goals. Look back on %1$d while you still remember it.</string>
+    <string name="new_year_goals_only">%1$d is reviewed. Set what %2$d is for.</string>
+    <string name="new_year_review">Look back on %1$d</string>
+    <string name="new_year_goals">Set %1$d goals</string>
+    <string name="new_year_not_now">Not now</string>
+    <string name="habits_fail_day">Fail today</string>
+    <string name="habits_fail_week">Fail this week</string>
+    <string name="habits_fail_month">Fail this month</string>
+    <string name="habits_unfail">Undo the fail</string>
     <string name="habits_pause">Pause</string>
     <string name="habits_resume">Resume</string>
     <string name="habits_archive">Archive</string>
@@ -670,6 +709,7 @@
     </plurals>
     <string name="habits_paused">Paused</string>
     <string name="habits_skipped">Skipped</string>
+    <string name="habits_failed">Failed</string>
     <string name="habits_not_due">Not today</string>
     <string name="habits_done">Done today</string>
     <string name="habits_not_yet">Not yet today</string>
@@ -679,6 +719,14 @@
     <string name="habits_limit_unit">%1$s of at most %2$s %3$s today</string>
     <string name="habits_none_today">None today</string>
     <string name="habits_over_today">Over the line today</string>
+    <string name="habits_done_on_day">Done</string>
+    <string name="habits_not_yet_on_day">Not done</string>
+    <string name="habits_value_on_day">%1$s of %2$s</string>
+    <string name="habits_value_unit_on_day">%1$s of %2$s %3$s</string>
+    <string name="habits_limit_on_day">%1$s of at most %2$s</string>
+    <string name="habits_limit_unit_on_day">%1$s of at most %2$s %3$s</string>
+    <string name="habits_none_on_day">None</string>
+    <string name="habits_over_on_day">Over the line</string>
     <plurals name="habits_met_week">
         <item quantity="one">%1$d of %2$d this week</item>
         <item quantity="other">%1$d of %2$d this week</item>
@@ -737,6 +785,7 @@
     <string name="habits_log_on">Log an amount on %1$s</string>
     <string name="habits_take_back">Take back %1$s</string>
     <string name="habits_unskip_on">Undo the skip on %1$s</string>
+    <string name="habits_unfail_on">Undo the fail on %1$s</string>
     <string name="habits_menu_check_in">Check in</string>
     <string name="habits_menu_take_back">Take back today\'s check-in</string>
     <string name="habits_menu_add_one">Add one</string>
@@ -775,11 +824,14 @@
     <string name="settings_monthly_review_hint">A nudge on the first of the month to look back on the month just gone.</string>
     <string name="reviews_weekly">Weekly review</string>
     <string name="reviews_monthly">Monthly review</string>
+    <string name="reviews_yearly">Yearly review</string>
     <string name="reviews_to_write">Write a review</string>
     <string name="reviews_this_week">This week</string>
     <string name="reviews_last_week">Last week</string>
     <string name="reviews_this_month">This month</string>
     <string name="reviews_last_month">Last month</string>
+    <string name="reviews_this_year">This year</string>
+    <string name="reviews_last_year">Last year</string>
     <string name="reviews_start">Start</string>
     <string name="reviews_written">Written</string>
     <string name="reviews_past">Written before</string>
@@ -892,8 +944,29 @@
     <string name="calendar_planned">Planned</string>
     <string name="calendar_deadline">Due</string>
     <string name="calendar_repeat">Repeats</string>
+    <string name="calendar_habits">Habits</string>
     <string name="calendar_reminders">%1$d reminders ring</string>
     <string name="calendar_drag_hint">Hold a task and drag it onto another day to move it.</string>
+    <!-- A day cell as a screen reader says it, after the date. -->
+    <string name="calendar_cell_today">today</string>
+    <string name="calendar_cell_open">open</string>
+    <string name="calendar_cell_empty">nothing on it</string>
+    <plurals name="calendar_cell_planned">
+        <item quantity="one">%1$d planned</item>
+        <item quantity="other">%1$d planned</item>
+    </plurals>
+    <plurals name="calendar_cell_due">
+        <item quantity="one">%1$d due</item>
+        <item quantity="other">%1$d due</item>
+    </plurals>
+    <plurals name="calendar_cell_repeats">
+        <item quantity="one">%1$d repeating</item>
+        <item quantity="other">%1$d repeating</item>
+    </plurals>
+    <plurals name="calendar_cell_reminders">
+        <item quantity="one">%1$d reminder</item>
+        <item quantity="other">%1$d reminders</item>
+    </plurals>
 
     <!-- Projects (docs/projects.md) -->
     <string name="projects_title">Projects</string>
@@ -971,9 +1044,18 @@
     <string name="stats_this_week">This week</string>
     <string name="stats_month_hit">%1$d/%2$d</string>
     <string name="stats_habit_met">%1$d of %2$d met, best run %3$d</string>
+    <string name="stats_on_projects">%1$d on projects</string>
+    <string name="stats_project_work">Projects %1$d</string>
+    <string name="stats_other_work">Other %1$d</string>
+    <string name="stats_week_tip">Week of %1$s: %2$d done, %3$d on projects</string>
+    <string name="stats_by_project">By project</string>
+    <string name="stats_more_projects">and %1$d more</string>
     <string name="task_goal">Goal</string>
     <string name="task_no_goal">No goal</string>
     <string name="projects_pick">Choose a project</string>
+    <string name="projects_none_match">No project matches the filter.</string>
+    <string name="projects_area">Area</string>
+    <string name="projects_no_area">No area</string>
     <string name="task_project">Project</string>
     <string name="task_no_project">No project</string>
     <string name="activity_goal">goal “%1$s”</string>
@@ -1034,8 +1116,8 @@
     <string name="places_pinned">Pinned</string>
     <string name="places_not_pinned">Not pinned</string>
     <plurals name="places_waiting">
-        <item quantity="one">%1$d waiting in Places</item>
-        <item quantity="other">%1$d waiting in Places</item>
+        <item quantity="one">%1$d waiting</item>
+        <item quantity="other">%1$d waiting</item>
     </plurals>
     <string name="places_out_of">/ %1$d</string>
     <string name="places_tomorrow">%1$d planned</string>
@@ -1137,7 +1219,7 @@
     <string name="tally_categories">Your categories</string>
     <string name="tally_categories_none">None yet. The shipped ones, like Coding and Video, are always there.</string>
     <string name="tally_rules">Your rules</string>
-    <string name="tally_rules_none">None yet. Your rules come before the shipped ones, from the next count on.</string>
+    <string name="tally_rules_none">None yet. Your rules come before the shipped ones and sort today\'s time again at once. Make a rule under an app to start one.</string>
     <string name="tally_rule_line">%1$s counts as %2$s</string>
     <string name="tally_category_add">Add a category</string>
     <string name="tally_category_name">Name</string>
@@ -1168,6 +1250,21 @@
     <string name="tally_hours_minutes">%1$d h %2$d min</string>
     <string name="tally_removed_category">A removed category</string>
     <string name="tally_removed_project">A removed project</string>
+    <string name="tally_back_today">Back to today</string>
+    <string name="tally_week_hint">Tap a day to see it closer up.</string>
+    <string name="tally_hours_title">By the hour on this phone</string>
+    <string name="tally_hours_none">Nothing counted on this phone that day.</string>
+    <string name="tally_hours_spoken">By the hour: %1$s</string>
+    <string name="tally_apps_title">Apps on this phone</string>
+    <string name="tally_apps_only_here">Only this phone\'s own apps show here. The record of apps never leaves the phone, so the PC shows its own.</string>
+    <string name="tally_apps_none">No apps counted on this phone then.</string>
+    <string name="tally_apps_pc">The PC\'s apps stay on the PC. Open Tally there to see them.</string>
+    <string name="tally_apps_open">Show its apps</string>
+    <string name="tally_apps_close">Hide its apps</string>
+    <string name="tally_apps_shown">Apps shown</string>
+    <string name="tally_apps_hidden">Apps hidden</string>
+    <string name="tally_make_rule">Make a rule</string>
+    <string name="tally_make_rule_for">Make a rule for %1$s</string>
     <string name="stats_tally">Where the time went</string>
     <string name="stats_tally_total">%1$s in twelve weeks</string>
     <string name="reviews_tally">Where the time went</string>

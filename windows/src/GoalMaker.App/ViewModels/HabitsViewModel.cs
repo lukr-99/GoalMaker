@@ -37,6 +37,9 @@ public sealed partial class HabitsViewModel : ObservableObject
     private HashSet<string>? milestones;
     private string? loggingId;
 
+    // The day a typed amount lands on: today, or the calendar's open day.
+    private DateOnly? loggingDay;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowList))]
     private bool isLogging;
@@ -163,6 +166,20 @@ public sealed partial class HabitsViewModel : ObservableObject
     /// <summary>Every habit due today, the ones kept off Today too: what the Places page counts.</summary>
     public IReadOnlyList<HabitRowViewModel> DueRows() => RowsWhere(HabitRules.DueToday);
 
+    /// <summary>
+    /// Every habit due on <paramref name="day"/>, as cards that check in, skip and fail on that day: the
+    /// calendar's open day (docs/calendar.md).
+    /// </summary>
+    public IReadOnlyList<HabitRowViewModel> DayRows(DateOnly day)
+    {
+        var checkins = habits.Checkins();
+        var pauses = habits.Pauses();
+        return [.. habits.All()
+            .Where(habit => HabitRules.DueToday(habit, day, [.. pauses.Where(pause => pause.HabitId == habit.Id)]))
+            // Today's own cards say "today"; another day's leave it out.
+            .Select(habit => Row(habit, checkins, pauses, day, null, strings, full: false, owner: this, day: day == Today() ? null : day))];
+    }
+
     private List<HabitRowViewModel> RowsWhere(Func<HabitItem, DateOnly, IReadOnlyList<HabitPause>, bool> rule)
     {
         var today = Today();
@@ -233,11 +250,12 @@ public sealed partial class HabitsViewModel : ObservableObject
         }
     }
 
-    // The summary card: of the habits that ask something of today (limits, skips and pauses ask nothing),
+    // The summary card: of the habits that ask something of today (limits, skips and pauses ask nothing,
+    // a failed one asked and didn't get it),
     // how many are done, how far the day has got (one still to do counts its ring), and the longest streak.
     private void ShowSummary(DateOnly today)
     {
-        var asking = Rows.Where(row => row.Standing is HabitStanding.Done or HabitStanding.Left).ToList();
+        var asking = Rows.Where(row => row.Standing is HabitStanding.Done or HabitStanding.Left or HabitStanding.Failed).ToList();
         var done = asking.Count(row => row.IsDone);
         SummaryShare = asking.Count == 0 ? 0 : asking.Sum(row => row.IsDone ? 1 : row.Fraction) / asking.Count;
         SummaryDate = today.ToString("dddd d MMMM", System.Globalization.CultureInfo.CurrentCulture).ToUpper(System.Globalization.CultureInfo.CurrentUICulture);
@@ -255,11 +273,11 @@ public sealed partial class HabitsViewModel : ObservableObject
     internal void OpenPage() => PageWanted?.Invoke(this, EventArgs.Empty);
 
     /// <summary>A tap on a habit's ring: a check toggles, a count adds one, an amount asks for its value.</summary>
-    internal void Tap(HabitItem habit)
+    internal void Tap(HabitItem habit, DateOnly? day = null)
     {
-        if (!habits.Tap(habit.Id, Today()))
+        if (!habits.Tap(habit.Id, day ?? Today()))
         {
-            StartLog(habit);
+            StartLog(habit, day);
         }
     }
 
@@ -269,9 +287,12 @@ public sealed partial class HabitsViewModel : ObservableObject
         PageWanted?.Invoke(this, EventArgs.Empty);
     }
 
-    internal void ClearToday(string id) => habits.SetValue(id, Today(), 0);
+    internal void ClearToday(string id, DateOnly? day = null) => habits.SetValue(id, day ?? Today(), 0);
 
-    internal void Skip(string id, bool skipped) => habits.Skip(id, Today(), skipped);
+    internal void Skip(string id, bool skipped, DateOnly? day = null) => habits.Skip(id, day ?? Today(), skipped);
+
+    /// <summary>Fails today's period (it won't happen: missed now, the streak ends) or takes the fail back.</summary>
+    internal void Fail(string id, bool failed, DateOnly? day = null) => habits.Fail(id, day ?? Today(), failed);
 
     internal void Pause(string id) => habits.Pause(id, Today());
 
@@ -285,24 +306,27 @@ public sealed partial class HabitsViewModel : ObservableObject
     /// One more of whatever the habit counts, straight from its row, which is the whole act for
     /// a glass of water or a cigarette (docs/habits.md). The panel stays for anything else.
     /// </summary>
-    internal void LogOne(HabitItem habit) => habits.CheckIn(habit.Id, Today());
+    internal void LogOne(HabitItem habit, DateOnly? day = null) => habits.CheckIn(habit.Id, day ?? Today());
 
     /// <summary>The number typed beside the row. Anything that is not one is left alone.</summary>
-    internal bool LogTyped(HabitItem habit, string text)
+    internal bool LogTyped(HabitItem habit, string text, DateOnly? day = null)
     {
         if (GoalEditorViewModel.ParseAmount(text) is not { } amount || amount <= 0)
         {
             return false;
         }
 
-        habits.CheckIn(habit.Id, Today(), amount);
+        habits.CheckIn(habit.Id, day ?? Today(), amount);
         return true;
     }
 
-    internal void StartLog(HabitItem habit)
+    internal void StartLog(HabitItem habit, DateOnly? day = null)
     {
         loggingId = habit.Id;
-        LogTitle = strings.Get("Habits.LogTitle", habit.Name);
+        loggingDay = day;
+        LogTitle = day is { } on && on != Today()
+            ? strings.Get("Habits.LogTitleOn", habit.Name, on.ToString("ddd d MMM", System.Globalization.CultureInfo.CurrentCulture))
+            : strings.Get("Habits.LogTitle", habit.Name);
         LogUnit = habit.Unit ?? string.Empty;
         LogText = string.Empty;
         IsLogging = true;
@@ -317,7 +341,8 @@ public sealed partial class HabitsViewModel : ObservableObject
         string? goalTitle,
         IStrings strings,
         bool full,
-        HabitsViewModel? owner)
+        HabitsViewModel? owner,
+        DateOnly? day = null)
     {
         var checkins = allCheckins.Where(checkin => checkin.HabitId == habit.Id).ToList();
         var pauses = allPauses.Where(pause => pause.HabitId == habit.Id).ToList();
@@ -350,7 +375,8 @@ public sealed partial class HabitsViewModel : ObservableObject
                 System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.ShortestDayNames[(int)day.DayOfWeek][..1]
                     .ToUpper(System.Globalization.CultureInfo.CurrentCulture),
                 day == today))],
-            full);
+            full,
+            day);
     }
 
     private static DateOnly Monday(DateOnly day) => day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
@@ -373,7 +399,7 @@ public sealed partial class HabitsViewModel : ObservableObject
     {
         if (loggingId is { } id && GoalEditorViewModel.ParseAmount(LogText) is { } amount)
         {
-            habits.CheckIn(id, Today(), amount);
+            habits.CheckIn(id, loggingDay ?? Today(), amount);
         }
 
         IsLogging = false;

@@ -33,6 +33,9 @@ public sealed record HabitItem(string Id, string Name, DateOnly StartsOn)
 
     public bool ShowOnToday { get; init; } = true;
 
+    /// <summary>The local time it reminds on the days it is still left (docs/reminders.md); null for no reminder.</summary>
+    public TimeOnly? RemindAt { get; init; }
+
     public double Position { get; init; }
 
     public bool Deleted { get; init; }

@@ -72,10 +72,15 @@ public static class HabitRules
 
     /// <summary>
     /// Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit,
-    /// a day nobody logged is met, because nothing was had. Skipped never meets a day.
+    /// a day nobody logged is met, because nothing was had. Skipped and failed never meet a day.
     /// </summary>
     public static bool DayMet(HabitItem habit, HabitCheckin? checkin)
     {
+        if (checkin is { Deleted: false, Failed: true })
+        {
+            return false;
+        }
+
         if (IsLimit(habit))
         {
             return checkin is null || checkin.Deleted || (!checkin.Skipped && !IsOver(habit, checkin.Value));
@@ -121,7 +126,7 @@ public static class HabitRules
                 return HabitPeriodState.Skipped;
             }
 
-            if (inPeriod.Any(checkin => IsOver(habit, checkin.Value)))
+            if (inPeriod.Any(checkin => checkin.Failed || IsOver(habit, checkin.Value)))
             {
                 return HabitPeriodState.Missed;
             }
@@ -142,6 +147,11 @@ public static class HabitRules
         if (inPeriod.Any(checkin => checkin.Skipped))
         {
             return HabitPeriodState.Skipped;
+        }
+
+        if (inPeriod.Any(checkin => checkin.Failed))
+        {
+            return HabitPeriodState.Missed;
         }
 
         return end >= today ? HabitPeriodState.Open : HabitPeriodState.Missed;
@@ -203,6 +213,11 @@ public static class HabitRules
             return HabitHeat.Skipped;
         }
 
+        if (checkin?.Failed == true)
+        {
+            return IsLimit(habit) ? HabitHeat.Over : HabitHeat.Share(0);
+        }
+
         if (IsLimit(habit))
         {
             // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
@@ -229,7 +244,7 @@ public static class HabitRules
         }
 
         var todays = checkins.FirstOrDefault(checkin => !checkin.Deleted && !checkin.Skipped && checkin.Day == today);
-        return Share(habit, todays?.Value ?? 0);
+        return todays?.Failed == true ? 0 : Share(habit, todays?.Value ?? 0);
     }
 
     /// <summary>The Habits page's group for <paramref name="habit"/>: limits, weekly (and monthly) ones, or the ones on days.</summary>
@@ -241,7 +256,7 @@ public static class HabitRules
     };
 
     /// <summary>
-    /// Where <paramref name="habit"/> stands on <paramref name="today"/>: none, paused, skipped, a limit (never
+    /// Where <paramref name="habit"/> stands on <paramref name="today"/>: none, paused, skipped, failed, a limit (never
     /// done or left), done (the ring is full, or a weekly or monthly habit's check-in today meets its day) or left.
     /// </summary>
     public static HabitStanding Standing(HabitItem habit, DateOnly today, IReadOnlyList<HabitCheckin> checkins, IReadOnlyList<HabitPause> pauses)
@@ -261,6 +276,11 @@ public static class HabitRules
         if (checkins.Any(checkin => !checkin.Deleted && checkin.Skipped && checkin.Day >= start && checkin.Day <= end))
         {
             return HabitStanding.Skipped;
+        }
+
+        if (checkins.Any(checkin => !checkin.Deleted && checkin.Failed && checkin.Day >= start && checkin.Day <= end))
+        {
+            return HabitStanding.Failed;
         }
 
         if (IsLimit(habit))
@@ -294,6 +314,11 @@ public static class HabitRules
         if (checkin?.Skipped == true)
         {
             return HabitDot.Skipped;
+        }
+
+        if (checkin?.Failed == true)
+        {
+            return IsLimit(habit) ? HabitDot.Over : HabitDot.Missed;
         }
 
         if (IsLimit(habit))
@@ -339,7 +364,7 @@ public static class HabitRules
             .Select(habit => habit.Id)
             .ToHashSet();
         return checkins
-            .Where(checkin => !checkin.Deleted && !checkin.Skipped && serving.Contains(checkin.HabitId) && checkin.Day >= goal.PeriodStart && checkin.Day <= end)
+            .Where(checkin => !checkin.Deleted && !checkin.Skipped && !checkin.Failed && serving.Contains(checkin.HabitId) && checkin.Day >= goal.PeriodStart && checkin.Day <= end)
             .Select(checkin => checkin.Value)
             .ToList();
     }

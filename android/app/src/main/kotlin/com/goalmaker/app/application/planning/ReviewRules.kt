@@ -46,6 +46,29 @@ object ReviewRules {
         return (lines.firstOrNull { (block, _) -> block.heading == 0 } ?: lines.firstOrNull())?.second
     }
 
+    /**
+     * The January nudge for planning day [today] (spec story 66, 'newYear' in contracts/vectors/reviews.json):
+     * null outside January, once the owner dismissed it this year ([dismissedYear] is the year it was last
+     * dismissed), or when last year is reviewed and this year has goals. [yearGoals] counts this year's year
+     * goals that are neither deleted nor dropped.
+     */
+    fun newYear(today: LocalDate, yearGoals: Int, lastYearReviewed: Boolean, dismissedYear: Int?): NewYearNudge? {
+        if (today.monthValue != 1 || dismissedYear == today.year) return null
+        val nudge = NewYearNudge(today.year, review = !lastYearReviewed, goals = yearGoals == 0)
+        return nudge.takeIf { it.review || it.goals }
+    }
+
+    /**
+     * [newYear] from what the owner has: this year's year goals that are neither deleted nor dropped, and
+     * whether last year's yearly review was written.
+     */
+    fun newYearFor(today: LocalDate, goals: List<GoalItem>, reviews: List<ReviewItem>, dismissedYear: Int?): NewYearNudge? {
+        val thisYear = LocalDate.of(today.year, 1, 1)
+        val yearGoals = goals.count { !it.deleted && it.horizon == GoalHorizon.YEAR && it.periodStart == thisYear && it.status != GoalRules.DROPPED }
+        val reviewed = reviews.any { !it.deleted && it.kind == YEARLY && it.periodStart == thisYear.minusYears(1) && it.written }
+        return newYear(today, yearGoals, reviewed, dismissedYear)
+    }
+
     /** The id of [owner]'s [kind] review for the period starting on [periodStart]. */
     fun idOf(owner: String, kind: String, periodStart: LocalDate): String =
         NameBasedUuid.of(NAMESPACE, "review/${owner.lowercase(Locale.ROOT)}/$kind/$periodStart")

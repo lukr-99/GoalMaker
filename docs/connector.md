@@ -32,12 +32,12 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `add_reminder`, `remove_reminder` | At a local time, or minutes before the task's time |
 | `add_step`, `check_step`, `update_step`, `remove_step` | A task's checklist |
 | `finish_plan_tomorrow`, `finish_review` | Records a ritual, which quiets its reminder on both devices |
-| `save_review_summary`, `get_review_summaries` | A review's summary, mood, energy and the reflections written in it; the summary is also the [Letter](letter.md) |
-| `get_review_digest` | One week or month in one JSON answer, for the Letter routine: done, left and overdue, goals, habits, the board, triggers, the review and last letter, the next period, wants and Tally's time. The week or month holding yesterday by default |
+| `save_review_summary`, `get_review_summaries` | A weekly, monthly or yearly review's summary, mood, energy and the reflections written in it; the summary is also the [Letter](letter.md) |
+| `get_review_digest` | One week, month or year in one JSON answer, for the Letter routine: done, left and overdue, goals, habits, the board, triggers, the review and last letter, the next period, wants and Tally's time. The week, month or year holding yesterday by default |
 | `get_time_tally` | Where time went on the phone and the PC ([Tally](tally.md)), by category, project or device, this week by default; never by app, since apps never leave the device |
 | `get_goals`, `add_goal`, `update_goal` | The goals of a period with their pace and the goal each feeds, the ones that need the owner first; new or changed ones, a new one also from a short `line` |
 | `set_goal_status`, `log_goal_amount`, `delete_goal` | Mark a goal done, dropped or open again; log an amount like "+5 km" |
-| `get_habits`, `check_in_habit`, `skip_habit` | Habits in the Habits page's groups with where each stands, its streak and the goal it serves, and "not on Today" for one kept off Today; check one in, or skip a period |
+| `get_habits`, `check_in_habit`, `skip_habit`, `fail_habit` | Habits in the Habits page's groups with where each stands, its streak and the goal it serves, and "not on Today" for one kept off Today; check one in, skip a period, or fail one (missed at once) |
 | `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction, the goal it feeds and whether it shows on Today (`show_on_today`); a new one also from a short `line` |
 | `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
 | `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order, all of them or only the owner's or Claude's items |
@@ -100,7 +100,7 @@ Habits, 1 habit left:
 1 more habit is due today but kept off Today; get_habits lists every habit.
 ```
 
-A habit is done, left, skipped, paused, a limit (never done and never left, so it never counts as
+A habit is done, left, skipped, failed, paused, a limit (never done and never left, so it never counts as
 left), or not due today. "Left" counts only the left habits on Today, the same number the apps show.
 `get_habits` puts them under **Every day**, **Weekly** and **Limits** (and **Archived** when asked
 for), with the goal each serves. `get_goals` gives each open goal its pace, **On track**, **Behind

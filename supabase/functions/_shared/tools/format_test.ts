@@ -4,7 +4,8 @@ import { assertEquals } from "jsr:@std/assert@1.0.13";
 import type { Habit } from "../planner/planner.ts";
 import type { GoalItem } from "../rules/goals.ts";
 import { lists } from "../rules/listRules.ts";
-import { cadenceText, goalLine, habitLine, names, paceText, standingText, today } from "./format.ts";
+import { cadenceText, goalLine, habitLine, names, newYearLine, paceText, standingText, today } from "./format.ts";
+import { periodOf } from "../rules/digest.ts";
 
 const ID = "00000000-0000-4000-8000-000000000001";
 
@@ -25,6 +26,7 @@ function habit(fields: Partial<Habit>): Habit {
     deleted: false,
     archived: false,
     showOnToday: true,
+    remindAt: null,
     ...fields,
   };
 }
@@ -151,4 +153,18 @@ Deno.test("a goal's line adds its pace and what it feeds only when asked", () =>
     feeds: null,
   });
   assertEquals(done, `- Run · week of the week · 20 of 20 km · done (goal id ${ID})`);
+});
+
+Deno.test("the January nudge and a yearly digest's period read like the apps", () => {
+  assertEquals(
+    newYearLine({ year: 2027, review: true, goals: true }),
+    "New year: 2026 has no yearly review yet and 2027 has no year goals yet.",
+  );
+  assertEquals(newYearLine({ year: 2027, review: false, goals: true }), "New year: 2027 has no year goals yet.");
+  assertEquals(periodOf("yearly", "2026-07-14"), { kind: "yearly", start: "2026-01-01", end: "2026-12-31" });
+});
+
+Deno.test("a habit that reminds says when", () => {
+  const line = habitLine(habit({ remindAt: "20:30" }), { standing: "left", value: 0, met: 0, streak: 0 });
+  assertEquals(line.includes("reminds at 20:30"), true, line);
 });

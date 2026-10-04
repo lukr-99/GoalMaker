@@ -48,6 +48,21 @@ public sealed class TaskListTests : IDisposable
     }
 
     [Fact]
+    public void FinishingOnADayGoneByStampsThatDaysNoonAndTodayStampsNow()
+    {
+        var tasks = Tasks();
+        var old = tasks.Add("Pay the rent")!;
+        var fresh = tasks.Add("Water the plants")!;
+        var prague = TimeZoneInfo.FindSystemTimeZoneById("Central Europe Standard Time");
+
+        tasks.FinishOn(old.Id, new DateOnly(2026, 9, 15), new DateOnly(2026, 9, 18), prague);
+        tasks.FinishOn(fresh.Id, new DateOnly(2026, 9, 18), new DateOnly(2026, 9, 18), prague);
+
+        Assert.Equal("2026-09-15T10:00:00.000000Z", (string?)test.Replica.Get("tasks", old.Id)!["completed_at"]);
+        Assert.Equal("2026-09-18T12:00:00.000000Z", (string?)test.Replica.Get("tasks", fresh.Id)!["completed_at"]);
+    }
+
+    [Fact]
     public void BlankTitlesAndSignedOutAddsAreIgnored()
     {
         Assert.Null(Tasks().Add("   "));

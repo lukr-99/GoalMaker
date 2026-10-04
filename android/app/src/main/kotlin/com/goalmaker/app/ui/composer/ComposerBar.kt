@@ -40,10 +40,10 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -195,7 +195,10 @@ private fun BarRoundButton(button: BarButton, enabled: Boolean, label: String, o
     }
 }
 
-/** A chip that only shows what the line says (Wants, Habits, Goals); a [ComposerChip.warning] one is in the danger color. */
+/**
+ * A chip that only shows what the line says (Wants, Habits, Goals); a [ComposerChip.warning] one is in
+ * the danger color, and its icon says "Warning" to a screen reader. Each reads as one item.
+ */
 @Composable
 private fun ReadChip(chip: ComposerChip) {
     val colors = AppTheme.colors
@@ -203,6 +206,7 @@ private fun ReadChip(chip: ComposerChip) {
         shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         border = if (chip.warning) BorderStroke(1.dp, colors.danger.copy(alpha = 0.6f)) else null,
+        modifier = Modifier.semantics(mergeDescendants = true) {},
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -213,9 +217,9 @@ private fun ReadChip(chip: ComposerChip) {
         ) {
             Icon(
                 chip.icon ?: icon(chip.kind),
-                contentDescription = null,
+                contentDescription = if (chip.warning) stringResource(R.string.composer_warning) else null,
                 tint = if (chip.warning) colors.danger else colors.accent,
-                modifier = Modifier.size(InputChipDefaults.IconSize),
+                modifier = Modifier.size(AssistChipDefaults.IconSize),
             )
             Text(
                 listOfNotNull(chip.label, chip.note).joinToString(" · "),
@@ -226,12 +230,16 @@ private fun ReadChip(chip: ComposerChip) {
     }
 }
 
+/**
+ * A part of the line that a tap takes out again. It is an assist chip rather than an input chip, so a
+ * screen reader hears a button ("Tomorrow, Remove") and not a checkbox that is never checked (M6-05).
+ */
 @Composable
 private fun PreviewChip(chip: ComposerChip, onRemove: (ComposerChip) -> Unit) {
     val area = chip.areaColorId?.let { id -> AppTheme.areaColors.firstOrNull { it.id == id } }
     val label = listOfNotNull(chip.label, chip.note).joinToString(" · ")
-    InputChip(
-        selected = false,
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    AssistChip(
         onClick = { onRemove(chip) },
         label = { Text(label) },
         leadingIcon = {
@@ -242,16 +250,18 @@ private fun PreviewChip(chip: ComposerChip, onRemove: (ComposerChip) -> Unit) {
                         .background(area?.let { AppTheme.colors.areaContent(it) } ?: MaterialTheme.colorScheme.outline, CircleShape),
                 )
             } else {
-                Icon(chip.icon ?: icon(chip.kind), contentDescription = null, modifier = Modifier.size(InputChipDefaults.IconSize))
+                Icon(chip.icon ?: icon(chip.kind), contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
             }
         },
         trailingIcon = {
             Icon(
                 Icons.Outlined.Close,
-                contentDescription = stringResource(R.string.composer_remove, chip.label),
-                modifier = Modifier.size(InputChipDefaults.IconSize),
+                contentDescription = stringResource(R.string.composer_remove),
+                modifier = Modifier.size(AssistChipDefaults.IconSize),
             )
         },
+        // An input chip's quieter colors, which these chips have always worn.
+        colors = AssistChipDefaults.assistChipColors(labelColor = muted, leadingIconContentColor = muted, trailingIconContentColor = muted),
         modifier = if (chip.muted) Modifier.alpha(0.7f) else Modifier,
     )
 }

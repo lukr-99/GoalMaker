@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The start-up smoke test (docs/setup/ci.md). A project of its own, so it runs in its own process:
+    it creates the WPF Application, which a process can have only once, and a real tray icon.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>GoalMaker.App.SmokeTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GoalMaker.App\GoalMaker.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The app reads its icon and tick through pack://application: URIs, which resolve in the process's
+      own assembly; here that is this one, so it carries the same files at the same paths.
+    -->
+    <Resource Include="..\..\src\GoalMaker.App\Assets\GoalMaker.ico" Link="Assets\GoalMaker.ico" />
+    <Resource Include="..\..\src\GoalMaker.App\Assets\tick.wav" Link="Assets\tick.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- xUnit v3 on Microsoft.Testing.Platform (windows/global.json). -->
+    <PackageReference Include="xunit.v3" Version="4.0.1" />
+  </ItemGroup>
+</Project>

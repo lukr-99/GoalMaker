@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.StatsRules
 import com.goalmaker.app.application.planning.TallyCategory
@@ -29,8 +30,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * The stats screen (docs/stats.md, spec stories 64 and 67): tasks finished week by week, goals hit
- * month by month, how the habits are holding up, the mood and energy of past reviews, what became
+ * The stats screen (docs/stats.md, spec stories 64 and 67): tasks finished week by week with the
+ * project work apart and per project ([projects]), goals hit month by month, how the habits are holding up, the mood and energy of past reviews, what became
  * of the wants, and where Tally says the time went over twelve weeks.
  */
 class StatsViewModel(
@@ -38,6 +39,7 @@ class StatsViewModel(
     goals: GoalList,
     habits: HabitList,
     reviews: ReviewList,
+    projects: ProjectList,
     wants: WantList,
     tally: TallyList,
     tallyCategories: List<TallyCategory>,
@@ -56,17 +58,17 @@ class StatsViewModel(
     }.flowOn(io)
 
     val uiState: StateFlow<StatsUiState> = combine(
-        tasks.watchAll().flowOn(io),
+        combine(tasks.watchAll().flowOn(io), projects.watch().flowOn(io).map { it.projects }, ::Pair),
         goals.watch().flowOn(io),
         habits.watch().flowOn(io),
         reviews.watch().flowOn(io),
         combine(wants.watch().flowOn(io), wants.watchCooldowns().flowOn(io), tallyWeeks, ::Triple),
-    ) { taskList, (goalList, entries), habitData, reviewList, (wantList, cooldowns, tallyBlock) ->
+    ) { (taskList, projectList), (goalList, entries), habitData, reviewList, (wantList, cooldowns, tallyBlock) ->
         val decided = WantRules.stats(wantList, cooldowns.currency)
         val (weeks, slices) = tallyBlock
         StatsUiState(
             loaded = true,
-            digest = StatsRules.build(taskList, goalList, entries, habitData, reviewList, today()),
+            digest = StatsRules.build(taskList, goalList, entries, habitData, reviewList, today(), projects = projectList),
             wants = decided.takeIf { it.bought + it.dropped > 0 },
             currency = cooldowns.currency,
             tallyWeeks = if (weeks.any { it.minutes > 0 }) weeks else emptyList(),

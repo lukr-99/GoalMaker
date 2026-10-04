@@ -45,7 +45,15 @@ public sealed class CalendarRulesContractTests
                 Recurrence = Text(task, "recurrence"),
                 SeriesId = Text(task, "seriesId"),
                 Deleted = task.TryGetProperty("deleted", out var deleted) && deleted.ValueKind == JsonValueKind.True,
+                AreaId = Text(task, "area"),
+                ProjectId = Text(task, "project"),
             }).ToList();
+            var links = testCase.GetProperty("tasks").EnumerateArray().ToDictionary(
+                task => task.GetProperty("id").GetString()!,
+                task => (IReadOnlySet<string>)(task.TryGetProperty("tags", out var tags) ? tags.EnumerateArray().Select(tag => tag.GetString()!).ToHashSet() : []));
+            var projectAreas = (testCase.TryGetProperty("projects", out var projects) ? projects.EnumerateArray().ToList() : [])
+                .ToDictionary(project => project.GetProperty("id").GetString()!, project => Text(project, "area"));
+            var filter = new ListFilter(Text(testCase, "area"), Text(testCase, "tag"));
             var reminders = testCase.GetProperty("reminders").EnumerateArray().Select((reminder, index) => new ReminderItem(
                 $"r{index}",
                 reminder.GetProperty("taskId").GetString()!,
@@ -54,7 +62,7 @@ public sealed class CalendarRulesContractTests
                 FireAt = DateTime.Parse(reminder.GetProperty("at").GetString()!, CultureInfo.InvariantCulture),
             }).ToList();
 
-            var days = CalendarRules.Build(tasks, reminders, Day(testCase, "from"), Day(testCase, "to"));
+            var days = CalendarRules.Build(tasks, reminders, Day(testCase, "from"), Day(testCase, "to"), task => filter.Keeps(task, links, projectAreas));
             var expect = testCase.GetProperty("expect");
             Assert.Equal(expect.EnumerateObject().Count(), days.Count);
             foreach (var day in days)

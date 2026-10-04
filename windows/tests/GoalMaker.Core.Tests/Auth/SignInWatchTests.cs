@@ -160,6 +160,8 @@ public sealed class SignInWatchTests
 
         public GoalsView GoalsView { get; set; }
 
+        public int? NewYearDismissed { get; set; }
+
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =
             new Dictionary<string, MiniWindowState>(StringComparer.Ordinal);
 

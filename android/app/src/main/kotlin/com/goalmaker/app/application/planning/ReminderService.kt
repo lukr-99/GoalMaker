@@ -14,7 +14,8 @@ import kotlinx.coroutines.flow.Flow
  * arms the alarm for the next one, says which notifications on screen went stale, and settles a
  * reminder the owner handled. [remindedUntil] is the device's last look, kept on the device so each
  * reminder is shown once. The evening Plan tomorrow reminder shares the one alarm: it rings at
- * [planTomorrowAt] unless [rituals] says the ritual already ran that planning day. Every method
+ * [planTomorrowAt] unless [rituals] says the ritual already ran that planning day, and so do the
+ * [habits] that remind, on the days they are still left (HabitReminder). Every method
  * blocks on disk, so callers run them off the main thread.
  */
 class ReminderService(
@@ -33,6 +34,7 @@ class ReminderService(
     private val monthlyReviewAt: () -> LocalTime? = { null },
     private val wants: WantList? = null,
     private val wantsReadyAt: () -> LocalTime? = { null },
+    private val habits: HabitList? = null,
 ) {
     /**
      * What arrived since the last look, including anything missed while the device was off, with the
@@ -47,9 +49,33 @@ class ReminderService(
         val weekly = reviewDue(RitualRunList.WEEKLY_REVIEW, weeklyReviewAt(), since, at)
         val monthly = reviewDue(RitualRunList.MONTHLY_REVIEW, monthlyReviewAt(), since, at)
         val ready = wants?.let { WantReminder.due(wantsReadyAt(), dayStartHour(), it.all(), since, at) }
+        val dueHabits = habits?.read()?.let { data ->
+            data.habits.mapNotNull { habit ->
+                HabitReminder.due(habit, data.checkinsOf(habit.id), data.pausesOf(habit.id), dayStartHour(), since, at)?.let { DueHabit(habit, it) }
+            }
+        }.orEmpty()
         setRemindedUntil(at)
         arm(all, byId, at)
-        return ReminderLook(due, planDay, weekly, monthly, ready)
+        return ReminderLook(due, planDay, weekly, monthly, ready, dueHabits)
+    }
+
+    /** Whether the reminder on screen for [habitId] on planning [day] has to go: the habit is no longer left, or the day moved on. */
+    fun habitStale(habitId: String, day: LocalDate): Boolean {
+        val data = habits?.read() ?: return true
+        val habit = data.habits.firstOrNull { it.id == habitId } ?: return true
+        return HabitReminder.stale(habit, day, data.checkinsOf(habitId), data.pausesOf(habitId), dayStartHour(), now())
+    }
+
+    /** Check in from a habit's notification: a check is met, a count gets one more (an amount opens the app). */
+    fun checkInHabit(habitId: String, day: LocalDate) {
+        habits?.checkIn(habitId, day)
+        rearm()
+    }
+
+    /** Skip from a habit's notification: its period that holds [day] neither counts nor breaks the streak. */
+    fun skipHabit(habitId: String, day: LocalDate) {
+        habits?.skip(habitId, day)
+        rearm()
     }
 
     /** Which of the notifications on screen ([shown], by reminder id) have to go (docs/reminders.md). */
@@ -155,7 +181,10 @@ class ReminderService(
         val weekly = reviewNext(RitualRunList.WEEKLY_REVIEW, weeklyReviewAt(), at)
         val monthly = reviewNext(RitualRunList.MONTHLY_REVIEW, monthlyReviewAt(), at)
         val ready = wants?.let { WantReminder.next(wantsReadyAt(), dayStartHour(), it.all(), at) }
-        val next = listOfNotNull(task, ritual, weekly, monthly, ready).minOrNull()
+        val habit = habits?.read()?.let { data ->
+            data.habits.mapNotNull { HabitReminder.next(it, data.checkinsOf(it.id), data.pausesOf(it.id), dayStartHour(), at) }.minOrNull()
+        }
+        val next = listOfNotNull(task, ritual, weekly, monthly, ready, habit).minOrNull()
         if (next == null) scheduler.cancel() else scheduler.armAt(next)
     }
 }

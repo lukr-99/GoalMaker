@@ -6,7 +6,8 @@ namespace GoalMaker.App.Shell;
 /// <summary>
 /// A click on a reminder toast, carried in the toast's arguments as
 /// <c>action=snooze;reminder=&lt;id&gt;;snooze=TenMinutes</c>. For the evening Plan tomorrow
-/// reminder the id is its planning day, <c>action=SkipPlan;reminder=2026-09-18</c>.
+/// reminder the id is its planning day, <c>action=SkipPlan;reminder=2026-09-18</c>, and for a review or
+/// a habit reminder the ritual or the habit's id with the planning day, <c>action=HabitSkip;reminder=&lt;habit id&gt;/2026-09-18</c>.
 /// </summary>
 public sealed record ToastActivation(ToastAction Action, string ReminderId, Snooze? Snooze = null)
 {
@@ -18,14 +19,13 @@ public sealed record ToastActivation(ToastAction Action, string ReminderId, Snoo
             : null;
 
     /// <summary>A review reminder's click: its ritual, the planning day it rang on, and the period it reviews.</summary>
-    public (string Ritual, DateOnly Day) Review()
-    {
-        var parts = ReminderId.Split('/');
-        return parts.Length == 2
-            && DateOnly.TryParseExact(parts[1], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
-                ? (parts[0], day)
-                : (string.Empty, DateOnly.MinValue);
-    }
+    public (string Ritual, DateOnly Day) Review() => WithDay();
+
+    /// <summary>A habit reminder's click: the habit's id and the planning day it rang on; an empty id when it isn't one.</summary>
+    public (string HabitId, DateOnly Day) Habit() =>
+        Action is ToastAction.Habit or ToastAction.HabitCheckIn or ToastAction.HabitSkip or ToastAction.HabitLog
+            ? WithDay()
+            : (string.Empty, DateOnly.MinValue);
 
     /// <summary>The arguments a toast or one of its buttons carries.</summary>
     public string Arguments => Snooze is { } option
@@ -52,5 +52,16 @@ public sealed record ToastActivation(ToastAction Action, string ReminderId, Snoo
 
         Snooze? snooze = parts.TryGetValue("snooze", out var option) && Enum.TryParse<Snooze>(option, out var parsed) ? parsed : null;
         return kind == ToastAction.Snooze && snooze is null ? null : new ToastActivation(kind, reminder, snooze);
+    }
+
+    // "<id>/<planning day>", as a review and a habit reminder carry it.
+    private (string Id, DateOnly Day) WithDay()
+    {
+        var parts = ReminderId.Split('/');
+        return parts.Length == 2
+            && parts[0].Length > 0
+            && DateOnly.TryParseExact(parts[1], "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+                ? (parts[0], day)
+                : (string.Empty, DateOnly.MinValue);
     }
 }

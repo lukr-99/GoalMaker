@@ -1,4 +1,4 @@
--- 0015: life goals and their pictures (Supabase migration 0021, docs/life-goals.md).
+-- 0017: life goals and their pictures (Supabase migration 0023, docs/life-goals.md).
 --
 -- The columns are laxer than the server's, like the rest of the replica: the server checks the why,
 -- the status with its time and a picture's size. The picture files are not here (ADR 0018).

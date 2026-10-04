@@ -21,14 +21,25 @@ public sealed class ListRulesContractTests
                 TaskState.Open,
                 false,
                 "2026-09-10T08:00:00.000000Z",
-                AreaId: task.TryGetProperty("area", out var area) ? area.GetString() : null)).ToList();
+                AreaId: task.TryGetProperty("area", out var area) ? area.GetString() : null,
+                ProjectId: task.TryGetProperty("project", out var project) ? project.GetString() : null)).ToList();
             var links = listed.ToDictionary(
                 task => task.GetProperty("id").GetString()!,
                 task => (IReadOnlySet<string>)(task.TryGetProperty("tags", out var tags) ? tags.EnumerateArray().Select(tag => tag.GetString()!).ToHashSet() : []));
+            var projects = testCase.TryGetProperty("projects", out var listedProjects) ? listedProjects.EnumerateArray().ToList() : [];
+            var projectAreas = projects.ToDictionary(project => project.GetProperty("id").GetString()!, project => project.GetProperty("area").GetString());
             var filter = new ListFilter(testCase.GetProperty("area").GetString(), testCase.GetProperty("tag").GetString());
+            var name = testCase.GetProperty("name").GetString();
             var expected = testCase.GetProperty("keep").EnumerateArray().Select(id => id.GetString()!);
 
-            Assert.True(expected.SequenceEqual(filter.Apply(tasks, links).Select(task => task.Id)), testCase.GetProperty("name").GetString());
+            Assert.True(expected.SequenceEqual(filter.Apply(tasks, links, projectAreas).Select(task => task.Id)), name);
+            if (testCase.TryGetProperty("keepProjects", out var keepProjects))
+            {
+                var kept = projects
+                    .Select(project => project.GetProperty("id").GetString()!)
+                    .Where(id => filter.KeepsProject(projectAreas[id], tasks.Where(task => task.ProjectId == id), links));
+                Assert.True(keepProjects.EnumerateArray().Select(id => id.GetString()!).SequenceEqual(kept), $"{name}: projects");
+            }
         }
     }
 

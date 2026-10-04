@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -77,6 +76,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.DndBreakthrough
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.update.InstallResult
 import com.goalmaker.app.application.update.UpdateCheckResult
@@ -133,6 +133,8 @@ fun SettingsScreen(
     /** The areas in use and the tags, shown in their own section with the way to the full manager. */
     areas: List<AreaItem> = emptyList(),
     tags: List<TagItem> = emptyList(),
+    /** Opens the system page that lets important reminders through Do Not Disturb, or not. */
+    onOpenDndSettings: (DndBreakthrough) -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val saved by viewModel.saved.counts.collectAsStateWithLifecycle()
@@ -244,7 +246,7 @@ fun SettingsScreen(
                                 }
                                 SettingsSection.ACCOUNT -> AccountRows(state, saved, viewModel)
                                 SettingsSection.APPEARANCE -> AppearanceRows(state, saved, viewModel)
-                                SettingsSection.PLANNING -> PlanningRows(state, saved, viewModel)
+                                SettingsSection.PLANNING -> PlanningRows(state, saved, viewModel, onOpenDndSettings)
                                 SettingsSection.AREAS -> AreasAndTagsCard(areas = areas, tags = tags, onOpenAreas = onOpenAreas)
                                 SettingsSection.CLAUDE -> {
                                     LinkRow(
@@ -319,7 +321,7 @@ private fun SectionChips(sections: List<SettingsSection>, current: SettingsSecti
                     borderColor = AppTheme.colors.outline,
                     selectedBorderColor = AppTheme.colors.primary,
                 ),
-                modifier = Modifier.height(32.dp).semantics { contentDescription = jumpTo },
+                modifier = Modifier.semantics { contentDescription = jumpTo },
             )
         }
     }
@@ -452,7 +454,12 @@ private fun AppearanceRows(state: SettingsUiState, saved: Map<SettingKey, Int>, 
 }
 
 @Composable
-private fun PlanningRows(state: SettingsUiState, saved: Map<SettingKey, Int>, viewModel: SettingsViewModel) {
+private fun PlanningRows(
+    state: SettingsUiState,
+    saved: Map<SettingKey, Int>,
+    viewModel: SettingsViewModel,
+    onOpenDndSettings: (DndBreakthrough) -> Unit,
+) {
     val clock = DateTimeFormatter.ofPattern("HH:mm")
     val locale = LocalConfiguration.current.locales[0]
     DropdownRow(
@@ -529,6 +536,24 @@ private fun PlanningRows(state: SettingsUiState, saved: Map<SettingKey, Int>, vi
     )
     RowDivider()
     QuietHoursRows(state.quietHours, saved, viewModel::setQuietHours)
+    RowDivider()
+    // Important reminders through Do Not Disturb (docs/reminders.md): only the owner can allow it, on
+    // the system page; coming back from there resumes this window, so it asks the phone again.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.checkImportantDnd() }
+    val dnd = state.importantDnd
+    ButtonRow(
+        title = stringResource(R.string.settings_important_dnd),
+        hint = stringResource(
+            when (dnd) {
+                DndBreakthrough.ALLOWED -> R.string.settings_important_dnd_allowed
+                DndBreakthrough.NOT_ALLOWED -> R.string.settings_important_dnd_not_allowed
+                DndBreakthrough.CHANNEL_OFF -> R.string.settings_important_dnd_channel_off
+                DndBreakthrough.NOTIFICATIONS_OFF -> R.string.settings_important_dnd_notifications_off
+            },
+        ),
+        button = stringResource(if (dnd == DndBreakthrough.ALLOWED) R.string.settings_important_dnd_change else R.string.settings_important_dnd_allow),
+        onClick = { onOpenDndSettings(dnd) },
+    )
 }
 
 /** A reminder: a switch, and while it is on the time in half hours, saved when the slider is let go. */

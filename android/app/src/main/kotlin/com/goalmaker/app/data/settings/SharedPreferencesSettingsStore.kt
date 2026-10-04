@@ -145,6 +145,14 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         goals.value = view
     }
 
+    private val newYear = MutableStateFlow(preferences.getInt(NEW_YEAR_DISMISSED, 0).takeIf { it > 0 })
+    override val newYearDismissed: StateFlow<Int?> = newYear.asStateFlow()
+
+    override fun setNewYearDismissed(year: Int) {
+        preferences.edit { putInt(NEW_YEAR_DISMISSED, year) }
+        newYear.value = year
+    }
+
     private val mode = MutableStateFlow(enumOrDefault(preferences.getString(COMPOSER_MODE, null), ComposerMode.QUICK_ADD))
     override val composerMode: StateFlow<ComposerMode> = mode.asStateFlow()
 
@@ -307,6 +315,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val COLLAPSED_COLUMNS = "board_collapsed_columns"
         const val GOALS_VIEW = "goals_view"
         const val COMPOSER_MODE = "composer_mode"
+        const val NEW_YEAR_DISMISSED = "new_year_dismissed"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"
         const val WEEKLY_REVIEW_AT = "weekly_review_reminder"
         const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"

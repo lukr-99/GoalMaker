@@ -55,6 +55,13 @@ pgTAP itself takes about 2 s. It is now three jobs that run side by side:
 
 Locally `python tools/supabase_migrations.py test` still runs everything in one go.
 
+**UI tests.** The Android job's `testDebugUnitTest` runs the Compose screen tests with the other
+Robolectric tests. The Windows job's `dotnet test --solution` runs `GoalMaker.App.SmokeTests`, the
+start-up smoke test, as its own test process: it builds the app as a dev build starts, over a
+throwaway folder, shows the main window without activating it and opens every page, in about 5 s.
+It needs a desktop session with a taskbar for the tray icon, which the `windows-latest` runners
+have.
+
 **Concurrency.** A new push to a pull request cancels its older CI and baseline runs. Each push to
 `main` gets its own group and is never cancelled (see the pitfall "A merge to main cancelled the
 one before it").

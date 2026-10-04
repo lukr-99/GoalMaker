@@ -87,23 +87,123 @@
             </StackPanel>
         </DataTemplate>
 
-        <!-- One day of the week: its time on top, its categories stacked, its name underneath; today's name in the accent. -->
+        <!--
+            One day of the week: its time on top, its categories stacked, its name underneath; today's name in
+            the accent. The whole bar is a button that shows the day closer up; the day shown is underlined.
+        -->
         <DataTemplate x:Key="DayBar" DataType="{x:Type vm:TallyBarViewModel}">
-            <StackPanel Margin="4,0" ToolTip="{Binding Tip}">
-                <!-- Two lines' room, so "5 h 20 min" wraps in a narrow window and every bar starts at the same height. -->
-                <Grid Height="30">
-                    <TextBlock Text="{Binding Value}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Bottom"
-                               Style="{StaticResource Number}" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                </Grid>
-                <controls:StackedBar Height="120" Margin="6,2,6,0" Parts="{Binding Parts}" Fraction="{Binding Fraction}" />
-                <TextBlock x:Name="Day" Text="{Binding Label}" FontSize="11" Margin="0,4,0,0" HorizontalAlignment="Center" />
-            </StackPanel>
+            <Button Command="{Binding Pick}" Cursor="Hand" ToolTip="{Binding Tip}" AutomationProperties.Name="{Binding Tip}"
+                    Margin="2,0" Padding="2,0" HorizontalContentAlignment="Stretch">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Frame" Background="Transparent" CornerRadius="6" BorderThickness="1" BorderBrush="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+                <StackPanel>
+                    <!-- Two lines' room, so "5 h 20 min" wraps in a narrow window and every bar starts at the same height. -->
+                    <Grid Height="30">
+                        <TextBlock Text="{Binding Value}" FontSize="11" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Bottom"
+                                   Style="{StaticResource Number}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    </Grid>
+                    <controls:StackedBar Height="120" Margin="6,2,6,0" Parts="{Binding Parts}" Fraction="{Binding Fraction}" />
+                    <TextBlock x:Name="Day" Text="{Binding Label}" FontSize="11" Margin="0,4,0,0" HorizontalAlignment="Center" />
+                    <Border x:Name="Picked" Height="2" Margin="10,2,10,2" CornerRadius="1" Background="{DynamicResource GM.AccentBrush}" Visibility="Hidden" />
+                </StackPanel>
+            </Button>
             <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsCurrent}" Value="True">
                     <Setter TargetName="Day" Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
                     <Setter TargetName="Day" Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
                 </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter TargetName="Picked" Property="Visibility" Value="Visible" />
+                </DataTrigger>
             </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- One clock hour of the day on this PC: its share of the hour and its categories stacked. -->
+        <DataTemplate x:Key="HourBar" DataType="{x:Type vm:TallyHourViewModel}">
+            <controls:StackedBar Height="72" Margin="1,0" Parts="{Binding Parts}" Fraction="{Binding Fraction}" ToolTip="{Binding Tip}" />
+        </DataTemplate>
+
+        <!-- A site or folder under an app, with Make a rule. -->
+        <DataTemplate x:Key="WindowRow" DataType="{x:Type vm:TallyWindowRowViewModel}">
+            <DockPanel Margin="16,0,0,0">
+                <ui:Button DockPanel.Dock="Right" Padding="8,2" Appearance="Transparent" FontSize="12" Command="{Binding MakeRuleCommand}"
+                           Content="{DynamicResource Tally.MakeRule}" AutomationProperties.Name="{Binding MakeRuleName}" />
+                <TextBlock DockPanel.Dock="Right" Margin="12,0,4,0" VerticalAlignment="Center" FontSize="12" Style="{StaticResource Number}"
+                           Text="{Binding Value}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </DockPanel>
+        </DataTemplate>
+
+        <!-- An app under a category: its executable, its time, Make a rule, and its sites or folders. -->
+        <DataTemplate x:Key="AppRow" DataType="{x:Type vm:TallyAppRowViewModel}">
+            <StackPanel Margin="26,2,0,4">
+                <DockPanel>
+                    <ui:Button DockPanel.Dock="Right" Padding="8,2" Appearance="Transparent" FontSize="12" Command="{Binding MakeRuleCommand}"
+                               Content="{DynamicResource Tally.MakeRule}" AutomationProperties.Name="{Binding MakeRuleName}" />
+                    <TextBlock DockPanel.Dock="Right" Margin="12,0,4,0" VerticalAlignment="Center" Style="{StaticResource Number}" Text="{Binding Value}" />
+                    <TextBlock VerticalAlignment="Center" FontSize="14" Text="{Binding App}" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+                <ItemsControl ItemsSource="{Binding Windows}" ItemTemplate="{StaticResource WindowRow}" Focusable="False"
+                              Visibility="{Binding HasWindows, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- A category of this PC's apps: a row that opens to its apps. -->
+        <DataTemplate x:Key="AppGroup" DataType="{x:Type vm:TallyAppGroupViewModel}">
+            <StackPanel Margin="0,0,0,2">
+                <ToggleButton IsChecked="{Binding IsExpanded}" Cursor="Hand" Focusable="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                              ToolTip="{DynamicResource Tally.ShowApps}" AutomationProperties.HelpText="{DynamicResource Tally.ShowApps}">
+                    <AutomationProperties.Name>
+                        <MultiBinding StringFormat="{}{0} {1}">
+                            <Binding Path="Name" />
+                            <Binding Path="Value" />
+                        </MultiBinding>
+                    </AutomationProperties.Name>
+                    <ToggleButton.Template>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="Row" Padding="8,6" CornerRadius="{DynamicResource GM.RowCorner}" Background="Transparent"
+                                    BorderThickness="1" BorderBrush="Transparent">
+                                <DockPanel>
+                                    <ui:SymbolIcon x:Name="Chevron" DockPanel.Dock="Right" Margin="8,0,0,0" Symbol="ChevronDown20" FontSize="14"
+                                                   Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Number}" Text="{Binding Value}"
+                                               Foreground="{DynamicResource GM.AccentBrush}" />
+                                    <Ellipse DockPanel.Dock="Left" Width="10" Height="10" Margin="0,0,10,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                                    <TextBlock DockPanel.Dock="Left" Text="{Binding Emoji}" FontSize="14" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" FontSize="14" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Chevron" Property="Symbol" Value="ChevronUp20" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Row" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </ToggleButton.Template>
+                </ToggleButton>
+                <ItemsControl ItemsSource="{Binding Apps}" ItemTemplate="{StaticResource AppRow}" Focusable="False"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
         </DataTemplate>
 
         <!-- A project's time this week against the project with the most. -->
@@ -179,7 +279,7 @@
         </DataTemplate>
     </Page.Resources>
 
-    <!-- Tally (docs/tally.md): the switch, the filters, today, the week, the projects, and the owner's rules and categories. -->
+    <!-- Tally (docs/tally.md): the switch, the filters, the day, its hours and apps on this PC, the week, the projects, and the owner's rules and categories. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Title="{DynamicResource Tally.Title}" FontSize="40" />
@@ -219,14 +319,20 @@
             <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Tally.Empty}"
                        Visibility="{Binding HasNoTime, Converter={StaticResource BoolToVisibility}}" />
 
-            <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.Today}" />
+            <!-- The day: today, or the day picked in the week, on every device. -->
+            <DockPanel>
+                <ui:Button DockPanel.Dock="Right" Margin="0,12,0,4" Appearance="Transparent" Command="{Binding ShowTodayCommand}"
+                           Content="{DynamicResource Tally.ShowToday}"
+                           Visibility="{Binding IsNotToday, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Style="{StaticResource SectionLabel}" VerticalAlignment="Bottom" Text="{Binding DayTitle}" />
+            </DockPanel>
             <Border Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Style="{StaticResource Number}" Text="{Binding TodayTotal}" FontSize="28" Foreground="{DynamicResource GM.AccentBrush}" />
-                    <controls:StackedBar Height="20" Margin="0,8,0,10" Flat="True" Parts="{Binding TodayParts}" />
-                    <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{DynamicResource Tally.NothingToday}"
-                               Visibility="{Binding HasNoToday, Converter={StaticResource BoolToVisibility}}" />
-                    <ItemsControl ItemsSource="{Binding TodayLegend}" ItemTemplate="{StaticResource Legend}" Focusable="False">
+                    <TextBlock Style="{StaticResource Number}" Text="{Binding DayTotal}" FontSize="28" Foreground="{DynamicResource GM.AccentBrush}" />
+                    <controls:StackedBar Height="20" Margin="0,8,0,10" Flat="True" Parts="{Binding DayParts}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{Binding DayEmpty}"
+                               Visibility="{Binding HasNoDay, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding DayLegend}" ItemTemplate="{StaticResource Legend}" Focusable="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel />
@@ -236,19 +342,69 @@
                 </StackPanel>
             </Border>
 
+            <!-- This PC's own look at the day, from its log: by hour, then its apps, sites and folders. -->
+            <StackPanel Visibility="{Binding ShowLocal, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.ByHour}" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel AutomationProperties.Name="{Binding HoursDescription}">
+                        <ItemsControl ItemsSource="{Binding Hours}" ItemTemplate="{StaticResource HourBar}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <primitives:UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <!-- The time every six hours, each over its quarter of the day. -->
+                        <ItemsControl ItemsSource="{Binding HourMarks}" Focusable="False" Margin="0,4,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <primitives:UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontSize="10" Style="{StaticResource Number}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.Apps}" />
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <WrapPanel>
+                            <ToggleButton Style="{StaticResource FilterChip}" Content="{Binding DayChoice}" Command="{Binding ShowAppsCommand}" CommandParameter="day"
+                                          IsChecked="{Binding AppsForDay, Mode=OneWay}" />
+                            <ToggleButton Style="{StaticResource FilterChip}" Content="{DynamicResource Tally.AppsWeek}" Command="{Binding ShowAppsCommand}"
+                                          CommandParameter="week" IsChecked="{Binding AppsForWeek, Mode=OneWay}" />
+                        </WrapPanel>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Tally.AppsOnlyHere}" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{DynamicResource Tally.AppsNone}"
+                                   Visibility="{Binding HasNoApps, Converter={StaticResource BoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding Apps}" ItemTemplate="{StaticResource AppGroup}" Focusable="False" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+            <TextBlock Style="{StaticResource Hint}" Margin="0,16,0,0" Text="{DynamicResource Tally.AppsPhone}"
+                       Visibility="{Binding ShowLocalElsewhere, Converter={StaticResource BoolToVisibility}}" />
+
             <DockPanel>
                 <TextBlock DockPanel.Dock="Right" Margin="0,20,4,6" VerticalAlignment="Bottom" FontSize="12" Style="{StaticResource Number}"
                            Text="{Binding WeekTotal}" Foreground="{DynamicResource GM.TextMutedBrush}" />
                 <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.ThisWeek}" />
             </DockPanel>
             <Border Style="{StaticResource Card}">
-                <ItemsControl ItemsSource="{Binding WeekDays}" ItemTemplate="{StaticResource DayBar}" Focusable="False">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <primitives:UniformGrid Rows="1" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding WeekDays}" ItemTemplate="{StaticResource DayBar}" Focusable="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <primitives:UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Tally.WeekHint}" />
+                </StackPanel>
             </Border>
 
             <StackPanel Visibility="{Binding HasProjects, Converter={StaticResource BoolToVisibility}}">

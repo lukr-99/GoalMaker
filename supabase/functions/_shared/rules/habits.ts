@@ -39,6 +39,8 @@ export interface HabitCheckin {
   day: Day;
   value: number;
   skipped: boolean;
+  /** The owner said the day's period failed: missed at once, today included. Left out means not failed. */
+  failed?: boolean;
   deleted: boolean;
 }
 
@@ -126,9 +128,10 @@ export function wentOver(habit: HabitItem, day: Day, checkins: HabitCheckin[]): 
 
 /**
  * Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit, a day
- * nobody logged is met, because nothing was had. Skipped never meets a day.
+ * nobody logged is met, because nothing was had. Skipped and failed never meet a day.
  */
 export function dayMet(habit: HabitItem, checkin: HabitCheckin | undefined): boolean {
+  if (checkin && !checkin.deleted && checkin.failed === true) return false;
   if (isLimit(habit)) return !checkin || checkin.deleted || (!checkin.skipped && !isOver(habit, checkin.value));
   if (!checkin || checkin.deleted || checkin.skipped) return false;
   return habit.measure === "check" ? checkin.value >= 1 : checkin.value >= (habit.target ?? Infinity);
@@ -156,12 +159,13 @@ export function habitState(
     // the number is missed the moment it happens, today included.
     if (pauses.some((pause) => covers(pause, start, end))) return "paused";
     if (inPeriod.some((checkin) => checkin.skipped)) return "skipped";
-    if (inPeriod.some((checkin) => isOver(habit, checkin.value))) return "missed";
+    if (inPeriod.some((checkin) => checkin.failed === true || isOver(habit, checkin.value))) return "missed";
     return end >= today ? "open" : "met";
   }
   if (inPeriod.filter((checkin) => dayMet(habit, checkin)).length >= required(habit)) return "met";
   if (pauses.some((pause) => covers(pause, start, end))) return "paused";
   if (inPeriod.some((checkin) => checkin.skipped)) return "skipped";
+  if (inPeriod.some((checkin) => checkin.failed === true)) return "missed";
   return end >= today ? "open" : "missed";
 }
 
@@ -195,6 +199,7 @@ export function heat(habit: HabitItem, day: Day, checkins: HabitCheckin[], pause
   if (pauses.some((pause) => covers(pause, day, day))) return "paused";
   const checkin = checkins.find((checkin) => !checkin.deleted && checkin.day === day);
   if (checkin?.skipped) return "skipped";
+  if (checkin?.failed === true) return isLimit(habit) ? "over" : 0;
   const value = checkin?.value ?? 0;
   // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
   if (isLimit(habit)) return isOver(habit, value) ? "over" : 1 - share(habit, value);
@@ -211,6 +216,7 @@ export function ring(habit: HabitItem, today: Day, checkins: HabitCheckin[]): nu
   }
   if (!isDue(habit, today)) return null;
   const checkin = checkins.find((checkin) => !checkin.deleted && !checkin.skipped && checkin.day === today);
+  if (checkin?.failed === true) return 0;
   return share(habit, checkin?.value ?? 0);
 }
 
@@ -218,7 +224,7 @@ export function ring(habit: HabitItem, today: Day, checkins: HabitCheckin[]): nu
 export type HabitGroup = "days" | "weekly" | "limits";
 
 /** Where a habit stands today: a limit is never done or left, so it never reads as not done. */
-export type HabitStanding = "none" | "paused" | "skipped" | "limit" | "done" | "left";
+export type HabitStanding = "none" | "paused" | "skipped" | "failed" | "limit" | "done" | "left";
 
 /** One day of the week's dots on a habit card. */
 export type HabitDot = "none" | "paused" | "skipped" | "over" | "open" | "met" | "missed";
@@ -229,7 +235,7 @@ export function habitGroup(habit: HabitItem): HabitGroup {
 }
 
 /**
- * Where a habit stands on `today`: none, paused, skipped, a limit, done (the ring is full, or a weekly or
+ * Where a habit stands on `today`: none, paused, skipped, failed, a limit, done (the ring is full, or a weekly or
  * monthly habit's check-in today meets its day) or left.
  */
 export function standing(habit: HabitItem, today: Day, checkins: HabitCheckin[], pauses: HabitPause[]): HabitStanding {
@@ -239,6 +245,13 @@ export function standing(habit: HabitItem, today: Day, checkins: HabitCheckin[],
   const end = habitPeriodEnd(habit, start);
   if (checkins.some((checkin) => !checkin.deleted && checkin.skipped && checkin.day >= start && checkin.day <= end)) {
     return "skipped";
+  }
+  if (
+    checkins.some((checkin) =>
+      !checkin.deleted && checkin.failed === true && checkin.day >= start && checkin.day <= end
+    )
+  ) {
+    return "failed";
   }
   if (isLimit(habit)) return "limit";
   if ((ring(habit, today, checkins) ?? 0) >= 1) return "done";
@@ -253,6 +266,7 @@ export function dot(habit: HabitItem, day: Day, today: Day, checkins: HabitCheck
   if (pauses.some((pause) => covers(pause, day, day))) return "paused";
   const checkin = checkins.find((checkin) => !checkin.deleted && checkin.day === day);
   if (checkin?.skipped) return "skipped";
+  if (checkin?.failed === true) return isLimit(habit) ? "over" : "missed";
   if (isLimit(habit)) {
     if (checkin !== undefined && isOver(habit, checkin.value)) return "over";
     return day >= today ? "open" : "met";
@@ -295,7 +309,8 @@ export function goalAmounts(
   );
   return checkins
     .filter((checkin) =>
-      !checkin.deleted && !checkin.skipped && serving.has(checkin.habitId) && checkin.day >= goal.periodStart &&
+      !checkin.deleted && !checkin.skipped && checkin.failed !== true && serving.has(checkin.habitId) &&
+      checkin.day >= goal.periodStart &&
       checkin.day <= end
     )
     .map((checkin) => checkin.value);

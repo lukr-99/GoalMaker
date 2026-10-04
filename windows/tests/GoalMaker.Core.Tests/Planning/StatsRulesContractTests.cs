@@ -15,18 +15,26 @@ public sealed class StatsRulesContractTests
         foreach (var testCase in vectors.GetProperty("weeks").EnumerateArray())
         {
             var name = Name(testCase);
-            var weeks = StatsRules.WeeksDone(Tasks(testCase), Day(testCase, "today"), testCase.GetProperty("count").GetInt32());
+            var count = testCase.GetProperty("count").GetInt32();
+            var weeks = StatsRules.WeeksDone(Tasks(testCase), Day(testCase, "today"), count, Projects(testCase));
             var expect = testCase.GetProperty("expect").EnumerateArray().ToList();
             Assert.Equal(expect.Count, weeks.Count);
             for (var index = 0; index < expect.Count; index++)
             {
                 Assert.True(Day(expect[index], "start") == weeks[index].Start, name);
                 Assert.True(expect[index].GetProperty("done").GetInt32() == weeks[index].Done, $"{name}: {weeks[index].Start}");
+                Assert.True((Number(expect[index], "project") ?? 0) == weeks[index].Project, $"{name}: project {weeks[index].Start}");
             }
 
-            var digest = new StatsDigest { Weeks = weeks };
+            var byProject = StatsRules.ByProject(Tasks(testCase), Projects(testCase), Day(testCase, "today"), count);
+            var digest = new StatsDigest { Weeks = weeks, ByProject = byProject };
             Assert.True(testCase.GetProperty("done").GetInt32() == digest.Done, $"{name}: total");
+            Assert.True((Number(testCase, "project") ?? 0) == digest.ProjectWork, $"{name}: project");
+            Assert.True(testCase.GetProperty("done").GetInt32() - (Number(testCase, "project") ?? 0) == digest.OtherWork, $"{name}: other");
             Assert.True(Maybe(testCase, "best") == digest.BestWeek?.Start, $"{name}: best");
+            Assert.Equal(
+                Rows(testCase, "byProject").Select(row => (Text(row, "id"), Text(row, "name"), Number(row, "done") ?? 0)),
+                byProject.Select(row => ((string?)row.Id, (string?)row.Name, row.Done)));
         }
     }
 
@@ -222,7 +230,14 @@ public sealed class StatsRulesContractTests
         CompletedAt = Text(task, "completedAt"),
         GoalId = Text(task, "goalId"),
         MovedCount = Number(task, "movedCount") ?? 0,
+        ProjectId = Text(task, "projectId"),
     }).ToList();
+
+    private static IReadOnlyList<ProjectItem> Projects(JsonElement testCase) => Rows(testCase, "projects").Select(project =>
+        new ProjectItem(project.GetProperty("id").GetString()!, Text(project, "name") ?? string.Empty)
+        {
+            Deleted = Flag(project, "deleted"),
+        }).ToList();
 
     private static IReadOnlyList<GoalItem> Goals(JsonElement testCase) => Rows(testCase, "goals").Select(goal => new GoalItem(
         goal.GetProperty("id").GetString()!,

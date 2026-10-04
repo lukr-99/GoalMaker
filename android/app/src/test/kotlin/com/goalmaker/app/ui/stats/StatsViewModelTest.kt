@@ -7,6 +7,7 @@ import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.TagList
@@ -40,6 +41,8 @@ import org.robolectric.annotation.Config
 class StatsViewModelTest {
     private lateinit var test: TestReplica
     private lateinit var tally: TallyList
+    private lateinit var tasks: TaskList
+    private lateinit var projects: ProjectList
     private lateinit var viewModel: StatsViewModel
 
     // Wednesday 30 September 2026 at noon; the twelve weeks run from Monday 13 July.
@@ -54,13 +57,15 @@ class StatsViewModelTest {
         val settings = SharedPreferencesSettingsStore(preferences)
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-30T10:00:00Z") })
         val areas = AreaList(test.replica, rows, listOf("violet", "blue"), {})
-        val tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), ProjectList(test.replica, rows, {}), {}) { today }
+        projects = ProjectList(test.replica, rows, {})
+        tasks = TaskList(test.replica, rows, areas, TagList(test.replica, rows, {}), projects, {}) { today }
         tally = TallyList(test.replica, rows, {}) { "phone" }
         viewModel = StatsViewModel(
             tasks = tasks,
             goals = GoalList(test.replica, rows, {}),
             habits = HabitList(test.replica, rows, {}),
             reviews = ReviewList(test.replica, rows, {}),
+            projects = projects,
             wants = WantList(test.replica, rows, {}) { today },
             tally = tally,
             tallyCategories = TallyDefaults.load(application.assets.open("tally-rules.json")).categories,
@@ -72,6 +77,44 @@ class StatsViewModelTest {
 
     @After
     fun tearDown() = test.close()
+
+    // A task finished now, in this week, inside a project when one is given.
+    private fun done(title: String, projectId: String? = null) {
+        val task = tasks.add(title)!!
+        projectId?.let { tasks.setProject(task.id, it) }
+        tasks.setDone(task.id, true)
+    }
+
+    @Test
+    fun `project work is counted apart and per project`() = runTest {
+        val app = projects.add(ProjectDraft(name = "GoalMaker"))!!
+        val garden = projects.add(ProjectDraft(name = "Garden"))!!
+        done("Fix the build", app.id)
+        done("Ship it", app.id)
+        done("Prune the roses", garden.id)
+        done("Groceries")
+
+        val digest = viewModel.uiState.first { it.loaded }.digest
+
+        assertEquals(4, digest.done)
+        assertEquals(3, digest.projectWork)
+        assertEquals(1, digest.otherWork)
+        assertEquals(3, digest.weeks.last().project)
+        assertEquals(listOf("GoalMaker" to 2, "Garden" to 1), digest.byProject.map { it.name to it.done })
+    }
+
+    @Test
+    fun `a deleted project's items are other work`() = runTest {
+        val garden = projects.add(ProjectDraft(name = "Garden"))!!
+        done("Prune the roses", garden.id)
+        projects.delete(garden.id)
+
+        val digest = viewModel.uiState.first { it.loaded }.digest
+
+        assertEquals(1, digest.done)
+        assertEquals(0, digest.projectWork)
+        assertTrue(digest.byProject.isEmpty())
+    }
 
     @Test
     fun `no Tally time, no Tally block`() = runTest {

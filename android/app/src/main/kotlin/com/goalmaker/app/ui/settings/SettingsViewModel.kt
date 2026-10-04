@@ -8,6 +8,7 @@ import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.planning.DndBreakthrough
 import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.application.sync.SyncCoordinator
@@ -54,6 +55,7 @@ class SettingsViewModel(
     private val restartApp: () -> Unit,
     private val unlockAvailability: () -> UnlockAvailability = { UnlockAvailability.UNAVAILABLE },
     private val appLockTurned: (Boolean) -> Unit = {},
+    private val importantDnd: () -> DndBreakthrough = { DndBreakthrough.NOT_ALLOWED },
 ) : ViewModel() {
 
     private val state = MutableStateFlow(
@@ -71,6 +73,7 @@ class SettingsViewModel(
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
             appLock = settings.appLock.value,
             unlock = unlockAvailability(),
+            importantDnd = importantDnd(),
             signingOut = false,
             unsyncedAtSignOut = null,
             update = UpdateUiState.Idle,
@@ -151,6 +154,9 @@ class SettingsViewModel(
 
     /** Asks the phone again what it can do, in case the owner has just set a fingerprint up. */
     fun checkUnlock() = state.update { it.copy(unlock = unlockAvailability()) }
+
+    /** Asks the phone again whether important reminders ring through Do Not Disturb, after its settings page. */
+    fun checkImportantDnd() = state.update { it.copy(importantDnd = importantDnd()) }
 
     fun setTheme(id: String) {
         settings.updateAppearance { it.copy(themeId = id) }

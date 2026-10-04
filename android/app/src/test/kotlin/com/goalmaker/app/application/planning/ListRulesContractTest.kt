@@ -32,17 +32,27 @@ class ListRulesContractTest {
                     topPriority = false,
                     createdAt = "2026-09-10T08:00:00.000000Z",
                     areaId = task["area"]?.jsonPrimitive?.content,
+                    projectId = task["project"]?.jsonPrimitive?.content,
                 )
             }
             val links = listed.associate { task ->
                 task.getValue("id").jsonPrimitive.content to task["tags"]?.jsonArray?.map { it.jsonPrimitive.content }.orEmpty().toSet()
             }
+            val projects = case["projects"]?.jsonArray?.map { it.jsonObject }.orEmpty()
+            val projectAreas = projects.associate { project ->
+                project.getValue("id").jsonPrimitive.content to project.getValue("area").let { if (it == JsonNull) null else it.jsonPrimitive.content }
+            }
             val filter = ListFilter(
                 areaId = case.getValue("area").let { if (it == JsonNull) null else it.jsonPrimitive.content },
                 tagId = case.getValue("tag").let { if (it == JsonNull) null else it.jsonPrimitive.content },
             )
+            val name = case.getValue("name").jsonPrimitive.content
             val expected = case.getValue("keep").jsonArray.map { it.jsonPrimitive.content }
-            assertEquals(case.getValue("name").jsonPrimitive.content, expected, filter.apply(tasks, links).map(TaskItem::id))
+            assertEquals(name, expected, filter.apply(tasks, links, projectAreas).map(TaskItem::id))
+            case["keepProjects"]?.jsonArray?.let { keepProjects ->
+                val kept = projectAreas.filter { (id, area) -> filter.keepsProject(area, tasks.filter { it.projectId == id }, links) }.keys
+                assertEquals("$name: projects", keepProjects.map { it.jsonPrimitive.content }, kept.toList())
+            }
         }
     }
 

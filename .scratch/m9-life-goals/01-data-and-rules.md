@@ -3,12 +3,12 @@
 **Status:** built, waiting for review · **Milestone:** M9
 
 ## Scope
-- Supabase migration 0021: `life_goals` (title, why, by date, area, status `open | achieved |
+- Supabase migration 0023: `life_goals` (title, why, by date, area, status `open | achieved |
   dropped` with the time it changed, position, made by) and `life_goal_pictures` (life goal, position,
   width, height) with the usual synced columns, row security, the activity log trigger, undo, the
   purge, grants and the Realtime publication. The private bucket `life-goal-pictures` (2 MB, JPEG
   only) with Storage policies that keep each owner in their own folder.
-- Replica migration 0015 and both tables in `contracts/schemas/synced-tables.json`; the backup
+- Replica migration 0017 and both tables in `contracts/schemas/synced-tables.json`; the backup
   carries them in the synced-tables order.
 - `LifeGoalRules` in Kotlin, C# and `rules/life-goals.ts` (time left and order; the why reminder's
   moment and life goal in Kotlin and C# only).
@@ -18,7 +18,7 @@
 ## Acceptance criteria
 - pgTAP: owner can, stranger can't, anonymous can't, on both tables and on the bucket's objects; the
   checks (why required, status and its time together). The migration harness passes in full and as
-  0020 to 0021 with fixtures; `tools/check_synced_tables.py` passes.
+  0022 to 0023 with fixtures; `tools/check_synced_tables.py` passes.
 - Every `life-goals.json` case passes in Kotlin, C# and (for its groups) TypeScript.
 - A backup round trip keeps life goals and picture rows.
 
@@ -31,15 +31,15 @@
 - `contracts/vectors/backup.json`: the table order with the two tables.
 
 ## Check
-- Emulator and Windows: nothing visible yet; both replicas migrate from 0014 with data.
+- Emulator and Windows: nothing visible yet; both replicas migrate from 0016 with data.
 
 ## Result
 
 2026-10-04.
 
-- Supabase migration 0021 (`life_goals`, `life_goal_pictures`, the made-by trigger reused from tasks,
+- Supabase migration 0023 (`life_goals`, `life_goal_pictures`, the made-by trigger reused from tasks,
   the purge, and the private `life-goal-pictures` bucket with four Storage policies on the owner's
-  folder), its fixtures and 19 pgTAP checks. Replica migration 0015 with a fixture; both tables in
+  folder), its fixtures and 19 pgTAP checks. Replica migration 0017 with a fixture; both tables in
   `synced-tables.json` and the backup order.
 - `contracts/vectors/life-goals.json`, made by a reference script and checked by hand, with
   `LifeGoalRules` and `WhyReminder` in Kotlin and C# (every group) and `rules/lifeGoals.ts` (time

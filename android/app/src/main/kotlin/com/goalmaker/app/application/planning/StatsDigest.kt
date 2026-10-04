@@ -11,9 +11,17 @@ data class StatsDigest(
     val months: List<Month> = emptyList(),
     val habits: List<Habit> = emptyList(),
     val ratings: List<Rating> = emptyList(),
+    /** The project work over the weeks on show, per project, most first. */
+    val byProject: List<ProjectDone> = emptyList(),
 ) {
     /** Tasks finished over the weeks on show. */
     val done: Int get() = weeks.sumOf(Week::done)
+
+    /** How many of them were project work: items of a project that is still there. */
+    val projectWork: Int get() = weeks.sumOf(Week::project)
+
+    /** And how many were everything else. */
+    val otherWork: Int get() = done - projectWork
 
     /** What that works out at a week. */
     val perWeek: Double get() = if (weeks.isEmpty()) 0.0 else done.toDouble() / weeks.size
@@ -34,8 +42,16 @@ data class StatsDigest(
     /** Whether there is nothing to show yet, so the screen can say so instead of drawing empty charts. */
     val empty: Boolean get() = done == 0 && goalsTotal == 0 && habits.isEmpty() && ratings.isEmpty()
 
-    /** One column of the tasks chart: the Monday it starts on and what was finished that week. */
-    data class Week(val start: LocalDate, val done: Int)
+    /**
+     * One column of the tasks chart: the Monday it starts on, what was finished that week and how
+     * much of it was [project] work.
+     */
+    data class Week(val start: LocalDate, val done: Int, val project: Int = 0) {
+        val other: Int get() = done - project
+    }
+
+    /** One project's finished items over the weeks on show. */
+    data class ProjectDone(val id: String, val name: String, val done: Int)
 
     /** One column of the goals chart: the first of the month, the goals it held and how many were hit. */
     data class Month(val start: LocalDate, val hit: Int, val total: Int) {

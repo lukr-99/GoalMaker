@@ -62,6 +62,8 @@ public sealed record SettingsDocument
     /// <summary>The ladder or the list; missing from older files reads as the ladder.</summary>
     public GoalsView GoalsView { get; init; } = GoalsView.Ladder;
 
+    public int? NewYearDismissed { get; init; }
+
     public string? WeeklyBackupFolder { get; init; }
 
     public DateTimeOffset? WeeklyBackupWritten { get; init; }

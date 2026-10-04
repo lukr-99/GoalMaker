@@ -1,4 +1,4 @@
--- 0021: life goals and their pictures (spec: stories 114 to 119; docs/life-goals.md; ADR 0018; M9-01).
+-- 0023: life goals and their pictures (spec: stories 114 to 119; docs/life-goals.md; ADR 0018; M9-01).
 --
 -- A life goal is something the owner wants in their life in the long run, with why it matters, an
 -- optional by date and pictures. It stands outside the goal cascade: no horizon, period or pace. It is

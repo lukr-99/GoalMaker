@@ -104,6 +104,24 @@ public sealed class CalendarViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AProjectItemOnTheDayWearsItsProjectsChip()
+    {
+        Plan("Fix the build +GoalMaker", Today);
+        Plan("Call the bank", Today);
+        var opened = new List<string>();
+        var page = Page(opened.Add);
+
+        page.Open(Today);
+
+        var item = page.DayEntries.Single(entry => entry.Title == "Fix the build");
+        Assert.True(item.HasProject);
+        Assert.Equal("GoalMaker", item.Project!.Name);
+        Assert.False(page.DayEntries.Single(entry => entry.Title == "Call the bank").HasProject);
+        item.Project.OpenCommand.Execute(null);
+        Assert.Equal([planner.Projects.Find("GoalMaker")!.Id], opened);
+    }
+
+    [Fact]
     public void PickingTheSameDayAgainClosesIt()
     {
         var page = Page();
@@ -116,6 +134,41 @@ public sealed class CalendarViewModelTests : IDisposable
         Assert.Empty(page.DayEntries);
     }
 
+    [Fact]
+    public void AnAreaNarrowsTheGridAndTheDayAndAProjectItemTakesItsProjectsArea()
+    {
+        Plan("Fix the shelf @Home", Today);
+        Plan("Send the invoice @Work", Today);
+        var item = Plan("Ship the board", Today);
+        var project = planner.Projects.Add(new ProjectDraft("GoalMaker") { AreaId = planner.Areas.Find("Work")!.Id })!;
+        planner.Tasks.SetProject(item.Id, project.Id, ProjectRules.Task);
+        var page = Page();
+        Assert.Equal(3, page.Cells.Single(cell => cell.Day == Today).Count);
+
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Label == "Work");
+        page.Open(Today);
+
+        Assert.Equal(2, page.Cells.Single(cell => cell.Day == Today).Count);
+        Assert.Equal(["Send the invoice", "Ship the board"], page.DayEntries.Select(entry => entry.Title).Order());
+    }
+
+    [Fact]
+    public void ATagNarrowsTheDeadlinesAndShowEverythingLetsGo()
+    {
+        var stamps = Plan("Buy stamps #errand", Today);
+        var report = Plan("Write the report", Today);
+        planner.Tasks.SetDeadline(stamps.Id, Today.AddDays(2));
+        planner.Tasks.SetDeadline(report.Id, Today.AddDays(2));
+        var page = Page();
+
+        page.Filters.SelectedTag = page.Filters.TagChoices.Single(tag => tag.Label == "#errand");
+        page.Open(Today.AddDays(2));
+        Assert.Equal(["Buy stamps"], page.DayEntries.Select(entry => entry.Title));
+
+        page.Filters.ClearCommand.Execute(null);
+        Assert.Equal(["Buy stamps", "Write the report"], page.DayEntries.Select(entry => entry.Title).Order());
+    }
+
     private TaskItem Plan(string line, DateOnly day)
     {
         var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
@@ -123,12 +176,65 @@ public sealed class CalendarViewModelTests : IDisposable
         return planner.Tasks.Find(task.Id)!;
     }
 
-    private CalendarViewModel Page() => new(
+    [Fact]
+    public void ADayGoneByListsItsHabitsAndACheckInOrAFailLandsOnThatDay()
+    {
+        var read = planner.Habits.Add(new HabitDraft("Read", new DateOnly(2026, 9, 1)))!;
+        planner.Habits.Add(new HabitDraft("Floss", new DateOnly(2026, 9, 1)));
+        var monday = new DateOnly(2026, 9, 14);
+        var page = Page(habits: true);
+        page.Open(monday);
+
+        Assert.Equal(["Read", "Floss"], page.DayHabits.Select(row => row.Name));
+        page.DayHabits.Single(row => row.Name == "Read").CheckInCommand.Execute(null);
+        page.DayHabits.Single(row => row.Name == "Floss").FailCommand.Execute(null);
+
+        Assert.True(page.DayHabits.Single(row => row.Name == "Read").IsDone);
+        Assert.True(page.DayHabits.Single(row => row.Name == "Floss").IsFailed);
+        Assert.All(planner.Habits.Checkins(), checkin => Assert.Equal(monday, checkin.Day));
+        Assert.Equal(HabitStanding.Left, HabitRules.Standing(read, Today, planner.Habits.Checkins(), []));
+    }
+
+    [Fact]
+    public void ADayToComeHasNoHabitsToCheckIn()
+    {
+        planner.Habits.Add(new HabitDraft("Read", new DateOnly(2026, 9, 1)));
+        var page = Page(habits: true);
+        page.Open(Today.AddDays(2));
+
+        Assert.False(page.HasDayHabits);
+    }
+
+    [Fact]
+    public void ATaskTickedOffOnADayGoneByIsDoneOnThatDay()
+    {
+        var monday = new DateOnly(2026, 9, 14);
+        var rent = Plan("Pay the rent", monday);
+        var page = Page();
+        page.Open(monday);
+
+        var entry = page.DayEntries.Single();
+        Assert.True(entry.CanTick);
+        entry.ToggleDoneCommand.Execute(null);
+
+        Assert.Equal(TaskState.Done, planner.Tasks.Find(rent.Id)!.State);
+        Assert.StartsWith("2026-09-14T12:00:00", planner.Tasks.Find(rent.Id)!.CompletedAt);
+        Assert.True(page.DayEntries.Single().Done);
+    }
+
+    private CalendarViewModel Page(Action<string>? openProject = null, bool habits = false) => new(
         planner.Tasks,
         planner.Reminders,
+        planner.Areas,
+        planner.Tags,
+        planner.Projects,
         planner.Settings,
         planner.Strings,
+        _ => null,
         planner.Time,
         _ => { },
-        action => action());
+        action => action(),
+        openProject,
+        habits ? new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, planner.Strings, planner.Time, () => true, action => action()) : null,
+        habits ? planner.Habits : null);
 }

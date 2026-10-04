@@ -38,6 +38,33 @@ and the end counts as outside, so a reminder due at exactly 07:00 is not held.
 An **important** reminder ignores quiet hours (spec, story 57). It fires at its own time and keeps
 ringing until it is handled.
 
+## Do Not Disturb
+
+Quiet hours are GoalMaker's own; the device's Do Not Disturb is the system's, and only the owner can
+let a reminder through it.
+
+On **Android**, important reminders have their own notification channel (id `reminders_important`,
+category reminder, high importance, ringing insistently). Do Not Disturb silences that channel too
+until its **Override Do Not Disturb** switch is on, and Android lets only the owner turn it on: an
+app can set a channel's override itself only while it holds Do Not Disturb access, which would let
+GoalMaker switch Do Not Disturb on and off, far more than it needs. So Settings, Planning, has an
+**Important reminders in Do Not Disturb** row that says where it stands (allowed, silenced, the
+channel switched off, or GoalMaker's notifications off) and opens the channel's own system page to
+change it, or the app's notification page while notifications are off altogether; it asks the phone
+again when the owner comes back. The channel keeps its id, so the owner's choice lasts across
+updates. An override lets the reminder through Do Not Disturb's priority setting; a "total silence"
+or "alarms only" setting still holds it back. The reminder stays in the reminder category rather
+than posing as an alarm (which Do Not Disturb lets through by default) because it is not an alarm
+clock, and it has no full-screen intent: it should ring, not take over the screen. Ordinary
+reminders keep their own channel and follow Do Not Disturb.
+
+On **Windows**, an important reminder's toast uses the alarm scenario with a looping alarm sound,
+and an ordinary one the reminder scenario. Windows' Do not disturb lets alarms through, and lets
+reminders through while "Show reminders, regardless of app used" is on under Set priority
+notifications, so nothing more is needed there. The urgent scenario was left alone: it needs a
+recent Windows 11 build and the owner's per-app consent, and the alarm scenario already rings
+through.
+
 ## Snooze
 
 A notification offers Done and the snoozes below. Windows shows all of them on the toast. Android
@@ -89,6 +116,42 @@ one alarm with task reminders, so whichever comes first is armed. It offers **Pl
 ritual, and **Not today**, which records the day as skipped. Reaching the ritual's summary card
 records it as done. On Android it has its own notification channel, so the owner can silence it
 apart from task reminders.
+
+## Habit reminders
+
+A habit can remind at a time of day the owner sets in its form (**Remind me**, 20:00 until changed;
+`habits.remind_at`, a local time, null for none). It rings once per planning day at that time, the way
+the Plan tomorrow reminder does (00:30 with a 04:00 day start still belongs to the evening before),
+and quiet hours don't move it. It rings only while the habit is still **left** that day
+([habits](habits.md#where-a-habit-stands-today)): a habit done, skipped, failed, paused, not due or
+not started yet stays quiet, and a limit never reminds. Pinned by the `habitReminders` and
+`habitReminderStale` groups of
+[`contracts/vectors/reminders.json`](../contracts/vectors/reminders.json).
+
+Each habit due gets a notification of its own: its emoji and name, and where it stands, "Still to do
+today" for a check, "4 of 8 glasses today" for a count or an amount, "1 of 3 this week" for a weekly
+or monthly habit. Its buttons, the same words on both apps:
+
+| Habit | Buttons |
+|---|---|
+| a check | **Check in**, which checks it in for the day |
+| a count | **+1**, which adds one to the day's value |
+| an amount | **Log**, which opens the app on the Habits page with the habit's log asking for the value |
+| any | **Skip today**, **Skip this week** or **Skip this month**, which skips the period holding the day |
+
+Clicking the notification itself opens the Habits page. A button writes the day's one check-in like
+the card's button does, so it syncs like any other, arms the next alarm and takes the notification
+down. Swiping it away writes nothing.
+
+The habit reminders share the device's one alarm, so the next of all the reminders is the one armed.
+On **Android** they have their own notification channel, **Habits** (id `habits`), so the owner can
+silence habit reminders apart from task reminders; the other channels keep their ids. Each
+notification is tagged with the habit's id and its planning day. On **Windows** the toast uses the
+default scenario, like the Plan tomorrow toast, and its buttons carry the habit's id and day.
+
+After every sync a device takes down each habit reminder that has gone stale: the habit was checked
+in, skipped, failed or paused here or on the other device so it is no longer left, its reminder was
+switched off, it was deleted, or the planning day moved on.
 
 ## Two devices
 

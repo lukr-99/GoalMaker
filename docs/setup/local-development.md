@@ -102,6 +102,23 @@ A side-by-side dev installer ("GoalMaker Dev") for testing the installer itself:
 powershell -File windows\installer\build-installer.ps1 -Dev
 ```
 
+## UI tests
+
+Two kinds, besides the unit tests (spec, "Testing Decisions"):
+
+- **Compose screen tests** (Android): `ui/*/*ScreenTest.kt` host the real screens under Robolectric
+  over a real replica on a throwaway file (`ui/ScreenPlanner`), with the clock fixed at noon on
+  Friday 18 September 2026, disk work on Unconfined and motion reduced (`ui/ScreenTheme`). They run
+  with the rest: `android\gradlew.bat -p android testDebugUnitTest`, or only them with
+  `--tests "*ScreenTest"`.
+- **Start-up smoke test** (Windows): `windows/tests/GoalMaker.App.SmokeTests` starts GoalMaker the
+  way `App.xaml.cs` starts a dev build, over a throwaway data folder: the resources, `AppGraph`,
+  `Shell/AppShell` (the tray icon, the quick-add box, the main window), the session coming back and
+  every page opened. The window shows for a few seconds without taking the focus. It runs with the
+  other tests; `dotnet test --project tests/GoalMaker.App.Tests` (from `windows`) skips it. While it
+  runs it registers the dev build's toast name and clears the dev build's toasts on the way out, as
+  a dev build quitting does.
+
 ## Checking both apps together
 
 Run this after changing sync or reminders. Dev builds keep to themselves, so turn signing in on in

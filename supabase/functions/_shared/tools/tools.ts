@@ -53,6 +53,7 @@ import {
 import { seriesOf } from "../rules/occurrences.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
 import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
+import { newYear, type NewYearNudge } from "../rules/reviews.ts";
 import * as format from "./format.ts";
 import { digestTools } from "./digestTools.ts";
 import { tallyTools } from "./tallyTools.ts";
@@ -229,7 +230,19 @@ async function habitFields(planner: Planner, args: Record<string, unknown>): Pro
     startsOn: (await dayFrom(planner, args.starts_on as string | undefined)) ?? undefined,
     archived: args.archived as boolean | undefined,
     showOnToday: args.show_on_today as boolean | undefined,
+    remindAt: remindTime(args.remind_at as string | undefined),
   };
+}
+
+/** A habit's reminder time as typed: "20:30" or "8:05"; empty is none, and undefined leaves it. */
+function remindTime(text: string | undefined): string | null | undefined {
+  if (text === undefined) return undefined;
+  if (text.trim() === "") return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
+  if (match === null || Number(match[1]) > 23 || Number(match[2]) > 59) {
+    throw new PlannerError(`"${text}" isn't a time: use one like 20:30.`);
+  }
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
 }
 
 /**
@@ -239,7 +252,7 @@ async function habitFields(planner: Planner, args: Record<string, unknown>): Pro
 function habitView(habit: Habit, day: Day, own: HabitCheckin[], rests: HabitPause[]): format.HabitView {
   const start = habitPeriodStart(habit, day);
   const end = habitPeriodEnd(habit, start);
-  const live = own.filter((checkin) => !checkin.deleted && !checkin.skipped);
+  const live = own.filter((checkin) => !checkin.deleted && !checkin.skipped && checkin.failed !== true);
   return {
     standing: standing(habit, day, own, rests),
     value: live.find((checkin) => checkin.day === day)?.value ?? 0,
@@ -287,6 +300,10 @@ const HABIT_GROUPS: [HabitGroup, string][] = [["days", "Every day"], ["weekly", 
 
 const goalId = z.string().describe("The goal's id, from get_goals.");
 const habitId = z.string().describe("The habit's id, from get_habits.");
+const remindAt = z.string().describe(
+  'The local time it reminds on the days it is due and still left, like "20:30"; empty for no reminder. ' +
+    "Its notification checks in, adds one or skips.",
+);
 const showOnToday = z.boolean().describe(
   "false keeps the habit off Today and its widgets. It still counts, keeps its streak and is checked in on the " +
     "Habits page. Not a pause: its days still count.",
@@ -349,6 +366,25 @@ async function line(planner: Planner, taskId: string): Promise<string> {
   return task === null ? "" : format.taskLine(task, await namesOf(planner), { showDay: true });
 }
 
+/**
+ * The January nudge as the connector sees it (docs/reviews.md): this year's year goals and last year's
+ * yearly review. Putting it away with Not now is kept on each device, so the connector never counts it.
+ */
+async function newYearOf(planner: Planner, today: Day): Promise<NewYearNudge | null> {
+  if (today.slice(5, 7) !== "01") return null;
+  const year = today.slice(0, 4);
+  const yearGoals =
+    (await planner.goals()).filter((goal) =>
+      !goal.deleted && goal.horizon === "year" && goal.periodStart === `${year}-01-01` && goal.status !== "dropped"
+    ).length;
+  const [last] = await planner.reviews("yearly", 1, `${Number(year) - 1}-01-01`);
+  const reviewed = last !== undefined && last.periodStart === `${Number(year) - 1}-01-01` && (
+    last.summary.trim() !== "" || last.mood !== null || last.energy !== null ||
+    last.reflections.some((one) => one.answer.trim() !== "")
+  );
+  return newYear(today, yearGoals, reviewed, null);
+}
+
 export const tools: Tool[] = [
   {
     name: "get_today",
@@ -357,17 +393,20 @@ export const tools: Tool[] = [
       "The owner's Today list as GoalMaker shows it: top priorities, scheduled tasks by time, more, and overdue " +
       "tasks from earlier days, with how many of today's tasks are done, then today's habits. A habit the owner " +
       "keeps off Today is only counted; get_habits shows it. Today is the owner's planning day, which starts at " +
-      "their day-start hour, not midnight.",
+      "their day-start hour, not midnight. In January it also says when last year has no yearly review or this " +
+      "year no year goals yet (the apps' January nudge).",
     input: {},
     readOnly: true,
     destructive: false,
     run: async (planner) => {
       const { today } = await planner.now();
-      return format.today(
+      const text = format.today(
         lists(await planner.tasks(), today),
         await namesOf(planner),
         await todayHabits(planner, today),
       );
+      const nudge = await newYearOf(planner, today);
+      return nudge === null ? text : `${text}\n\n${format.newYearLine(nudge)}`;
     },
   },
   {
@@ -1028,7 +1067,7 @@ export const tools: Tool[] = [
     title: "Habits",
     description:
       "The owner's habits as the Habits screen shows them, grouped into Every day, Weekly and Limits: how often " +
-      "each one asks, where it stands on the day (done, left, skipped, paused, a limit with its count, or not " +
+      "each one asks, where it stands on the day (done, left, skipped, failed, paused, a limit with its count, or not " +
       "due), the streak it is on and the goal it serves. A habit kept off Today says not on Today. Archived " +
       "habits are left out.",
     input: {
@@ -1114,6 +1153,27 @@ export const tools: Tool[] = [
     },
   },
   {
+    name: "fail_habit",
+    title: "Fail a habit",
+    description:
+      "Fails a habit's period: the owner says it won't happen, so it is missed at once, today included, and " +
+      "its streak ends. A skip is for a day off; this is for a slip. Checking in or skipping takes the fail " +
+      "back too. Set failed to false to take it back and leave the day empty.",
+    input: {
+      id: habitId,
+      day: z.string().optional().describe("A day in the period that failed. Today by default."),
+      failed: z.boolean().optional().describe("True by default."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
+      const failed = args.failed !== false;
+      const habit = await planner.failHabit(args.id, day, failed);
+      return failed ? `${habit.name} failed on ${day}.` : `${habit.name} is no longer failed on ${day}.`;
+    },
+  },
+  {
     name: "add_habit",
     title: "Add a habit",
     description:
@@ -1142,6 +1202,7 @@ export const tools: Tool[] = [
         "The first day it counts from; today by default. Streaks never reach back past it.",
       ),
       show_on_today: showOnToday.optional().describe("true by default."),
+      remind_at: remindAt.optional().describe("No reminder by default."),
     },
     readOnly: false,
     destructive: false,
@@ -1171,7 +1232,7 @@ export const tools: Tool[] = [
     title: "Edit a habit",
     description:
       "Changes a habit's name, emoji, cadence, measure, target, unit, direction, the goal it serves, the day it " +
-      "starts from or whether it shows on Today, and archives it or brings it back. What is left out stays as it " +
+      "starts from, whether it shows on Today or when it reminds, and archives it or brings it back. What is left out stays as it " +
       "was. Its check-ins are kept.",
     input: {
       id: habitId,
@@ -1188,6 +1249,7 @@ export const tools: Tool[] = [
       starts_on: day.optional(),
       archived: z.boolean().optional().describe("true puts it away, false brings it back."),
       show_on_today: showOnToday.optional(),
+      remind_at: remindAt.optional(),
     },
     readOnly: false,
     destructive: false,
@@ -1725,13 +1787,13 @@ export const tools: Tool[] = [
     name: "save_review_summary",
     title: "Save a review summary",
     description:
-      "Saves the summary of a weekly or monthly review (a few sentences: wins, lessons, focus), for the week or " +
-      "month that contains the given day. Saving again for the same period replaces the summary. It is also the " +
+      "Saves the summary of a weekly, monthly or yearly review (a few sentences: wins, lessons, focus), for the " +
+      "week, month or year that contains the given day. Saving again for the same period replaces the summary. It is also the " +
       "Letter: a scheduled routine that wrote the owner a letter about the week from get_review_digest saves it " +
       "here, with period set to the digest's period start, and both apps show it before the review.",
     input: {
-      kind: z.enum(["weekly", "monthly"]).describe("weekly or monthly."),
-      period: day.optional().describe("Any day in the week or month; today by default."),
+      kind: z.enum(["weekly", "monthly", "yearly"]).describe("weekly, monthly or yearly."),
+      period: day.optional().describe("Any day in the week, month or year; today by default."),
       summary: z.string().describe("The summary, plain text or light Markdown."),
       mood: z.number().int().optional().describe("How the period felt, 1 (low) to 5 (great), if the owner said."),
       energy: z.number().int().optional().describe("The owner's energy, 1 (low) to 5 (high), if they said."),
@@ -1756,9 +1818,10 @@ export const tools: Tool[] = [
   {
     name: "get_review_summaries",
     title: "Past review summaries",
-    description: "The latest weekly and monthly review summaries, newest first, to compare with earlier periods.",
+    description:
+      "The latest weekly, monthly and yearly review summaries, newest first, to compare with earlier periods.",
     input: {
-      kind: z.enum(["weekly", "monthly"]).optional().describe("Only this kind."),
+      kind: z.enum(["weekly", "monthly", "yearly"]).optional().describe("Only this kind."),
       limit: z.number().int().min(1).max(20).optional().describe("How many; 5 by default."),
     },
     readOnly: true,

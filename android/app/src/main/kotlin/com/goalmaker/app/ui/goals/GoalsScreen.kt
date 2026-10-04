@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
@@ -322,7 +323,7 @@ private fun RungHeader(section: GoalSection, today: LocalDate) {
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(24.dp).background(AppTheme.colors.accent, RoundedCornerShape(8.dp)),
+            modifier = Modifier.sizeIn(minWidth = 24.dp, minHeight = 24.dp).background(AppTheme.colors.accent, RoundedCornerShape(8.dp)),
         ) {
             Text(stringResource(section.horizon.badge()), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Black, color = AppTheme.colors.onAccent)
         }

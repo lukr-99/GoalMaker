@@ -68,6 +68,17 @@ class MainActivity : FragmentActivity() {
             graph.openedForWants()
             intent.removeExtra(ReminderAlarm.EXTRA_OPEN_WANTS)
         }
+        if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_HABITS, false)) {
+            graph.openedForHabits(
+                habitId = intent.getStringExtra(ReminderAlarm.EXTRA_HABIT_ID),
+                day = intent.getStringExtra(ReminderAlarm.EXTRA_HABIT_DAY)?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() },
+                log = intent.getBooleanExtra(ReminderAlarm.EXTRA_LOG_HABIT, false),
+            )
+            intent.removeExtra(ReminderAlarm.EXTRA_OPEN_HABITS)
+            intent.removeExtra(ReminderAlarm.EXTRA_HABIT_ID)
+            intent.removeExtra(ReminderAlarm.EXTRA_HABIT_DAY)
+            intent.removeExtra(ReminderAlarm.EXTRA_LOG_HABIT)
+        }
         if (intent.getBooleanExtra(WidgetOpen.EXTRA_OPEN_GOALS, false)) {
             graph.openedForGoals()
             intent.removeExtra(WidgetOpen.EXTRA_OPEN_GOALS)

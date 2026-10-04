@@ -79,6 +79,11 @@ interface SettingsStore : UpdateMemory {
 
     fun setGoalsView(view: GoalsView)
 
+    /** The year the January nudge was last put away with Not now on this phone (docs/reviews.md); null for never. */
+    val newYearDismissed: StateFlow<Int?>
+
+    fun setNewYearDismissed(year: Int)
+
     /** Whether the composer quick-adds or chats (spec, "Quick chat (M7)"); quick-add unless changed. */
     val composerMode: StateFlow<ComposerMode>
 

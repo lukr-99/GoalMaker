@@ -217,7 +217,8 @@ public sealed class HabitRulesContractTests
             checkin.TryGetProperty("habitId", out var habitId) ? habitId.GetString()! : "h",
             Day(checkin, "day"),
             checkin.GetProperty("value").GetDouble(),
-            checkin.GetProperty("skipped").GetBoolean())).ToList();
+            checkin.GetProperty("skipped").GetBoolean(),
+            Failed: checkin.TryGetProperty("failed", out var failed) && failed.GetBoolean())).ToList();
 
     private static List<HabitPause> Pauses(JsonElement testCase) =>
         testCase.GetProperty("pauses").EnumerateArray().Select((pause, index) => new HabitPause(

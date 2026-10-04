@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "description": "The six-digit sign-in code (docs/sign-in.md, supabase/config.toml otp_length). 'parse': what the code box accepts as typed: six ASCII digits, spaces between them allowed, nothing else; null otherwise. 'find': the code in text copied from somewhere else (the email's notification, its subject, the email itself), so the sign-in screen can take it from the clipboard: the one run of six digits that stands alone (not part of a longer run of digits, letters or a time like 10:30 on either side), optionally split once by a space or a dash as 123 456 or 123-456. Null when there is none, or when the text holds two different codes, since guessing could sign in with the wrong one; the same code twice is fine.",
+  "parse": [
+    { "text": "123456", "expect": "123456" },
+    { "text": " 123 456 ", "expect": "123456" },
+    { "text": "12345", "expect": null },
+    { "text": "1234567", "expect": null },
+    { "text": "12345a", "expect": null },
+    { "text": "١٢٣٤٥٦", "expect": null },
+    { "text": "", "expect": null }
+  ],
+  "find": [
+    { "name": "the subject line", "text": "482913 is your GoalMaker code", "expect": "482913" },
+    { "name": "the verification code subject", "text": "Your GoalMaker verification code is 482913", "expect": "482913" },
+    { "name": "the code alone", "text": "482913", "expect": "482913" },
+    { "name": "a sentence around it", "text": "Your sign-in code is 482913. It works for 10 minutes.", "expect": "482913" },
+    { "name": "grouped with a space", "text": "Code: 482 913", "expect": "482913" },
+    { "name": "grouped with a dash", "text": "Code: 482-913", "expect": "482913" },
+    { "name": "the same code twice", "text": "482913 is your GoalMaker code. Your sign-in code is 482913.", "expect": "482913" },
+    { "name": "two different codes", "text": "482913 or 571004", "expect": null },
+    { "name": "a longer number is not a code", "text": "Order 4829130 shipped", "expect": null },
+    { "name": "digits glued to letters are not a code", "text": "ref A482913", "expect": null },
+    { "name": "a year and a time are not codes", "text": "Sent 2026-10-03 at 10:30", "expect": null },
+    { "name": "a phone number is not a code", "text": "Call +420 777 123 456", "expect": null },
+    { "name": "nothing", "text": "Hello", "expect": null },
+    { "name": "new lines are spaces", "text": "Your code\n482913\n", "expect": "482913" }
+  ]
+}

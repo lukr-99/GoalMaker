@@ -20,15 +20,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Inventory2
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
-import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material3.AlertDialog
@@ -62,7 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
@@ -71,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.ProjectColumn
 import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectItem
@@ -81,6 +78,7 @@ import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.lists.UndoEvent
 import com.goalmaker.app.ui.nav.AppMark
@@ -140,7 +138,7 @@ fun ProjectsScreen(
             verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
-            if (state.projects.isEmpty()) {
+            if (!state.anyProject) {
                 item("empty") {
                     Text(
                         stringResource(R.string.projects_empty),
@@ -158,10 +156,24 @@ fun ProjectsScreen(
                 return@LazyColumn
             }
 
+            // The area and tag filter narrows the projects and the board, as it narrows the lists.
+            item("filter") {
+                ListFilterRow(state.filter, onArea = viewModel::filterByArea, onTag = viewModel::filterByTag)
+            }
+
             item("picker") {
                 // A new project starts beside the picker, where the projects are chosen.
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProjectPicker(state, onPick = viewModel::select, modifier = Modifier.weight(1f))
+                    if (state.projects.isEmpty()) {
+                        Text(
+                            stringResource(R.string.projects_none_match),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AppTheme.colors.textMuted,
+                            modifier = Modifier.weight(1f).padding(8.dp),
+                        )
+                    } else {
+                        ProjectPicker(state, onPick = viewModel::select, modifier = Modifier.weight(1f))
+                    }
                     IconButton(onClick = { adding = true }) {
                         Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.projects_add))
                     }
@@ -250,6 +262,8 @@ fun ProjectsScreen(
     if (adding || editing != null) {
         ProjectDialog(
             project = editing,
+            areas = state.filter.areas,
+            newArea = state.filter.filter.areaId,
             onSave = { draft, archiveAfterDays ->
                 val current = editing
                 if (current == null) {
@@ -530,15 +544,15 @@ private fun ItemRow(
             // An idea and a bug carry their own icon and colour, so a board reads at a glance.
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    typeIcon(task.itemType),
+                    ItemTypeLook.icon(task.itemType),
                     contentDescription = null,
-                    tint = typeColor(task.itemType),
+                    tint = ItemTypeLook.color(task.itemType),
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
                     typeName(task.itemType),
                     style = MaterialTheme.typography.labelSmall,
-                    color = typeColor(task.itemType),
+                    color = ItemTypeLook.color(task.itemType),
                     modifier = Modifier.padding(start = 4.dp),
                 )
                 task.plannedDate?.let { day ->
@@ -605,6 +619,8 @@ private fun ItemRow(
 @Composable
 private fun ProjectDialog(
     project: ProjectItem?,
+    areas: List<AreaItem>,
+    newArea: String?,
     onSave: (ProjectDraft, Int?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
@@ -614,6 +630,8 @@ private fun ProjectDialog(
     var repository by remember { mutableStateOf(project?.repositoryUrl.orEmpty()) }
     var folder by remember { mutableStateOf(project?.localFolder.orEmpty()) }
     var status by remember { mutableStateOf(project?.status ?: ProjectRules.ACTIVE) }
+    // A new project made while an area filter is on starts in that area, so it stays in sight.
+    var area by remember { mutableStateOf(if (project == null) newArea else project.areaId) }
     var archiveAfterDays by remember { mutableStateOf(if (project == null) ProjectRules.ARCHIVE_AFTER_DAYS else project.archiveAfterDays) }
 
     AlertDialog(
@@ -629,6 +647,18 @@ private fun ProjectDialog(
                     listOf(ProjectRules.ACTIVE, ProjectRules.PAUSED, ProjectRules.PROJECT_DONE).forEach { choice ->
                         ChoiceChip(selected = status == choice, onClick = { status = choice }, label = statusName(choice))
                     }
+                }
+                // The project's area: its items without one of their own count as in it (docs/projects.md).
+                if (areas.isNotEmpty()) {
+                    Choices(
+                        R.string.projects_area,
+                        listOf(NO_AREA) + areas.map(AreaItem::id),
+                        area ?: NO_AREA,
+                        { choice ->
+                            areas.firstOrNull { it.id == choice }?.let { listOfNotNull(it.emoji, it.name).joinToString(" ") }
+                                ?: stringResource(R.string.projects_no_area)
+                        },
+                    ) { choice -> area = choice.takeUnless { it == NO_AREA } }
                 }
                 // A number set elsewhere, say by Claude, stays one of the choices rather than being lost.
                 val days = (ARCHIVE_CHOICES + listOfNotNull(project?.archiveAfterDays)).distinct().sorted()
@@ -658,7 +688,7 @@ private fun ProjectDialog(
                         ProjectDraft(
                             name = name,
                             description = description,
-                            areaId = project?.areaId,
+                            areaId = area,
                             status = status,
                             repositoryUrl = repository.ifBlank { null },
                             localFolder = folder.ifBlank { null },
@@ -742,6 +772,7 @@ private fun Field(value: String, onChange: (String) -> Unit, label: Int) {
 /** The days offered for how long done items stay on the board, besides never (docs/projects.md). */
 private val ARCHIVE_CHOICES = listOf(7, 14, 30, 90)
 private const val NEVER = "never"
+private const val NO_AREA = ""
 
 @Composable
 private fun archiveChoiceName(choice: String): String = choice.toIntOrNull()
@@ -775,21 +806,6 @@ private fun makerName(filter: String): String = stringResource(
         else -> R.string.projects_made_by_all
     },
 )
-
-/** The icon an item's type wears on the board: a bug, a lightbulb, or a plain task. */
-private fun typeIcon(itemType: String): ImageVector = when (itemType) {
-    ProjectRules.IDEA -> Icons.Outlined.Lightbulb
-    ProjectRules.BUG -> Icons.Outlined.BugReport
-    else -> Icons.Outlined.TaskAlt
-}
-
-/** A bug reads as a problem, an idea as something to pick up, and a task keeps the quiet colour. */
-@Composable
-private fun typeColor(itemType: String): Color = when (itemType) {
-    ProjectRules.IDEA -> AppTheme.colors.accent
-    ProjectRules.BUG -> AppTheme.colors.danger
-    else -> AppTheme.colors.textMuted
-}
 
 @Composable
 private fun priorityName(priority: String): String = stringResource(

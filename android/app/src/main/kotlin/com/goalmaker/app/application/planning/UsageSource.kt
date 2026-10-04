@@ -15,4 +15,7 @@ interface UsageSource {
      * the screen goes off or the lock screen shows. Null when usage access isn't granted.
      */
     fun foreground(from: Instant, to: Instant): List<UsageInterval>?
+
+    /** The name an app shows under its icon, for the Tally place's apps; null when the phone doesn't know the package. */
+    fun appName(app: String): String?
 }

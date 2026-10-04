@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.planning
 
 import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * A habit as the owner typed it, before [HabitList] cleans it: the fields that don't fit the cadence
@@ -19,4 +20,5 @@ data class HabitDraft(
     val emoji: String? = null,
     val goalId: String? = null,
     val showOnToday: Boolean = true,
+    val remindAt: LocalTime? = null,
 )

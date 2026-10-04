@@ -28,13 +28,13 @@
                     MinHeight="{DynamicResource GM.RowMinHeight}"
                     CornerRadius="{DynamicResource GM.RowCorner}"
                     Background="{DynamicResource GM.SurfaceBrush}">
-                <DockPanel>
+                <DockPanel KeyboardNavigation.TabNavigation="Local">
                     <ui:Button DockPanel.Dock="Right" Padding="6" Appearance="Transparent" Command="{Binding DeleteCommand}"
                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}"
                                ToolTip="{DynamicResource Reviews.Delete}" AutomationProperties.Name="{DynamicResource Reviews.Delete}">
                         <ui:SymbolIcon Symbol="Delete24" />
                     </ui:Button>
-                    <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding OpenCommand}" Content="{Binding Action}"
+                    <ui:Button DockPanel.Dock="Right" TabIndex="0" Appearance="Transparent" Command="{Binding OpenCommand}" Content="{Binding Action}"
                                Foreground="{DynamicResource GM.AccentBrush}" />
                     <!-- A review with a letter carries an accent envelope. -->
                     <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Center" Symbol="Mail24"

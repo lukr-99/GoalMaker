@@ -18,9 +18,10 @@ import type { WantItem } from "./wants.ts";
  * One period of GoalMaker in one piece (docs/letter.md, contracts/vectors/reviews.json 'digest'):
  * what was done and what is left, the goals and habits, the board, what the period's facts call for,
  * the review so far and the last letter, what the next period holds, and the wants. The connector's
- * get_review_digest and its weekly and monthly review prompts are both built from it.
+ * get_review_digest and its weekly and monthly review prompts are both built from it; a yearly digest
+ * serves the yearly review (docs/reviews.md).
  */
-export type DigestKind = Extract<ReviewKind, "weekly" | "monthly">;
+export type DigestKind = ReviewKind;
 
 export interface DigestPeriod {
   kind: DigestKind;
@@ -115,13 +116,14 @@ export interface Digest {
 const SLIPPING_MOVES = 3;
 
 /** The goals' horizon a review of `kind` looks at. */
-export function horizonOf(kind: DigestKind): "week" | "month" {
-  return kind === "weekly" ? "week" : "month";
+export function horizonOf(kind: DigestKind): "week" | "month" | "year" {
+  return kind === "weekly" ? "week" : kind === "monthly" ? "month" : "year";
 }
 
 /** The last day of the period of `kind` that starts on `start`. */
 export function periodEnd(kind: DigestKind, start: Day): Day {
   if (kind === "weekly") return addDays(start, 6);
+  if (kind === "yearly") return `${start.slice(0, 4)}-12-31`;
   const [year, month] = start.split("-").map(Number);
   return addDays(new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10), -1);
 }

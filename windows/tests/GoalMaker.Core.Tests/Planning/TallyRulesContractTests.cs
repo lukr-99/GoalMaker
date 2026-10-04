@@ -137,6 +137,70 @@ public sealed class TallyRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryWindowLabel()
+    {
+        foreach (var testCase in vectors.GetProperty("window").EnumerateArray())
+        {
+            var actual = TallyBreakdown.WindowLabel(testCase.GetProperty("app").GetString()!, Text(testCase, "title"));
+            Assert.True(Text(testCase, "expect") == actual, Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryDayByTheHour()
+    {
+        foreach (var testCase in vectors.GetProperty("hours").EnumerateArray())
+        {
+            var startHour = testCase.GetProperty("startHour").GetInt32();
+            var hours = TallyBreakdown.Hours(Stretches(testCase), Day(testCase, "day"), startHour);
+            Assert.True(Enumerable.Range(0, 24).Select(index => (startHour + index) % 24).SequenceEqual(hours.Select(hour => hour.Hour)), Name(testCase));
+            Assert.True(hours.Where(hour => hour.Seconds == 0).All(hour => hour.Categories.Count == 0), Name(testCase));
+            var expected = testCase.GetProperty("expect").EnumerateArray().Select(hour =>
+                $"{hour.GetProperty("hour").GetInt32()} {hour.GetProperty("seconds").GetInt32()}: " +
+                string.Join(", ", hour.GetProperty("categories").EnumerateArray().Select(part => $"{part.GetProperty("category").GetString()} {part.GetProperty("seconds").GetInt32()}")));
+            var actual = hours.Where(hour => hour.Seconds > 0).Select(hour =>
+                $"{hour.Hour} {hour.Seconds}: " + string.Join(", ", hour.Categories.Select(part => $"{part.Category} {part.Seconds}")));
+            Assert.Equal(expected, actual);
+        }
+    }
+
+    [Fact]
+    public void EveryAppList()
+    {
+        foreach (var testCase in vectors.GetProperty("apps").EnumerateArray())
+        {
+            var actual = TallyBreakdown.Apps(Stretches(testCase), Day(testCase, "from"), Day(testCase, "to"), testCase.GetProperty("startHour").GetInt32());
+            var expected = testCase.GetProperty("expect").EnumerateArray().Select(group =>
+                $"{group.GetProperty("category").GetString()} {group.GetProperty("minutes").GetInt32()} [" +
+                string.Join("; ", group.GetProperty("apps").EnumerateArray().Select(app =>
+                    $"{app.GetProperty("app").GetString()} {app.GetProperty("minutes").GetInt32()} (" +
+                    string.Join(", ", app.GetProperty("windows").EnumerateArray().Select(window => $"{window.GetProperty("label").GetString()} {window.GetProperty("minutes").GetInt32()}")) + ")")) + "]");
+            var described = actual.Select(group =>
+                $"{group.Category} {group.Minutes} [" +
+                string.Join("; ", group.Apps.Select(app =>
+                    $"{app.App} {app.Minutes} (" + string.Join(", ", app.Windows.Select(window => $"{window.Label} {window.Minutes}")) + ")")) + "]");
+            Assert.Equal(expected, described);
+        }
+    }
+
+    [Fact]
+    public void EveryShippedCategoryHasItsOwnColor()
+    {
+        Assert.Equal(shipped.Categories.Count, shipped.Categories.Select(category => category.Color).Distinct().Count());
+        Assert.Equal(TallyRules.Other, shipped.Categories[^1].Id);
+    }
+
+    private static List<TallyStretch> Stretches(JsonElement testCase) =>
+    [
+        .. testCase.GetProperty("stretches").EnumerateArray().Select(stretch => new TallyStretch(
+            Moment(stretch, "start"),
+            Moment(stretch, "end"),
+            stretch.GetProperty("app").GetString()!,
+            Text(stretch, "title"),
+            stretch.GetProperty("category").GetString()!)),
+    ];
+
     private static List<TallyRule> Rules(JsonElement value) =>
     [
         .. value.EnumerateArray().Select(rule => new TallyRule(

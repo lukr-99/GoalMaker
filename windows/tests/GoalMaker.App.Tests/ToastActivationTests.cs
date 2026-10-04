@@ -23,6 +23,28 @@ public sealed class ToastActivationTests
     }
 
     [Theory]
+    [InlineData(ToastAction.Habit)]
+    [InlineData(ToastAction.HabitCheckIn)]
+    [InlineData(ToastAction.HabitSkip)]
+    [InlineData(ToastAction.HabitLog)]
+    public void AHabitReminderCarriesItsHabitAndDay(ToastAction action)
+    {
+        var activation = ToastActivation.Parse(new ToastActivation(action, Reminder + "/2026-09-18").Arguments);
+
+        Assert.Equal((Reminder, new DateOnly(2026, 9, 18)), activation!.Habit());
+    }
+
+    [Theory]
+    [InlineData("action=HabitSkip;reminder=abc")]
+    [InlineData("action=HabitSkip;reminder=/2026-09-18")]
+    [InlineData("action=HabitCheckIn;reminder=abc/18.9.2026")]
+    [InlineData("action=SkipReview;reminder=abc/2026-09-18")]
+    public void OnlyAHabitButtonWithAnIdAndADayNamesAHabit(string arguments)
+    {
+        Assert.Equal(string.Empty, ToastActivation.Parse(arguments)!.Habit().HabitId);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("action=done")]

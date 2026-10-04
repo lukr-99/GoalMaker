@@ -76,6 +76,7 @@ import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
+import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.chat.ChatViewModel
 import com.goalmaker.app.ui.components.AppSnackbarHost
@@ -94,6 +95,7 @@ import com.goalmaker.app.ui.habits.HabitSheet
 import com.goalmaker.app.ui.habits.HabitRow
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
@@ -118,6 +120,8 @@ fun ListsScreen(
     actions: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
     onOpenWant: (String) -> Unit = {},
+    onOpenReview: (String, LocalDate) -> Unit = { _, _ -> },
+    onOpenProject: ((String) -> Unit)? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -133,13 +137,13 @@ fun ListsScreen(
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
-    // A habit card's button: undo a skip, or check in; an amount asks for its value first.
+    // A habit card's button: undo a skip or a fail, or check in; an amount asks for its value first.
     fun checkInHabit(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
-        if (row.skipped) {
-            viewModel.skipHabit(row.habit.id, false)
-        } else {
-            scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
+        when {
+            row.skipped -> viewModel.skipHabit(row.habit.id, false)
+            row.failed -> viewModel.failHabit(row.habit.id, false)
+            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
         }
     }
 
@@ -169,6 +173,7 @@ fun ListsScreen(
                 onCheckIn = { checkInHabit(row) },
                 onLog = { logging = row.habit },
                 onSkip = { skipped -> viewModel.skipHabit(id, skipped) },
+                onFail = { failed -> viewModel.failHabit(id, failed) },
                 onClear = { viewModel.clearHabit(id) },
                 onPause = { viewModel.pauseHabit(id) },
                 onOpenHabits = onOpenHabits,
@@ -297,9 +302,11 @@ fun ListsScreen(
                                 onOpenTask = onOpenTask,
                                 onOpenGoals = onOpenGoals,
                                 onOpenHabits = onOpenHabits,
+                                onOpenReview = onOpenReview,
                                 onCheckInHabit = ::checkInHabit,
                                 onHabitMenu = { habitMenu = it.habit.id },
                                 onRemind = { remindFor = it },
+                                onOpenProject = onOpenProject,
                             )
                         }
                     }
@@ -322,9 +329,11 @@ private fun ListContent(
     onOpenTask: (String) -> Unit,
     onOpenGoals: () -> Unit,
     onOpenHabits: () -> Unit,
+    onOpenReview: (String, LocalDate) -> Unit,
     onCheckInHabit: (HabitRow) -> Unit,
     onHabitMenu: (HabitRow) -> Unit,
     onRemind: (TaskItem) -> Unit,
+    onOpenProject: ((String) -> Unit)?,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
     var goalsOpen by rememberSaveable { mutableStateOf(false) }
@@ -347,6 +356,8 @@ private fun ListContent(
                     reminded = task.id in state.reminded,
                     tick = tick,
                     modifier = Modifier.animateItem(),
+                    project = state.projectOf(task),
+                    onOpenProject = task.projectId?.let { id -> onOpenProject?.let { open -> { open(id) } } },
                 )
             }
         }
@@ -355,6 +366,17 @@ private fun ListContent(
                 val sections = lists.todaySections
                 // Tasks and habits each have a half of Today, behind the switch (the habits prototype, option C).
                 // Without a habit on Today there is nothing to switch to.
+                state.newYear?.let { nudge ->
+                    item(key = "new-year") {
+                        NewYearCard(
+                            nudge = nudge,
+                            onReview = { onOpenReview(ReviewRules.YEARLY, LocalDate.of(nudge.year - 1, 1, 1)) },
+                            onGoals = onOpenGoals,
+                            onDismiss = viewModel::dismissNewYear,
+                            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp).animateItem(),
+                        )
+                    }
+                }
                 if (state.habits.isNotEmpty() || state.segment == TodaySegment.HABITS) item(key = "switch") {
                     TodaySwitch(
                         shown = state.segment,

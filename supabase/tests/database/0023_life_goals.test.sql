@@ -1,4 +1,4 @@
--- Row security and integrity for life goals, their pictures and the pictures bucket (migration 0021).
+-- Row security and integrity for life goals, their pictures and the pictures bucket (migration 0023).
 begin;
 create extension if not exists pgtap with schema extensions;
 select plan(19);

@@ -96,6 +96,30 @@ public sealed class HabitListTests : IDisposable
     }
 
     [Fact]
+    public void AFailEmptiesTheDayAndCheckingInOrSkippingTakesItBack()
+    {
+        var water = habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 8 })!;
+        habits.CheckIn(water.Id, Today, 3);
+
+        Assert.True(habits.Fail(water.Id, Today));
+        var failed = habits.Checkins().Single();
+        Assert.Equal((true, 0.0), (failed.Failed, failed.Value));
+        Assert.Equal(HabitStanding.Failed, HabitRules.Standing(water, Today, habits.Checkins(), []));
+
+        // A glass after the fail starts the day again from nothing.
+        Assert.Equal(1, habits.CheckIn(water.Id, Today));
+        Assert.False(habits.Checkins().Single().Failed);
+
+        Assert.True(habits.Fail(water.Id, Today));
+        Assert.True(habits.Skip(water.Id, Today));
+        Assert.Equal((true, false), (habits.Checkins().Single().Skipped, habits.Checkins().Single().Failed));
+
+        Assert.True(habits.Fail(water.Id, Today));
+        Assert.True(habits.Fail(water.Id, Today, failed: false));
+        Assert.Equal(HabitStanding.Left, HabitRules.Standing(water, Today, habits.Checkins(), []));
+    }
+
+    [Fact]
     public void APauseEndsTheDayBeforeTheHabitResumesAndOneResumedTheSameDayGoesAway()
     {
         var read = habits.Add(new HabitDraft("Read", Today))!;

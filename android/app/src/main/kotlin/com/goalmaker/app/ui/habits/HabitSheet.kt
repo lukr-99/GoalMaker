@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.automirrored.outlined.Redo
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.PauseCircle
@@ -41,7 +44,7 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * Everything a habit can do besides its button, as a sheet: the card's menu and its long press open it
  * (the habits prototype). Check in or add one, log an amount, skip today (or this week) or undo the
- * skip, clear today, pause or resume; the Habits screen adds edit, archive and delete, and Today a way
+ * skip, fail today (or this week) or undo the fail, clear today, pause or resume; the Habits screen adds edit, archive and delete, and Today a way
  * to the Habits screen. Each choice closes the sheet first.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,8 +55,9 @@ fun HabitSheet(
     onCheckIn: () -> Unit,
     onLog: () -> Unit,
     onSkip: (Boolean) -> Unit,
+    onFail: (Boolean) -> Unit,
     onClear: () -> Unit,
-    onPause: () -> Unit,
+    onPause: (() -> Unit)? = null,
     onResume: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onArchive: ((Boolean) -> Unit)? = null,
@@ -62,7 +66,13 @@ fun HabitSheet(
 ) {
     val habit = row.habit
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 32.dp)) {
+        // It scrolls, so at the largest text sizes the last choices stay in reach.
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(start = 24.dp, end = 24.dp, bottom = 32.dp),
+        ) {
             Text(
                 listOfNotNull(habit.emoji, habit.name).joinToString(" "),
                 style = MaterialTheme.typography.titleMedium,
@@ -71,7 +81,7 @@ fun HabitSheet(
             Text(
                 listOfNotNull(statusText(row), streakText(row)).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
-                color = if (row.isOver) AppTheme.colors.danger else AppTheme.colors.textMuted,
+                color = if (row.isOver || row.failed) AppTheme.colors.danger else AppTheme.colors.textMuted,
                 modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
             )
 
@@ -102,13 +112,18 @@ fun HabitSheet(
                 } else {
                     Choice(Icons.AutoMirrored.Outlined.Redo, stringResource(skipText(habit))) { onSkip(true) }
                 }
+                if (row.failed) {
+                    Choice(Icons.AutoMirrored.Outlined.Undo, stringResource(R.string.habits_unfail)) { onFail(false) }
+                } else if (!row.skipped) {
+                    Choice(Icons.Outlined.Close, stringResource(failText(habit))) { onFail(true) }
+                }
             }
             if (!habit.archived && row.value > 0.0) Choice(Icons.AutoMirrored.Outlined.Backspace, stringResource(R.string.habits_clear), action = onClear)
             if (!habit.archived) {
                 if (row.paused) {
                     onResume?.let { Choice(Icons.Outlined.PlayCircle, stringResource(R.string.habits_resume), action = it) }
                 } else {
-                    Choice(Icons.Outlined.PauseCircle, stringResource(R.string.habits_pause), action = onPause)
+                    onPause?.let { Choice(Icons.Outlined.PauseCircle, stringResource(R.string.habits_pause), action = it) }
                 }
             }
             onEdit?.let { Choice(Icons.Outlined.Edit, stringResource(R.string.habits_edit_menu), action = it) }

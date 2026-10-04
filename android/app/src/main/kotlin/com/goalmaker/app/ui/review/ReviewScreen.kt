@@ -101,7 +101,17 @@ fun ReviewScreen(viewModel: ReviewViewModel, onClose: () -> Unit) {
         modifier = if (reading) Modifier.nestedScroll(collapsing.nestedScrollConnection) else Modifier,
         topBar = {
             TopAppBar(
-                title = { ScreenTitle(stringResource(if (state.kind == ReviewRules.MONTHLY) R.string.reviews_monthly else R.string.reviews_weekly)) },
+                title = {
+                    ScreenTitle(
+                        stringResource(
+                            when (state.kind) {
+                                ReviewRules.YEARLY -> R.string.reviews_yearly
+                                ReviewRules.MONTHLY -> R.string.reviews_monthly
+                                else -> R.string.reviews_weekly
+                            },
+                        ),
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { if (!viewModel.back()) onClose() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))

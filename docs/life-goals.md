@@ -25,8 +25,8 @@ rung on the ladder (2026-10-04).
 | made by | Owner or Claude, like tasks |
 | pictures | None or more, in their own order |
 
-`life_goals` and `life_goal_pictures` are synced tables (Supabase migration 0021, replica migration
-0015) with the usual row security, tombstones, activity log and undo, and both are in the backup.
+`life_goals` and `life_goal_pictures` are synced tables (Supabase migration 0023, replica migration
+0017) with the usual row security, tombstones, activity log and undo, and both are in the backup.
 
 ## Time left
 

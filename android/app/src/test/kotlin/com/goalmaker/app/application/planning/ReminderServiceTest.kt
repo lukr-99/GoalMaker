@@ -34,6 +34,7 @@ class ReminderServiceTest {
     private var planAt: LocalTime? = LocalTime.of(20, 0)
     private var quiet = QuietHours.OFF
     private lateinit var reminders: ReminderList
+    private lateinit var habits: HabitList
 
     @Before
     fun setUp() {
@@ -44,6 +45,7 @@ class ReminderServiceTest {
         tasks = TaskList(test.replica, rows, areas, tags, ProjectList(test.replica, rows, {}), {}) { LocalDate.parse("2026-09-18") }
         rituals = RitualRunList(test.replica, rows, {})
         reminders = ReminderList(test.replica, rows, {})
+        habits = HabitList(test.replica, rows, {})
         service = ReminderService(
             reminders = reminders,
             tasks = tasks,
@@ -63,6 +65,7 @@ class ReminderServiceTest {
             setRemindedUntil = { remindedUntil = it },
             rituals = rituals,
             planTomorrowAt = { planAt },
+            habits = habits,
         )
     }
 
@@ -82,6 +85,36 @@ class ReminderServiceTest {
 
         now = LocalDateTime.parse("2026-09-18T20:05")
         assertNull(service.catchUp().planTomorrow)
+    }
+
+    @Test
+    fun `a habit reminds at its time while it is left, and a check-in from the notification settles it`() {
+        planAt = null
+        val read = habits.add(HabitDraft("Read", LocalDate.parse("2026-09-01"), remindAt = LocalTime.of(19, 30)))!!
+        service.rearm()
+        assertEquals(LocalDateTime.parse("2026-09-18T19:30"), armed.last())
+
+        remindedUntil = LocalDateTime.parse("2026-09-18T19:00")
+        now = LocalDateTime.parse("2026-09-18T19:31")
+        val look = service.catchUp()
+        assertEquals(listOf(DueHabit(habits.find(read.id)!!, LocalDate.parse("2026-09-18"))), look.habits)
+        assertFalse(service.habitStale(read.id, LocalDate.parse("2026-09-18")))
+
+        service.checkInHabit(read.id, LocalDate.parse("2026-09-18"))
+        assertTrue(service.habitStale(read.id, LocalDate.parse("2026-09-18")))
+        assertEquals(LocalDateTime.parse("2026-09-19T19:30"), armed.last())
+    }
+
+    @Test
+    fun `a habit done before its time stays quiet that day`() {
+        planAt = null
+        val read = habits.add(HabitDraft("Read", LocalDate.parse("2026-09-01"), remindAt = LocalTime.of(19, 30)))!!
+        habits.checkIn(read.id, LocalDate.parse("2026-09-18"))
+        remindedUntil = LocalDateTime.parse("2026-09-18T19:00")
+        now = LocalDateTime.parse("2026-09-18T19:31")
+
+        assertEquals(emptyList<DueHabit>(), service.catchUp().habits)
+        assertEquals(LocalDateTime.parse("2026-09-19T19:30"), armed.last())
     }
 
     @Test

@@ -10,6 +10,7 @@ import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
@@ -77,6 +78,21 @@ class WidgetContentTest {
 
         assertEquals(listOf("Buy milk"), rows.map(WidgetTask::title))
         assertEquals(1 to 2, WidgetContent.done(tasks.all(), today))
+    }
+
+    @Test
+    fun `a project item on the today widget names its project while the project is there`() {
+        val projects = ProjectList(test.replica, NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-20T12:00:00Z") }), {})
+        val project = projects.add(ProjectDraft(name = "GoalMaker"))!!
+        val item = plan("Fix the build")
+        tasks.setProject(item.id, project.id)
+        plan("Buy milk")
+
+        val rows = WidgetContent.today(tasks.all(), today, projects = projects.all())
+
+        assertEquals(mapOf("Fix the build" to "GoalMaker", "Buy milk" to ""), rows.associate { it.title to it.project })
+        projects.delete(project.id)
+        assertEquals(listOf("", ""), WidgetContent.today(tasks.all(), today, projects = projects.all()).map(WidgetTask::project))
     }
 
     @Test

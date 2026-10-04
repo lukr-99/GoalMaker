@@ -107,6 +107,38 @@ public sealed class SignInViewModelTests
     }
 
     [Fact]
+    public async Task ACodeCopiedFromTheEmailsNotificationGoesInByItselfOnce()
+    {
+        string? clipboard = "482913 is your GoalMaker code";
+        var viewModel = new SignInViewModel(
+            auth, new SignInWatch(auth, settings, () => Now), new KeyStrings(), devBackend: null, readClipboard: () => clipboard);
+        Assert.False(viewModel.TakeCopiedCode());
+
+        viewModel.Email = "me@example.com";
+        await viewModel.SendCodeCommand.ExecuteAsync(null);
+        Assert.True(viewModel.TakeCopiedCode());
+        Assert.Equal([("me@example.com", "482913")], auth.Verified);
+    }
+
+    [Fact]
+    public async Task PasteTakesTheCodeOrSaysNothingWasCopied()
+    {
+        string? clipboard = "hello";
+        auth.VerifyResult = new AuthResult.WrongOrExpiredCode();
+        var viewModel = new SignInViewModel(
+            auth, new SignInWatch(auth, settings, () => Now), new KeyStrings(), devBackend: null, readClipboard: () => clipboard);
+        viewModel.Email = "me@example.com";
+        await viewModel.SendCodeCommand.ExecuteAsync(null);
+
+        viewModel.PasteCodeCommand.Execute(null);
+        Assert.Equal("SignIn.Error.NoCodeCopied", viewModel.ErrorText);
+
+        clipboard = "Your sign-in code is 482 913.";
+        viewModel.PasteCodeCommand.Execute(null);
+        Assert.Equal([("me@example.com", "482913")], auth.Verified);
+    }
+
+    [Fact]
     public void AReleaseBuildHasNeitherDoor()
     {
         Assert.False(Create().HasDevSignIn);

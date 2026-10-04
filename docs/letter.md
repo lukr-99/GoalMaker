@@ -27,6 +27,8 @@ No other app's data passes through GoalMaker's backend, and GoalMaker sends no e
 week or month):
 
 - `period`: kind, start and end (the start is what `save_review_summary` must be given back);
+- `counts`: how many tasks were done, and how many of them were project work and other work, the
+  way [stats](stats.md) counts them (an item of a deleted project is other work);
 - `done`: tasks finished, by the day they were done, with area and project;
 - `open`: `left` (still open and planned in the period, with move counts), `overdue` (every open
   task planned before today) and `slipping` (left ones moved three times or more);

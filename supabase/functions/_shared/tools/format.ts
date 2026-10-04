@@ -158,7 +158,7 @@ export function cadenceText(habit: Pick<Habit, "cadence" | "times" | "weekdays">
 }
 
 /**
- * Where a habit stands on the day, the way its card says it: the standing (done, left, skipped, paused,
+ * Where a habit stands on the day, the way its card says it: the standing (done, left, skipped, failed, paused,
  * limit, not due today), then the count behind it ("3 of 8 glasses today", "1 of 3 this week",
  * "1 of at most 2 today").
  */
@@ -169,6 +169,7 @@ export function standingText(habit: Habit, view: HabitView): string {
       return habit.archived ? "archived" : "not due today";
     case "paused":
     case "skipped":
+    case "failed":
       return view.standing;
     case "limit": {
       if (habit.measure === "check") return view.value >= 1 ? "limit · over the line today" : "limit · none today";
@@ -186,6 +187,15 @@ export function standingText(habit: Habit, view: HabitView): string {
   }
 }
 
+/** The January nudge in a line: what the new year still asks for. */
+export function newYearLine(nudge: { year: number; review: boolean; goals: boolean }): string {
+  const asks = [
+    ...(nudge.review ? [`${nudge.year - 1} has no yearly review yet`] : []),
+    ...(nudge.goals ? [`${nudge.year} has no year goals yet`] : []),
+  ];
+  return `New year: ${asks.join(" and ")}.`;
+}
+
 /** `4-day streak`, `2-week streak`: a streak counts the habit's periods. */
 export function streakText(habit: Pick<Habit, "cadence">, streak: number): string {
   const period = habit.cadence === "per_week" ? "week" : habit.cadence === "per_month" ? "month" : "day";
@@ -198,6 +208,7 @@ export function habitLine(habit: Habit, view: HabitView): string {
   if (view.streak > 0) parts.push(streakText(habit, view.streak));
   if (view.serves) parts.push(`serves ${view.serves}`);
   if (!habit.showOnToday) parts.push("not on Today");
+  if (habit.remindAt) parts.push(`reminds at ${habit.remindAt}`);
   return `- ${parts.join(" · ")} (habit id ${habit.id})`;
 }
 

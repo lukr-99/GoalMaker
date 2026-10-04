@@ -18,6 +18,7 @@ public sealed class TaskList
     private const string GoalId = "goal_id";
     private const string Goals = "goals";
     private const string BoardArchivedAt = "board_archived_at";
+    private static readonly TimeOnly Noon = new(12, 0);
     private const int MaxTitle = 500;
     private const int MaxNotes = 20_000;
     private readonly IReplica replica;
@@ -144,6 +145,14 @@ public sealed class TaskList
             Reopen(id, _ => { });
         }
     }
+
+    /// <summary>
+    /// Finishes the task as done on planning <paramref name="day"/>, from the calendar (docs/calendar.md):
+    /// a day gone by stamps its noon in <paramref name="zone"/>, so the stats and the archive count it on
+    /// that day; today or a day still to come stamps now.
+    /// </summary>
+    public void FinishOn(string id, DateOnly day, DateOnly today, TimeZoneInfo zone) =>
+        Finish(id, "done", day < today ? new DateTimeOffset(day.ToDateTime(Noon), zone.GetUtcOffset(day.ToDateTime(Noon))) : null);
 
     public void Delete(string id) => Change(id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
@@ -358,7 +367,8 @@ public sealed class TaskList
         _ => TaskState.Open,
     };
 
-    private void Finish(string id, string status)
+    // Done or dropped; at is when it was done, now unless the calendar says a day gone by.
+    private void Finish(string id, string status, DateTimeOffset? at = null)
     {
         var changed = false;
         replica.InTransaction(() =>
@@ -370,7 +380,7 @@ public sealed class TaskList
 
             var wasOpen = (string?)row["status"] == "open";
             row["status"] = status;
-            row["completed_at"] = status == "done" ? rows.Timestamp() : null;
+            row["completed_at"] = status == "done" ? (at is { } stamp ? SyncRules.Format(stamp) : rows.Timestamp()) : null;
             if ((string?)row["board_column"] is { } column)
             {
                 row["board_column"] = ProjectRules.FinishedIn(StateOf(status), column);

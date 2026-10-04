@@ -7,6 +7,7 @@ class FakeUsageSource : UsageSource {
     val stretches = mutableListOf<UsageInterval>()
     var granted = true
     val reads = mutableListOf<Pair<Instant, Instant>>()
+    val names = mutableMapOf<String, String>()
 
     fun add(app: String, start: String, end: String) {
         stretches += UsageInterval(app, Instant.parse(start), Instant.parse(end))
@@ -21,4 +22,6 @@ class FakeUsageSource : UsageSource {
             .filter { it.end.isAfter(from) && it.start.isBefore(to) }
             .map { it.copy(start = maxOf(it.start, from), end = minOf(it.end, to)) }
     }
+
+    override fun appName(app: String): String? = names[app]
 }

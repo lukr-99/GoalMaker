@@ -11,19 +11,16 @@ using GoalMaker.Infrastructure.Storage;
 namespace GoalMaker.App;
 
 /// <summary>
-/// Process lifetime: one instance per user and build kind, the composition root, the tray icon and
-/// the main window. Closing the window hides it; only Quit ends the app. The instance lock comes
-/// first; only then are the resources merged (<see cref="AppResources"/>).
+/// Process lifetime: one instance per user and build kind, the composition root, and the shell over
+/// it (<see cref="AppShell"/>: the tray icon, the main window and the rest). Closing the window hides
+/// it; only Quit ends the app. The instance lock comes first; only then are the resources merged
+/// (<see cref="AppResources"/>).
 /// </summary>
 public partial class App : Application
 {
     private SingleInstance? instance;
     private AppGraph? graph;
-    private TrayIcon? tray;
-    private MainWindow? window;
-    private QuickAddWindow? quickAdd;
-    private QuickAddHotkey? hotkey;
-    private readonly Dictionary<MiniPage, MiniWindow> miniWindows = [];
+    private AppShell? shell;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -54,41 +51,11 @@ public partial class App : Application
         }
 
         CrashLog.Install(this, graph.Paths.Root);
-        window = new MainWindow(graph);
-        graph.Theme.Attach(window);
-        graph.Theme.Apply(graph.Settings.Appearance);
-        quickAdd = new QuickAddWindow(graph.QuickAdd, strings);
-        var menu = TrayMenu.Build(
-            strings,
-            () => FromTray(ShowMainWindow),
-            SummonQuickAdd,
-            page => FromTray(() => ShowMini(page)),
-            Quit);
-        tray = new TrayIcon(
-            build.IsDevBuild ? strings.Get("App.Name") + " (dev)" : strings.Get("App.Name"),
-            new TrayFlyout(graph.TrayFlyout),
-            graph.TrayFlyout.Refresh,
-            ShowMainWindow,
-            menu);
-        // The tray shows the logo in the theme's colors, like the window and the taskbar (GM.LogoIcon).
-        tray.SetIcon(graph.Theme.LogoIconFile);
-        graph.Theme.Applied += (_, _) => tray.SetIcon(graph.Theme.LogoIconFile);
-        graph.WindowRequested += (_, page) =>
-        {
-            tray.CloseFlyout();
-            ShowMainWindow();
-            window.Open(page);
-        };
-        graph.QuickAddRequested += (_, _) => SummonQuickAdd();
-        graph.MiniRequested += (_, page) => ShowMini(page);
+        var started = new AppShell(graph, build, strings, RunOnUi, Quit);
+        shell = started;
+        instance.Listen(arguments => RunOnUi(() => started.Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
 
-        // The global quick-add shortcut (spec, story 11); Settings shows it and can change it.
-        hotkey = new QuickAddHotkey(() => RunOnUi(SummonQuickAdd));
-        graph.ApplyQuickAddHotkey = hotkey.Apply;
-        graph.SettingsPage.ApplyStoredQuickAddHotkey();
-        instance.Listen(arguments => RunOnUi(() => Handle(StartupOptions.Parse(arguments), secondLaunch: true)));
-
-        Handle(options, secondLaunch: false);
+        started.Handle(options, secondLaunch: false);
         _ = RestoreSessionAsync(graph);
     }
 
@@ -99,109 +66,9 @@ public partial class App : Application
         await graph.SignInWatch.EnforceAsync();
     }
 
-    private void Handle(StartupOptions options, bool secondLaunch)
-    {
-        if (options.Mini is { } mini)
-        {
-            ShowMini(mini);
-        }
-
-        if (options.StartInTray)
-        {
-            return;
-        }
-
-        ShowMainWindow(activate: !options.NoActivate);
-        if (options.OpenPage is { } page)
-        {
-            window?.Open(page);
-        }
-        else if (!secondLaunch)
-        {
-            window?.Open(AppPage.Today);
-        }
-    }
-
-    private void ShowMainWindow() => ShowMainWindow(activate: true);
-
-    // A menu item closes the Today flyout before it opens anything over it.
-    private void FromTray(Action action)
-    {
-        tray?.CloseFlyout();
-        action();
-    }
-
-    /// <summary>
-    /// Opens a mini window, or brings the one already there to the front (spec, story 80). Each kind
-    /// has one window; closing it puts it away until it is asked for again.
-    /// </summary>
-    private void ShowMini(MiniPage page)
-    {
-        if (graph is null)
-        {
-            return;
-        }
-
-        if (!miniWindows.TryGetValue(page, out var mini))
-        {
-            var content = MiniWindowContent.For(page, graph.Today, graph.HabitsPage);
-            mini = new MiniWindow(content, new ResourceStrings(this), graph.Settings, ShowMainWindow);
-            mini.Closed += (_, _) => miniWindows.Remove(page);
-            miniWindows[page] = mini;
-        }
-
-        mini.Show();
-        if (mini.WindowState == WindowState.Minimized)
-        {
-            mini.WindowState = WindowState.Normal;
-        }
-
-        mini.Activate();
-    }
-
-    private void SummonQuickAdd()
-    {
-        tray?.CloseFlyout();
-        quickAdd?.Summon();
-    }
-
-    private void ShowMainWindow(bool activate)
-    {
-        if (window is null)
-        {
-            return;
-        }
-
-        // WPF refuses to show a maximized window without activating it, so a window left maximized
-        // and asked for with --no-activate goes up normal and is maximized once it is on screen.
-        var (show, after) = WindowShow.Plan(activate, window.WindowState);
-        window.WindowState = show;
-        window.ShowActivated = activate;
-        window.Show();
-        window.WindowState = after;
-
-        if (activate)
-        {
-            window.Activate();
-        }
-    }
-
     private void Quit()
     {
-        if (window is not null)
-        {
-            window.AllowClose = true;
-            window.Close();
-        }
-
-        foreach (var mini in miniWindows.Values.ToList())
-        {
-            mini.Close();
-        }
-
-        hotkey?.Dispose();
-        quickAdd?.CloseForGood();
-        tray?.Dispose();
+        shell?.Dispose();
         graph?.Dispose();
         instance?.Dispose();
         instance = null;

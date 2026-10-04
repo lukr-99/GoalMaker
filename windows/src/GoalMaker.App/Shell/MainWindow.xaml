@@ -120,6 +120,7 @@
             <Border x:Name="PaletteScrim" Background="#59000000" />
             <Border x:Name="PaletteBox"
                     Width="520"
+                    MaxWidth="{Binding ActualWidth, ElementName=PaletteLayer}"
                     Margin="0,56,0,0"
                     HorizontalAlignment="Center"
                     VerticalAlignment="Top"

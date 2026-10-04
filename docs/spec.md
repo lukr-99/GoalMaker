@@ -353,7 +353,7 @@ Story numbers continue from 99 (the list above repeats 88 once; those numbers st
 - `habits`: cadence (`daily | weekdays | per_week | per_month` with days or count), measure
   (`check | count | amount`), target and unit, linked goal, paused ranges, and whether it shows on
   Today.
-- `habit_checkins`: date, value, skipped flag.
+- `habit_checkins`: date, value, skipped flag, failed flag.
 - `projects`: name, description, area, status, repository URL, local folder, notes.
 - `project_milestones`.
 - `reminders`: owner item, fire time (absolute or offset from the task's time), important flag,
@@ -516,15 +516,14 @@ project; deploys run through the CLI. See ADR 0001.
   (owner can, stranger can't, anonymous can't) for every table.
 - **Connector:** tool tests against the local stack through the MCP endpoint.
 - **Android:** JVM unit tests for domain and application code, Robolectric for Android adapters,
-  Compose UI tests for key screens, a few Maestro flows (prior art: Tarot2Go).
+  Compose UI tests for key screens.
 - **Windows:** xUnit tests for domain, application and view models; a start-up smoke test.
 - Prior art: Tarot2Go (Room migrations, updater seams), SubTrackr (sync over Supabase), CodePrint
   (contract vectors, migration harness).
 
 ## Out of Scope (v1)
 
-- Other users, sharing, collaboration. GoalMaker is for personal use only (ADR 0011); the shared habit
-  challenges idea was removed from the roadmap on 2026-09-28.
+- Other users, sharing, collaboration. GoalMaker is for personal use only (ADR 0011).
 - Any paid LLM API; in-app chat before M7.
 - OAuth for the connector (secret link in v1).
 - Firebase or any push service.

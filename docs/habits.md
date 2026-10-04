@@ -52,7 +52,22 @@ and the shade fades as the allowance is used.
 A day has at most one check-in per habit, holding the day's value; tapping again adds to it. Its id
 is a name-based UUID of `checkin/<habit id>/<day>` (the reviews' namespace), so two devices checking
 in on the same day land on the same row. A check-in can instead mark the day's period **skipped**
-(sick, travelling).
+(sick, travelling), or **failed**.
+
+## Failing a period
+
+A skip excuses a period; a fail says it won't happen. When the owner knows today's run, glass or
+week is lost, **Fail today** (this week, this month) in the habit's menu marks the period failed, so
+it is missed at once, today included, rather than sitting open until midnight. The streak ends
+there, the card stops asking (a failed habit is neither done nor left, so Today's "left" count and
+the **all done** card don't wait for it), and the summary on the Habits page counts it against the
+day. A failed day shows as missed in the week's dots and as empty on the heatmap; a limit's failed
+day reads as over the line.
+
+A failed check-in holds no value and no skip. Checking in, logging an amount or skipping takes the
+fail back and starts the day from nothing, and **Undo the fail**, in the menu or on the check-in
+button (a danger outline with a cross while failed), leaves the day empty again. A day before today
+can fail too, from the calendar ([calendar](calendar.md)) or through the connector's `fail_habit`.
 
 ## Periods and streaks
 
@@ -63,12 +78,15 @@ Each period of a habit is in one state, the first that applies:
 2. **met**: enough days in it are met (one for a day; N for a week or month);
 3. **paused**: one of its days falls in a pause;
 4. **skipped**: a check-in in it says skipped;
-5. **open**: it hasn't ended yet (it holds today);
-6. **missed**: otherwise.
+5. **missed** at once: a check-in in it says failed;
+6. **open**: it hasn't ended yet (it holds today);
+7. **missed**: otherwise.
+
+So a weekly habit already met stays met when a later day of the week fails.
 
 A limit is read in a different order, because it is kept by default: **paused**, then **skipped**,
-then **missed** as soon as a check-in goes over the number, then **open** while the day is still on,
-and **met** once the day is over with nothing over the line.
+then **missed** as soon as a check-in goes over the number or is failed, then **open** while the day
+is still on, and **met** once the day is over with nothing over the line.
 
 The **streak** counts met periods back from the current one: an open, paused, skipped or none period
 is passed over without counting or breaking it, and the first missed one ends the streak. So a "3
@@ -85,10 +103,11 @@ The cards on Today and the Habits page read one **standing** per habit, the firs
 1. **none**: archived, not started yet, or not due today (a weekday outside its mask);
 2. **paused**: a pause covers today;
 3. **skipped**: a check-in in the period holding today says skipped;
-4. **limit**: a limit is never done and never left, so Snacks never reads as "not done";
-5. **done**: today's ring is full, or a weekly or monthly habit was checked in today (one run of
+4. **failed**: a check-in in the period holding today says failed;
+5. **limit**: a limit is never done and never left, so Snacks never reads as "not done";
+6. **done**: today's ring is full, or a weekly or monthly habit was checked in today (one run of
    "3 times a week" is today's part, even while the week still needs more);
-6. **left**: otherwise.
+7. **left**: otherwise.
 
 Today's "left" count counts the left ones, **Hide done** hides the done ones, and Today shows its
 short **all done** card when none is left and at least one is done (`allDone`). A skipped habit stays
@@ -107,12 +126,12 @@ nothing; a limit's clean day is met.
   weekly habit needs (a limit's pips past the line turn to the danger colour) or a bar for an amount,
   and the week's dots. Its **check-in button** checks a check habit (and takes it back), adds one to
   a count ("+1"), and asks for the value of an amount; once today's part is done it fills with the
-  accent and turns round, and while the habit is skipped it is a dashed outline whose click undoes
-  the skip. Every check-in writes the day's one check-in, so three then five is eight. A streak
+  accent and turns round, while the habit is skipped it is a dashed outline whose click undoes
+  the skip, and while it is failed it is a danger outline with a cross whose click undoes the fail. Every check-in writes the day's one check-in, so three then five is eight. A streak
   reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods gets confetti, skipped under reduce
   motion.
 - **The menu** holds the rest: check in or add one, log an amount, skip today (this week, this
-  month) or undo the skip, clear today, pause or resume, edit, archive and delete; on Today also
+  month) or undo the skip, fail today (this week, this month) or undo the fail, clear today, pause or resume, edit, archive and delete; on Today also
   Open Habits. On the phone a long press on the card or its menu button opens it as a sheet, and a
   screen reader gets Skip and More as actions, so nothing needs the long press. On Windows the
   card's menu button, a right click or the menu key open it.
@@ -169,10 +188,18 @@ A habit can serve a goal. When the goal counts a number and the habit's unit is 
 case and spaces), the habit's check-ins in the goal's period add to it like logged amounts (story 32,
 [goals](goals.md)).
 
+## Reminders
+
+The habit form's **Remind me** sets a time of day a habit reminds at, on the days it is still left,
+with Check in (+1 for a count, Log for an amount) and Skip on the notification; see
+[reminders](reminders.md#habit-reminders).
+
 ## Storage
 
 `habits`, `habit_checkins` and `habit_pauses` are synced tables (Supabase migration 0010, replica
-migration 0005). `direction` came with Supabase migration 0014 (replica 0009) and `show_on_today`
+migration 0005). `habit_checkins.failed` came with Supabase migration 0021 (replica 0015), false by
+default; a trigger clears it whenever a check-in holds a value or a skip, so an app from before it,
+which leaves the column out, still takes a fail back by checking in. `direction` came with Supabase migration 0014 (replica 0009) and `show_on_today`
 with Supabase migration 0020 (replica 0014); both have defaults, so a habit from before reads as it
-did. Deleting a habit takes its check-ins and pauses with it; deleting its goal leaves the
+did. `remind_at` came with Supabase migration 0022 (replica 0016), null for no reminder. Deleting a habit takes its check-ins and pauses with it; deleting its goal leaves the
 habit without one.

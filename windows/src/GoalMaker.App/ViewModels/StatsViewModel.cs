@@ -8,8 +8,8 @@ using GoalMaker.Core.Settings;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The Stats page (docs/stats.md, spec stories 64 and 67): tasks finished week by week, goals hit
-/// month by month, how the habits are holding up, the mood and energy of past reviews, what became
+/// The Stats page (docs/stats.md, spec stories 64 and 67): tasks finished week by week with the
+/// project work apart and per project, goals hit month by month, how the habits are holding up, the mood and energy of past reviews, what became
 /// of the wants, and where the time went over twelve weeks (Tally, docs/tally.md).
 /// </summary>
 public sealed partial class StatsViewModel : ObservableObject
@@ -21,6 +21,7 @@ public sealed partial class StatsViewModel : ObservableObject
     private readonly WantList? wants;
     private readonly TallyList? tally;
     private readonly Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels;
+    private readonly ProjectList? projects;
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
     private readonly TimeProvider time;
@@ -33,6 +34,26 @@ public sealed partial class StatsViewModel : ObservableObject
 
     [ObservableProperty]
     private string donePerWeek = string.Empty;
+
+    /// <summary>How many of the tasks done were project work, under the hero; empty when none were.</summary>
+    [ObservableProperty]
+    private string doneOnProjects = string.Empty;
+
+    [ObservableProperty]
+    private bool hasProjectWork;
+
+    [ObservableProperty]
+    private string projectWorkLegend = string.Empty;
+
+    [ObservableProperty]
+    private string otherWorkLegend = string.Empty;
+
+    /// <summary>"and 3 more" under the By project rows when more projects finished something than they show.</summary>
+    [ObservableProperty]
+    private string moreProjects = string.Empty;
+
+    [ObservableProperty]
+    private bool hasMoreProjects;
 
     [ObservableProperty]
     private string goalsValue = string.Empty;
@@ -99,8 +120,10 @@ public sealed partial class StatsViewModel : ObservableObject
         Action<Action> runOnUi,
         WantList? wants = null,
         TallyList? tally = null,
-        Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels = null)
+        Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels = null,
+        ProjectList? projects = null)
     {
+        this.projects = projects;
         this.wants = wants;
         this.tally = tally;
         this.tallyLabels = tallyLabels;
@@ -125,11 +148,19 @@ public sealed partial class StatsViewModel : ObservableObject
             tally.Changed += (_, _) => runOnUi(Refresh);
         }
 
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
-    /// <summary>A bar per week, the week holding today last.</summary>
+    /// <summary>A bar per week, the week holding today last, its project work at the bottom.</summary>
     public ObservableCollection<StatsBarViewModel> Weeks { get; } = [];
+
+    /// <summary>The projects that finished the most over the weeks, most first (<see cref="StatsRules.TopProjects"/> at most).</summary>
+    public ObservableCollection<StatsProjectViewModel> ByProject { get; } = [];
 
     /// <summary>A bar per month, as full as the share of its goals that were hit.</summary>
     public ObservableCollection<StatsBarViewModel> Months { get; } = [];
@@ -153,18 +184,37 @@ public sealed partial class StatsViewModel : ObservableObject
             habits.Checkins(),
             habits.Pauses(),
             reviews.All(),
-            Today());
+            Today(),
+            projects: projects?.All());
 
         var most = Math.Max(1, digest.Weeks.Count == 0 ? 1 : digest.Weeks.Max(week => week.Done));
         Weeks.Clear();
         foreach (var week in digest.Weeks)
         {
+            var label = week.Start.ToString("d MMM", CultureInfo.CurrentCulture);
             Weeks.Add(new StatsBarViewModel(
-                week.Start.ToString("d MMM", CultureInfo.CurrentCulture),
+                label,
                 week.Done > 0 ? week.Done.ToString(CultureInfo.CurrentCulture) : string.Empty,
                 (double)week.Done / most,
-                week.Done > 0));
+                week.Done > 0,
+                (double)week.Project / most,
+                strings.Get("Stats.WeekTip", label, week.Done, week.Project)));
         }
+
+        // Project work apart (docs/stats.md): the hero's line, the chart's legend and the busiest projects.
+        HasProjectWork = digest.ProjectWork > 0;
+        DoneOnProjects = HasProjectWork ? strings.Get("Stats.OnProjects", digest.ProjectWork) : string.Empty;
+        ProjectWorkLegend = strings.Get("Stats.ProjectWork", digest.ProjectWork);
+        OtherWorkLegend = strings.Get("Stats.OtherWork", digest.OtherWork);
+        var busiest = Math.Max(1, digest.ByProject.Count == 0 ? 1 : digest.ByProject[0].Done);
+        ByProject.Clear();
+        foreach (var project in digest.ByProject.Take(StatsRules.TopProjects))
+        {
+            ByProject.Add(new StatsProjectViewModel(project.Name, project.Done.ToString(CultureInfo.CurrentCulture), (double)project.Done / busiest));
+        }
+
+        HasMoreProjects = digest.ByProject.Count > StatsRules.TopProjects;
+        MoreProjects = HasMoreProjects ? strings.Get("Stats.MoreProjects", digest.ByProject.Count - StatsRules.TopProjects) : string.Empty;
 
         Months.Clear();
         foreach (var month in digest.Months)
