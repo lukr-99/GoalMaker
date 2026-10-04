@@ -1,7 +1,7 @@
 # Life goals
 
-> M9 (`.scratch/m9-life-goals/`): the data and rules (M9-01), the place on both apps (M9-02,
-> M9-03) and the why reminder (M9-04) are built. The widget and the connector tools follow.
+> M9 (`.scratch/m9-life-goals/`): built. The data and rules (M9-01), the place on both apps (M9-02,
+> M9-03), the why reminder (M9-04), the widget (M9-05) and the connector tools (M9-06).
 
 A **life goal** is something the owner wants in their life in the long run ("Own an Audi R8"),
 written down with **why** it matters, an optional **by** date and pictures of it (spec, stories 114
