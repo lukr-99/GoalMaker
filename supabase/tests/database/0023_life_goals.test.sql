@@ -103,10 +103,13 @@ select is(
   (select count(*)::integer from storage.objects where bucket_id = 'life-goal-pictures'),
   1,
   'and sees only their own files');
+-- Storage refuses deletes in SQL for everyone (the Storage API removes files), so the policy is
+-- checked on a rename instead.
 select is_empty(
-  $$ delete from storage.objects where bucket_id = 'life-goal-pictures'
-       and name like '22222222-2222-2222-2222-222222222222/%' returning name $$,
-  'and can''t remove a stranger''s');
+  $$ update storage.objects set name = '11111111-1111-1111-1111-111111111111/taken.jpg'
+     where bucket_id = 'life-goal-pictures' and name like '22222222-2222-2222-2222-222222222222/%'
+     returning name $$,
+  'and can''t take a stranger''s');
 
 reset role;
 select set_config('request.jwt.claims', '', true);
