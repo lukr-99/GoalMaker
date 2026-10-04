@@ -4,8 +4,8 @@ Behavior that the Android app (Kotlin) and the Windows app (C#) must implement i
 here as data. Both test suites load the same files, so a disagreement fails CI in whichever app is
 wrong. The Claude connector's TypeScript rules (`supabase/functions/_shared/rules/rules_test.ts`) run
 the planning files too: lists, plan, recurrence, archive, the ritual ids in reminders, reviews, goals,
-habits and projects, and `wants_test.ts`, `digest_test.ts`, `tally_test.ts` and `quickAdd_test.ts`
-run wants, the review digest, Tally and the bottom bar's lines.
+habits and projects, and `wants_test.ts`, `digest_test.ts`, `tally_test.ts`, `quickAdd_test.ts` and
+`lifeGoals_test.ts` run wants, the review digest, Tally, the bottom bar's lines and life goals.
 
 | File | Rule | Kotlin test | C# test |
 | --- | --- | --- | --- |
@@ -31,6 +31,7 @@ run wants, the review digest, Tally and the bottom bar's lines.
 | `vectors/calendar.json` | The week and month grids and what lands on a day ([calendar](../docs/calendar.md)) | `CalendarRulesContractTest` | `CalendarRulesContractTests` |
 | `vectors/wants.json` | Want cooldowns, states, the ready notification, the stats block and the thresholds id ([wants](../docs/wants.md)) | `WantRulesContractTest` | `WantRulesContractTests` |
 | `vectors/tally.json` | Tally: which category and project time goes to, editor folders, idle, daily totals and their ids, the twelve-week stats, and the Tally place's own-device look: a window's site or folder, the day by hour and the apps by category ([tally](../docs/tally.md)) | `TallyRulesContractTest` | `TallyRulesContractTests` |
+| `vectors/life-goals.json` | Life goals: time left, order, and the why reminder's hash, moment, life goal, look and next alarm ([life goals](../docs/life-goals.md)) | `LifeGoalRulesContractTest` | `LifeGoalRulesContractTests` |
 | `vectors/navigation.json` | Pinned places, the phone's limit of four, stored pins and the Places count (ADR 0014) | `PlaceRulesContractTest` | `PlaceRulesContractTests` |
 | `vectors/settings.json` | The Settings page: section order, the chips or list only with 4+ sections, the current section (80 line, the bottom, a jump's target), the jump scroll's time, the jump and scroll hints with reduce motion, the Saved mark's timing, the update deep link ([design](../docs/design/spec.md#settings)) | `SettingsPageRulesContractTest` | `SettingsPageRulesContractTests` |
 | `schemas/release-manifest.schema.json` | Shape of the manifest in the update channel | (documentation) | (documentation) |

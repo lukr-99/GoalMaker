@@ -18,6 +18,9 @@ same file and read each other's, which
 }
 ```
 
+Life goal pictures are the one thing a backup leaves out: it carries their rows, and the files stay
+in the private Storage bucket (ADR 0018).
+
 The tables are the synced tables in their own order, so a row is written after whatever it points
 at, and each row is the row the replica holds. **Tombstones are left out**, so a row may point at
 something the file does not carry (a task whose area was deleted); that is not an error.

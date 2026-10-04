@@ -308,6 +308,21 @@ Story numbers continue from 99 (the list above repeats 88 once; those numbers st
 113. As the owner, I want Tally in stats, in the weekly review and through the connector, so that
      Claude and the Letter can say how much of the week was coding.
 
+### Life goals (M9, after v1)
+
+114. As the owner, I want to write down what I want in my life in the long run, with why it matters
+     and an optional by date, so that the daily plan has a reason behind it.
+115. As the owner, I want pictures of each life goal, added from my phone's gallery or a file on the
+     PC, so that I can see what I am working toward.
+116. As the owner, I want a notification now and then that shows one life goal with its why, so that
+     I remember why I do what I do.
+117. As the owner, I want a home screen widget that cycles through my life goals' pictures, so that I
+     see them many times a day.
+118. As the owner, I want to mark a life goal achieved or drop it, and keep the ones I reached, so
+     that the list stays honest.
+119. As the owner, I want Claude to read and add life goals, so that a review or a chat can tie a
+     week to them.
+
 ## Implementation Decisions
 
 ### Architecture
@@ -437,6 +452,16 @@ tried later. Not part of v1.
   and only those totals sync.
 - **Navigation:** a prototype chooses a navigation with room for more places before Wants and Tally
   arrive (M8-01).
+
+### Life goals (M9)
+
+- **Data ([docs/life-goals.md](life-goals.md)):** synced `life_goals` (title, why, by date, area,
+  status, order, made by) and `life_goal_pictures`, outside the goal cascade (the owner's pick,
+  2026-10-04). Pictures are JPEGs in the private Storage bucket `life-goal-pictures`, shrunk to 1600
+  pixels by the apps, cached on each device and left out of the JSON backup (ADR 0018).
+- **Why reminder:** a device setting (off, weekly by default, every 3 days, daily). The moment and
+  the life goal come from a hash of the period, so both devices agree without stored reminder rows.
+- **Widget:** Android only; one picture at a time, the next every 30 minutes.
 
 ### Reviews content
 

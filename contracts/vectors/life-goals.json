@@ -1,0 +1,554 @@
+{
+  "schema": 1,
+  "description": "Life goals (docs/life-goals.md, supabase/migrations/0021_life_goals.sql). 'timeLeft': how far a by date is from the planning day: whole years when a year or more, else whole months, else days; 'today' on the date and 'past' after it (count 0); null without a by date. Years and months count like birthdays: a month is whole once the day of the month is reached, so January 31 to February 28 is not a month yet. 'order': open life goals by position, then createdAt, then id; then achieved and dropped ones by closedAt, the most recent first, then id. The why reminder: a frequency (daily, every-3-days, weekly) splits time into periods: days, blocks of 3 days from 1970-01-01, or weeks from Monday. A period's number is its index from 1970-01-01 (for weeks, (days since 1970-01-01 + 3) / 7, rounded down). Its seed is the 32-bit FNV-1a hash of the UTF-8 text '<frequency>:<period start>'. The moment is on the period start plus (seed mod length) days, at 10:00 plus ((seed / length, rounded down) mod 600) minutes, then held back by quiet hours like an ordinary reminder (reminders.json). 'whyMoment': the period a day falls in and its moment. 'whyGoal': the open life goal a period shows, the one at (period number mod open count) in their order; null with none open. 'whyDue': at a look, the latest moment after 'since' and up to 'now' among the period now falls in and the two before, or null; 'off' is never due. 'whyNext': the first moment after 'now', for the alarm; null when off. Quiet hours are 'HH:MM-HH:MM' or null. Times are local.",
+  "timeLeft": [
+    {
+      "name": "ten years to the day",
+      "by": "2036-10-04",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "years",
+        "count": 10
+      }
+    },
+    {
+      "name": "a day short of ten years is nine",
+      "by": "2036-10-03",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "years",
+        "count": 9
+      }
+    },
+    {
+      "name": "one year",
+      "by": "2027-10-04",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "years",
+        "count": 1
+      }
+    },
+    {
+      "name": "a day short of a year is eleven months",
+      "by": "2027-10-03",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "months",
+        "count": 11
+      }
+    },
+    {
+      "name": "months",
+      "by": "2027-06-15",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "months",
+        "count": 8
+      }
+    },
+    {
+      "name": "one month",
+      "by": "2026-11-04",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "months",
+        "count": 1
+      }
+    },
+    {
+      "name": "the 31st into a shorter month is not a month yet",
+      "by": "2026-02-28",
+      "today": "2026-01-31",
+      "expect": {
+        "unit": "days",
+        "count": 28
+      }
+    },
+    {
+      "name": "days",
+      "by": "2026-10-16",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "days",
+        "count": 12
+      }
+    },
+    {
+      "name": "one day",
+      "by": "2026-10-05",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "days",
+        "count": 1
+      }
+    },
+    {
+      "name": "the by date itself",
+      "by": "2026-10-04",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "today",
+        "count": 0
+      }
+    },
+    {
+      "name": "past its date",
+      "by": "2026-10-03",
+      "today": "2026-10-04",
+      "expect": {
+        "unit": "past",
+        "count": 0
+      }
+    },
+    {
+      "name": "no by date",
+      "by": null,
+      "today": "2026-10-04",
+      "expect": null
+    }
+  ],
+  "order": [
+    {
+      "name": "open by position, then made, then id; closed by when, the latest first",
+      "lifeGoals": [
+        {
+          "id": "a",
+          "status": "open",
+          "position": 2.0,
+          "createdAt": "2026-10-01T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "b",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-10-02T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "c",
+          "status": "achieved",
+          "position": 0.0,
+          "createdAt": "2026-01-01T08:00:00Z",
+          "closedAt": "2026-09-01T08:00:00Z"
+        },
+        {
+          "id": "d",
+          "status": "dropped",
+          "position": 3.0,
+          "createdAt": "2026-02-01T08:00:00Z",
+          "closedAt": "2026-09-20T08:00:00Z"
+        },
+        {
+          "id": "e",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "f",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        }
+      ],
+      "expect": [
+        "e",
+        "f",
+        "b",
+        "a",
+        "d",
+        "c"
+      ]
+    },
+    {
+      "name": "nothing",
+      "lifeGoals": [],
+      "expect": []
+    }
+  ],
+  "whyMoment": [
+    {
+      "name": "weekly, the week of October 4",
+      "frequency": "weekly",
+      "day": "2026-10-04",
+      "quietHours": null,
+      "expect": {
+        "periodStart": "2026-09-28",
+        "at": "2026-09-30T18:07"
+      }
+    },
+    {
+      "name": "weekly, the next week",
+      "frequency": "weekly",
+      "day": "2026-10-05",
+      "quietHours": null,
+      "expect": {
+        "periodStart": "2026-10-05",
+        "at": "2026-10-11T17:34"
+      }
+    },
+    {
+      "name": "every 3 days",
+      "frequency": "every-3-days",
+      "day": "2026-10-04",
+      "quietHours": null,
+      "expect": {
+        "periodStart": "2026-10-04",
+        "at": "2026-10-06T12:29"
+      }
+    },
+    {
+      "name": "daily",
+      "frequency": "daily",
+      "day": "2026-10-04",
+      "quietHours": null,
+      "expect": {
+        "periodStart": "2026-10-04",
+        "at": "2026-10-04T12:03"
+      }
+    },
+    {
+      "name": "daily, the next day",
+      "frequency": "daily",
+      "day": "2026-10-05",
+      "quietHours": null,
+      "expect": {
+        "periodStart": "2026-10-05",
+        "at": "2026-10-05T15:04"
+      }
+    },
+    {
+      "name": "inside quiet hours it waits for their end",
+      "frequency": "weekly",
+      "day": "2026-10-04",
+      "quietHours": "17:37-18:52",
+      "expect": {
+        "periodStart": "2026-09-28",
+        "at": "2026-09-30T18:52"
+      }
+    },
+    {
+      "name": "quiet hours elsewhere change nothing",
+      "frequency": "weekly",
+      "day": "2026-10-04",
+      "quietHours": "22:00-07:00",
+      "expect": {
+        "periodStart": "2026-09-28",
+        "at": "2026-09-30T18:07"
+      }
+    }
+  ],
+  "whyGoal": [
+    {
+      "name": "weekly rotates through the open ones",
+      "frequency": "weekly",
+      "periodStart": "2026-09-28",
+      "lifeGoals": [
+        {
+          "id": "a",
+          "status": "open",
+          "position": 2.0,
+          "createdAt": "2026-10-01T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "b",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-10-02T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "c",
+          "status": "achieved",
+          "position": 0.0,
+          "createdAt": "2026-01-01T08:00:00Z",
+          "closedAt": "2026-09-01T08:00:00Z"
+        },
+        {
+          "id": "d",
+          "status": "dropped",
+          "position": 3.0,
+          "createdAt": "2026-02-01T08:00:00Z",
+          "closedAt": "2026-09-20T08:00:00Z"
+        },
+        {
+          "id": "e",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "f",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        }
+      ],
+      "expect": "f"
+    },
+    {
+      "name": "the next week shows the next one",
+      "frequency": "weekly",
+      "periodStart": "2026-10-05",
+      "lifeGoals": [
+        {
+          "id": "a",
+          "status": "open",
+          "position": 2.0,
+          "createdAt": "2026-10-01T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "b",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-10-02T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "c",
+          "status": "achieved",
+          "position": 0.0,
+          "createdAt": "2026-01-01T08:00:00Z",
+          "closedAt": "2026-09-01T08:00:00Z"
+        },
+        {
+          "id": "d",
+          "status": "dropped",
+          "position": 3.0,
+          "createdAt": "2026-02-01T08:00:00Z",
+          "closedAt": "2026-09-20T08:00:00Z"
+        },
+        {
+          "id": "e",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "f",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        }
+      ],
+      "expect": "b"
+    },
+    {
+      "name": "daily",
+      "frequency": "daily",
+      "periodStart": "2026-10-04",
+      "lifeGoals": [
+        {
+          "id": "a",
+          "status": "open",
+          "position": 2.0,
+          "createdAt": "2026-10-01T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "b",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-10-02T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "c",
+          "status": "achieved",
+          "position": 0.0,
+          "createdAt": "2026-01-01T08:00:00Z",
+          "closedAt": "2026-09-01T08:00:00Z"
+        },
+        {
+          "id": "d",
+          "status": "dropped",
+          "position": 3.0,
+          "createdAt": "2026-02-01T08:00:00Z",
+          "closedAt": "2026-09-20T08:00:00Z"
+        },
+        {
+          "id": "e",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "f",
+          "status": "open",
+          "position": 1.0,
+          "createdAt": "2026-09-30T08:00:00Z",
+          "closedAt": null
+        }
+      ],
+      "expect": "b"
+    },
+    {
+      "name": "one open life goal is always it",
+      "frequency": "weekly",
+      "periodStart": "2026-10-05",
+      "lifeGoals": [
+        {
+          "id": "a",
+          "status": "open",
+          "position": 2.0,
+          "createdAt": "2026-10-01T08:00:00Z",
+          "closedAt": null
+        },
+        {
+          "id": "c",
+          "status": "achieved",
+          "position": 0.0,
+          "createdAt": "2026-01-01T08:00:00Z",
+          "closedAt": "2026-09-01T08:00:00Z"
+        }
+      ],
+      "expect": "a"
+    },
+    {
+      "name": "none open, nothing",
+      "frequency": "weekly",
+      "periodStart": "2026-10-05",
+      "lifeGoals": [
+        {
+          "id": "c",
+          "status": "achieved",
+          "position": 0.0,
+          "createdAt": "2026-01-01T08:00:00Z",
+          "closedAt": "2026-09-01T08:00:00Z"
+        },
+        {
+          "id": "d",
+          "status": "dropped",
+          "position": 3.0,
+          "createdAt": "2026-02-01T08:00:00Z",
+          "closedAt": "2026-09-20T08:00:00Z"
+        }
+      ],
+      "expect": null
+    }
+  ],
+  "whyDue": [
+    {
+      "name": "just after the moment",
+      "frequency": "weekly",
+      "quietHours": null,
+      "since": "2026-09-30T18:02",
+      "now": "2026-09-30T18:08",
+      "expect": {
+        "periodStart": "2026-09-28",
+        "at": "2026-09-30T18:07"
+      }
+    },
+    {
+      "name": "just before it, nothing yet",
+      "frequency": "weekly",
+      "quietHours": null,
+      "since": "2026-09-30T18:02",
+      "now": "2026-09-30T18:06",
+      "expect": null
+    },
+    {
+      "name": "already shown at the last look",
+      "frequency": "weekly",
+      "quietHours": null,
+      "since": "2026-09-30T18:08",
+      "now": "2026-09-30T21:07",
+      "expect": null
+    },
+    {
+      "name": "off for a day, caught up",
+      "frequency": "weekly",
+      "quietHours": null,
+      "since": "2026-09-29T18:07",
+      "now": "2026-10-01T18:07",
+      "expect": {
+        "periodStart": "2026-09-28",
+        "at": "2026-09-30T18:07"
+      }
+    },
+    {
+      "name": "off past the next one, only the latest",
+      "frequency": "weekly",
+      "quietHours": null,
+      "since": "2026-09-29T18:07",
+      "now": "2026-10-11T18:34",
+      "expect": {
+        "periodStart": "2026-10-05",
+        "at": "2026-10-11T17:34"
+      }
+    },
+    {
+      "name": "off is never due",
+      "frequency": "off",
+      "quietHours": null,
+      "since": "2026-09-29T18:07",
+      "now": "2026-10-01T18:07",
+      "expect": null
+    }
+  ],
+  "whyNext": [
+    {
+      "name": "before this week's moment, this week's",
+      "frequency": "weekly",
+      "quietHours": null,
+      "now": "2026-09-30T17:07",
+      "expect": "2026-09-30T18:07"
+    },
+    {
+      "name": "after it, next week's",
+      "frequency": "weekly",
+      "quietHours": null,
+      "now": "2026-09-30T18:07",
+      "expect": "2026-10-11T17:34"
+    },
+    {
+      "name": "daily, after today's, tomorrow's",
+      "frequency": "daily",
+      "quietHours": null,
+      "now": "2026-10-04T21:00",
+      "expect": "2026-10-05T15:04"
+    },
+    {
+      "name": "every 3 days",
+      "frequency": "every-3-days",
+      "quietHours": null,
+      "now": "2026-10-04T09:00",
+      "expect": "2026-10-06T12:29"
+    },
+    {
+      "name": "off has no next",
+      "frequency": "off",
+      "quietHours": null,
+      "now": "2026-10-04T09:00",
+      "expect": null
+    }
+  ],
+  "fnv1a": [
+    {
+      "name": "nothing",
+      "text": "",
+      "expect": 2166136261
+    },
+    {
+      "name": "a letter",
+      "text": "a",
+      "expect": 3826002220
+    },
+    {
+      "name": "a weekly seed",
+      "text": "weekly:2026-09-28",
+      "expect": 3116878011
+    }
+  ]
+}

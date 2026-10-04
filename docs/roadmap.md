@@ -32,7 +32,8 @@ planned.
 11. **M7: quick chat** (planned as issues 2026-09-30 in `.scratch/m7-quick-chat/`; four decisions wait for the owner)
 12. **M8: Letter, Tally, Wants** (planned 2026-09-28; built and shipped in 1.3.0, 1.4.0 and 1.5.0 by
     2026-09-30; a few checks with real data are left in the issues)
-13. The post-v1 list
+13. **M9: Life goals** (planned 2026-10-04 in `.scratch/m9-life-goals/`)
+14. The post-v1 list
 
 ## Milestones
 
@@ -120,6 +121,18 @@ Issues: `.scratch/m8-letter-tally-wants/`.
   daily minutes per category (and per project on the PC), with raw data kept on each device (ADR
   0013, [docs/tally.md](tally.md)); a Tally place, blocks in stats and the review, and
   `get_time_tally` in the connector.
+
+### M9: Life goals
+
+What the owner wants in their life in the long run, with why it matters, a by date and pictures; a
+why reminder now and then and a picture widget on the phone ([docs/life-goals.md](life-goals.md),
+ADR 0018). Issues: `.scratch/m9-life-goals/`.
+
+- **Data and rules (M9-01):** the synced tables, the pictures bucket, time left, order and the why
+  reminder's moment as vectors, and the lists on both apps.
+- **The place (M9-02, M9-03):** Life goals on Android, then Windows, with pictures.
+- **The why reminder (M9-04)** on both apps, **the widget (M9-05)** on Android, and **the connector
+  tools (M9-06)**.
 
 ## After v1
 

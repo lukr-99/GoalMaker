@@ -110,7 +110,8 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
   settings and its own `files/crash.log` in private app storage, excluded from Android backups.
 - **Backup:** a versioned full export both apps read and a checked restore that merges and never
   wipes, plus a weekly automatic export on Windows ([docs/backup.md](docs/backup.md)). The raw Tally
-  record never leaves its device and is in no backup; its daily minutes are.
+  record never leaves its device and is in no backup; its daily minutes are. Life goal pictures
+  are files in a private Storage bucket, not in the backup; their rows are (ADR 0018).
 
 ## Delivery
 

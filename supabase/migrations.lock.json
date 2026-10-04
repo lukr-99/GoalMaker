@@ -22,6 +22,7 @@
     "0019_assistant.sql": "2b83ea6cb3d23d5215afbf700d4fb102848bea7eeb75b2c8228f4bad8f0c33e9",
     "0020_habit_show_on_today.sql": "7c64a68057cd041b46d6dc1129e35790b8444d7e747700ac7e3d52774fb75ffd",
     "0021_habit_fails.sql": "ad8861422e0ca386d9a6609be33a9437ed506642ef41526bcafc907025dab03a",
-    "0022_habit_reminders.sql": "5ff9c31c59eb65a3a1edc67966ab3cab6e196f56287fac185b10a9734934be6c"
+    "0022_habit_reminders.sql": "5ff9c31c59eb65a3a1edc67966ab3cab6e196f56287fac185b10a9734934be6c",
+    "0023_life_goals.sql": "b4ba55dc70c75cf95b9216a04c0d697a3336f2910c1fee972d4ab726cc988920"
   }
 }
