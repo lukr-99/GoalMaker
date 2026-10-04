@@ -26,6 +26,7 @@ class WidgetPreviewTest {
         WidgetKind.GOALS to R.xml.goals_widget_info,
         WidgetKind.MOTIVATION to R.xml.motivation_widget_info,
         WidgetKind.QUICK_ADD to R.xml.quick_add_widget_info,
+        WidgetKind.LIFE_GOALS to R.xml.life_goals_widget_info,
     )
 
     @Test
