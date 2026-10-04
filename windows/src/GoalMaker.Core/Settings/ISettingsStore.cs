@@ -31,6 +31,9 @@ public interface ISettingsStore
     /// <summary>When the toast for wants that became ready rings (docs/wants.md); 10:00 unless changed, null when off.</summary>
     TimeOnly? WantsReadyReminder { get; set; }
 
+    /// <summary>How often the why reminder shows a life goal (docs/life-goals.md); weekly unless changed.</summary>
+    WhyFrequency WhyReminder { get; set; }
+
     /// <summary>When this device last looked at its reminders, so each one is shown once (docs/reminders.md).</summary>
     DateTimeOffset? RemindedUntil { get; set; }
 

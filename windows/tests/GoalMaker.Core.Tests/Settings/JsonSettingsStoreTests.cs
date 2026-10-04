@@ -1,3 +1,4 @@
+using GoalMaker.Core.Planning;
 using GoalMaker.Core.Settings;
 using GoalMaker.Infrastructure.Settings;
 
@@ -149,5 +150,24 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         store.PlanTomorrowReminder = null;
         Assert.Null(new JsonSettingsStore(SettingsFile).PlanTomorrowReminder);
+    }
+
+    [Fact]
+    public void TheWhyReminderIsWeeklyUntilChangedAndKeptByItsKey()
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(SettingsFile, """{ "Version": 1 }""");
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Equal(WhyFrequency.Weekly, store.WhyReminder);
+
+        store.WhyReminder = WhyFrequency.Every3Days;
+        Assert.Equal(WhyFrequency.Every3Days, new JsonSettingsStore(SettingsFile).WhyReminder);
+        Assert.Contains("\"every-3-days\"", File.ReadAllText(SettingsFile), StringComparison.Ordinal);
+
+        store.WhyReminder = WhyFrequency.Off;
+        Assert.Equal(WhyFrequency.Off, new JsonSettingsStore(SettingsFile).WhyReminder);
+
+        File.WriteAllText(SettingsFile, """{ "Version": 1, "WhyReminder": "hourly" }""");
+        Assert.Equal(WhyFrequency.Weekly, new JsonSettingsStore(SettingsFile).WhyReminder);
     }
 }

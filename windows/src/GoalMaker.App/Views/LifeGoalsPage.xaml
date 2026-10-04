@@ -200,7 +200,7 @@
 
                 <TextBlock Style="{StaticResource Hint}" FontSize="15" Text="{DynamicResource LifeGoals.Empty}"
                            Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
-                <ItemsControl ItemsSource="{Binding Open}" ItemTemplate="{StaticResource LifeGoalCard}" Focusable="False" />
+                <ItemsControl x:Name="OpenCards" ItemsSource="{Binding Open}" ItemTemplate="{StaticResource LifeGoalCard}" Focusable="False" />
 
                 <ui:Button Margin="0,4,0,8" Appearance="Transparent" BorderThickness="0" Command="{Binding ToggleClosedCommand}"
                            Visibility="{Binding HasClosed, Converter={StaticResource BoolToVisibility}}"
@@ -222,7 +222,7 @@
                         </ui:SymbolIcon>
                     </StackPanel>
                 </ui:Button>
-                <ItemsControl ItemsSource="{Binding Closed}" ItemTemplate="{StaticResource LifeGoalCard}" Focusable="False"
+                <ItemsControl x:Name="ClosedCards" ItemsSource="{Binding Closed}" ItemTemplate="{StaticResource LifeGoalCard}" Focusable="False"
                               Visibility="{Binding ShowsClosed, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
         </ScrollViewer>

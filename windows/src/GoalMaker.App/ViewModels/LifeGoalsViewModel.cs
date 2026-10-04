@@ -122,6 +122,42 @@ public sealed partial class LifeGoalsViewModel : ObservableObject
         _ => strings.Get("LifeGoals.Past"),
     };
 
+    /// <summary>The life goal the page should bring into view and give the keyboard, or null for none.</summary>
+    public string? FocusRequest { get; private set; }
+
+    /// <summary>Raised when <see cref="FocusRequest"/> is set, so a page on screen moves to that card.</summary>
+    public event EventHandler? FocusRequested;
+
+    /// <summary>Asks the page to show the card of <paramref name="lifeGoalId"/>, as the why reminder's toast does.</summary>
+    public void Focus(string lifeGoalId)
+    {
+        FocusRequest = lifeGoalId;
+        FocusRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>The card the page should move to, taken once: open ones first, then a closed one, which unfolds them.</summary>
+    public LifeGoalCardViewModel? TakeFocusRequest()
+    {
+        if (FocusRequest is not { } id)
+        {
+            return null;
+        }
+
+        FocusRequest = null;
+        if (Open.FirstOrDefault(card => card.Goal.Id == id) is { } open)
+        {
+            return open;
+        }
+
+        var closed = Closed.FirstOrDefault(card => card.Goal.Id == id);
+        if (closed is not null)
+        {
+            ShowsClosed = true;
+        }
+
+        return closed;
+    }
+
     internal void Edit(LifeGoalCardViewModel card) =>
         Editor.Open(card.Goal, lifeGoals.PicturesOf(card.Goal.Id));
 

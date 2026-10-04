@@ -1087,6 +1087,13 @@
     <sys:String x:Key="LifeGoals.DaysLeft">{0} days left</sys:String>
     <sys:String x:Key="LifeGoals.Today">Today</sys:String>
     <sys:String x:Key="LifeGoals.Past">Past its date</sys:String>
+    <!-- The why reminder (docs/life-goals.md, M9-04) -->
+    <sys:String x:Key="Settings.Why">Why reminder</sys:String>
+    <sys:String x:Key="Settings.WhyHint">Shows one life goal and why it matters, at a random time.</sys:String>
+    <sys:String x:Key="Settings.WhyOff">Off</sys:String>
+    <sys:String x:Key="Settings.WhyWeekly">Weekly</sys:String>
+    <sys:String x:Key="Settings.WhyEvery3Days">Every 3 days</sys:String>
+    <sys:String x:Key="Settings.WhyDaily">Daily</sys:String>
     <!-- Tally (docs/tally.md, M8-13) -->
     <sys:String x:Key="Nav.Tally">Tally</sys:String>
     <sys:String x:Key="Tally.Title">Tally</sys:String>

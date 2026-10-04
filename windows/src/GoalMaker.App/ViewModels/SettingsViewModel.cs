@@ -210,6 +210,13 @@ public sealed partial class SettingsViewModel : ObservableObject
             new(ReduceMotion.On, strings.Get("Settings.ReduceMotionOn")),
             new(ReduceMotion.Off, strings.Get("Settings.ReduceMotionOff")),
         ];
+        WhyOptions =
+        [
+            new(WhyFrequency.Off, strings.Get("Settings.WhyOff")),
+            new(WhyFrequency.Weekly, strings.Get("Settings.WhyWeekly")),
+            new(WhyFrequency.Every3Days, strings.Get("Settings.WhyEvery3Days")),
+            new(WhyFrequency.Daily, strings.Get("Settings.WhyDaily")),
+        ];
         BuildThemes();
         auth.SessionChanged += (_, session) => runOnUi(() => ShowSession(session));
         // The quiet daily check finds updates too, so the card follows what the service keeps.
@@ -414,6 +421,26 @@ public sealed partial class SettingsViewModel : ObservableObject
     public string WantsReadySummary => settings.WantsReadyReminder is { } at
         ? strings.Get("Settings.PlanReminderOn", at.ToString("t", CultureInfo.CurrentCulture))
         : strings.Get("Settings.WantsReadyHint");
+
+    /// <summary>How often the why reminder comes (docs/life-goals.md): Off, Weekly, Every 3 days and Daily.</summary>
+    public IReadOnlyList<SettingsOption> WhyOptions { get; }
+
+    /// <summary>The why reminder's frequency; a change arms the timer again at once.</summary>
+    public SettingsOption SelectedWhy
+    {
+        get => WhyOptions.First(option => (WhyFrequency)option.Value == settings.WhyReminder);
+        set
+        {
+            if (value?.Value is not WhyFrequency frequency || frequency == settings.WhyReminder)
+            {
+                return;
+            }
+
+            settings.WhyReminder = frequency;
+            OnPropertyChanged();
+            quietHoursChanged();
+        }
+    }
 
     /// <summary>When quiet hours start (docs/reminders.md), typed as a time; the same time as the end switches them off.</summary>
     public string QuietHoursStartText

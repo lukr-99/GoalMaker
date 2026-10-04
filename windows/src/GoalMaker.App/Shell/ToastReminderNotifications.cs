@@ -27,6 +27,7 @@ public sealed class ToastReminderNotifications
     private const string ReviewGroup = "review";
     private const string WantsGroup = "wants";
     private const string HabitsGroup = "habits";
+    private const string WhyGroup = "why";
     private readonly Dictionary<DateOnly, IReadOnlyList<string>> shownWants = [];
     private readonly string appId;
     private readonly IStrings strings;
@@ -162,6 +163,51 @@ public sealed class ToastReminderNotifications
         };
         Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
     }
+
+    /// <summary>
+    /// Shows the why reminder (docs/life-goals.md): the life goal's title, its why, its time left and its
+    /// first picture as the hero image when <paramref name="picture"/> names a file. Clicking it opens the
+    /// Life goals page on that life goal. It is tagged with the life goal's id.
+    /// </summary>
+    public void ShowWhy(LifeGoalItem goal, string? timeLeft, string? picture)
+    {
+        var document = new WinRtXml.XmlDocument();
+        document.LoadXml(WhyContent(goal, timeLeft, picture).ToString(SaveOptions.DisableFormatting));
+        var toast = new ToastNotification(document) { Tag = goal.Id, Group = WhyGroup };
+        toast.Activated += (_, args) =>
+        {
+            if (ToastActivation.Parse((args as ToastActivatedEventArgs)?.Arguments) is { } activation)
+            {
+                Activated?.Invoke(this, activation);
+            }
+        };
+        Try(() => ToastNotificationManager.CreateToastNotifier(appId).Show(toast));
+    }
+
+    /// <summary>Takes the why reminder of a life goal away.</summary>
+    public void ClearWhy(string lifeGoalId) => Try(() => ToastNotificationManager.History.Remove(lifeGoalId, WhyGroup, appId));
+
+    /// <summary>The life goals whose why reminder is on screen or in the notification centre.</summary>
+    public IReadOnlyList<string> ShownWhy()
+    {
+        IReadOnlyList<string> shown = [];
+        Try(() => shown = [.. ToastNotificationManager.History.GetHistory(appId).Where(toast => toast.Group == WhyGroup).Select(toast => toast.Tag)]);
+        return shown;
+    }
+
+    /// <summary>The why reminder's toast: the title, the why, the time left below them, and the picture on top.</summary>
+    internal static XElement WhyContent(LifeGoalItem goal, string? timeLeft, string? picture) => new(
+        "toast",
+        new XAttribute("launch", new ToastActivation(ToastAction.Why, goal.Id).Arguments),
+        new XElement(
+            "visual",
+            new XElement(
+                "binding",
+                new XAttribute("template", "ToastGeneric"),
+                new XElement("text", goal.Title),
+                new XElement("text", goal.Why),
+                timeLeft is null ? null : new XElement("text", new XAttribute("placement", "attribution"), timeLeft),
+                picture is null ? null : new XElement("image", new XAttribute("placement", "hero"), new XAttribute("src", new Uri(picture).AbsoluteUri)))));
 
     /// <summary>Takes the reminder of a habit for planning <paramref name="day"/> away.</summary>
     public void ClearHabit(string habitId, DateOnly day) =>

@@ -174,6 +174,7 @@ public sealed class AppGraph : IDisposable
         Rituals = new RitualRunList(replica, newRows, Sync.Request);
         Habits = new HabitList(replica, newRows, Sync.Request);
         ReminderRows = new ReminderList(replica, newRows, Sync.Request);
+        LifeGoals = new LifeGoalList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
             ReminderRows,
             Tasks,
@@ -182,7 +183,9 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             Rituals,
             Wants,
-            Habits);
+            Habits,
+            LifeGoals,
+            () => Settings.WhyReminder);
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -310,7 +313,6 @@ public sealed class AppGraph : IDisposable
         // Life goals and their pictures (docs/life-goals.md, ADR 0018): the rows sync like any other, the
         // files sit in a cache beside this backend's replica and go up and down after every sync run and
         // after a picture is added. A dev build kept on this PC has no owner here, so nothing is sent.
-        LifeGoals = new LifeGoalList(replica, newRows, Sync.Request);
         LifeGoalPictures = new LifeGoalPictures(
             LifeGoals,
             new FilePictureFiles(localOnly ? Paths.LocalPictures : Paths.PicturesFor(backend.Url)),
@@ -322,6 +324,8 @@ public sealed class AppGraph : IDisposable
         Sync.RunCompleted += (_, _) => _ = Task.Run(TransferPicturesAsync);
         LifeGoalsPage = new LifeGoalsViewModel(
             LifeGoals, LifeGoalPictures, Settings, strings, TimeProvider.System, runOnUi, PictureShrinker.Shrink, () => PickPictures(strings));
+        // A life goal added, closed, reopened or deleted moves the why reminder's alarm and may settle its toast.
+        LifeGoals.Changed += (_, _) => runOnUi(SettleReminders);
         Reviews = new ReviewList(replica, newRows, Sync.Request);
         // Tally's categories by name and palette color, the shipped ones and the owner's (docs/tally.md).
         TallyLabels NameTally(IReadOnlyList<TallyCategory> own) => new(tallyDefaults, own, strings, Theme.SwatchBrush);
@@ -814,6 +818,44 @@ public sealed class AppGraph : IDisposable
                 toasts.ShowHabit(due, [.. checkins.Where(checkin => checkin.HabitId == due.Habit.Id)]);
             }
         }
+
+        if (look.Why is { } why && LifeGoals.Get(why.LifeGoalId) is { } goal)
+        {
+            var today = PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour);
+            var left = LifeGoalRules.TimeLeft(goal.By, today) is { } time ? LifeGoalsViewModel.TimeLeftText(time, strings) : null;
+            toasts.ShowWhy(goal, left, WhyPicture(goal.Id));
+        }
+    }
+
+    // The life goal's first picture as a file the toast can show, when this PC has it. Windows reads a
+    // toast's image from a path, so the cached bytes are copied out, one file per life goal. A copy whose
+    // toast is gone is removed.
+    private string? WhyPicture(string lifeGoalId)
+    {
+        if (LifeGoals.PicturesOf(lifeGoalId).FirstOrDefault() is not { } first || LifeGoalPictures.Read(first.Id) is not { } bytes)
+        {
+            return null;
+        }
+
+        try
+        {
+            var folder = Path.Combine(Paths.Root, "toast-pictures");
+            Directory.CreateDirectory(folder);
+            var shown = toasts.ShownWhy().ToHashSet(StringComparer.Ordinal);
+            foreach (var old in Directory.EnumerateFiles(folder).Where(old => !shown.Contains(Path.GetFileNameWithoutExtension(old))).ToList())
+            {
+                File.Delete(old);
+            }
+
+            var file = Path.Combine(folder, lifeGoalId + ".jpg");
+            File.WriteAllBytes(file, bytes);
+            return file;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // The toast shows without its picture.
+            return null;
+        }
     }
 
     private void SettleReminders()
@@ -838,6 +880,12 @@ public sealed class AppGraph : IDisposable
         foreach (var (habitId, habitDay) in toasts.ShownHabits().Where(shown => Reminders.HabitStale(shown.HabitId, shown.Day)))
         {
             toasts.ClearHabit(habitId, habitDay);
+        }
+
+        // A why reminder goes once its life goal was achieved, dropped or deleted, here or on the other device.
+        foreach (var lifeGoalId in toasts.ShownWhy().Where(Reminders.WhyStale))
+        {
+            toasts.ClearWhy(lifeGoalId);
         }
     }
 
@@ -877,6 +925,14 @@ public sealed class AppGraph : IDisposable
         if (activation.Action == ToastAction.Wants)
         {
             WindowRequested?.Invoke(this, AppPage.Wants);
+            return;
+        }
+
+        if (activation.Action == ToastAction.Why)
+        {
+            LifeGoalsPage.Focus(activation.ReminderId);
+            WindowRequested?.Invoke(this, AppPage.LifeGoals);
+            toasts.ClearWhy(activation.ReminderId);
             return;
         }
 

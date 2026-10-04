@@ -255,6 +255,8 @@ public sealed class AutoUpdateCheckTests : IDisposable
 
         public TimeOnly? WantsReadyReminder { get; set; }
 
+        public WhyFrequency WhyReminder { get; set; } = WhyFrequency.Off;
+
         public DateTimeOffset? RemindedUntil { get; set; }
 
         public DateTimeOffset? SignedInAt { get; set; }

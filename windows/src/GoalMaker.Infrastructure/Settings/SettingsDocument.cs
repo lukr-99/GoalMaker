@@ -35,6 +35,9 @@ public sealed record SettingsDocument
 
     public TimeOnly? WantsReadyReminder { get; init; } = WantReminder.DefaultTime;
 
+    /// <summary>The why reminder's frequency by its key ("weekly"); missing from older files reads as weekly.</summary>
+    public string? WhyReminder { get; init; }
+
     public DateTimeOffset? RemindedUntil { get; init; }
 
     /// <summary>When the owner last signed in on this PC; missing from older files starts the week anew.</summary>
