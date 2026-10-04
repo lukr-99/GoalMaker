@@ -12,6 +12,7 @@ object PlaceRules {
     const val CALENDAR = "calendar"
     const val HABITS = "habits"
     const val GOALS = "goals"
+    const val LIFE_GOALS = "life-goals"
     const val PROJECTS = "projects"
     const val WANTS = "wants"
     const val TALLY = "tally"
@@ -20,7 +21,7 @@ object PlaceRules {
     const val ARCHIVE = "archive"
 
     /** Every place, in the order the Places hub lists them. */
-    val PLACES = listOf(TODAY, TOMORROW, INBOX, CALENDAR, HABITS, GOALS, PROJECTS, WANTS, TALLY, REVIEWS, STATS, ARCHIVE)
+    val PLACES = listOf(TODAY, TOMORROW, INBOX, CALENDAR, HABITS, GOALS, LIFE_GOALS, PROJECTS, WANTS, TALLY, REVIEWS, STATS, ARCHIVE)
 
     private const val PHONE_LIMIT = 4
 

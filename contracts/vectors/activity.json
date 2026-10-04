@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals, wants), name (areas, tags, habits, tally_categories) or pattern (tally_rules) from 'after', else null.",
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); life_goals: achieved (status to achieved), dropped (status to dropped), reopened (status to open), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals, wants, life_goals), name (areas, tags, habits, tally_categories) or pattern (tally_rules) from 'after', else null.",
   "cases": [
     {
       "name": "a new task is added",
@@ -746,6 +746,120 @@
       "expect": {
         "change": "edited",
         "subject": "Chess lesson"
+      }
+    },
+    {
+      "name": "a life goal is added",
+      "entity": "life_goals",
+      "action": "create",
+      "before": null,
+      "after": {
+        "title": "Own an Audi R8",
+        "status": "open"
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Own an Audi R8"
+      }
+    },
+    {
+      "name": "a life goal is achieved",
+      "entity": "life_goals",
+      "action": "update",
+      "before": {
+        "title": "Own an Audi R8",
+        "status": "open"
+      },
+      "after": {
+        "title": "Own an Audi R8",
+        "status": "achieved"
+      },
+      "expect": {
+        "change": "achieved",
+        "subject": "Own an Audi R8"
+      }
+    },
+    {
+      "name": "a life goal is dropped",
+      "entity": "life_goals",
+      "action": "update",
+      "before": {
+        "title": "Own an Audi R8",
+        "status": "open"
+      },
+      "after": {
+        "title": "Own an Audi R8",
+        "status": "dropped"
+      },
+      "expect": {
+        "change": "dropped",
+        "subject": "Own an Audi R8"
+      }
+    },
+    {
+      "name": "a life goal is reopened",
+      "entity": "life_goals",
+      "action": "update",
+      "before": {
+        "title": "Own an Audi R8",
+        "status": "achieved"
+      },
+      "after": {
+        "title": "Own an Audi R8",
+        "status": "open"
+      },
+      "expect": {
+        "change": "reopened",
+        "subject": "Own an Audi R8"
+      }
+    },
+    {
+      "name": "a life goal is renamed",
+      "entity": "life_goals",
+      "action": "update",
+      "before": {
+        "title": "Own a fast car",
+        "status": "open"
+      },
+      "after": {
+        "title": "Own an Audi R8",
+        "status": "open"
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "Own an Audi R8"
+      }
+    },
+    {
+      "name": "a life goal's why is edited",
+      "entity": "life_goals",
+      "action": "update",
+      "before": {
+        "title": "Own an Audi R8",
+        "status": "open",
+        "why": "Speed"
+      },
+      "after": {
+        "title": "Own an Audi R8",
+        "status": "open",
+        "why": "Proof"
+      },
+      "expect": {
+        "change": "edited",
+        "subject": "Own an Audi R8"
+      }
+    },
+    {
+      "name": "a life goal gets a picture",
+      "entity": "life_goal_pictures",
+      "action": "create",
+      "before": null,
+      "after": {
+        "life_goal_id": "aaaaaaaa-0000-4000-8000-000000000001"
+      },
+      "expect": {
+        "change": "added",
+        "subject": null
       }
     }
   ]

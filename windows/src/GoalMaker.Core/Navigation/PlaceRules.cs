@@ -13,6 +13,7 @@ public static class PlaceRules
     public const string Calendar = "calendar";
     public const string Habits = "habits";
     public const string Goals = "goals";
+    public const string LifeGoals = "life-goals";
     public const string Projects = "projects";
     public const string Wants = "wants";
     public const string Tally = "tally";
@@ -24,7 +25,7 @@ public static class PlaceRules
 
     /// <summary>Every place, in the order the Places hub and All places list them.</summary>
     public static readonly IReadOnlyList<string> Places =
-        [Today, Tomorrow, Inbox, Calendar, Habits, Goals, Projects, Wants, Tally, Reviews, Stats, Archive];
+        [Today, Tomorrow, Inbox, Calendar, Habits, Goals, LifeGoals, Projects, Wants, Tally, Reviews, Stats, Archive];
 
     /// <summary>How many pins a device holds, or null for no limit.</summary>
     public static int? Limit(DeviceKind device) => device == DeviceKind.Phone ? PhoneLimit : null;
