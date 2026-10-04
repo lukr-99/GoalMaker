@@ -37,6 +37,11 @@ class LifeGoalList(
     fun allPictures(): List<LifeGoalPicture> = live(PICTURES).map(::toPicture)
         .sortedWith(compareBy<LifeGoalPicture> { it.lifeGoalId }.thenBy { it.position }.thenBy { it.id })
 
+    /** The deleted pictures' rows still in the replica, each with when it was deleted. */
+    fun pictureTombstones(): Map<String, String> = replica.all(PICTURES)
+        .mapNotNull { row -> row.text(SyncedTable.DELETED_AT)?.let { row.text(SyncedTable.ID).orEmpty() to it } }
+        .toMap()
+
     /** [allPictures], again after every change to a picture. */
     fun watchPictures(): Flow<List<LifeGoalPicture>> = replica.watch(PICTURES).map { allPictures() }
 

@@ -33,10 +33,21 @@ public sealed class AppDataPaths
     /// The device replica (ADR 0007), one file per backend, so a dev build switched to another
     /// Supabase project never mixes its rows with the first one's.
     /// </summary>
-    public string ReplicaFor(string backendUrl)
+    public string ReplicaFor(string backendUrl) => Path.Combine(Root, $"replica-{BackendKey(backendUrl)}.db");
+
+    /// <summary>A dev build's own life goal pictures when it keeps everything on this PC.</summary>
+    public string LocalPictures => Path.Combine(Root, "pictures-local");
+
+    /// <summary>
+    /// The cache of life goal picture files (ADR 0018), one folder per backend like the replica, so its
+    /// files always belong to the rows beside them.
+    /// </summary>
+    public string PicturesFor(string backendUrl) => Path.Combine(Root, $"pictures-{BackendKey(backendUrl)}");
+
+    private static string BackendKey(string backendUrl)
     {
         var digest = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(backendUrl.Trim().TrimEnd('/')));
-        return Path.Combine(Root, $"replica-{Convert.ToHexStringLower(digest)[..12]}.db");
+        return Convert.ToHexStringLower(digest)[..12];
     }
 
     public string EnsureRoot()
