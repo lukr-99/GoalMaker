@@ -183,6 +183,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public TimeOnly? WantsReadyReminder { get; set; }
 
+        public WhyFrequency WhyReminder { get; set; } = WhyFrequency.Off;
+
         public IReadOnlyList<string> PinnedPlaces { get; set; } = [];
 
         public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];

@@ -1,5 +1,6 @@
 package com.goalmaker.app.ui.settings
 
+import com.goalmaker.app.application.planning.WhyFrequency
 import com.goalmaker.app.application.about.AppInfo
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.planning.DndBreakthrough
@@ -25,6 +26,7 @@ data class SettingsUiState(
     val monthlyReviewReminder: LocalTime?,
     /** When the notification for wants that became ready rings, or null when it's off. */
     val wantsReadyReminder: LocalTime? = null,
+    val whyReminder: WhyFrequency = WhyFrequency.DEFAULT,
     /** The theme in use: the chosen one, or the default when none is chosen or it's unknown. */
     val themeId: String,
     val themes: List<ThemeDefinition>,

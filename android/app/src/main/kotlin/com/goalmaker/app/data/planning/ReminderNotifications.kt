@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
@@ -20,6 +21,9 @@ import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.ScheduledReminder
 import com.goalmaker.app.application.planning.WantsDue
+import com.goalmaker.app.application.planning.TimeLeft
+import com.goalmaker.app.application.planning.TimeLeftUnit
+import com.goalmaker.app.application.planning.WhyDue
 import com.goalmaker.app.domain.planning.Snooze
 import java.text.NumberFormat
 import java.time.LocalDate
@@ -71,6 +75,11 @@ class ReminderNotifications(private val context: Context) {
         system.createNotificationChannel(
             NotificationChannel(CHANNEL_WANTS, context.getString(R.string.wants_ready_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
                 description = context.getString(R.string.wants_ready_channel_description)
+            },
+        )
+        system.createNotificationChannel(
+            NotificationChannel(CHANNEL_WHY, context.getString(R.string.why_reminder_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = context.getString(R.string.why_reminder_channel_description)
             },
         )
         system.createNotificationChannel(
@@ -205,6 +214,49 @@ class ReminderNotifications(private val context: Context) {
             // Notifications aren't allowed yet; the wants are waiting in the app.
         }
     }
+
+    /**
+     * Shows the why reminder (docs/life-goals.md): one life goal's title, its why and its time left,
+     * with its first [picture] large when this device has it. Tapping it opens the Life goals place on
+     * that life goal; achieving, dropping or deleting the life goal takes it down.
+     */
+    fun showWhy(due: WhyDue, title: String, why: String, timeLeft: TimeLeft?, picture: ByteArray?) {
+        if (!manager.areNotificationsEnabled()) return
+        val bitmap = picture?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
+        val builder = NotificationCompat.Builder(context, CHANNEL_WHY)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(why)
+            .setSubText(timeLeft?.let(::timeLeftText))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(openLifeGoal(due.lifeGoalId))
+        builder.setStyle(
+            if (bitmap != null) {
+                NotificationCompat.BigPictureStyle().bigPicture(bitmap).setSummaryText(why)
+            } else {
+                NotificationCompat.BigTextStyle().bigText(why)
+            },
+        )
+        try {
+            manager.notify(due.lifeGoalId, WHY_ID, builder.build())
+        } catch (_: SecurityException) {
+            // Notifications aren't allowed yet; the life goal is still in the app.
+        }
+    }
+
+    private fun timeLeftText(left: TimeLeft): String = when (left.unit) {
+        TimeLeftUnit.YEARS -> context.resources.getQuantityString(R.plurals.life_goals_years_left, left.count, left.count)
+        TimeLeftUnit.MONTHS -> context.resources.getQuantityString(R.plurals.life_goals_months_left, left.count, left.count)
+        TimeLeftUnit.DAYS -> context.resources.getQuantityString(R.plurals.life_goals_days_left, left.count, left.count)
+        TimeLeftUnit.TODAY -> context.getString(R.string.life_goals_today)
+        TimeLeftUnit.PAST -> context.getString(R.string.life_goals_past)
+    }
+
+    /** The life goals whose why reminder is on screen. */
+    fun shownWhy(): List<String> = manager.activeNotifications.filter { it.id == WHY_ID }.mapNotNull { it.tag }
+
+    fun clearWhy(lifeGoalId: String) = manager.cancel(lifeGoalId, WHY_ID)
 
     /** The wants notifications on screen, as their planning day and the wants they name. */
     fun shownWants(): List<Pair<LocalDate, List<String>>> = manager.activeNotifications
@@ -367,6 +419,15 @@ class ReminderNotifications(private val context: Context) {
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
+    private fun openLifeGoal(lifeGoalId: String): PendingIntent = PendingIntent.getActivity(
+        context,
+        (WHY_ID.toString() + lifeGoalId).hashCode(),
+        Intent(context, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(ReminderAlarm.EXTRA_OPEN_LIFE_GOAL, lifeGoalId),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
     private fun openReview(kind: String, periodStart: LocalDate): PendingIntent = PendingIntent.getActivity(
         context,
         (REVIEW_ID.toString() + kind + periodStart).hashCode(),
@@ -460,5 +521,9 @@ class ReminderNotifications(private val context: Context) {
         const val CHANNEL_HABITS = "habits"
         private const val HABIT_ID = 4005
         private const val EXTRA_WANT_IDS = "com.goalmaker.app.WANT_IDS"
+
+        /** The why reminder's channel, so the owner can silence it apart from the rest. */
+        private const val CHANNEL_WHY = "why_reminder"
+        private const val WHY_ID = 4006
     }
 }

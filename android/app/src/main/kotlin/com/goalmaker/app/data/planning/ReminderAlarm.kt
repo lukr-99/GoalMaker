@@ -46,6 +46,9 @@ object ReminderAlarm {
     const val EXTRA_OPEN_PLAN = "open_plan"
     const val EXTRA_OPEN_WANTS = "open_wants"
 
+    /** Set on the intent that opens the Life goals place from the why reminder: the life goal's id. */
+    const val EXTRA_OPEN_LIFE_GOAL = "open_life_goal"
+
     /** Set on the intent that opens the Habits place from a habit reminder; [EXTRA_LOG_HABIT] also opens its log dialog. */
     const val EXTRA_OPEN_HABITS = "open_habits"
     const val EXTRA_LOG_HABIT = "log_habit"

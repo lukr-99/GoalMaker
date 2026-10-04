@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -337,6 +338,9 @@ private fun Live(place: String, digest: PlacesDigest, hero: Boolean) {
         PlaceRules.WANTS ->
             if (digest.wantsReady > 0) BigNumber(digest.wantsReady, stringResource(R.string.wants_status_ready), muted)
             else Line(stringResource(R.string.places_wants_cooling, digest.wantsCooling), muted)
+        PlaceRules.LIFE_GOALS ->
+            if (digest.lifeGoalsOpen == 0) Line(stringResource(R.string.places_life_goals_none), muted)
+            else Line(pluralStringResource(R.plurals.places_life_goals, digest.lifeGoalsOpen, digest.lifeGoalsOpen), muted)
         PlaceRules.TALLY ->
             if (digest.tallyToday.isEmpty()) {
                 Line(stringResource(R.string.places_tally_none), muted)

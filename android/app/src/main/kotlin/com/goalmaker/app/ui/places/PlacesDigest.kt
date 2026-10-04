@@ -19,6 +19,7 @@ data class PlacesDigest(
     val letterWaiting: Boolean = false,
     val wantsReady: Int = 0,
     val wantsCooling: Int = 0,
+    val lifeGoalsOpen: Int = 0,
     /** Today's Tally minutes by category, most first, on every device. */
     val tallyToday: List<TallySlice> = emptyList(),
     val doneThisWeek: Int = 0,

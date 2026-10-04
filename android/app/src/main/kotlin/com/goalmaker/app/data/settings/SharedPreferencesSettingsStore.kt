@@ -5,6 +5,7 @@ import androidx.core.content.edit
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.WantReminder
+import com.goalmaker.app.application.planning.WhyFrequency
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.navigation.DeviceKind
 import com.goalmaker.app.domain.navigation.PlaceRules
@@ -104,6 +105,14 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
     override fun setWantsReadyReminder(time: LocalTime?) {
         preferences.edit { putInt(WANTS_READY_AT, time?.toSecondOfDay() ?: OFF) }
         wantsReady.value = time
+    }
+
+    private val why = MutableStateFlow(WhyFrequency.of(preferences.getString(WHY_REMINDER, null)))
+    override val whyReminder: StateFlow<WhyFrequency> = why.asStateFlow()
+
+    override fun setWhyReminder(frequency: WhyFrequency) {
+        preferences.edit { putString(WHY_REMINDER, frequency.key) }
+        why.value = frequency
     }
 
     override fun setPlanTomorrowReminder(time: LocalTime?) {
@@ -321,6 +330,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val WEEKLY_REVIEW_DAY = "weekly_review_weekday"
         const val MONTHLY_REVIEW_AT = "monthly_review_reminder"
         const val WANTS_READY_AT = "wants_ready_reminder"
+        const val WHY_REMINDER = "why_reminder"
         const val OFF = -1
         const val SECONDS_PER_DAY = 86_400
         const val BACKEND_URL = "dev_backend_url"

@@ -12,6 +12,7 @@ public enum AppPage
     Archive,
     Activity,
     Goals,
+    LifeGoals,
     Habits,
     Reviews,
     Stats,

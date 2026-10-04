@@ -26,6 +26,7 @@ internal static class PlaceSidebar
         [PlaceRules.Calendar] = typeof(CalendarPage),
         [PlaceRules.Habits] = typeof(HabitsPage),
         [PlaceRules.Goals] = typeof(GoalsPage),
+        [PlaceRules.LifeGoals] = typeof(LifeGoalsPage),
         [PlaceRules.Projects] = typeof(ProjectsPage),
         [PlaceRules.Reviews] = typeof(ReviewsPage),
         [PlaceRules.Stats] = typeof(StatsPage),

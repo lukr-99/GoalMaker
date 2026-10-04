@@ -73,6 +73,12 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { WantsReadyReminder = value });
     }
 
+    public WhyFrequency WhyReminder
+    {
+        get => WhyFrequencies.Of(document.WhyReminder);
+        set => Save(document with { WhyReminder = WhyFrequencies.Key(value) });
+    }
+
     public TimeOnly? MonthlyReviewReminder
     {
         get => document.MonthlyReviewReminder;

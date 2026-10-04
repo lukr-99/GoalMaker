@@ -8,7 +8,8 @@ namespace GoalMaker.Core.Planning;
 /// reminder the owner handled. The time of the last look stays in the settings, so each reminder is
 /// shown once. The evening Plan tomorrow reminder shares the one timer: it rings at the time in the
 /// settings unless the ritual already ran that planning day, and so do the habits that remind, on the days
-/// they are still left (<see cref="HabitReminder"/>).
+/// they are still left (<see cref="HabitReminder"/>), and the why reminder while a life goal is open
+/// (<see cref="WhyReminder"/>).
 /// </summary>
 public sealed class ReminderService
 {
@@ -20,7 +21,11 @@ public sealed class ReminderService
     private readonly RitualRunList? rituals;
     private readonly WantList? wants;
     private readonly HabitList? habits;
+    private readonly LifeGoalList? lifeGoals;
+    private readonly Func<WhyFrequency> whyFrequency;
 
+    /// <param name="lifeGoals">The life goals the why reminder shows; null for none.</param>
+    /// <param name="whyFrequency">How often the why reminder comes, a device setting; off when not given.</param>
     public ReminderService(
         ReminderList reminders,
         TaskList tasks,
@@ -29,8 +34,12 @@ public sealed class ReminderService
         TimeProvider time,
         RitualRunList? rituals = null,
         WantList? wants = null,
-        HabitList? habits = null)
+        HabitList? habits = null,
+        LifeGoalList? lifeGoals = null,
+        Func<WhyFrequency>? whyFrequency = null)
     {
+        this.lifeGoals = lifeGoals;
+        this.whyFrequency = whyFrequency ?? (() => WhyFrequency.Off);
         this.wants = wants;
         this.habits = habits;
         this.reminders = reminders;
@@ -77,8 +86,11 @@ public sealed class ReminderService
             }
         }
 
-        return new ReminderLook(due, planDay, weekly, monthly, ready, dueHabits);
+        return new ReminderLook(due, planDay, weekly, monthly, ready, dueHabits, DueWhy(since, now));
     }
+
+    /// <summary>Whether the why reminder on screen for <paramref name="lifeGoalId"/> has to go: the life goal is gone or no longer open.</summary>
+    public bool WhyStale(string lifeGoalId) => lifeGoals?.Get(lifeGoalId) is not { Status: LifeGoalRules.Open };
 
     /// <summary>Whether the reminder on screen for a habit on planning <paramref name="day"/> has to go: the habit is no longer left, or the day moved on.</summary>
     public bool HabitStale(string habitId, DateOnly day)
@@ -216,6 +228,26 @@ public sealed class ReminderService
 
     private IReadOnlySet<DateOnly> Ran(string ritual) => rituals?.Ran(ritual) ?? new HashSet<DateOnly>();
 
+    // The latest why moment since the last look, with the open life goal its period shows (docs/life-goals.md).
+    private WhyDue? DueWhy(DateTime since, DateTime now)
+    {
+        if (lifeGoals is null)
+        {
+            return null;
+        }
+
+        var frequency = whyFrequency();
+        return WhyReminder.Due(frequency, settings.QuietHours, since, now) is { } moment
+            && WhyReminder.Goal(frequency, moment.PeriodStart, lifeGoals.All()) is { } goal
+                ? new WhyDue(moment.PeriodStart, goal.Id)
+                : null;
+    }
+
+    // The next why moment, while there is an open life goal for it to show.
+    private DateTime? NextWhy(DateTime now) => lifeGoals is null || LifeGoalRules.OpenOnes(lifeGoals.All()).Count == 0
+        ? null
+        : WhyReminder.Next(whyFrequency(), settings.QuietHours, now);
+
     private static List<HabitCheckin> Own(IReadOnlyList<HabitCheckin> checkins, string habitId) =>
         [.. checkins.Where(checkin => checkin.HabitId == habitId)];
 
@@ -233,7 +265,7 @@ public sealed class ReminderService
         : ReviewReminder.Next(KindOf(ritual), time, settings.WeeklyReviewWeekday, settings.DayStartHour, Ran(ritual), now);
 
     // One timer for whichever comes first: a task's reminder, the evening Plan tomorrow reminder, a review
-    // reminder, or the wants that become ready.
+    // reminder, the wants that become ready, a habit's reminder or the why reminder.
     private void Arm(IReadOnlyList<ReminderItem> all, IReadOnlyDictionary<string, TaskItem> byId, DateTime now)
     {
         var task = ReminderSchedule.Next(all, byId, settings.QuietHours, now)?.At;
@@ -251,7 +283,7 @@ public sealed class ReminderService
                 .Min();
         }
 
-        var next = new[] { task, ritual, weekly, monthly, ready, habit }.Where(moment => moment is not null).Min();
+        var next = new[] { task, ritual, weekly, monthly, ready, habit, NextWhy(now) }.Where(moment => moment is not null).Min();
         if (next is { } at)
         {
             scheduler.ArmAt(at);

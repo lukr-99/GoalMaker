@@ -10,7 +10,7 @@ public static class ActivityRules
     {
         var subject = entity switch
         {
-            "tasks" or "task_steps" or "goals" or "wants" => Text(after, "title"),
+            "tasks" or "task_steps" or "goals" or "wants" or "life_goals" => Text(after, "title"),
             "areas" or "tags" or "habits" or "tally_categories" => Text(after, "name"),
             "tally_rules" => Text(after, "pattern"),
             _ => null,
@@ -56,6 +56,10 @@ public static class ActivityRules
             "wants" when Changed("decision") && Text(after, "decision") == "dropped" => "dropped",
             "wants" when Changed("decision") => "reopened",
             "wants" when Changed("title") => "renamed",
+            "life_goals" when Changed("status") && Text(after, "status") == "achieved" => "achieved",
+            "life_goals" when Changed("status") && Text(after, "status") == "dropped" => "dropped",
+            "life_goals" when Changed("status") && Text(after, "status") == "open" => "reopened",
+            "life_goals" when Changed("title") => "renamed",
             _ => "edited",
         };
     }

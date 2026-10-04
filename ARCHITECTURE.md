@@ -60,7 +60,8 @@ composition root creates everything
   (`SqliteReplica` on the bundled SQLite driver, `ReplicaMigrator`, `SqlScript`), `sync/`
   (`PostgrestRemoteTables` over Ktor, `SupabaseChangeFeed`, `SyncWorker` and
   `WorkManagerSyncScheduler`), `planning/` (`AlarmReminderScheduler`, `ReminderNotifications`,
-  `ReminderReceiver`), `activity/` and `connector/` (PostgREST readers), `assistant/SupabaseAssistantClient`,
+  `ReminderReceiver`, and the life goal picture adapters `FilePictureFiles` and
+  `SupabasePictureCloud`), `activity/` and `connector/` (PostgREST readers), `assistant/SupabaseAssistantClient`,
   `diagnostics/CrashLog`.
 - `ui/`: `places/` (the Places hub and its live tiles, ADR 0014),
   `theme/` (Material 3 Expressive, semantic tokens, pinned alpha per ADR 0005), `components/`
@@ -83,7 +84,9 @@ composition root creates everything
 - `GoalMaker.Infrastructure` (net10.0-windows): `SupabaseAuthGateway`, a DPAPI-encrypted session
   store, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`, `InstallerLauncher`,
   `JsonSettingsStore`, `AppDataPaths`, `Replica/SqliteReplica` (Microsoft.Data.Sqlite),
-  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Assistant/SupabaseAssistantClient`, `Planning/TimerReminderScheduler` and
+  `Sync/PostgrestRemoteTables`, `Sync/SupabaseChangeFeed`, `Assistant/SupabaseAssistantClient`, `Planning/TimerReminderScheduler`, the life goal
+  picture adapters (`Planning/FilePictureFiles`, `Planning/SupabasePictureCloud`,
+  `Planning/PictureShrinker`) and
   `Startup/` (GoalMaker's own value under Run, and finding Startup Profiles).
 - `GoalMaker.App` (WPF, `net10.0-windows10.0.19041.0` for toasts, ADR 0009):
   `Composition/AppGraph` (composition root), `Shell/` (`AppShell`, what `App` puts up over the

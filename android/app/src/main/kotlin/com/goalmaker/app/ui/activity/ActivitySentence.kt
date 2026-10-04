@@ -35,6 +35,8 @@ fun activitySentence(row: ActivityRow): String {
         "habit_pauses" -> stringResource(R.string.activity_habit_pause)
         "wants" -> stringResource(R.string.activity_want, subject)
         "want_cooldowns" -> stringResource(R.string.activity_want_cooldowns)
+        "life_goals" -> stringResource(R.string.activity_life_goal, subject)
+        "life_goal_pictures" -> stringResource(R.string.activity_life_goal_picture)
         "tally_categories" -> stringResource(R.string.activity_tally_category, subject)
         "tally_rules" -> stringResource(R.string.activity_tally_rule)
         else -> entry.entity
@@ -47,6 +49,7 @@ fun activitySentence(row: ActivityRow): String {
         "completed" -> stringResource(R.string.activity_completed, actor, what)
         "dropped" -> stringResource(R.string.activity_dropped, actor, what)
         "bought" -> stringResource(R.string.activity_bought, actor, what)
+        "achieved" -> stringResource(R.string.activity_achieved, actor, what)
         "reopened" -> stringResource(R.string.activity_reopened, actor, what)
         "moved" -> row.change.day?.let { day ->
             stringResource(R.string.activity_moved, actor, what, LocalDate.parse(day).format(days))

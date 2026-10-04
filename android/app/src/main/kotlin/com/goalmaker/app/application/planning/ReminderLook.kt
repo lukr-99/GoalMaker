@@ -16,4 +16,6 @@ data class ReminderLook(
     val wants: WantsDue? = null,
     /** The habits whose reminder rang, each still left on its planning day. */
     val habits: List<DueHabit> = emptyList(),
+    /** The why reminder, when its moment came (docs/life-goals.md). */
+    val why: WhyDue? = null,
 )

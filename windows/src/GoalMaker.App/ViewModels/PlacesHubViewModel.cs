@@ -13,7 +13,7 @@ namespace GoalMaker.App.ViewModels;
 /// Places hub, the pinned ones marked, and Edit, where a click pins or unpins a place. The PC has no
 /// pin limit, so only the last pin refuses. The numbers come from the same rules and helpers the
 /// places themselves use (Today's summary and habit rings, this week's goals, the archive, Stats' week,
-/// Wants' states, Tally's day), so a tile never disagrees with its page.
+/// Wants' states, the open life goals, Tally's day), so a tile never disagrees with its page.
 /// </summary>
 public sealed partial class PlacesHubViewModel : ObservableObject
 {
@@ -24,6 +24,7 @@ public sealed partial class PlacesHubViewModel : ObservableObject
     private readonly HabitsViewModel habitsPage;
     private readonly HabitList habits;
     private readonly GoalList goals;
+    private readonly LifeGoalList lifeGoals;
     private readonly ReviewList reviews;
     private readonly WantList wants;
     private readonly TallyList tally;
@@ -46,6 +47,7 @@ public sealed partial class PlacesHubViewModel : ObservableObject
         HabitsViewModel habitsPage,
         HabitList habits,
         GoalList goals,
+        LifeGoalList lifeGoals,
         ReviewList reviews,
         WantList wants,
         TallyList tally,
@@ -60,6 +62,7 @@ public sealed partial class PlacesHubViewModel : ObservableObject
         this.habitsPage = habitsPage;
         this.habits = habits;
         this.goals = goals;
+        this.lifeGoals = lifeGoals;
         this.reviews = reviews;
         this.wants = wants;
         this.tally = tally;
@@ -73,6 +76,7 @@ public sealed partial class PlacesHubViewModel : ObservableObject
         tasks.Changed += (_, _) => runOnUi(Refresh);
         habits.Changed += (_, _) => runOnUi(Refresh);
         goals.Changed += (_, _) => runOnUi(Refresh);
+        lifeGoals.Changed += (_, _) => runOnUi(Refresh);
         reviews.Changed += (_, _) => runOnUi(Refresh);
         wants.Changed += (_, _) => runOnUi(Refresh);
         tally.Changed += (_, _) => runOnUi(Refresh);
@@ -97,6 +101,7 @@ public sealed partial class PlacesHubViewModel : ObservableObject
         // The Habits tile counts every habit due today, the ones kept off Today too.
         var habitRows = habitsPage.DueRows();
         var goalRows = GoalsViewModel.ThisWeek(goals, tasks, today, strings, habits);
+        var openLifeGoals = lifeGoals.All().Count(goal => goal.Status == LifeGoalRules.Open);
         var wantStates = wants.All().Select(want => WantRules.State(want, today)).ToList();
         var ready = wantStates.Count(state => state == WantState.Ready);
         var labels = tallyLabels(tally.Categories());
@@ -131,6 +136,12 @@ public sealed partial class PlacesHubViewModel : ObservableObject
                     break;
                 case PlaceRules.Goals:
                     Ring(tile, goalRows.Count(row => row.IsHit), goalRows.Count);
+                    break;
+                case PlaceRules.LifeGoals when openLifeGoals == 0:
+                    Line(tile, strings.Get("Places.LifeGoalsNone"));
+                    break;
+                case PlaceRules.LifeGoals:
+                    Line(tile, strings.Get(openLifeGoals == 1 ? "Places.LifeGoal" : "Places.LifeGoals", openLifeGoals));
                     break;
                 case PlaceRules.Projects:
                     Line(tile, strings.Get("Places.ProjectsLine", items.Count, items.Count(task => task.BoardColumn == ProjectRules.Doing)));

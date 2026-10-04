@@ -53,6 +53,11 @@ public sealed class LifeGoalList
             .ThenBy(picture => picture.Position)
             .ThenBy(picture => picture.Id, StringComparer.Ordinal)];
 
+    /// <summary>The deleted pictures' rows still in the replica, each with when it was deleted.</summary>
+    public IReadOnlyDictionary<string, string> PictureTombstones() => replica.All(Pictures)
+        .Where(row => (string?)row[SyncedTable.DeletedAt] is not null)
+        .ToDictionary(row => (string?)row[SyncedTable.Id] ?? string.Empty, row => (string)row[SyncedTable.DeletedAt]!, StringComparer.Ordinal);
+
     /// <summary>Adds an open life goal after the others. Null without a title or a why.</summary>
     public LifeGoalItem? Add(LifeGoalDraft draft)
     {

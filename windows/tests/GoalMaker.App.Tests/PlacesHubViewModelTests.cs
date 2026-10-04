@@ -29,7 +29,7 @@ public sealed class PlacesHubViewModelTests : IDisposable
         var hub = Hub();
 
         Assert.Equal(
-            ["today", "tomorrow", "inbox", "calendar", "habits", "goals", "projects", "wants", "tally", "reviews", "stats", "archive"],
+            ["today", "tomorrow", "inbox", "calendar", "habits", "goals", "life-goals", "projects", "wants", "tally", "reviews", "stats", "archive"],
             hub.Tiles.Select(tile => tile.Id));
         Assert.Equal("Nav.Habits", Tile(hub, "habits").Title);
     }
@@ -87,6 +87,23 @@ public sealed class PlacesHubViewModelTests : IDisposable
         Assert.Equal((PlaceTileLook.Ring, "1", "Places.OutOf(2)"), (habits.Look, habits.Number, habits.Detail));
         var goals = Tile(hub, "goals");
         Assert.Equal((PlaceTileLook.Ring, "1", "Places.OutOf(2)", 0.5), (goals.Look, goals.Number, goals.Detail, goals.Fraction));
+    }
+
+    [Fact]
+    public void LifeGoalsCountTheOpenOnesOrAskWhatYouWant()
+    {
+        var hub = Hub();
+        Assert.Equal((PlaceTileLook.Line, "Places.LifeGoalsNone"), (Tile(hub, "life-goals").Look, Tile(hub, "life-goals").Detail));
+
+        planner.LifeGoals.Add(new LifeGoalDraft("Own an Audi R8", "Proof"));
+        Assert.Equal("Places.LifeGoal(1)", Tile(hub, "life-goals").Detail);
+
+        var boat = planner.LifeGoals.Add(new LifeGoalDraft("Sail to Greece", "The sea"))!;
+        planner.LifeGoals.Add(new LifeGoalDraft("Run a marathon", "To know I can"));
+        planner.LifeGoals.Achieve(boat.Id);
+
+        Assert.Equal("Places.LifeGoals(2)", Tile(hub, "life-goals").Detail);
+        Assert.Equal("Nav.LifeGoals", Tile(hub, "life-goals").Title);
     }
 
     [Fact]
@@ -190,7 +207,7 @@ public sealed class PlacesHubViewModelTests : IDisposable
             tile.ActivateCommand.Execute(null);
         }
 
-        Assert.Equal(12, planner.Settings.PinnedPlaces.Count);
+        Assert.Equal(13, planner.Settings.PinnedPlaces.Count);
         Assert.All(hub.Tiles, tile => Assert.True(tile.IsActionable));
 
         foreach (var tile in hub.Tiles.Where(tile => tile.Id != "goals"))
@@ -222,6 +239,7 @@ public sealed class PlacesHubViewModelTests : IDisposable
             habitsPage,
             planner.Habits,
             planner.Goals,
+            planner.LifeGoals,
             planner.Reviews,
             planner.Wants,
             planner.Tally,

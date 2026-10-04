@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.application.planning.WhyFrequency
 import com.goalmaker.app.R
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.planning.AreaItem
@@ -533,6 +534,21 @@ private fun PlanningRows(
         onTime = viewModel::setWantsReadyReminder,
         saved = saved[SettingKey.WANTS_READY],
         savedTime = saved[SettingKey.WANTS_READY_TIME],
+    )
+    RowDivider()
+    // The why reminder (docs/life-goals.md): one life goal now and then, at a moment worked out per period.
+    DropdownRow(
+        title = stringResource(R.string.settings_why_reminder),
+        hint = stringResource(R.string.settings_why_reminder_hint),
+        options = listOf(
+            WhyFrequency.OFF to stringResource(R.string.settings_why_off),
+            WhyFrequency.WEEKLY to stringResource(R.string.settings_why_weekly),
+            WhyFrequency.EVERY_3_DAYS to stringResource(R.string.settings_why_every_3_days),
+            WhyFrequency.DAILY to stringResource(R.string.settings_why_daily),
+        ),
+        selected = state.whyReminder,
+        onSelect = viewModel::setWhyReminder,
+        saved = saved[SettingKey.WHY_REMINDER],
     )
     RowDivider()
     QuietHoursRows(state.quietHours, saved, viewModel::setQuietHours)

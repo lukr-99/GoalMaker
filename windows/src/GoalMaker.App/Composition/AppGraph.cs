@@ -174,6 +174,7 @@ public sealed class AppGraph : IDisposable
         Rituals = new RitualRunList(replica, newRows, Sync.Request);
         Habits = new HabitList(replica, newRows, Sync.Request);
         ReminderRows = new ReminderList(replica, newRows, Sync.Request);
+        LifeGoals = new LifeGoalList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
             ReminderRows,
             Tasks,
@@ -182,7 +183,9 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             Rituals,
             Wants,
-            Habits);
+            Habits,
+            LifeGoals,
+            () => Settings.WhyReminder);
         toasts = new ToastReminderNotifications(
             build.IsDevBuild ? "GoalMaker.Dev" : "GoalMaker",
             build.IsDevBuild ? strings.Get("App.Name") + " Dev" : strings.Get("App.Name"),
@@ -306,6 +309,23 @@ public sealed class AppGraph : IDisposable
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits, Chat);
         HabitsPage = new HabitsViewModel(
             Habits, Goals, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, () => OpenMini(MiniPage.Habits), Chat);
+
+        // Life goals and their pictures (docs/life-goals.md, ADR 0018): the rows sync like any other, the
+        // files sit in a cache beside this backend's replica and go up and down after every sync run and
+        // after a picture is added. A dev build kept on this PC has no owner here, so nothing is sent.
+        LifeGoalPictures = new LifeGoalPictures(
+            LifeGoals,
+            new FilePictureFiles(localOnly ? Paths.LocalPictures : Paths.PicturesFor(backend.Url)),
+            new SupabasePictureCloud(
+                http, backend.Url, backend.PublishableKey, () => supabase.Auth.CurrentSession?.AccessToken, () => runOnUi(() => Sync?.Request())),
+            () => localOnly ? null : (Auth.Session as AuthSession.SignedIn)?.UserId,
+            TimeProvider.System,
+            () => _ = Task.Run(TransferPicturesAsync));
+        Sync.RunCompleted += (_, _) => _ = Task.Run(TransferPicturesAsync);
+        LifeGoalsPage = new LifeGoalsViewModel(
+            LifeGoals, LifeGoalPictures, Settings, strings, TimeProvider.System, runOnUi, PictureShrinker.Shrink, () => PickPictures(strings));
+        // A life goal added, closed, reopened or deleted moves the why reminder's alarm and may settle its toast.
+        LifeGoals.Changed += (_, _) => runOnUi(SettleReminders);
         Reviews = new ReviewList(replica, newRows, Sync.Request);
         // Tally's categories by name and palette color, the shipped ones and the owner's (docs/tally.md).
         TallyLabels NameTally(IReadOnlyList<TallyCategory> own) => new(tallyDefaults, own, strings, Theme.SwatchBrush);
@@ -350,7 +370,7 @@ public sealed class AppGraph : IDisposable
             Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject, HabitsPage, Habits);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
-            Places, Tasks, HabitsPage, Habits, Goals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
+            Places, Tasks, HabitsPage, Habits, Goals, LifeGoals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
         // An amount habit tapped on Today asks for its value on the Habits page.
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
@@ -455,6 +475,32 @@ public sealed class AppGraph : IDisposable
         return dialog.ShowDialog() == true ? dialog.FolderName : null;
     }
 
+    // Pictures for a life goal: any picture file Windows can read; the editor shrinks each to a JPEG.
+    private static IReadOnlyList<string> PickPictures(IStrings strings)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = strings.Get("LifeGoals.PictureFilter") + "|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.tif;*.tiff;*.heic;*.heif;*.webp;*.jxr",
+            Multiselect = true,
+            CheckFileExists = true,
+        };
+        return dialog.ShowDialog() == true ? dialog.FileNames : [];
+    }
+
+    // Moves life goal picture files up and down. Offline it waits for the next sync run; a file this
+    // PC can't write is only logged, and the next run tries again.
+    private async Task TransferPicturesAsync()
+    {
+        try
+        {
+            await LifeGoalPictures.TransferAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            System.Diagnostics.Trace.WriteLine("GoalMaker: a life goal picture could not be kept: " + error.Message);
+        }
+    }
+
     // A web page the owner asked for opens in their default browser.
     private static void OpenInBrowser(string url) =>
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
@@ -522,6 +568,15 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The Goals page.</summary>
     public GoalsViewModel GoalsPage { get; private set; } = null!;
+
+    /// <summary>The owner's life goals and their pictures' rows (docs/life-goals.md).</summary>
+    public LifeGoalList LifeGoals { get; private set; } = null!;
+
+    /// <summary>The life goal picture files: this PC's cache and the bucket (ADR 0018).</summary>
+    public LifeGoalPictures LifeGoalPictures { get; private set; } = null!;
+
+    /// <summary>The Life goals page.</summary>
+    public LifeGoalsViewModel LifeGoalsPage { get; private set; } = null!;
 
     /// <summary>The owner's habits, their check-ins and pauses (docs/habits.md).</summary>
     public HabitList Habits { get; private set; } = null!;
@@ -763,6 +818,44 @@ public sealed class AppGraph : IDisposable
                 toasts.ShowHabit(due, [.. checkins.Where(checkin => checkin.HabitId == due.Habit.Id)]);
             }
         }
+
+        if (look.Why is { } why && LifeGoals.Get(why.LifeGoalId) is { } goal)
+        {
+            var today = PlanningDay.Of(TimeProvider.System.GetLocalNow().DateTime, Settings.DayStartHour);
+            var left = LifeGoalRules.TimeLeft(goal.By, today) is { } time ? LifeGoalsViewModel.TimeLeftText(time, strings) : null;
+            toasts.ShowWhy(goal, left, WhyPicture(goal.Id));
+        }
+    }
+
+    // The life goal's first picture as a file the toast can show, when this PC has it. Windows reads a
+    // toast's image from a path, so the cached bytes are copied out, one file per life goal. A copy whose
+    // toast is gone is removed.
+    private string? WhyPicture(string lifeGoalId)
+    {
+        if (LifeGoals.PicturesOf(lifeGoalId).FirstOrDefault() is not { } first || LifeGoalPictures.Read(first.Id) is not { } bytes)
+        {
+            return null;
+        }
+
+        try
+        {
+            var folder = Path.Combine(Paths.Root, "toast-pictures");
+            Directory.CreateDirectory(folder);
+            var shown = toasts.ShownWhy().ToHashSet(StringComparer.Ordinal);
+            foreach (var old in Directory.EnumerateFiles(folder).Where(old => !shown.Contains(Path.GetFileNameWithoutExtension(old))).ToList())
+            {
+                File.Delete(old);
+            }
+
+            var file = Path.Combine(folder, lifeGoalId + ".jpg");
+            File.WriteAllBytes(file, bytes);
+            return file;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            // The toast shows without its picture.
+            return null;
+        }
     }
 
     private void SettleReminders()
@@ -787,6 +880,12 @@ public sealed class AppGraph : IDisposable
         foreach (var (habitId, habitDay) in toasts.ShownHabits().Where(shown => Reminders.HabitStale(shown.HabitId, shown.Day)))
         {
             toasts.ClearHabit(habitId, habitDay);
+        }
+
+        // A why reminder goes once its life goal was achieved, dropped or deleted, here or on the other device.
+        foreach (var lifeGoalId in toasts.ShownWhy().Where(Reminders.WhyStale))
+        {
+            toasts.ClearWhy(lifeGoalId);
         }
     }
 
@@ -826,6 +925,14 @@ public sealed class AppGraph : IDisposable
         if (activation.Action == ToastAction.Wants)
         {
             WindowRequested?.Invoke(this, AppPage.Wants);
+            return;
+        }
+
+        if (activation.Action == ToastAction.Why)
+        {
+            LifeGoalsPage.Focus(activation.ReminderId);
+            WindowRequested?.Invoke(this, AppPage.LifeGoals);
+            toasts.ClearWhy(activation.ReminderId);
             return;
         }
 
@@ -978,6 +1085,7 @@ public sealed class AppGraph : IDisposable
         Inbox.Refresh();
         Plan.Refresh();
         GoalsPage.Refresh();
+        LifeGoalsPage.Refresh();
         HabitsPage.Refresh();
         ReviewsPage.Refresh();
         WantsPage.Refresh();

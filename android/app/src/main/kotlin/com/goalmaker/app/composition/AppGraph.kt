@@ -29,6 +29,9 @@ import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.TallyDefaults
 import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TallyTracker
+import com.goalmaker.app.application.planning.LifeGoalList
+import com.goalmaker.app.application.planning.LifeGoalPictures
+import com.goalmaker.app.application.planning.LifeGoalRules
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -75,6 +78,8 @@ import com.goalmaker.app.data.settings.PostgrestProfileSettings
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.data.supabase.PostgrestHttp
 import com.goalmaker.app.data.supabase.SupabaseClientFactory
+import com.goalmaker.app.data.planning.FilePictureFiles
+import com.goalmaker.app.data.planning.SupabasePictureCloud
 import com.goalmaker.app.data.sync.LocalOnlyRemoteTables
 import com.goalmaker.app.data.sync.PostgrestRemoteTables
 import com.goalmaker.app.data.sync.SupabaseChangeFeed
@@ -338,6 +343,28 @@ class AppGraph(context: Context) {
         zone = ZoneId::systemDefault,
     )
     val projects = ProjectList(replica, newRows, sync::request)
+
+    /** Life goals and their pictures' rows (docs/life-goals.md). */
+    val lifeGoals = LifeGoalList(replica, newRows, sync::request)
+
+    /**
+     * Life goal picture files (ADR 0018): kept in private app storage, sent to the owner's folder in
+     * the bucket and brought down once. A dev build that keeps everything on the phone keeps them here.
+     */
+    val lifeGoalPictures = LifeGoalPictures(
+        lifeGoals = lifeGoals,
+        files = FilePictureFiles(File(appContext.filesDir, "life-goal-pictures")),
+        cloud = SupabasePictureCloud(
+            http = http,
+            baseUrl = backend.url,
+            publishableKey = backend.publishableKey,
+            refreshSession = { supabaseAuth?.refresh() ?: false },
+        ) { supabase.auth.currentAccessTokenOrNull() },
+        owner = { if (localOnly) null else newRows.owner() },
+        now = Instant::now,
+        requestTransfer = ::transferPictures,
+    )
+
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 
     /** Reading the owner's data out to a file and back in (docs/backup.md). */
@@ -376,6 +403,8 @@ class AppGraph(context: Context) {
         wants = wants,
         wantsReadyAt = { settings.wantsReadyReminder.value },
         habits = habits,
+        lifeGoals = lifeGoals,
+        whyFrequency = { settings.whyReminder.value },
     )
 
     private val planRequest = MutableStateFlow(false)
@@ -397,6 +426,11 @@ class AppGraph(context: Context) {
 
     /** The habit whose log dialog a habit reminder's Log asked for, until the Habits place opens it. */
     val habitLogRequested: StateFlow<String?> = habitLogRequest.asStateFlow()
+
+    private val lifeGoalRequest = MutableStateFlow<String?>(null)
+
+    /** The life goal the why reminder asked for, until the Life goals place has shown it. */
+    val lifeGoalRequested: StateFlow<String?> = lifeGoalRequest.asStateFlow()
 
     private val goalsRequest = MutableStateFlow(false)
 
@@ -452,6 +486,8 @@ class AppGraph(context: Context) {
                     .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
                     .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
                 clearStaleWants()
+                clearStaleWhy()
+                transferPictures()
                 reminderNotifications.shownHabits()
                     .filter { (habitId, day) -> reminders.habitStale(habitId, day) }
                     .forEach { (habitId, day) -> reminderNotifications.clearHabit(habitId, day) }
@@ -507,6 +543,13 @@ class AppGraph(context: Context) {
                 clearStaleWants()
             }
         }
+        // A life goal added, closed or deleted changes whether the why reminder waits, and may settle it.
+        scope.launch(io) {
+            lifeGoals.watch().drop(1).collect {
+                reminders.rearm()
+                clearStaleWhy()
+            }
+        }
         // The home screen widgets show the replica, so a change made in the app or brought in by a
         // sync draws them again, a moment after the last of a burst (docs/widgets.md).
         scope.launch(io) {
@@ -549,6 +592,8 @@ class AppGraph(context: Context) {
         // Tally's totals go out with this push (docs/tally.md).
         withContext(io) { tallyTracker.track() }
         val reached = !sync.syncNow().offline
+        // Pictures go up and come down after the rows they belong to (ADR 0018).
+        lifeGoalPictures.transfer()
         // What came in may change what the home screen shows (docs/widgets.md).
         Widgets.refresh(appContext)
         return reached
@@ -605,6 +650,11 @@ class AppGraph(context: Context) {
         planRequest.value = false
     }
 
+    // One picture transfer at a time, off the main thread; LifeGoalPictures waits for a running one.
+    private fun transferPictures() {
+        scope.launch(io) { if (replicaOpened()) lifeGoalPictures.transfer() }
+    }
+
     /** The owner opened the app from the wants notification: the Wants place opens. */
     fun openedForWants() {
         wantsRequest.value = true
@@ -615,6 +665,21 @@ class AppGraph(context: Context) {
         reminderNotifications.shownWants()
             .filter { (_, ids) -> reminders.wantsStale(ids) }
             .forEach { (day, _) -> reminderNotifications.clearWants(day) }
+    }
+
+    /** The owner opened the app from the why reminder: the Life goals place opens on that life goal. */
+    fun openedForLifeGoal(lifeGoalId: String) {
+        lifeGoalRequest.value = lifeGoalId
+    }
+
+    /** The Life goals place showed the life goal, so the request is settled. */
+    fun lifeGoalOpened() {
+        lifeGoalRequest.value = null
+    }
+
+    // A why reminder goes once its life goal is no longer open, here or on the other device.
+    private fun clearStaleWhy() {
+        reminderNotifications.shownWhy().filter(reminders::whyStale).forEach(reminderNotifications::clearWhy)
     }
 
     /** The Wants place is on screen, so the request is settled. */
@@ -685,6 +750,17 @@ class AppGraph(context: Context) {
         if (look.habits.isNotEmpty()) {
             val data = habits.read()
             look.habits.forEach { due -> reminderNotifications.showHabit(due, data.checkinsOf(due.habit.id)) }
+        }
+        look.why?.let { due ->
+            lifeGoals.get(due.lifeGoalId)?.let { goal ->
+                reminderNotifications.showWhy(
+                    due = due,
+                    title = goal.title,
+                    why = goal.why,
+                    timeLeft = LifeGoalRules.timeLeft(goal.by, today()),
+                    picture = lifeGoals.pictures(goal.id).firstNotNullOfOrNull { lifeGoalPictures.read(it.id) },
+                )
+            }
         }
     }
 

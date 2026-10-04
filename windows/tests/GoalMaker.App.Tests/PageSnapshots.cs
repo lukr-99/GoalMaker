@@ -1023,6 +1023,79 @@ public sealed class PageSnapshots
     });
 
     [Fact(Explicit = true)]
+    public void LifeGoalsPage_() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+        var cache = new SnapshotPictureFiles(files);
+        var pictures = new LifeGoalPictures(planner.LifeGoals, cache, new SnapshotPictureCloud(), () => null, planner.Time, () => { });
+        var car = planner.LifeGoals.Add(new LifeGoalDraft("Own an Audi R8", "Proof that the work paid off, and the sound of it on an empty road.", Today.AddYears(10)))!;
+        pictures.Add(car.Id, Gradient(Colors.SteelBlue, Colors.OrangeRed), 1600, 900);
+        pictures.Add(car.Id, Gradient(Colors.SeaGreen, Colors.Gold), 1600, 900);
+        planner.LifeGoals.Add(new LifeGoalDraft("Run a marathon", "To know I can keep going when it is hard.", new DateOnly(2027, 5, 18)));
+        var boat = planner.LifeGoals.Add(new LifeGoalDraft("Sail to Greece", "The sea"))!;
+        planner.LifeGoals.Achieve(boat.Id);
+        var page = new LifeGoalsViewModel(
+            planner.LifeGoals, pictures, planner.Settings, strings, planner.Time, action => action(), _ => null, () => []);
+        page.ToggleClosedCommand.Execute(null);
+        Save(new LifeGoalsPage(page), folder, "life-goals", new Size(852, 1500));
+
+        page.Open[0].EditCommand.Execute(null);
+        Save(new LifeGoalsPage(page), folder, "life-goals-editor", new Size(852, 900));
+        page.Editor.CancelCommand.Execute(null);
+        page.Open[1].DeleteCommand.Execute(null);
+        Save(new LifeGoalsPage(page), folder, "life-goals-delete", new Size(852, 600));
+    });
+
+    // A made-up photo: a soft diagonal from one color to another, as a JPEG.
+    private static byte[] Gradient(Color from, Color to)
+    {
+        var visual = new DrawingVisual();
+        using (var context = visual.RenderOpen())
+        {
+            context.DrawRectangle(new LinearGradientBrush(from, to, 30), null, new Rect(0, 0, 800, 450));
+        }
+
+        var bitmap = new RenderTargetBitmap(800, 450, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var encoder = new JpegBitmapEncoder { QualityLevel = 85 };
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = new MemoryStream();
+        encoder.Save(stream);
+        return stream.ToArray();
+    }
+
+    private sealed class SnapshotPictureFiles(Dictionary<string, byte[]> files) : IPictureFiles
+    {
+        public bool Has(string id) => files.ContainsKey(id);
+
+        public byte[]? Read(string id) => files.GetValueOrDefault(id);
+
+        public void Write(string id, byte[] bytes, bool pending) => files[id] = bytes;
+
+        public void Delete(string id) => files.Remove(id);
+
+        public IReadOnlySet<string> Ids() => files.Keys.ToHashSet();
+
+        public IReadOnlySet<string> Pending() => new HashSet<string>();
+
+        public void Uploaded(string id)
+        {
+        }
+    }
+
+    private sealed class SnapshotPictureCloud : IPictureCloud
+    {
+        public Task UploadAsync(string owner, string id, byte[] bytes, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<byte[]?> DownloadAsync(string owner, string id, CancellationToken cancellationToken) => Task.FromResult<byte[]?>(null);
+
+        public Task RemoveAsync(string owner, string id, CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    [Fact(Explicit = true)]
     public void PlacesPage_() => OnUiThread(folder =>
     {
         using var planner = new TestPlanner();
@@ -1049,7 +1122,7 @@ public sealed class PageSnapshots
         var places = new PlacesViewModel(planner.Settings, strings);
         var habits = new HabitsViewModel(planner.Habits, planner.Goals, planner.Settings, strings, planner.Time, () => true, action => action());
         var hub = new PlacesHubViewModel(
-            places, planner.Tasks, habits, planner.Habits, planner.Goals, planner.Reviews, planner.Wants, planner.Tally,
+            places, planner.Tasks, habits, planner.Habits, planner.Goals, planner.LifeGoals, planner.Reviews, planner.Wants, planner.Tally,
             own => new TallyLabels(defaults, own, strings, theme.SwatchBrush), planner.Settings, strings, planner.Time, action => action());
         Save(new PlacesPage(hub), folder, "places-wide", new Size(1100, 760));
         Save(new PlacesPage(hub), folder, "places-narrow", new Size(520, 1100));

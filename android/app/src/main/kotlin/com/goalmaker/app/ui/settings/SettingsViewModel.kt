@@ -8,6 +8,7 @@ import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.auth.UnlockAvailability
 import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.planning.WhyFrequency
 import com.goalmaker.app.application.planning.DndBreakthrough
 import com.goalmaker.app.application.planning.ReminderService
 import com.goalmaker.app.application.settings.SettingsStore
@@ -68,6 +69,7 @@ class SettingsViewModel(
             weeklyReviewWeekday = settings.weeklyReviewWeekday.value,
             monthlyReviewReminder = settings.monthlyReviewReminder.value,
             wantsReadyReminder = settings.wantsReadyReminder.value,
+            whyReminder = settings.whyReminder.value,
             themeId = design.theme(settings.appearance.value.themeId).id,
             themes = design.themes,
             email = (auth.session.value as? AuthSession.SignedIn)?.email.orEmpty(),
@@ -126,6 +128,9 @@ class SettingsViewModel(
         }
         viewModelScope.launch {
             settings.wantsReadyReminder.collect { time -> state.update { it.copy(wantsReadyReminder = time) } }
+        }
+        viewModelScope.launch {
+            settings.whyReminder.collect { frequency -> state.update { it.copy(whyReminder = frequency) } }
         }
         viewModelScope.launch {
             combine(settings.appearance, auth.session) { appearance, session -> appearance to session }
@@ -193,6 +198,13 @@ class SettingsViewModel(
     }
 
     /** When the notification for wants that became ready rings; the alarm is armed again. */
+    /** How often the why reminder shows a life goal (docs/life-goals.md). */
+    fun setWhyReminder(frequency: WhyFrequency) {
+        settings.setWhyReminder(frequency)
+        saved.mark(SettingKey.WHY_REMINDER)
+        rearm()
+    }
+
     fun setWantsReadyReminder(time: LocalTime?) {
         val before = state.value.wantsReadyReminder
         settings.setWantsReadyReminder(time)

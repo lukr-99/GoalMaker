@@ -18,6 +18,7 @@ enum class SettingKey {
     MONTHLY_REVIEW_TIME,
     WANTS_READY,
     WANTS_READY_TIME,
+    WHY_REMINDER,
     QUIET_START,
     QUIET_END,
 }

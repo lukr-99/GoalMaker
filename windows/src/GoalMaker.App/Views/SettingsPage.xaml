@@ -153,6 +153,9 @@
                             Value="{Binding WantsReadyHalf}"
                             ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
                             Visibility="{Binding WantsReadyOn, Converter={StaticResource BoolToVisibility}}" />
+            <!-- The why reminder (docs/life-goals.md): how often, at a moment worked out the same on both devices. -->
+            <tray:DropdownRow Label="{DynamicResource Settings.Why}" Hint="{DynamicResource Settings.WhyHint}"
+                              Options="{Binding WhyOptions}" SelectedItem="{Binding SelectedWhy}" DisplayMemberPath="Text" />
 
             <!-- Quiet hours (docs/reminders.md): typed times, saved on Enter or when the field is left. -->
             <tray:ButtonRow Label="{DynamicResource Settings.QuietHours}" Hint="{Binding QuietHoursSummary}"
