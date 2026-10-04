@@ -54,6 +54,8 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after; a new one also from a short `line` |
 | `decide_want` | Bought or dropped with a note, or reopened; only what the owner decided in the conversation |
 | `record_price_check` | The price Claude found with its own web search, where, and the alternatives; GoalMaker never fetches from a shop |
+| `get_life_goals` | The life goals, open ones first in the owner's order, each with its time left ("10 years left", "Today", "Past its date"), by date, area, how many pictures and its why |
+| `add_life_goal`, `update_life_goal` | A life goal with its why (required), a by date as a day or `in_years`, and its area; mark it achieved, dropped or open again. No delete, and pictures are added in the apps |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
@@ -84,6 +86,16 @@ Wants are decided with the owner, not for them ([wants](wants.md)). For example:
 Claude reads the ready wants, looks each price up with its own web search, records what it found
 with `record_price_check`, and asks whether the owner still wants it before `decide_want` marks it
 bought or dropped. A want Claude adds says "by Claude" in both apps.
+
+Life goals are what the owner wants in their life in the long run, each with why it matters
+([life goals](life-goals.md)). For example:
+
+> Use GoalMaker. Add a life goal: run a marathon in 10 years, because I want to feel strong at 40.
+
+Claude asks for the why when the owner leaves it out, counts "in 10 years" from the planning day (the
+same day ten years on, as the apps' "In 10 years" does), and marks a life goal achieved or dropped
+only when the owner says so. `get_life_goals` says how many pictures each one has, but pictures are
+added in the apps, and deleting a life goal is the owner's, in the apps too.
 
 Habits and goals read the way their cards do, from the same rules (`standings`, `groups` and
 `allDone` in `contracts/vectors/habits.json`, the pace and its order in `goals.json`):

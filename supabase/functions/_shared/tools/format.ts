@@ -1,8 +1,10 @@
 import type { Area, Habit, Reminder, Step, Tag } from "../planner/planner.ts";
+import type { LifeGoal } from "../planner/lifeGoalList.ts";
 import type { Want } from "../planner/wantList.ts";
 import { type Day, daysBetween, weekday } from "../rules/day.ts";
 import type { GoalItem, GoalProgress, GoalStanding } from "../rules/goals.ts";
 import type { HabitStanding } from "../rules/habits.ts";
+import type { TimeLeft } from "../rules/lifeGoals.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
 import type { Column, ProjectItem, ProjectMilestone } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
@@ -246,6 +248,43 @@ export function wantLine(want: Want, state: WantState, today: Day, names: Names)
   }
   if (want.decision !== null && want.decisionNote.trim().length > 0) lines.push(`  Note: ${want.decisionNote.trim()}`);
   return lines.join("\n");
+}
+
+/** A life goal's time left the way the apps word it: "10 years left", "8 months left", "Today", "Past its date". */
+export function timeLeftText(left: TimeLeft): string {
+  switch (left.unit) {
+    case "years":
+      return `${left.count} ${left.count === 1 ? "year" : "years"} left`;
+    case "months":
+      return `${left.count} ${left.count === 1 ? "month" : "months"} left`;
+    case "days":
+      return `${left.count} ${left.count === 1 ? "day" : "days"} left`;
+    case "today":
+      return "Today";
+    case "past":
+      return "Past its date";
+  }
+}
+
+/** `no pictures`, `1 picture`, `3 pictures`. */
+export function picturesText(count: number): string {
+  return count === 0 ? "no pictures" : `${count} ${count === 1 ? "picture" : "pictures"}`;
+}
+
+/**
+ * A life goal the way the Life goals place shows it: an open one with its time left, a closed one with
+ * how it closed, then its by date, area, maker and pictures, and its why on the line under it.
+ */
+export function lifeGoalLine(goal: LifeGoal, left: TimeLeft | null, names: Names): string {
+  const parts = [goal.title];
+  if (goal.status !== "open") parts.push(goal.status);
+  else if (left !== null) parts.push(timeLeftText(left));
+  if (goal.by !== null) parts.push(`by date ${goal.by}`);
+  const area = goal.areaId ? names.areas.get(goal.areaId) : undefined;
+  if (area) parts.push(`@${area.name}`);
+  if (goal.madeBy === "claude") parts.push("by Claude");
+  parts.push(picturesText(goal.pictures));
+  return [`- ${parts.join(" · ")} (life goal id ${goal.id})`, `  Why: ${goal.why}`].join("\n");
 }
 
 /** A number without a trailing .0, so "5 of 20 km" reads like a person wrote it. */

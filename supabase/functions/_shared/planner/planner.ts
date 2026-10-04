@@ -43,6 +43,7 @@ import {
 } from "../rules/projects.ts";
 import { AREA_COLORS, colorForNewArea } from "./palette.ts";
 import { TallyDays } from "./tallyDays.ts";
+import { LifeGoalList } from "./lifeGoalList.ts";
 import { WantList } from "./wantList.ts";
 
 export interface Area {
@@ -614,6 +615,11 @@ export class Planner {
   /** The owner's wants, through the same connection and planning day. */
   wants(): WantList {
     return new WantList(this.db, async () => (await this.now()).today);
+  }
+
+  /** The owner's life goals, through the same connection. */
+  lifeGoals(): LifeGoalList {
+    return new LifeGoalList(this.db);
   }
 
   /** Every goal that is not deleted, newest period first, in the order the apps keep them. */
