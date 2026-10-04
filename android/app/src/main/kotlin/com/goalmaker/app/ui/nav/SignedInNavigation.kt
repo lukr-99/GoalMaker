@@ -132,6 +132,11 @@ fun SignedInNavigation(graph: AppGraph) {
             graph.wantsOpened()
         }
     }
+    // The why reminder opens the Life goals place on its life goal, pinned or not.
+    val lifeGoalRequested by graph.lifeGoalRequested.collectAsState()
+    LaunchedEffect(lifeGoalRequested) {
+        if (lifeGoalRequested != null) select(PlaceRules.LIFE_GOALS)
+    }
     // A habit reminder opens the Habits place, pinned or not.
     val habitsRequested by graph.habitsRequested.collectAsState()
     LaunchedEffect(habitsRequested) {
@@ -370,7 +375,13 @@ fun SignedInNavigation(graph: AppGraph) {
                                     val lifeGoalsViewModel = viewModel(key = "life-goals-tab") {
                                         LifeGoalsViewModel(graph.lifeGoals, graph.lifeGoalPictures, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
                                     }
-                                    LifeGoalsScreen(viewModel = lifeGoalsViewModel, onBack = backToHub, actions = actions)
+                                    LifeGoalsScreen(
+                                        viewModel = lifeGoalsViewModel,
+                                        onBack = backToHub,
+                                        actions = actions,
+                                        focus = lifeGoalRequested,
+                                        onFocused = graph::lifeGoalOpened,
+                                    )
                                 }
                                 PlaceRules.TALLY -> {
                                     val tallyViewModel = viewModel(key = "tally-tab") {

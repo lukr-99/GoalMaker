@@ -68,6 +68,10 @@ class MainActivity : FragmentActivity() {
             graph.openedForWants()
             intent.removeExtra(ReminderAlarm.EXTRA_OPEN_WANTS)
         }
+        intent.getStringExtra(ReminderAlarm.EXTRA_OPEN_LIFE_GOAL)?.let { lifeGoalId ->
+            graph.openedForLifeGoal(lifeGoalId)
+            intent.removeExtra(ReminderAlarm.EXTRA_OPEN_LIFE_GOAL)
+        }
         if (intent.getBooleanExtra(ReminderAlarm.EXTRA_OPEN_HABITS, false)) {
             graph.openedForHabits(
                 habitId = intent.getStringExtra(ReminderAlarm.EXTRA_HABIT_ID),

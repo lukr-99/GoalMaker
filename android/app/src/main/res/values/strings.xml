@@ -1371,5 +1371,13 @@
         <item quantity="one">%1$d life goal</item>
         <item quantity="other">%1$d life goals</item>
     </plurals>
+    <string name="why_reminder_channel">Why reminder</string>
+    <string name="why_reminder_channel_description">Now and then, one life goal and why it matters.</string>
+    <string name="settings_why_reminder">Why reminder</string>
+    <string name="settings_why_reminder_hint">Shows one life goal and why it matters, at a random time.</string>
+    <string name="settings_why_off">Off</string>
+    <string name="settings_why_weekly">Weekly</string>
+    <string name="settings_why_every_3_days">Every 3 days</string>
+    <string name="settings_why_daily">Daily</string>
     <string name="places_life_goals_none">What do you want in life?</string>
 </resources>

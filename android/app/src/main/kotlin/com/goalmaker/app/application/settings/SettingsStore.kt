@@ -1,6 +1,7 @@
 package com.goalmaker.app.application.settings
 
 import com.goalmaker.app.application.environment.BackendEnvironment
+import com.goalmaker.app.application.planning.WhyFrequency
 import com.goalmaker.app.application.update.UpdateMemory
 import com.goalmaker.app.domain.planning.QuietHours
 import com.goalmaker.app.domain.settings.Appearance
@@ -55,6 +56,11 @@ interface SettingsStore : UpdateMemory {
     val wantsReadyReminder: StateFlow<LocalTime?>
 
     fun setWantsReadyReminder(time: LocalTime?)
+
+    /** How often the why reminder shows a life goal (docs/life-goals.md); weekly unless changed. */
+    val whyReminder: StateFlow<WhyFrequency>
+
+    fun setWhyReminder(frequency: WhyFrequency)
 
     /**
      * The places pinned to the bottom bar, at most four (ADR 0014), in bar order. Read back through

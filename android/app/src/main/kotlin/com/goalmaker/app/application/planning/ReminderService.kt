@@ -35,6 +35,8 @@ class ReminderService(
     private val wants: WantList? = null,
     private val wantsReadyAt: () -> LocalTime? = { null },
     private val habits: HabitList? = null,
+    private val lifeGoals: LifeGoalList? = null,
+    private val whyFrequency: () -> WhyFrequency = { WhyFrequency.OFF },
 ) {
     /**
      * What arrived since the last look, including anything missed while the device was off, with the
@@ -54,10 +56,19 @@ class ReminderService(
                 HabitReminder.due(habit, data.checkinsOf(habit.id), data.pausesOf(habit.id), dayStartHour(), since, at)?.let { DueHabit(habit, it) }
             }
         }.orEmpty()
+        val why = lifeGoals?.let { list ->
+            WhyReminder.due(whyFrequency(), quietHours(), since, at)?.let { moment ->
+                WhyReminder.goal(whyFrequency(), moment.periodStart, list.all())?.let { WhyDue(moment.periodStart, it.id) }
+            }
+        }
         setRemindedUntil(at)
         arm(all, byId, at)
-        return ReminderLook(due, planDay, weekly, monthly, ready, dueHabits)
+        return ReminderLook(due, planDay, weekly, monthly, ready, dueHabits, why)
     }
+
+    /** Whether the why reminder naming [lifeGoalId] has to go: that life goal is gone or no longer open. */
+    fun whyStale(lifeGoalId: String): Boolean =
+        lifeGoals?.get(lifeGoalId)?.status != LifeGoalRules.OPEN
 
     /** Whether the reminder on screen for [habitId] on planning [day] has to go: the habit is no longer left, or the day moved on. */
     fun habitStale(habitId: String, day: LocalDate): Boolean {
@@ -184,7 +195,9 @@ class ReminderService(
         val habit = habits?.read()?.let { data ->
             data.habits.mapNotNull { HabitReminder.next(it, data.checkinsOf(it.id), data.pausesOf(it.id), dayStartHour(), at) }.minOrNull()
         }
-        val next = listOfNotNull(task, ritual, weekly, monthly, ready, habit).minOrNull()
+        // The why reminder waits while there is no open life goal to show.
+        val why = lifeGoals?.takeIf { LifeGoalRules.open(it.all()).isNotEmpty() }?.let { WhyReminder.next(whyFrequency(), quietHours(), at) }
+        val next = listOfNotNull(task, ritual, weekly, monthly, ready, habit, why).minOrNull()
         if (next == null) scheduler.cancel() else scheduler.armAt(next)
     }
 }

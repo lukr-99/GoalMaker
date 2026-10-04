@@ -31,6 +31,7 @@ import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TallyTracker
 import com.goalmaker.app.application.planning.LifeGoalList
 import com.goalmaker.app.application.planning.LifeGoalPictures
+import com.goalmaker.app.application.planning.LifeGoalRules
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -402,6 +403,8 @@ class AppGraph(context: Context) {
         wants = wants,
         wantsReadyAt = { settings.wantsReadyReminder.value },
         habits = habits,
+        lifeGoals = lifeGoals,
+        whyFrequency = { settings.whyReminder.value },
     )
 
     private val planRequest = MutableStateFlow(false)
@@ -423,6 +426,11 @@ class AppGraph(context: Context) {
 
     /** The habit whose log dialog a habit reminder's Log asked for, until the Habits place opens it. */
     val habitLogRequested: StateFlow<String?> = habitLogRequest.asStateFlow()
+
+    private val lifeGoalRequest = MutableStateFlow<String?>(null)
+
+    /** The life goal the why reminder asked for, until the Life goals place has shown it. */
+    val lifeGoalRequested: StateFlow<String?> = lifeGoalRequest.asStateFlow()
 
     private val goalsRequest = MutableStateFlow(false)
 
@@ -478,6 +486,7 @@ class AppGraph(context: Context) {
                     .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
                     .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
                 clearStaleWants()
+                clearStaleWhy()
                 transferPictures()
                 reminderNotifications.shownHabits()
                     .filter { (habitId, day) -> reminders.habitStale(habitId, day) }
@@ -532,6 +541,13 @@ class AppGraph(context: Context) {
             wants.watch().collect {
                 reminders.rearm()
                 clearStaleWants()
+            }
+        }
+        // A life goal added, closed or deleted changes whether the why reminder waits, and may settle it.
+        scope.launch(io) {
+            lifeGoals.watch().drop(1).collect {
+                reminders.rearm()
+                clearStaleWhy()
             }
         }
         // The home screen widgets show the replica, so a change made in the app or brought in by a
@@ -651,6 +667,21 @@ class AppGraph(context: Context) {
             .forEach { (day, _) -> reminderNotifications.clearWants(day) }
     }
 
+    /** The owner opened the app from the why reminder: the Life goals place opens on that life goal. */
+    fun openedForLifeGoal(lifeGoalId: String) {
+        lifeGoalRequest.value = lifeGoalId
+    }
+
+    /** The Life goals place showed the life goal, so the request is settled. */
+    fun lifeGoalOpened() {
+        lifeGoalRequest.value = null
+    }
+
+    // A why reminder goes once its life goal is no longer open, here or on the other device.
+    private fun clearStaleWhy() {
+        reminderNotifications.shownWhy().filter(reminders::whyStale).forEach(reminderNotifications::clearWhy)
+    }
+
     /** The Wants place is on screen, so the request is settled. */
     fun wantsOpened() {
         wantsRequest.value = false
@@ -719,6 +750,17 @@ class AppGraph(context: Context) {
         if (look.habits.isNotEmpty()) {
             val data = habits.read()
             look.habits.forEach { due -> reminderNotifications.showHabit(due, data.checkinsOf(due.habit.id)) }
+        }
+        look.why?.let { due ->
+            lifeGoals.get(due.lifeGoalId)?.let { goal ->
+                reminderNotifications.showWhy(
+                    due = due,
+                    title = goal.title,
+                    why = goal.why,
+                    timeLeft = LifeGoalRules.timeLeft(goal.by, today()),
+                    picture = lifeGoals.pictures(goal.id).firstNotNullOfOrNull { lifeGoalPictures.read(it.id) },
+                )
+            }
         }
     }
 
