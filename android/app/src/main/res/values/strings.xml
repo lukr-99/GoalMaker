@@ -1065,9 +1065,12 @@
     <string name="activity_habit_pause">a habit pause</string>
     <string name="activity_want">the want “%1$s”</string>
     <string name="activity_want_cooldowns">the want cooldowns</string>
+    <string name="activity_life_goal">the life goal “%1$s”</string>
+    <string name="activity_life_goal_picture">a life goal picture</string>
     <string name="activity_tally_category">the Tally category “%1$s”</string>
     <string name="activity_tally_rule">a Tally rule</string>
     <string name="activity_bought">%1$s bought %2$s</string>
+    <string name="activity_achieved">%1$s achieved %2$s</string>
     <string name="activity_skipped">%1$s skipped %2$s</string>
     <string name="activity_paused">%1$s paused %2$s</string>
     <string name="activity_resumed">%1$s resumed %2$s</string>
@@ -1311,4 +1314,62 @@
     <string name="task_form_notes">Notes</string>
     <string name="task_form_save">Add task</string>
     <string name="task_form_cancel">Cancel</string>
+    <!-- Life goals (docs/life-goals.md, M9-02) -->
+    <string name="life_goals_title">Life goals</string>
+    <string name="life_goals_empty">Write down what you want in your life, and why it matters. A picture helps you see it.</string>
+    <string name="life_goals_add">New life goal</string>
+    <string name="life_goals_edit">Edit life goal</string>
+    <string name="life_goals_title_field">What you want</string>
+    <string name="life_goals_why_field">Why it matters</string>
+    <string name="life_goals_why_hint">The why reminder shows this now and then.</string>
+    <string name="life_goals_by">By</string>
+    <string name="life_goals_by_none">No date</string>
+    <plurals name="life_goals_in_years">
+        <item quantity="one">In %1$d year</item>
+        <item quantity="other">In %1$d years</item>
+    </plurals>
+    <string name="life_goals_pick_day">Pick a day</string>
+    <string name="life_goals_pictures">Pictures</string>
+    <string name="life_goals_add_picture">Add a picture</string>
+    <string name="life_goals_remove_picture">Remove this picture</string>
+    <string name="life_goals_picture_failed">That picture could not be read.</string>
+    <string name="life_goals_picture">Picture %1$d of %2$d of %3$s</string>
+    <string name="life_goals_picture_waiting">The picture is on its way.</string>
+    <string name="life_goals_save">Save</string>
+    <string name="life_goals_menu">More for %1$s</string>
+    <string name="life_goals_achieve">Achieved</string>
+    <string name="life_goals_drop">Drop</string>
+    <string name="life_goals_reopen">Reopen</string>
+    <string name="life_goals_delete">Delete</string>
+    <string name="life_goals_move_up">Move up</string>
+    <string name="life_goals_move_down">Move down</string>
+    <string name="life_goals_delete_question">Delete %1$s?</string>
+    <string name="life_goals_delete_detail">Its pictures go with it.</string>
+    <string name="life_goals_cancel">Cancel</string>
+    <string name="life_goals_achieved_message">%1$s achieved</string>
+    <string name="life_goals_dropped_message">%1$s dropped</string>
+    <string name="life_goals_deleted_message">%1$s deleted</string>
+    <string name="life_goals_closed">Achieved and dropped</string>
+    <string name="life_goals_status_achieved">Achieved</string>
+    <string name="life_goals_status_dropped">Dropped</string>
+    <string name="life_goals_by_claude">by Claude</string>
+    <plurals name="life_goals_years_left">
+        <item quantity="one">%1$d year left</item>
+        <item quantity="other">%1$d years left</item>
+    </plurals>
+    <plurals name="life_goals_months_left">
+        <item quantity="one">%1$d month left</item>
+        <item quantity="other">%1$d months left</item>
+    </plurals>
+    <plurals name="life_goals_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+    <string name="life_goals_today">Today</string>
+    <string name="life_goals_past">Past its date</string>
+    <plurals name="places_life_goals">
+        <item quantity="one">%1$d life goal</item>
+        <item quantity="other">%1$d life goals</item>
+    </plurals>
+    <string name="places_life_goals_none">What do you want in life?</string>
 </resources>

@@ -74,6 +74,8 @@ import com.goalmaker.app.ui.tally.TallyViewModel
 import com.goalmaker.app.ui.task.TaskKey
 import com.goalmaker.app.ui.task.TaskScreen
 import com.goalmaker.app.ui.task.TaskViewModel
+import com.goalmaker.app.ui.lifegoals.LifeGoalsScreen
+import com.goalmaker.app.ui.lifegoals.LifeGoalsViewModel
 import com.goalmaker.app.ui.wants.WantsScreen
 import com.goalmaker.app.ui.wants.WantsViewModel
 import com.goalmaker.app.ui.theme.AppTheme
@@ -219,6 +221,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 graph.goals,
                                 graph.reviews,
                                 graph.wants,
+                                graph.lifeGoals,
                                 graph.tally,
                                 graph.tallyDefaults.categories,
                                 graph.settings,
@@ -362,6 +365,12 @@ fun SignedInNavigation(graph: AppGraph) {
                                         addTitle = wantTitle,
                                         onAddShown = { wantTitle = null },
                                     )
+                                }
+                                PlaceRules.LIFE_GOALS -> {
+                                    val lifeGoalsViewModel = viewModel(key = "life-goals-tab") {
+                                        LifeGoalsViewModel(graph.lifeGoals, graph.lifeGoalPictures, graph.settings.dayStartHour, graph.io, LocalDateTime::now)
+                                    }
+                                    LifeGoalsScreen(viewModel = lifeGoalsViewModel, onBack = backToHub, actions = actions)
                                 }
                                 PlaceRules.TALLY -> {
                                     val tallyViewModel = viewModel(key = "tally-tab") {

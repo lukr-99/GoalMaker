@@ -6,6 +6,7 @@ import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.DonutLarge
@@ -36,6 +37,7 @@ object PlaceLook {
         PlaceRules.CALENDAR -> R.string.calendar_title
         PlaceRules.HABITS -> R.string.habits_title
         PlaceRules.GOALS -> R.string.goals_title
+        PlaceRules.LIFE_GOALS -> R.string.life_goals_title
         PlaceRules.PROJECTS -> R.string.projects_title
         PlaceRules.WANTS -> R.string.wants_title
         PlaceRules.TALLY -> R.string.tally_title
@@ -52,6 +54,7 @@ object PlaceLook {
         PlaceRules.CALENDAR -> Icons.Outlined.CalendarMonth
         PlaceRules.HABITS -> Icons.Outlined.DonutLarge
         PlaceRules.GOALS -> Icons.Outlined.Flag
+        PlaceRules.LIFE_GOALS -> Icons.Outlined.AutoAwesome
         PlaceRules.PROJECTS -> Icons.Outlined.Dashboard
         PlaceRules.WANTS -> Icons.Outlined.ShoppingBag
         PlaceRules.TALLY -> Icons.Outlined.Timelapse

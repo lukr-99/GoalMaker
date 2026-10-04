@@ -9,6 +9,8 @@ import com.goalmaker.app.application.planning.TallyCategory
 import com.goalmaker.app.application.planning.TallyFilter
 import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TaskList
+import com.goalmaker.app.application.planning.LifeGoalList
+import com.goalmaker.app.application.planning.LifeGoalRules
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.navigation.DeviceKind
@@ -37,6 +39,7 @@ class PlacesViewModel(
     goals: GoalList,
     reviews: ReviewList,
     wants: WantList,
+    lifeGoals: LifeGoalList,
     tally: TallyList,
     private val tallyCategories: List<TallyCategory>,
     private val settings: SettingsStore,
@@ -62,15 +65,19 @@ class PlacesViewModel(
 
     private val digest = combine(
         combine(tasks.watchAll().flowOn(io), habits.watch().flowOn(io), ::Pair),
-        goals.watch().flowOn(io),
+        combine(goals.watch().flowOn(io), lifeGoals.watch().flowOn(io), ::Pair),
         combine(reviews.watch().flowOn(io), wants.watch().flowOn(io), tallyDays, ::Triple),
         settings.dayStartHour,
         minutes,
-    ) { (taskList, habitData), (goalList, entries), (reviewList, wantList, tallyData), startHour, _ ->
+    ) { (taskList, habitData), (goalData, lifeGoalList), (reviewList, wantList, tallyData), startHour, _ ->
+        val (goalList, entries) = goalData
         val today = PlanningDay.of(clock(), startHour)
         val (rows, own) = tallyData
         val tallyToday = TallyBoard.day(rows, today, TallyFilter(), TallyBoard.lookup(tallyCategories, own))
-        PlacesBoard.build(taskList, habitData, goalList, entries, reviewList, today, wantList).copy(tallyToday = tallyToday.slices)
+        PlacesBoard.build(taskList, habitData, goalList, entries, reviewList, today, wantList).copy(
+            tallyToday = tallyToday.slices,
+            lifeGoalsOpen = lifeGoalList.count { it.status == LifeGoalRules.OPEN },
+        )
     }
 
     val uiState: StateFlow<PlacesUiState> = combine(digest, settings.pins, editing) { built, pins, isEditing ->

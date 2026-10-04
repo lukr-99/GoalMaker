@@ -29,6 +29,8 @@ import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.TallyDefaults
 import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TallyTracker
+import com.goalmaker.app.application.planning.LifeGoalList
+import com.goalmaker.app.application.planning.LifeGoalPictures
 import com.goalmaker.app.application.planning.WantList
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.application.planning.ReminderList
@@ -75,6 +77,8 @@ import com.goalmaker.app.data.settings.PostgrestProfileSettings
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.data.supabase.PostgrestHttp
 import com.goalmaker.app.data.supabase.SupabaseClientFactory
+import com.goalmaker.app.data.planning.FilePictureFiles
+import com.goalmaker.app.data.planning.SupabasePictureCloud
 import com.goalmaker.app.data.sync.LocalOnlyRemoteTables
 import com.goalmaker.app.data.sync.PostgrestRemoteTables
 import com.goalmaker.app.data.sync.SupabaseChangeFeed
@@ -338,6 +342,28 @@ class AppGraph(context: Context) {
         zone = ZoneId::systemDefault,
     )
     val projects = ProjectList(replica, newRows, sync::request)
+
+    /** Life goals and their pictures' rows (docs/life-goals.md). */
+    val lifeGoals = LifeGoalList(replica, newRows, sync::request)
+
+    /**
+     * Life goal picture files (ADR 0018): kept in private app storage, sent to the owner's folder in
+     * the bucket and brought down once. A dev build that keeps everything on the phone keeps them here.
+     */
+    val lifeGoalPictures = LifeGoalPictures(
+        lifeGoals = lifeGoals,
+        files = FilePictureFiles(File(appContext.filesDir, "life-goal-pictures")),
+        cloud = SupabasePictureCloud(
+            http = http,
+            baseUrl = backend.url,
+            publishableKey = backend.publishableKey,
+            refreshSession = { supabaseAuth?.refresh() ?: false },
+        ) { supabase.auth.currentAccessTokenOrNull() },
+        owner = { if (localOnly) null else newRows.owner() },
+        now = Instant::now,
+        requestTransfer = ::transferPictures,
+    )
+
     val tasks = TaskList(replica, newRows, areas, tags, projects, sync::request, ::today)
 
     /** Reading the owner's data out to a file and back in (docs/backup.md). */
@@ -452,6 +478,7 @@ class AppGraph(context: Context) {
                     .filter { (ritual, day) -> reminders.reviewStale(ritual, day) }
                     .forEach { (ritual, day) -> reminderNotifications.clearReview(ritual, day) }
                 clearStaleWants()
+                transferPictures()
                 reminderNotifications.shownHabits()
                     .filter { (habitId, day) -> reminders.habitStale(habitId, day) }
                     .forEach { (habitId, day) -> reminderNotifications.clearHabit(habitId, day) }
@@ -549,6 +576,8 @@ class AppGraph(context: Context) {
         // Tally's totals go out with this push (docs/tally.md).
         withContext(io) { tallyTracker.track() }
         val reached = !sync.syncNow().offline
+        // Pictures go up and come down after the rows they belong to (ADR 0018).
+        lifeGoalPictures.transfer()
         // What came in may change what the home screen shows (docs/widgets.md).
         Widgets.refresh(appContext)
         return reached
@@ -603,6 +632,11 @@ class AppGraph(context: Context) {
     /** The ritual is on screen, so the request is settled. */
     fun planOpened() {
         planRequest.value = false
+    }
+
+    // One picture transfer at a time, off the main thread; LifeGoalPictures waits for a running one.
+    private fun transferPictures() {
+        scope.launch(io) { if (replicaOpened()) lifeGoalPictures.transfer() }
     }
 
     /** The owner opened the app from the wants notification: the Wants place opens. */
