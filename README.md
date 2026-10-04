@@ -108,6 +108,8 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
 - **Local data:** the Windows app keeps its session (DPAPI-encrypted), settings and crash log in
   `%LOCALAPPDATA%\GoalMaker` (`GoalMaker-dev` for dev builds); the Android app keeps its session,
   settings and its own `files/crash.log` in private app storage, excluded from Android backups.
+  Life goal pictures are cached in `files/life-goal-pictures` on the phone and in a `pictures-`
+  folder per backend under the same Windows folder.
 - **Backup:** a versioned full export both apps read and a checked restore that merges and never
   wipes, plus a weekly automatic export on Windows ([docs/backup.md](docs/backup.md)). The raw Tally
   record never leaves its device and is in no backup; its daily minutes are. Life goal pictures

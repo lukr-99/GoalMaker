@@ -1,7 +1,7 @@
 # Life goals
 
-> M9 (`.scratch/m9-life-goals/`): the data and rules (M9-01) are built. The place, the why
-> reminder, the widget and the connector tools follow.
+> M9 (`.scratch/m9-life-goals/`): the data and rules (M9-01) and the place on both apps (M9-02,
+> M9-03) are built. The why reminder, the widget and the connector tools follow.
 
 A **life goal** is something the owner wants in their life in the long run ("Own an Audi R8"),
 written down with **why** it matters, an optional **by** date and pictures of it (spec, stories 114
@@ -21,7 +21,7 @@ rung on the ladder (2026-10-04).
 | by | Optional date. The editor offers In 5, 10 and 20 years, or a picked day |
 | area | Optional |
 | status | `open`, `achieved` or `dropped`, with the time it changed |
-| position | The owner's order, by dragging |
+| position | The owner's order, set with Move up and Move down |
 | made by | Owner or Claude, like tasks |
 | pictures | None or more, in their own order |
 
@@ -90,16 +90,23 @@ one. The alarm is armed for the next moment. Pinned by `fnv1a`, `whyMoment`, `wh
 
 ## On screen
 
-**Life goals** is a place on both apps, after Goals.
+**Life goals** is a place on both apps, after Goals, with a tile on the Places hub ("2 life goals").
 
-- Each open life goal is a card: its first picture (or the area's color with its first letter), the
-  title, the why in full, the time left and the area. Swiping or clicking through shows its other
-  pictures. Achieved and dropped life goals fold under the open ones.
-- The editor has the title, the why, the by date (In 5, 10 or 20 years, or a picked day), the area and
-  the pictures (add from the gallery or a file, remove, drag to order). A card's menu marks it
-  achieved, drops it, reopens it or deletes it.
-- **Android:** a picture comes from the system photo picker. The widget is below.
-- **Windows:** a picture comes from a file picker, or is dropped onto the editor.
+- Each open life goal is a card: its pictures to swipe or click through (or the accent with its first
+  letter when it has none), the title, the time left, and the why in full. A life goal Claude added
+  says "by Claude". Achieved and dropped life goals fold under the open ones.
+- The editor has the title, the why, the by date (No date, In 5, 10 or 20 years, or a picked day)
+  and the pictures. Pictures are added and removed there and kept, with the rest, when the editor
+  saves; they show in the order they were added. A life goal keeps its area, but the editor does not
+  set one yet.
+- A card's menu edits it, marks it achieved, drops it, moves it up or down (the owner's order),
+  reopens a closed one, or deletes it after asking. Achieving, dropping and deleting offer an undo.
+- **Android:** a picture comes from the system photo picker (up to six at once). The widget is below.
+- **Windows:** a picture comes from a file picker, or is dropped onto the editor, and is shrunk on
+  the PC the same way. The by date is a list (No date, In 5, 10 or 20 years, Pick a day) with a date
+  picker. Each card is one button for the keyboard: Enter edits it, the menu key or a right click
+  opens its menu, and Left and Right click through its pictures. Ctrl+N adds a life goal and
+  Ctrl+Enter saves the editor. Delete asks inside the page.
 
 ## The widget (Android)
 
