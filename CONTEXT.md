@@ -156,6 +156,18 @@ A want whose cooldown has passed and that is not decided yet.
 **Decision**:
 What became of a want: bought or dropped, with the day and an optional note.
 
+**Life goal**:
+Something the owner wants in their life in the long run, with why it matters, an optional by date and
+pictures. It stands outside the goal cascade: it has no horizon, period or pace.
+_Avoid_: Dream, bucket list, vision
+
+**Why**:
+The reason a life goal matters, written by the owner and shown by the why reminder.
+
+**Why reminder**:
+A notification now and then (weekly by default) that shows one open life goal with its why and
+picture.
+
 **Tally**:
 Where the owner's time actually went on the phone and the PC, as daily minutes per category.
 _Avoid_: Screen time, tracking (in UI copy)
