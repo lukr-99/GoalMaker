@@ -14,6 +14,7 @@ public static class PlaceIcons
         PlaceRules.Calendar => SymbolRegular.CalendarLtr24,
         PlaceRules.Habits => SymbolRegular.ArrowRepeatAll24,
         PlaceRules.Goals => SymbolRegular.Flag24,
+        PlaceRules.LifeGoals => SymbolRegular.Sparkle24,
         PlaceRules.Projects => SymbolRegular.Board24,
         PlaceRules.Reviews => SymbolRegular.BookOpen24,
         PlaceRules.Stats => SymbolRegular.DataTrending24,

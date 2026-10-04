@@ -150,6 +150,44 @@ public sealed class KeyboardReachTests : IDisposable
         Assert.Equal(today.ShownHabits[0].ButtonText, names[hide + 2]);
     });
 
+    [Fact]
+    public void LifeGoalCardsAreReachedInOrderAndEnterOpensTheEditor() => WpfApp.Run(() =>
+    {
+        planner.LifeGoals.Add(new LifeGoalDraft("Own an Audi R8", "Proof", Today.AddYears(10)));
+        planner.LifeGoals.Add(new LifeGoalDraft("Run a marathon", "To know I can"));
+        var lifeGoals = new LifeGoalsViewModel(
+            planner.LifeGoals,
+            new LifeGoalPictures(planner.LifeGoals, new NoPictureFiles(), new NoPictureCloud(), () => null, planner.Time, () => { }),
+            planner.Settings,
+            planner.Strings,
+            planner.Time,
+            action => action(),
+            _ => null,
+            () => []);
+        var page = new Views.LifeGoalsPage(lifeGoals);
+        using var host = TabOrder.Host(page, 900, 1400);
+
+        var stops = TabOrder.Stops(page);
+
+        // Each card, then its "more" button, in the owner's order.
+        Assert.Equal(
+            ["New life goal", "Own an Audi R8, LifeGoals.YearsLeft(10)", "LifeGoals.Menu(Own an Audi R8)", "Run a marathon", "LifeGoals.Menu(Run a marathon)"],
+            stops.Where(stop => stop.IsVisible).Select(TabOrder.Name));
+        var card = (ButtonBase)stops.Single(stop => TabOrder.Name(stop) == "Run a marathon");
+        // The menu key and a right click open the card's own menu: Edit, Achieved, Drop, Move up, Delete.
+        var menu = Assert.IsType<ContextMenu>(card.ContextMenu);
+        menu.DataContext = card.DataContext;
+        TabOrder.Settle();
+        Assert.Equal(
+            ["Edit", "Achieved", "Drop", "Move up", "Delete"],
+            menu.Items.OfType<MenuItem>().Where(item => item.Visibility == Visibility.Visible).Select(item => (string)item.Header));
+
+        Assert.True(Press(card, Key.Enter));
+
+        Assert.True(lifeGoals.Editor.IsOpen);
+        Assert.Equal("Run a marathon", lifeGoals.Editor.Title);
+    });
+
     private static ContentControl Bar(ComposerViewModel composer)
     {
         var bar = new ContentControl { Content = composer, Focusable = false };
@@ -158,14 +196,48 @@ public sealed class KeyboardReachTests : IDisposable
     }
 
     // Esc as the keyboard sends it; true when something took it.
-    private static bool PressEscape(UIElement target)
+    private static bool PressEscape(UIElement target) => Press(target, Key.Escape);
+
+    private static bool Press(UIElement target, Key key)
     {
-        var press = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(target)!, 0, Key.Escape)
+        var press = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(target)!, 0, key)
         {
             RoutedEvent = Keyboard.KeyDownEvent,
         };
         target.RaiseEvent(press);
         return press.Handled;
+    }
+
+    private sealed class NoPictureFiles : IPictureFiles
+    {
+        public bool Has(string id) => false;
+
+        public byte[]? Read(string id) => null;
+
+        public void Write(string id, byte[] bytes, bool pending)
+        {
+        }
+
+        public void Delete(string id)
+        {
+        }
+
+        public IReadOnlySet<string> Ids() => new HashSet<string>();
+
+        public IReadOnlySet<string> Pending() => new HashSet<string>();
+
+        public void Uploaded(string id)
+        {
+        }
+    }
+
+    private sealed class NoPictureCloud : IPictureCloud
+    {
+        public Task UploadAsync(string owner, string id, byte[] bytes, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task<byte[]?> DownloadAsync(string owner, string id, CancellationToken cancellationToken) => Task.FromResult<byte[]?>(null);
+
+        public Task RemoveAsync(string owner, string id, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private (MiniWindowContent Content, FrameworkElement Frame, MiniWindow Window) Mini(MiniPage page)

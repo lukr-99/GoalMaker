@@ -74,6 +74,7 @@ public sealed record StartupOptions(bool StartInTray, AppPage? OpenPage, bool No
         "archive" => AppPage.Archive,
         "activity" => AppPage.Activity,
         "goals" => AppPage.Goals,
+        "life-goals" => AppPage.LifeGoals,
         "habits" => AppPage.Habits,
         "reviews" => AppPage.Reviews,
         "stats" => AppPage.Stats,

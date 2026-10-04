@@ -41,6 +41,7 @@ internal sealed class TestPlanner : IDisposable
         Habits = new HabitList(replica, rows, () => { });
         Reviews = new ReviewList(replica, rows, () => { });
         Wants = new WantList(replica, rows, () => { }, () => PlanningDay.Of(Time.GetLocalNow().DateTime, Settings.DayStartHour));
+        LifeGoals = new LifeGoalList(replica, rows, () => { });
         Tally = new TallyList(replica, rows, () => Settings.DeviceId, () => { });
     }
 
@@ -71,6 +72,8 @@ internal sealed class TestPlanner : IDisposable
     public ReviewList Reviews { get; }
 
     public WantList Wants { get; }
+
+    public LifeGoalList LifeGoals { get; }
 
     public TallyList Tally { get; }
 

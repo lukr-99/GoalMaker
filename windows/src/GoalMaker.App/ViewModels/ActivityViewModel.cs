@@ -157,6 +157,8 @@ public sealed partial class ActivityViewModel : ObservableObject
             "habit_pauses" => strings.Get("Activity.HabitPause"),
             "wants" => strings.Get("Activity.Want", subject),
             "want_cooldowns" => strings.Get("Activity.WantCooldowns"),
+            "life_goals" => strings.Get("Activity.LifeGoal", subject),
+            "life_goal_pictures" => strings.Get("Activity.LifeGoalPicture"),
             "tally_categories" => strings.Get("Activity.TallyCategory", subject),
             "tally_rules" => strings.Get("Activity.TallyRule"),
             _ => entry.Entity,
