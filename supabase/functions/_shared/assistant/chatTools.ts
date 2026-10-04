@@ -51,6 +51,8 @@ export const CHAT_TOOLS = new Set([
   "move_project_item",
   "get_wants",
   "add_want",
+  "get_life_goals",
+  "add_life_goal",
   "get_activity",
 ]);
 
@@ -61,6 +63,7 @@ export const CHAT_TOOLS = new Set([
 export const CHAT_INPUTS: Record<string, Set<string>> = {
   add_habit: new Set(["line", "emoji", "direction", "show_on_today"]),
   add_goal: new Set(["line", "emoji", "parent"]),
+  add_life_goal: new Set(["title", "why", "by"]),
 };
 
 /** The connector's tools the chat offers; one that deletes never is, even if listed. */

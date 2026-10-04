@@ -1,6 +1,7 @@
 # The home screen widgets
 
-Five Glance widgets put the day and the goals on the phone's home screen (spec, stories 85 to 87).
+Six Glance widgets put the day, the goals and the life goals on the phone's home screen (spec,
+stories 85 to 87 and 117).
 They read the device's replica, so they show what the app shows, and the ones that change anything
 write through the outbox, so a tap syncs like any other change and turns up on the PC.
 
@@ -66,11 +67,25 @@ where they were; a tap outside closes it without saving.
 A home screen widget cannot hold a text field of its own, because the launcher draws it and has no
 keyboard, so the typing happens in `QuickAddActivity`, a see-through window the widget starts.
 
+## Life goals
+
+One picture of an open life goal at a time, cropped to fill the widget, with its title and time left
+on a dark band across the foot ([life goals](life-goals.md)). It goes through every picture of
+every open life goal in the owner's order, the next every 30 minutes (`WidgetContent.lifeGoalSlides`
+and `lifeGoalSlide`, by the clock, so a redraw at any time shows the right one). A life goal without
+pictures shows its title, time left and why on the theme's colors. With none open it says how to
+start. A tap opens the Life goals place on that life goal.
+
+The launcher's update every 30 minutes (`updatePeriodMillis`) only recomposes a running Glance
+session, which would keep the slide it read, so `LifeGoalsWidgetReceiver` turns it into a redraw
+that reads again. A picture is read at about 720 pixels, since a widget's bitmaps go to the
+launcher, and a picture that came down from the other device draws the widget again.
+
 ## How they are built
 
 `ui/widget/` holds them: `WidgetContent` works out what each widget shows from the same rules the
 screens use, which is what the tests cover; `TodayWidget`, `HabitsWidget`, `GoalsWidget`,
-`MotivationWidget` and `QuickAddWidget` draw it with Glance, the last one over `ui/capture/`, the
+`MotivationWidget`, `QuickAddWidget` and `LifeGoalsWidget` draw it with Glance, the last one over `ui/capture/`, the
 same composer the share sheet uses; `CompleteTaskAction` and `CheckInHabitAction` write the tap and
 draw the widgets again. `WidgetSkin` takes the owner's theme and mode, so a widget matches the app
 rather than the launcher. `WidgetOpen` opens the app, or the Goals place through the same kind of

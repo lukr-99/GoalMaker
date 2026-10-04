@@ -7,10 +7,14 @@ import com.goalmaker.app.application.planning.GoalRules
 import com.goalmaker.app.application.planning.HabitData
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
+import com.goalmaker.app.application.planning.LifeGoalItem
+import com.goalmaker.app.application.planning.LifeGoalPicture
+import com.goalmaker.app.application.planning.LifeGoalRules
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.goals.GoalBoard
+import java.time.Instant
 import java.time.LocalDate
 
 /**
@@ -106,6 +110,30 @@ object WidgetContent {
     private fun amount(value: Double, target: Double, unit: String?): String {
         val text = "${number(value)} of ${number(target)}"
         return if (unit.isNullOrBlank()) text else "$text $unit"
+    }
+
+    /** How long the Life goals widget shows one slide before the next. */
+    const val LIFE_GOAL_SLIDE_MINUTES = 30L
+
+    /**
+     * Every slide the Life goals widget goes through: each picture of each open life goal, in the
+     * owner's order and the pictures' order, and one slide for a life goal without pictures.
+     */
+    fun lifeGoalSlides(goals: List<LifeGoalItem>, pictures: List<LifeGoalPicture>, today: LocalDate): List<WidgetLifeGoal> {
+        val byGoal = pictures.filterNot(LifeGoalPicture::deleted).groupBy(LifeGoalPicture::lifeGoalId)
+        return LifeGoalRules.open(goals).flatMap { goal ->
+            val slide = WidgetLifeGoal(goal.id, goal.title, goal.why, LifeGoalRules.timeLeft(goal.by, today))
+            byGoal[goal.id].orEmpty().sortedWith(compareBy<LifeGoalPicture> { it.position }.thenBy { it.id })
+                .map { slide.copy(pictureId = it.id) }
+                .ifEmpty { listOf(slide) }
+        }
+    }
+
+    /** The slide on show at [now]: the next one every [LIFE_GOAL_SLIDE_MINUTES], round and round. */
+    fun lifeGoalSlide(slides: List<WidgetLifeGoal>, now: Instant): WidgetLifeGoal? {
+        if (slides.isEmpty()) return null
+        val slot = now.epochSecond / (LIFE_GOAL_SLIDE_MINUTES * 60)
+        return slides[Math.floorMod(slot, slides.size.toLong()).toInt()]
     }
 
     private fun number(value: Double): String =

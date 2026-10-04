@@ -3,7 +3,8 @@
 // doesn't serve functions). It makes its own user and link in the database and deletes them after.
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1.0.13";
 import { postgres } from "../_shared/deps.ts";
-import { localNow } from "../_shared/rules/day.ts";
+import { yearsLater } from "../_shared/planner/lifeGoalList.ts";
+import { addDays, localNow } from "../_shared/rules/day.ts";
 import { defaultPeriod } from "../_shared/rules/digest.ts";
 import { planningDay } from "../_shared/rules/planningDay.ts";
 import { reviewId } from "../_shared/rules/reviews.ts";
@@ -984,6 +985,140 @@ Deno.test({
         assertStringIncludes(board.text, "Done today");
         const tooMany = await client.tool("update_project", { project: projectId, archive_after_days: 0 });
         assert(tooMany.isError, tooMany.text);
+      });
+
+      await t.step("life goals are added, read, achieved, reopened and undone through the connector", async () => {
+        // This step makes more calls than the minute's budget has left after the ones before it.
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const tools = (await client.call("tools/list")).tools.map((tool: Json) => tool.name);
+        for (const name of ["get_life_goals", "add_life_goal", "update_life_goal"]) {
+          assert(tools.includes(name), `${name} in ${tools}`);
+        }
+        assert(!tools.includes("delete_life_goal"), "deleting a life goal is the owner's, in the apps");
+        const lifeGoalOf = (text: string) => /\(life goal id ([0-9a-f-]{36})\)/.exec(text)![1];
+        const rowOf = async (id: string) =>
+          (await sql`
+            select title, why, by_date::text, area_id is not null as filed, status, closed_at is not null as closed,
+                   made_by, position
+            from public.life_goals where id = ${id}`)[0];
+        const standing = async (id: string) => {
+          const row = await rowOf(id);
+          return [row.status, row.closed];
+        };
+        const today = planningDay(localNow("Europe/Prague", new Date()), 4);
+
+        const marathon = await client.tool("add_life_goal", {
+          title: "Run a marathon",
+          why: "To feel strong at 40",
+          in_years: 10,
+          area: "Health",
+        });
+        assert(!marathon.isError, marathon.text);
+        const marathonId = lifeGoalOf(marathon.text);
+        assertStringIncludes(
+          marathon.text,
+          `- Run a marathon · 10 years left · by date ${yearsLater(today, 10)} · @Health · by Claude · no pictures`,
+        );
+        assertEquals(await rowOf(marathonId), {
+          title: "Run a marathon",
+          why: "To feel strong at 40",
+          by_date: yearsLater(today, 10),
+          filed: true,
+          status: "open",
+          closed: false,
+          made_by: "claude",
+          position: 0,
+        });
+        const [log] = await sql`
+          select actor from public.activity_log
+          where entity = 'life_goals' and entity_id = ${marathonId} and action = 'create'`;
+        assertEquals(log.actor, "claude");
+
+        const lights = await client.tool("add_life_goal", {
+          title: "See the northern lights",
+          why: "Grandma always talked about them",
+          by: addDays(today, 12),
+        });
+        assert(!lights.isError, lights.text);
+        assertStringIncludes(lights.text, "12 days left");
+        assertEquals((await rowOf(lifeGoalOf(lights.text))).position, 1, "a new one goes after the open ones");
+
+        const noWhy = await client.tool("add_life_goal", { title: "Anything" });
+        assert(noWhy.isError, noWhy.text);
+        assertStringIncludes(noWhy.text, "needs a why");
+        const blankWhy = await client.tool("add_life_goal", { title: "Anything", why: "  " });
+        assert(blankWhy.isError, blankWhy.text);
+        const badDay = await client.tool("add_life_goal", { title: "Anything", why: "Why not", by: "next year" });
+        assert(badDay.isError, badDay.text);
+        const both = await client.tool("add_life_goal", {
+          title: "Anything",
+          why: "Why not",
+          by: "2040-01-01",
+          in_years: 5,
+        });
+        assert(both.isError, both.text);
+
+        // Pictures are added in the apps; the connector only counts the ones not deleted.
+        for (const [index, deleted] of [[0, false], [1, false], [2, true]] as const) {
+          await sql`
+            insert into public.life_goal_pictures (id, owner_id, life_goal_id, position, width, height, deleted_at)
+            values (${crypto.randomUUID()}, ${OWNER}, ${marathonId}, ${index}, 800, 600,
+                    ${deleted ? new Date() : null})`;
+        }
+        // A stranger's life goal never shows, and can't be changed.
+        const strangers = "c0ffee00-0000-4000-8000-0000000000bb";
+        await sql`
+          insert into public.life_goals (id, owner_id, title, why, made_by)
+          values (${strangers}, ${STRANGER}, ${"The stranger's secret dream"}, ${"Nobody knows"}, ${"owner"})`;
+
+        const listed = await client.tool("get_life_goals");
+        assert(!listed.isError, listed.text);
+        assertStringIncludes(
+          listed.text,
+          `Open:\n- Run a marathon · 10 years left · by date ${yearsLater(today, 10)} · @Health · by Claude · ` +
+            `2 pictures (life goal id ${marathonId})\n  Why: To feel strong at 40\n- See the northern lights`,
+        );
+        assert(!listed.text.includes("stranger"), listed.text);
+        assert(!listed.text.includes("Achieved and dropped"), listed.text);
+        const theirs = await client.tool("update_life_goal", { id: strangers, status: "achieved" });
+        assert(theirs.isError, theirs.text);
+        assertEquals((await sql`select status from public.life_goals where id = ${strangers}`)[0].status, "open");
+
+        const achieved = await client.tool("update_life_goal", { id: marathonId, status: "achieved" });
+        assert(!achieved.isError, achieved.text);
+        assertStringIncludes(achieved.text, "Marked achieved:\n- Run a marathon · achieved");
+        assertEquals(await standing(marathonId), ["achieved", true]);
+        const closed = await client.tool("get_life_goals", { status: "closed" });
+        assertStringIncludes(closed.text, "Achieved and dropped:\n- Run a marathon · achieved");
+        assert(!closed.text.includes("northern lights"), closed.text);
+
+        const history = await client.tool("get_activity", { limit: 10 });
+        const change = history.text.split("\n").find((line) =>
+          line.startsWith("- update") && line.includes(marathonId)
+        );
+        assert(change !== undefined, history.text);
+        const undone = await client.tool("undo_change", { id: /\(change id ([0-9]+)/.exec(change)![1] });
+        assert(!undone.isError, undone.text);
+        assertEquals(await standing(marathonId), ["open", false], "undo takes the achievement back");
+
+        const dropped = await client.tool("update_life_goal", { id: marathonId, status: "dropped" });
+        assertStringIncludes(dropped.text, "Marked dropped:");
+        const reopened = await client.tool("update_life_goal", { id: marathonId, status: "open" });
+        assertStringIncludes(reopened.text, "Reopened:");
+        assertEquals(await standing(marathonId), ["open", false]);
+
+        const edited = await client.tool("update_life_goal", {
+          id: marathonId,
+          title: "Run a half marathon",
+          by: "",
+          area: "",
+        });
+        assert(!edited.isError, edited.text);
+        assertStringIncludes(edited.text, "Updated:\n- Run a half marathon · by Claude · 2 pictures");
+        const row = await rowOf(marathonId);
+        assertEquals([row.by_date, row.filed, row.made_by], [null, false, "claude"]);
+        const nothing = await client.tool("update_life_goal", { id: marathonId });
+        assert(nothing.isError, nothing.text);
       });
 
       await t.step("the 121st call in a minute is refused", async () => {

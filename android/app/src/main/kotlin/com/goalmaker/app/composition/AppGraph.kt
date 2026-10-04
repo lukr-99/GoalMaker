@@ -92,6 +92,7 @@ import com.goalmaker.app.data.update.UpdateNotifications
 import com.goalmaker.app.data.update.WorkManagerUpdateDownloads
 import com.goalmaker.app.domain.design.DesignTokens
 import com.goalmaker.app.ui.widget.WidgetData
+import com.goalmaker.app.ui.widget.WidgetKind
 import com.goalmaker.app.ui.widget.Widgets
 import com.goalmaker.app.domain.design.LogoMark
 import com.goalmaker.app.domain.planning.PromptLibrary
@@ -562,6 +563,13 @@ class AppGraph(context: Context) {
         }
         scope.launch {
             settings.appearance.drop(1).collectLatest { Widgets.refresh(appContext) }
+        }
+        // A life goal picture that came down draws the Life goals widget again.
+        scope.launch(io) {
+            lifeGoalPictures.changes.drop(1).collectLatest {
+                delay(WIDGET_REDRAW_DELAY)
+                Widgets.redraw(appContext, WidgetKind.LIFE_GOALS)
+            }
         }
         scope.launch {
             auth.session.collect { session ->

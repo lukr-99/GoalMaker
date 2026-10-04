@@ -4,13 +4,16 @@ import android.content.Context
 import com.goalmaker.app.GoalMakerApplication
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.domain.planning.PlanningDay
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 /** What the widgets read: the replica through the app's own lists, on the caller's thread. */
 object WidgetData {
     /** The replica tables the widgets read; a change to any of them draws the widgets again. */
-    val TABLES = listOf("tasks", "habits", "habit_checkins", "habit_pauses", "goals", "goal_entries", "projects")
+    val TABLES = listOf(
+        "tasks", "habits", "habit_checkins", "habit_pauses", "goals", "goal_entries", "projects", "life_goals", "life_goal_pictures",
+    )
 
     fun today(context: Context): List<WidgetTask> {
         val graph = (context.applicationContext as GoalMakerApplication).graph
@@ -40,6 +43,14 @@ object WidgetData {
     fun rings(context: Context): List<WidgetRing> {
         val graph = (context.applicationContext as GoalMakerApplication).graph
         return WidgetContent.rings(graph.goals.all(), graph.goals.entries(), graph.tasks.all(), graph.habits.read(), day(context))
+    }
+
+    /** The Life goals widget's slide for now, with its picture's bytes when this device has them. */
+    fun lifeGoal(context: Context): Pair<WidgetLifeGoal, ByteArray?>? {
+        val graph = (context.applicationContext as GoalMakerApplication).graph
+        val slides = WidgetContent.lifeGoalSlides(graph.lifeGoals.all(), graph.lifeGoals.allPictures(), day(context))
+        val slide = WidgetContent.lifeGoalSlide(slides, Instant.now()) ?: return null
+        return slide to slide.pictureId?.let(graph.lifeGoalPictures::read)
     }
 
     /** The owner's planning day, which starts at their day-start hour, not midnight. */

@@ -887,6 +887,13 @@
     <string name="widget_today_label">Today</string>
     <string name="widget_habits_label">Habits</string>
     <string name="widget_goals_label">Goals</string>
+    <string name="widget_life_goals_label">Life goals</string>
+    <string name="widget_life_goals_title">Life goals</string>
+    <string name="widget_life_goals_description">One of your life goals at a time, with its picture, the next every 30 minutes.</string>
+    <string name="widget_life_goals_empty">Write down what you want in life, and it shows here.</string>
+    <string name="widget_life_goals_picture">A picture of %1$s</string>
+    <string name="widget_life_goals_preview_title">Own a house by the sea</string>
+    <string name="widget_life_goals_preview_left">10 years left</string>
     <string name="widget_motivation_label">Motivation</string>
     <string name="widget_quick_add_label">Quick add</string>
     <string name="widget_unavailable">Open GoalMaker to see this.</string>

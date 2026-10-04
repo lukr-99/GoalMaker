@@ -37,3 +37,6 @@ node_modules/
 windows/GoalMaker.local.props
 windows/installer/publish/
 windows/installer/dist/
+
+# What android/tools/check-widgets.ps1 leaves: screenshots, view dumps and logcat (docs/widgets.md).
+.scratch/widgets/

@@ -143,6 +143,19 @@
                 android:resource="@xml/motivation_widget_info" />
         </receiver>
 
+        <!-- The Life goals widget (docs/life-goals.md). -->
+        <receiver
+            android:name=".ui.widget.LifeGoalsWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_life_goals_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/life_goals_widget_info" />
+        </receiver>
+
         <!-- The Motivation widget's setup: the launcher opens it when the widget is placed. -->
         <activity
             android:name=".MotivationConfigureActivity"

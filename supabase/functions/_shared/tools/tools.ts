@@ -56,6 +56,7 @@ import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
 import { newYear, type NewYearNudge } from "../rules/reviews.ts";
 import * as format from "./format.ts";
 import { digestTools } from "./digestTools.ts";
+import { lifeGoalTools } from "./lifeGoalTools.ts";
 import { tallyTools } from "./tallyTools.ts";
 import { wantTools } from "./wantTools.ts";
 
@@ -1841,6 +1842,7 @@ export const tools: Tool[] = [
     },
   },
   ...wantTools,
+  ...lifeGoalTools,
   ...digestTools,
   ...tallyTools,
 ];
