@@ -530,7 +530,10 @@ Deno.test({
           const wrong of [
             { name: "Stretch", cadence: "weekdays" },
             { name: "Water", measure: "count" },
-            { name: "Snacks", cadence: "per_week", times: 2, measure: "count", target: 2, direction: "at_most" },
+            // A habit to build needs something to reach; only a limit may be 0.
+            { name: "Water", measure: "count", target: 0 },
+            { name: "Swim", cadence: "per_week", times: 0 },
+            { name: "Takeaway", cadence: "per_week", times: 8, direction: "at_most" },
           ]
         ) {
           const refused = await client.tool("add_habit", wrong);
@@ -574,6 +577,60 @@ Deno.test({
         const [left] = await sql`
           select count(*)::int as n from public.habit_checkins where habit_id = ${gymId} and deleted_at is null`;
         assertEquals(left.n, 0, "a deleted habit takes its check-ins with it");
+      });
+
+      await t.step("a limit can be weekly or monthly, and it can be 0", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const takeaway = await client.tool("add_habit", {
+          name: "Takeaway",
+          cadence: "per_week",
+          times: 2,
+          direction: "at_most",
+        });
+        assert(!takeaway.isError, takeaway.text);
+        const takeawayId = /\(habit id ([0-9a-f-]{36})\)/.exec(takeaway.text)![1];
+        const sweets = await client.tool("add_habit", {
+          name: "Sweets",
+          measure: "count",
+          target: 0,
+          direction: "at_most",
+        });
+        assert(!sweets.isError, sweets.text);
+        const sweetsId = /\(habit id ([0-9a-f-]{36})\)/.exec(sweets.text)![1];
+        const drinks = await client.tool("add_habit", {
+          name: "Drinks",
+          cadence: "per_month",
+          measure: "count",
+          target: 5,
+          unit: "drinks",
+          direction: "at_most",
+        });
+        assert(!drinks.isError, drinks.text);
+        const drinksId = /\(habit id ([0-9a-f-]{36})\)/.exec(drinks.text)![1];
+
+        const rows = await sql`select name, cadence, times, measure, target, direction from public.habits
+          where id in (${takeawayId}, ${sweetsId}, ${drinksId}) order by name`;
+        assertEquals([...rows], [
+          { name: "Drinks", cadence: "per_month", times: 1, measure: "count", target: 5, direction: "at_most" },
+          { name: "Sweets", cadence: "daily", times: null, measure: "count", target: 0, direction: "at_most" },
+          { name: "Takeaway", cadence: "per_week", times: 2, measure: "check", target: null, direction: "at_most" },
+        ]);
+
+        await client.tool("check_in_habit", { id: takeawayId });
+        await client.tool("check_in_habit", { id: drinksId, amount: 3 });
+        const habits = (await client.tool("get_habits")).text;
+        const limits = habits.indexOf("Limits:");
+        for (const name of ["Takeaway ·", "Sweets ·", "Drinks ·"]) assert(habits.indexOf(name) > limits, habits);
+        assertStringIncludes(habits, "Takeaway · weekly · limit · 1 of at most 2 this week");
+        assertStringIncludes(habits, "Sweets · every day · limit · none today");
+        assertStringIncludes(habits, "Drinks · monthly · limit · 3 of at most 5 drinks this month");
+
+        const over = await client.tool("check_in_habit", { id: sweetsId, amount: 1 });
+        assertStringIncludes(over.text, "Sweets · every day · limit · over the line today");
+
+        for (const id of [takeawayId, sweetsId, drinksId]) {
+          assert(!(await client.tool("delete_habit", { id })).isError);
+        }
       });
 
       await t.step("a habit kept off Today still counts and comes back on Today", async () => {

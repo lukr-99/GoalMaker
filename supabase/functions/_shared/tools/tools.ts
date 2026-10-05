@@ -37,6 +37,7 @@ import {
   onToday,
   standing,
   streak,
+  used,
 } from "../rules/habits.ts";
 import { readGoalLine, readHabitLine } from "../rules/quickAdd.ts";
 import { lists } from "../rules/listRules.ts";
@@ -152,6 +153,15 @@ const measure = z.enum(["check", "count", "amount"]).describe(
 const direction = z.enum(["at_least", "at_most"]).describe(
   "at_least reaches the target; at_most keeps at or under it, which is a habit to keep down.",
 );
+const habitTimes = z.number().int().describe(
+  "For per_week (1 to 7) or per_month (1 to 31): how many days a period needs. For a weekly or monthly limit " +
+    "measured as a check, how many days it may happen, from 0 (0 to 7 a week, 0 to 31 a month). A count or " +
+    "amount limit doesn't use it.",
+);
+const habitTarget = z.number().describe(
+  "For a count or an amount: what a day needs, above 0. For a limit, the most a day may have, or the most a " +
+    "week's or a month's check-ins may add up to on a per_week or per_month habit; it may be 0.",
+);
 const weekday = z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
 
 const WEEKDAY_BITS: Record<string, number> = { mon: 1, tue: 2, wed: 4, thu: 8, fri: 16, sat: 32, sun: 64 };
@@ -258,6 +268,7 @@ function habitView(habit: Habit, day: Day, own: HabitCheckin[], rests: HabitPaus
     standing: standing(habit, day, own, rests),
     value: live.find((checkin) => checkin.day === day)?.value ?? 0,
     met: live.filter((checkin) => checkin.day >= start && checkin.day <= end && dayMet(habit, checkin)).length,
+    used: used(habit, day, own),
     streak: streak(habit, day, own, rests),
   };
 }
@@ -1180,7 +1191,12 @@ export const tools: Tool[] = [
     description:
       "Adds a habit: what it asks of a day and how often. It runs daily, on chosen weekdays, or so many times a " +
       "week or a month, and is measured as a check, a count or an amount against a target. A limit habit (at_most) " +
-      "is something to keep down, and only a daily or weekdays habit can be one. A habit may serve a numeric goal, " +
+      "is something to keep down. On a daily or weekdays habit its number is for each day: a count's or an " +
+      "amount's target, or not once for a check. On a per_week or per_month habit it covers the whole period: a " +
+      "check's times is how many days it may happen, and a count's or an amount's target is the most the period " +
+      'may add up to ("takeaway at most 2 times a week" is per_week, check, times 2; "at most 5 drinks a month" is ' +
+      "per_month, count, target 5). A limit's number may be 0; a habit to build needs a target above 0 and times " +
+      "of at least 1. A habit may serve a numeric goal, " +
       'and its check-ins then count toward that goal. A short line like "Swim 2 times a week 40 min" can go in ' +
       "line instead of name, cadence, measure, target and unit.",
     input: {
@@ -1193,9 +1209,9 @@ export const tools: Tool[] = [
       emoji: z.string().optional().describe("One emoji for the habit."),
       cadence: cadence.optional().describe("daily by default."),
       weekdays: z.array(weekday).optional().describe("For the weekdays cadence: which days, like [mon, wed, fri]."),
-      times: z.number().int().optional().describe("For per_week (1 to 7) or per_month (1 to 31): how many days."),
+      times: habitTimes.optional(),
       measure: measure.optional().describe("check by default."),
-      target: z.number().optional().describe("What a day needs, for a count or an amount."),
+      target: habitTarget.optional(),
       unit: z.string().optional().describe('What the amount counts, like "km" or "pages".'),
       direction: direction.optional().describe("at_least by default; at_most makes the target a limit."),
       goal: z.string().optional().describe("A numeric goal's id, for a habit that feeds one."),
@@ -1234,16 +1250,17 @@ export const tools: Tool[] = [
     description:
       "Changes a habit's name, emoji, cadence, measure, target, unit, direction, the goal it serves, the day it " +
       "starts from, whether it shows on Today or when it reminds, and archives it or brings it back. What is left out stays as it " +
-      "was. Its check-ins are kept.",
+      "was. Its check-ins are kept. Any cadence can be a limit (at_most): on a per_week or per_month habit the " +
+      "number covers the whole period, a check's times or a count's or an amount's target, and it may be 0.",
     input: {
       id: habitId,
       name: z.string().optional(),
       emoji: z.string().optional().describe("One emoji, or empty for none."),
       cadence: cadence.optional(),
       weekdays: z.array(weekday).optional().describe("For the weekdays cadence: which days, like [mon, wed, fri]."),
-      times: z.number().int().optional(),
+      times: habitTimes.optional(),
       measure: measure.optional(),
-      target: z.number().optional(),
+      target: habitTarget.optional(),
       unit: z.string().optional(),
       direction: direction.optional(),
       goal: z.string().optional().describe("A numeric goal's id, or empty to serve none."),

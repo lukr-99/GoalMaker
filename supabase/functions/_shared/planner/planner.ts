@@ -1496,8 +1496,9 @@ function toChange(row: any): Change {
 
 /**
  * The habit fields the database will take, or a PlannerError naming what does not fit: a cadence
- * carries either its weekdays or its times and never both, only a counted habit has a target, and
- * only a habit measured day by day can be a limit (supabase/migrations/0010 and 0014).
+ * carries either its weekdays or its times and never both, and only a counted habit has a target. A
+ * habit to build needs a target above 0 and at least 1 day a period; a limit's number may be 0
+ * (supabase/migrations/0010, 0014 and 0024).
  */
 function habitShape(wanted: {
   cadence: HabitCadence;
@@ -1509,29 +1510,33 @@ function habitShape(wanted: {
   unit: string | null;
 }) {
   const { cadence, measure, direction } = wanted;
+  const limit = direction === "at_most";
+  const periodic = cadence === "per_week" || cadence === "per_month";
   const weekdays = cadence === "weekdays" ? wanted.weekdays : null;
-  const times = cadence === "per_week" || cadence === "per_month" ? wanted.times : null;
+  // A weekly or monthly count or amount limit doesn't read its times, but the table still wants one.
+  const times = !periodic ? null : wanted.times ?? (limit && measure !== "check" ? 1 : null);
   if (cadence === "weekdays" && (weekdays === null || !Number.isInteger(weekdays) || weekdays < 1 || weekdays > 127)) {
     throw new PlannerError(
       "A weekdays habit needs its days added up: Monday 1, Tuesday 2, Wednesday 4, Thursday 8, Friday 16, " +
         "Saturday 32, Sunday 64.",
     );
   }
-  if (
-    (cadence === "per_week" || cadence === "per_month") && (times === null || !Number.isInteger(times) || times < 1)
-  ) {
-    throw new PlannerError("A habit counted per week or per month needs how many days a period takes.");
+  if (periodic && (times === null || !Number.isInteger(times) || times < (limit ? 0 : 1))) {
+    throw new PlannerError(
+      limit
+        ? "A weekly or monthly limit needs how many days it may have, from 0."
+        : "A habit counted per week or per month needs how many days a period takes, at least 1.",
+    );
   }
   if (cadence === "per_week" && times !== null && times > 7) throw new PlannerError("A week holds 7 days.");
   if (cadence === "per_month" && times !== null && times > 31) {
     throw new PlannerError("A month holds at most 31 days.");
   }
   const target = measure === "check" ? null : wanted.target;
-  if (measure !== "check" && (target === null || !(target > 0))) {
-    throw new PlannerError("A habit that counts needs a target above zero.");
-  }
-  if (direction === "at_most" && cadence !== "daily" && cadence !== "weekdays") {
-    throw new PlannerError("Only a daily or weekdays habit can be a limit, because a limit is kept day by day.");
+  if (measure !== "check" && (target === null || !(target > 0 || (limit && target >= 0)))) {
+    throw new PlannerError(
+      limit ? "A limit that counts needs a number, 0 or more." : "A habit that counts needs a target above zero.",
+    );
   }
   return { cadence, weekdays, times, measure, target, direction, unit: measure === "check" ? null : wanted.unit };
 }
