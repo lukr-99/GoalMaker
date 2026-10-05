@@ -32,6 +32,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.remember
+import com.goalmaker.app.application.planning.TallyCategory
+import com.goalmaker.app.application.planning.TallyRules
 import com.goalmaker.app.R
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.theme.AppTheme
@@ -48,6 +55,7 @@ internal fun TallyAppsPanel(
     dayLabel: String,
     onScope: (TallyAppScope) -> Unit,
     onMakeRule: (group: TallyAppGroup, app: TallyAppRow) -> Unit,
+    onMove: (app: String, category: String) -> Unit,
 ) {
     var open by rememberSaveable { mutableStateOf(listOf<String>()) }
     Column(
@@ -64,12 +72,16 @@ internal fun TallyAppsPanel(
         Text(stringResource(R.string.tally_apps_only_here), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
         if (state.apps.isEmpty()) {
             Text(stringResource(R.string.tally_apps_none), style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.textMuted)
+        } else {
+            ToSort(state, onMove)
         }
         state.apps.forEach { group ->
             val expanded = group.category in open
             CategoryLine(group, expanded) { open = if (expanded) open - group.category else open + group.category }
             if (expanded) {
-                group.apps.forEach { app -> AppLine(app) { onMakeRule(group, app) } }
+                group.apps.forEach { app ->
+                    AppLine(app, state.categories, group.category, onMove = { onMove(app.app, it) }) { onMakeRule(group, app) }
+                }
             }
         }
     }
@@ -108,9 +120,47 @@ private fun CategoryLine(group: TallyAppGroup, expanded: Boolean, onToggle: () -
     }
 }
 
-/** One app: its name, its package when the name differs, its minutes, its sites, and Make a rule. */
+/**
+ * What landed in Other, most first, each with its categories one tap away (docs/tally.md, "Sorting"): a
+ * tap saves the rule and counts today again, so the app leaves the list.
+ */
 @Composable
-private fun AppLine(app: TallyAppRow, onMakeRule: () -> Unit) {
+private fun ToSort(state: TallyUiState, onMove: (app: String, category: String) -> Unit) {
+    Text(
+        stringResource(R.string.tally_to_sort).uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = AppTheme.colors.accent,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+    if (state.toSort.isEmpty()) {
+        Text(stringResource(R.string.tally_to_sort_none), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
+        return
+    }
+    state.toSort.forEach { app ->
+        Column(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(app.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(durationText(app.minutes), style = tabular(MaterialTheme.typography.bodyMedium), color = AppTheme.colors.text)
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp, bottom = 6.dp),
+            ) {
+                state.categories.filter { it.id != TallyRules.OTHER }.forEach { category ->
+                    ChoiceChip(
+                        selected = false,
+                        onClick = { onMove(app.app, category.id) },
+                        label = listOfNotNull(category.emoji, category.name).joinToString(" "),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One app: its name, its package when the name differs, its minutes, its sites, Move to and Make a rule. */
+@Composable
+private fun AppLine(app: TallyAppRow, categories: List<TallyCategory>, current: String, onMove: (String) -> Unit, onMakeRule: () -> Unit) {
     val makeRule = stringResource(R.string.tally_make_rule_for, app.name)
     Column(Modifier.fillMaxWidth().padding(start = 22.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -128,8 +178,25 @@ private fun AppLine(app: TallyAppRow, onMakeRule: () -> Unit) {
                 Text(durationText(window.minutes), style = tabular(MaterialTheme.typography.bodySmall), color = AppTheme.colors.textMuted)
             }
         }
-        TextButton(onClick = onMakeRule, modifier = Modifier.semantics { contentDescription = makeRule }) {
-            Text(stringResource(R.string.tally_make_rule))
+        Row {
+            var moving by remember { mutableStateOf(false) }
+            Box {
+                TextButton(onClick = { moving = true }) { Text(stringResource(R.string.tally_move_to)) }
+                DropdownMenu(expanded = moving, onDismissRequest = { moving = false }) {
+                    categories.filter { it.id != current }.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(listOfNotNull(category.emoji, category.name).joinToString(" ")) },
+                            onClick = {
+                                moving = false
+                                onMove(category.id)
+                            },
+                        )
+                    }
+                }
+            }
+            TextButton(onClick = onMakeRule, modifier = Modifier.semantics { contentDescription = makeRule }) {
+                Text(stringResource(R.string.tally_make_rule))
+            }
         }
     }
 }

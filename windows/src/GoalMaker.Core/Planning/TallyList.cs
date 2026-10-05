@@ -214,6 +214,43 @@ public sealed partial class TallyList
 
     public bool DeleteRule(string id) => Change(RulesTable, id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
+    /// <summary>
+    /// Sorts one app, site or folder into <paramref name="category"/> in one step (docs/tally.md): the
+    /// owner's own rule for exactly that <paramref name="match"/> and <paramref name="pattern"/> (ignoring
+    /// case) on that <paramref name="platform"/> changes its category, keeping its pattern and project,
+    /// or a new rule is added after the others. False when the rule wouldn't hold.
+    /// </summary>
+    public bool SortInto(string match, string pattern, string platform, string category)
+    {
+        var clean = pattern.Trim();
+        var same = Rules().FirstOrDefault(rule =>
+            rule.Match == match && rule.Platform == platform && string.Equals(rule.Pattern, clean, StringComparison.OrdinalIgnoreCase));
+        return same?.Id is { } id
+            ? UpdateRule(id, same with { Category = category })
+            : AddRule(new TallyRule(match, clean, platform, category)) is not null;
+    }
+
+    /// <summary>
+    /// Merges the owner's own category <paramref name="from"/> into <paramref name="into"/>: its rules
+    /// sort into <paramref name="into"/> from now on, and <paramref name="from"/> is deleted. Days already
+    /// counted keep the category they were counted in. False when <paramref name="from"/> isn't one of
+    /// the owner's categories or the two are the same.
+    /// </summary>
+    public bool MergeCategory(string from, string into)
+    {
+        if (from == into || Categories().All(category => category.Id != from))
+        {
+            return false;
+        }
+
+        foreach (var rule in Rules().Where(rule => rule.Category == from && rule.Id is not null))
+        {
+            UpdateRule(rule.Id!, rule with { Category = into });
+        }
+
+        return DeleteCategory(from);
+    }
+
     [GeneratedRegex("^[a-z][a-z0-9-]{0,23}$")]
     private static partial Regex Palette();
 

@@ -151,6 +151,30 @@ class TallyList(
 
     fun deleteRule(id: String): Boolean = change(RULES, id) { it[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp()) }
 
+    /**
+     * Sorts one app, site or folder into [category] in one step (docs/tally.md, "Sorting"): the owner's
+     * own rule for exactly that [match] and [pattern] on that [platform] changes its category, or a new
+     * rule is added after the others. False when the rule wouldn't hold.
+     */
+    fun sortInto(match: String, pattern: String, platform: String, category: String): Boolean {
+        val same = rules().firstOrNull {
+            it.match == match && it.platform == platform && it.pattern.equals(pattern.trim(), ignoreCase = true)
+        }
+        if (same?.id != null) return updateRule(same.id, same.copy(category = category))
+        return addRule(TallyRule(match, pattern, platform, category)) != null
+    }
+
+    /**
+     * Merges the owner's own category [from] into [into]: its rules sort into [into] from now on, and
+     * [from] is deleted. Days already counted keep the category they were counted in. False when [from]
+     * isn't one of the owner's categories or the two are the same.
+     */
+    fun mergeCategory(from: String, into: String): Boolean {
+        if (from == into || categories().none { it.id == from }) return false
+        rules().filter { it.category == from && it.id != null }.forEach { rule -> updateRule(rule.id!!, rule.copy(category = into)) }
+        return deleteCategory(from)
+    }
+
     private fun categoryValues(name: String, color: String, emoji: String?): Map<String, JsonElement>? {
         val clean = name.trim().take(MAX_NAME)
         if (clean.isEmpty() || !COLOR.matches(color.trim())) return null

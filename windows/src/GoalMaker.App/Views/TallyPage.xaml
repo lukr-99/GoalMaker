@@ -136,11 +136,40 @@
             <controls:StackedBar Height="72" Margin="1,0" Parts="{Binding Parts}" Fraction="{Binding Fraction}" ToolTip="{Binding Tip}" />
         </DataTemplate>
 
-        <!-- A site or folder under an app, with Make a rule. -->
+        <!--
+            Move to: the categories to sort an app, site or folder into, in one click. The row gives the
+            choices (every category but its own, the owner's first) and the command; one menu per button.
+        -->
+        <ContextMenu x:Key="MoveMenu" x:Shared="False" ItemsSource="{Binding Choices}">
+            <ContextMenu.ItemContainerStyle>
+                <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                    <Setter Property="Header" Value="{Binding}" />
+                    <Setter Property="Command" Value="{Binding DataContext.MoveToCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+                    <Setter Property="CommandParameter" Value="{Binding Id}" />
+                    <Setter Property="HeaderTemplate">
+                        <Setter.Value>
+                            <DataTemplate DataType="{x:Type vm:FilterChoiceViewModel}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="10" Height="10" Margin="0,0,8,0" VerticalAlignment="Center" Fill="{Binding Brush}" />
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ContextMenu.ItemContainerStyle>
+        </ContextMenu>
+
+        <!-- A site or folder under an app, with Move to and Make a rule. -->
         <DataTemplate x:Key="WindowRow" DataType="{x:Type vm:TallyWindowRowViewModel}">
             <DockPanel Margin="16,0,0,0">
-                <ui:Button DockPanel.Dock="Right" Padding="8,2" Appearance="Transparent" FontSize="12" Command="{Binding MakeRuleCommand}"
-                           Content="{DynamicResource Tally.MakeRule}" AutomationProperties.Name="{Binding MakeRuleName}" />
+                <!-- One panel for both, written in screen order, so Tab reaches Move to before Make a rule. -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <ui:Button Padding="8,2" Appearance="Transparent" FontSize="12" Content="{DynamicResource Tally.MoveTo}"
+                               controls:MenuButton.OpensMenu="True" ContextMenu="{StaticResource MoveMenu}" AutomationProperties.Name="{Binding MoveName}" />
+                    <ui:Button Padding="8,2" Appearance="Transparent" FontSize="12" Command="{Binding MakeRuleCommand}"
+                               Content="{DynamicResource Tally.MakeRule}" AutomationProperties.Name="{Binding MakeRuleName}" />
+                </StackPanel>
                 <TextBlock DockPanel.Dock="Right" Margin="12,0,4,0" VerticalAlignment="Center" FontSize="12" Style="{StaticResource Number}"
                            Text="{Binding Value}" Foreground="{DynamicResource GM.TextMutedBrush}" />
                 <TextBlock VerticalAlignment="Center" FontSize="12" Text="{Binding Label}" TextTrimming="CharacterEllipsis"
@@ -148,17 +177,67 @@
             </DockPanel>
         </DataTemplate>
 
-        <!-- An app under a category: its executable, its time, Make a rule, and its sites or folders. -->
+        <!-- An app under a category: its executable, its time, Move to, Make a rule, and its sites or folders. -->
         <DataTemplate x:Key="AppRow" DataType="{x:Type vm:TallyAppRowViewModel}">
             <StackPanel Margin="26,2,0,4">
                 <DockPanel>
-                    <ui:Button DockPanel.Dock="Right" Padding="8,2" Appearance="Transparent" FontSize="12" Command="{Binding MakeRuleCommand}"
-                               Content="{DynamicResource Tally.MakeRule}" AutomationProperties.Name="{Binding MakeRuleName}" />
+                    <!-- One panel for both, written in screen order, so Tab reaches Move to before Make a rule. -->
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <ui:Button Padding="8,2" Appearance="Transparent" FontSize="12" Content="{DynamicResource Tally.MoveTo}"
+                                   controls:MenuButton.OpensMenu="True" ContextMenu="{StaticResource MoveMenu}" AutomationProperties.Name="{Binding MoveName}" />
+                        <ui:Button Padding="8,2" Appearance="Transparent" FontSize="12" Command="{Binding MakeRuleCommand}"
+                                   Content="{DynamicResource Tally.MakeRule}" AutomationProperties.Name="{Binding MakeRuleName}" />
+                    </StackPanel>
                     <TextBlock DockPanel.Dock="Right" Margin="12,0,4,0" VerticalAlignment="Center" Style="{StaticResource Number}" Text="{Binding Value}" />
                     <TextBlock VerticalAlignment="Center" FontSize="14" Text="{Binding App}" TextTrimming="CharacterEllipsis" />
                 </DockPanel>
                 <ItemsControl ItemsSource="{Binding Windows}" ItemTemplate="{StaticResource WindowRow}" Focusable="False"
                               Visibility="{Binding HasWindows, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Something in Other to sort: its name, what it is, its time, and Move to as the one action. -->
+        <DataTemplate x:Key="SortRow" DataType="{x:Type vm:TallySortRowViewModel}">
+            <Border Margin="0,0,0,4" Padding="10,4,4,4" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceVariantBrush}">
+                <DockPanel>
+                    <ui:Button DockPanel.Dock="Right" Padding="10,4" Appearance="Secondary" FontSize="12"
+                               controls:MenuButton.OpensMenu="True" ContextMenu="{StaticResource MoveMenu}" AutomationProperties.Name="{Binding MoveName}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{DynamicResource Tally.MoveTo}" VerticalAlignment="Center" />
+                            <ui:SymbolIcon Margin="6,0,0,0" FontSize="12" Symbol="ChevronDown16" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ui:Button>
+                    <TextBlock DockPanel.Dock="Right" Margin="12,0,12,0" VerticalAlignment="Center" Style="{StaticResource Number}" Text="{Binding Value}" />
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock FontSize="14" Text="{Binding Pattern}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock FontSize="12" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+
+        <!-- One week of the last eight: its categories stacked from the bottom, the Monday it starts under it. -->
+        <DataTemplate x:Key="RecentWeek" DataType="{x:Type vm:TallyBarViewModel}">
+            <StackPanel Margin="3,0" ToolTip="{Binding Tip}" AutomationProperties.Name="{Binding Tip}">
+                <controls:StackedBar Height="90" Parts="{Binding Parts}" Fraction="{Binding Fraction}" />
+                <TextBlock x:Name="Week" Text="{Binding Label}" FontSize="10" Margin="0,4,0,0" HorizontalAlignment="Center"
+                           Style="{StaticResource Number}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                    <Setter TargetName="Week" Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- A device this week: its name and time over one flat bar by category. -->
+        <DataTemplate x:Key="DeviceBar" DataType="{x:Type vm:TallyBarViewModel}">
+            <StackPanel Margin="0,0,0,10" ToolTip="{Binding Tip}" AutomationProperties.Name="{Binding Tip}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Style="{StaticResource Number}" Text="{Binding Value}" Foreground="{DynamicResource GM.AccentBrush}" />
+                    <TextBlock Text="{Binding Label}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                </DockPanel>
+                <controls:StackedBar Height="16" Margin="0,4,0,0" Flat="True" Parts="{Binding Parts}" Fraction="{Binding Fraction}" />
             </StackPanel>
         </DataTemplate>
 
@@ -279,7 +358,7 @@
         </DataTemplate>
     </Page.Resources>
 
-    <!-- Tally (docs/tally.md): the switch, the filters, the day, its hours and apps on this PC, the week, the projects, and the owner's rules and categories. -->
+    <!-- Tally (docs/tally.md): the switch, the filters, the day, its hours and apps on this PC with what is left to sort, the week, each device, the last eight weeks, the projects, and the owner's rules and categories. -->
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
             <controls:HeadlineText Title="{DynamicResource Tally.Title}" FontSize="40" />
@@ -380,6 +459,15 @@
                                           CommandParameter="week" IsChecked="{Binding AppsForWeek, Mode=OneWay}" />
                         </WrapPanel>
                         <TextBlock Style="{StaticResource Hint}" Margin="0,0,0,8" Text="{DynamicResource Tally.AppsOnlyHere}" />
+                        <!-- To sort: what landed in Other, most first, each one click from a rule. -->
+                        <StackPanel Margin="0,0,0,12" Visibility="{Binding ShowToSort, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{DynamicResource Tally.ToSort}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Tally.ToSortHint}" />
+                            <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{DynamicResource Tally.NothingToSort}"
+                                       Visibility="{Binding HasNothingToSort, Converter={StaticResource BoolToVisibility}}" />
+                            <ItemsControl ItemsSource="{Binding ToSort}" ItemTemplate="{StaticResource SortRow}" Focusable="False"
+                                          AutomationProperties.Name="{DynamicResource Tally.ToSort}" />
+                        </StackPanel>
                         <TextBlock Style="{StaticResource Hint}" Margin="0" Text="{DynamicResource Tally.AppsNone}"
                                    Visibility="{Binding HasNoApps, Converter={StaticResource BoolToVisibility}}" />
                         <ItemsControl ItemsSource="{Binding Apps}" ItemTemplate="{StaticResource AppGroup}" Focusable="False" />
@@ -406,6 +494,41 @@
                     <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,0" Text="{DynamicResource Tally.WeekHint}" />
                 </StackPanel>
             </Border>
+
+            <!-- This week on the phone and on the PC, from the synced days. -->
+            <StackPanel Visibility="{Binding HasTime, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.Devices}" />
+                <Border Style="{StaticResource Card}" Padding="16,16,16,6">
+                    <ItemsControl ItemsSource="{Binding Devices}" ItemTemplate="{StaticResource DeviceBar}" Focusable="False" />
+                </Border>
+            </StackPanel>
+
+            <!-- The last eight weeks under the chips, as Stats shows twelve. -->
+            <StackPanel Visibility="{Binding HasRecentWeeks, Converter={StaticResource BoolToVisibility}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Right" Margin="0,20,4,6" VerticalAlignment="Bottom" FontSize="12" Style="{StaticResource Number}"
+                               Text="{Binding RecentTotal}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.RecentWeeks}" />
+                </DockPanel>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding RecentWeekBars}" ItemTemplate="{StaticResource RecentWeek}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <primitives:UniformGrid Rows="1" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding RecentLegend}" ItemTemplate="{StaticResource Legend}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
 
             <StackPanel Visibility="{Binding HasProjects, Converter={StaticResource BoolToVisibility}}">
                 <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Tally.Projects}" />
@@ -500,6 +623,32 @@
                                         AutomationProperties.Name="{DynamicResource Tally.Emoji}" />
                         </StackPanel>
                     </Grid>
+                    <!-- Merge into another category: only for one of the owner's own, and only after asking. -->
+                    <StackPanel Visibility="{Binding CanMerge, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Tally.MergeInto}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox ItemsSource="{Binding MergeChoices}" SelectedItem="{Binding MergeTarget}" ItemTemplate="{StaticResource CategoryChoice}"
+                                      AutomationProperties.Name="{DynamicResource Tally.MergeInto}" />
+                            <ui:Button Grid.Column="1" Margin="8,0,0,0" Appearance="Secondary" Content="{DynamicResource Tally.Merge}"
+                                       Command="{Binding AskMergeCommand}" />
+                        </Grid>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0" Text="{DynamicResource Tally.MergeHint}" />
+                        <Border Margin="0,8,0,0" Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" BorderThickness="1"
+                                BorderBrush="{DynamicResource GM.DangerBrush}"
+                                Visibility="{Binding IsAskingMerge, Converter={StaticResource BoolToVisibility}}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <ui:Button Appearance="Transparent" Content="{DynamicResource Tally.Cancel}" Command="{Binding CancelMergeCommand}" Margin="8,0,8,0" />
+                                    <ui:Button Appearance="Danger" Content="{DynamicResource Tally.Merge}" Command="{Binding ConfirmMergeCommand}" />
+                                </StackPanel>
+                                <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding MergeQuestion}" />
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
                         <ui:Button Appearance="Transparent" Content="{DynamicResource Tally.Cancel}" Command="{Binding CancelCategoryCommand}" Margin="0,0,8,0" />
                         <ui:Button Appearance="Primary" Content="{DynamicResource Tally.Save}" Command="{Binding SaveCategoryCommand}" />

@@ -295,6 +295,37 @@ class TallyViewModelTest {
         assertEquals(listOf("study"), state.apps.map(TallyAppGroup::category))
     }
 
+    @Test
+    fun `the last 8 weeks and each device's week are stacked bars by category`() = runTest {
+        seedWeek()
+
+        val state = viewModel.uiState.first { it.loaded && it.weekMinutes > 0 }
+
+        // Eight weeks, oldest first: last week's 200 games minutes, then this week's 250 (100 on the phone, 150 on the PC).
+        assertEquals(8, state.trend.size)
+        assertEquals(listOf(0, 0, 0, 0, 0, 0, 200, 250), state.trend.map(TallyBar::minutes))
+        assertEquals(listOf(TallyRules.PHONE, TallyRules.PC), state.devices.map(TallyDeviceTime::kind))
+        assertEquals(listOf(100, 150), state.devices.map { it.bar.minutes })
+        assertEquals(listOf("coding" to 150), state.devices.last().bar.slices.map { it.category to it.minutes })
+    }
+
+    @Test
+    fun `an app in Other is left to sort, and moving it sorts it at once with one rule`() = runTest {
+        viewModel.setOn(true)
+        shadowOf(Looper.getMainLooper()).idle()
+        viewModel.moveApp("com.google.android.youtube", TallyRules.OTHER)
+        shadowOf(Looper.getMainLooper()).idle()
+        var state = viewModel.uiState.first { it.toSort.isNotEmpty() }
+        assertEquals(listOf("com.google.android.youtube"), state.toSort.map(TallyAppRow::app))
+
+        viewModel.moveApp("com.google.android.youtube", "study")
+        shadowOf(Looper.getMainLooper()).idle()
+
+        state = viewModel.uiState.first { it.toSort.isEmpty() && it.apps.any { group -> group.category == "study" } }
+        assertEquals(listOf("study" to 30), tally.totals(WEDNESDAY, WEDNESDAY).map { it.category to it.minutes })
+        assertEquals(1, tally.rules().size)
+    }
+
     /** Monday and Wednesday on this phone, Tuesday and Wednesday on the PC (one project on Wednesday). */
     private fun seedWeek(): String {
         tally.rewrite(MONDAY, listOf(TallyTotal(MONDAY, "video", null, 50), TallyTotal(MONDAY, "chat", null, 20)))

@@ -32,7 +32,14 @@ data class TallyUiState(
     val appScope: TallyAppScope = TallyAppScope.DAY,
     /** This phone's apps by category, for the shown day or the week. */
     val apps: List<TallyAppGroup> = emptyList(),
+    /** The last 8 weeks under the filter, oldest first. */
+    val trend: List<TallyBar> = emptyList(),
+    /** This week on the phone and on the PC, by category. */
+    val devices: List<TallyDeviceTime> = emptyList(),
 ) {
+    /** The apps that landed in Other, most first: what is left to sort. */
+    val toSort: List<TallyAppRow> get() = apps.firstOrNull { it.category == TallyRules.OTHER }?.apps.orEmpty()
+
     /** The week's minutes under the filter. */
     val weekMinutes: Int get() = week.sumOf(TallyBar::minutes)
 

@@ -151,6 +151,33 @@ class TallyListTest {
     }
 
     @Test
+    fun `sorting an app adds one rule, and sorting it again changes that rule`() {
+        assertTrue(tally.sortInto(TallyRules.APP, "com.chess", TallyRules.ANDROID, "games"))
+        assertTrue(tally.sortInto(TallyRules.APP, "COM.CHESS", TallyRules.ANDROID, "study"))
+        assertTrue(tally.sortInto(TallyRules.APP, "com.chess", TallyRules.WINDOWS, "games"))
+
+        assertEquals(
+            listOf("com.chess" to "study", "com.chess" to "games"),
+            tally.rules().map { it.pattern to it.category },
+        )
+    }
+
+    @Test
+    fun `merging a category moves its rules into the other one and deletes it`() {
+        val chess = tally.addCategory("Chess", "teal")!!
+        tally.addRule(TallyRule(TallyRules.APP, "com.chess", TallyRules.ANDROID, chess.id))
+        tally.addRule(TallyRule(TallyRules.TITLE, "lichess", TallyRules.WINDOWS, chess.id))
+        tally.addRule(TallyRule(TallyRules.APP, "com.spotify", TallyRules.ANDROID, "music"))
+
+        assertFalse("only the owner's own categories merge", tally.mergeCategory("music", "games"))
+        assertFalse(tally.mergeCategory(chess.id, chess.id))
+        assertTrue(tally.mergeCategory(chess.id, "games"))
+
+        assertEquals(listOf("games", "games", "music"), tally.rules().map(TallyRule::category))
+        assertTrue(tally.categories().none { it.id == chess.id })
+    }
+
+    @Test
     fun `a rule is updated in place, keeping its turn, and deleted as a tombstone`() {
         val first = tally.addRule(TallyRule(TallyRules.APP, "com.chess", TallyRules.ANDROID, "games"))!!
         val second = tally.addRule(TallyRule(TallyRules.TITLE, "lesson", TallyRules.WINDOWS, "study"))!!

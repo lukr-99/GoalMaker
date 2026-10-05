@@ -100,6 +100,48 @@ public sealed class TallyListTests : IDisposable
     }
 
     [Fact]
+    public void SortingAnAppAddsOneRuleAndSortingItAgainChangesThatRule()
+    {
+        Assert.True(tally.SortInto(TallyRules.App, "com.chess", TallyRules.Android, "games"));
+        Assert.True(tally.SortInto(TallyRules.App, "COM.CHESS", TallyRules.Android, "study"));
+        Assert.True(tally.SortInto(TallyRules.App, "com.chess", TallyRules.Windows, "games"));
+        Assert.False(tally.SortInto(TallyRules.Title, "lichess", TallyRules.Android, "games"));
+
+        Assert.Equal(
+            [("com.chess", "study"), ("com.chess", "games")],
+            tally.Rules().Select(rule => (rule.Pattern, rule.Category)));
+    }
+
+    [Fact]
+    public void SortingASiteAgainKeepsItsRulesProject()
+    {
+        tally.AddRule(new TallyRule(TallyRules.Title, "GitHub", TallyRules.Windows, "work", "p-goalmaker"));
+
+        Assert.True(tally.SortInto(TallyRules.Title, " github ", TallyRules.Windows, "coding"));
+
+        var rule = Assert.Single(tally.Rules());
+        Assert.Equal(("GitHub", "coding", "p-goalmaker"), (rule.Pattern, rule.Category, rule.Project));
+    }
+
+    [Fact]
+    public void MergingACategoryMovesItsRulesIntoTheOtherOneAndDeletesIt()
+    {
+        var chess = tally.AddCategory("Chess", "teal")!;
+        tally.AddRule(new TallyRule(TallyRules.App, "com.chess", TallyRules.Android, chess.Id));
+        tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Windows, chess.Id));
+        tally.AddRule(new TallyRule(TallyRules.App, "com.spotify", TallyRules.Android, "music"));
+        tally.RewriteDay(Day, [new TallyTotal(Day, chess.Id, null, 25)]);
+
+        Assert.False(tally.MergeCategory("music", "games"));
+        Assert.False(tally.MergeCategory(chess.Id, chess.Id));
+        Assert.True(tally.MergeCategory(chess.Id, "games"));
+
+        Assert.Equal(["games", "games", "music"], tally.Rules().Select(rule => rule.Category));
+        Assert.DoesNotContain(tally.Categories(), category => category.Id == chess.Id);
+        Assert.Equal([(chess.Id, 25)], tally.Days(Day, Day).Select(day => (day.Category, day.Minutes)));
+    }
+
+    [Fact]
     public void CategoriesAndRulesChangeInPlaceAndGo()
     {
         var chess = tally.AddCategory("Chess", "teal")!;
