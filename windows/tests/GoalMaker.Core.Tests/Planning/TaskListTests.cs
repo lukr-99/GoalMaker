@@ -300,6 +300,62 @@ public sealed class TaskListTests : IDisposable
     }
 
     [Fact]
+    public void MovingAnItemToDroppedDropsItAndKeepsTheColumnItIsStoredIn()
+    {
+        var tasks = Tasks();
+        var board = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        tasks.SetBoardColumn(board.Id, ProjectRules.Doing);
+
+        tasks.SetBoardColumn(board.Id, ProjectRules.Dropped);
+
+        var dropped = tasks.Find(board.Id)!;
+        Assert.Equal(TaskState.Dropped, dropped.State);
+        Assert.Equal(ProjectRules.Doing, dropped.BoardColumn);
+        Assert.Equal(ProjectRules.Doing, (string?)test.Replica.Get("tasks", board.Id)!["board_column"]);
+    }
+
+    [Fact]
+    public void MovingADroppedItemToToDoOpensItThere()
+    {
+        var tasks = Tasks();
+        var board = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        tasks.SetBoardColumn(board.Id, ProjectRules.Doing);
+        tasks.SetBoardColumn(board.Id, ProjectRules.Dropped);
+
+        tasks.SetBoardColumn(board.Id, ProjectRules.Todo);
+
+        var reopened = tasks.Find(board.Id)!;
+        Assert.Equal(TaskState.Open, reopened.State);
+        Assert.Equal(ProjectRules.Todo, reopened.BoardColumn);
+    }
+
+    [Fact]
+    public void MovingADroppedItemToDoneCompletesIt()
+    {
+        var tasks = Tasks();
+        var board = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+        tasks.Drop(board.Id);
+
+        tasks.SetBoardColumn(board.Id, ProjectRules.Done);
+
+        var done = tasks.Find(board.Id)!;
+        Assert.Equal(TaskState.Done, done.State);
+        Assert.Equal(ProjectRules.Done, done.BoardColumn);
+        Assert.NotNull(done.CompletedAt);
+    }
+
+    [Fact]
+    public void ALooseTaskCannotBeMovedToDropped()
+    {
+        var tasks = Tasks();
+        var loose = tasks.Add("Run")!;
+
+        tasks.SetBoardColumn(loose.Id, ProjectRules.Dropped);
+
+        Assert.Equal(TaskState.Open, tasks.Find(loose.Id)!.State);
+    }
+
+    [Fact]
     public void TheListAnnouncesChanges()
     {
         var tasks = Tasks();

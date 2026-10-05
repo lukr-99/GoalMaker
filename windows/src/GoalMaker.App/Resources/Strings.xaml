@@ -838,6 +838,7 @@
     <sys:String x:Key="Projects.Todo">To do</sys:String>
     <sys:String x:Key="Projects.Doing">Doing</sys:String>
     <sys:String x:Key="Projects.Done">Done</sys:String>
+    <sys:String x:Key="Projects.Dropped">Dropped</sys:String>
     <sys:String x:Key="Projects.Task">Task</sys:String>
     <sys:String x:Key="Projects.Idea">Idea</sys:String>
     <sys:String x:Key="Projects.Bug">Bug</sys:String>

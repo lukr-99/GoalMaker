@@ -143,10 +143,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { PinnedPlaces = [.. PlaceRules.Stored(value, DeviceKind.Pc)] });
     }
 
-    /// <summary>Only the four columns count, each once, so a file edited by hand can't fold something unknown.</summary>
+    /// <summary>
+    /// Only the board columns count, each once, so a file edited by hand can't fold something unknown.
+    /// Nothing stored yet folds Dropped away; an empty list stored means every column is open.
+    /// </summary>
     public IReadOnlyList<string> FoldedBoardColumns
     {
-        get => Known(document.FoldedBoardColumns ?? []);
+        get => Known(document.FoldedBoardColumns ?? [ProjectRules.Dropped]);
         set => Save(document with { FoldedBoardColumns = [.. Known(value)] });
     }
 
@@ -214,7 +217,7 @@ public sealed class JsonSettingsStore : ISettingsStore
     }
 
     private static List<string> Known(IEnumerable<string> columns) =>
-        [.. ProjectRules.Columns.Where(columns.Contains)];
+        [.. ProjectRules.BoardColumns.Where(columns.Contains)];
 
     private static SettingsDocument Load(string path)
     {
