@@ -189,10 +189,14 @@ public static partial class QuickAddLines
         return new WantLine(read.Rest(), reason.Length > 0 ? reason : null, price, currency, waitDays);
     }
 
-    /// <summary>A habit: "Swim 2 times a week", "Read 20 minutes every day", "Piano every mon and thu".</summary>
+    /// <summary>
+    /// A habit: "Swim 2 times a week", "Read 20 minutes every day", "Piano every mon and thu", or a limit:
+    /// "Coffee at most 3 cups a day", "At most 2 takeaways a week", "No casino this month".
+    /// </summary>
     public static HabitLine ReadHabit(string line)
     {
         var read = new Reader(Words(line));
+        var limit = LimitAt(read);
         var cadence = HabitRules.Daily;
         int? weekdays = null;
         int? times = null;
@@ -202,7 +206,7 @@ public static partial class QuickAddLines
 
         for (var i = 0; i < read.Count; i++)
         {
-            if (CadenceAt(read, i) is not { } found)
+            if (CadenceAt(read, i, limit) is not { } found)
             {
                 continue;
             }
@@ -236,7 +240,7 @@ public static partial class QuickAddLines
                 break;
             }
 
-            if (read.Measure(i) is not { Value: > 0 } amount)
+            if (read.Measure(i) is not { } amount || amount.Value < 0 || (amount.Value == 0 && limit == Limit.None))
             {
                 continue;
             }
@@ -244,11 +248,23 @@ public static partial class QuickAddLines
             measure = amount.Decimal || AmountUnits.Contains(amount.Unit.ToLowerInvariant()) ? HabitRules.Amount : HabitRules.Count;
             target = amount.Value;
             unit = amount.Unit;
-            read.Mark(i, amount.End + read.PerDay(amount.End), Used);
+            // Under a limit, "a week" or "a month" after the number makes it the most for the whole period.
+            if (limit != Limit.None && cadence == HabitRules.Daily && PeriodAt(read, amount.End) is { } period)
+            {
+                cadence = period.Week ? HabitRules.PerWeek : HabitRules.PerMonth;
+                times = 1;
+                read.Mark(i, period.End, Used);
+            }
+            else
+            {
+                read.Mark(i, amount.End + read.PerDay(amount.End), Used);
+            }
+
             break;
         }
 
-        return new HabitLine(read.Rest(), cadence, weekdays, times, measure, target, unit);
+        var direction = limit == Limit.None ? HabitRules.AtLeast : HabitRules.AtMost;
+        return new HabitLine(read.Rest(), cadence, weekdays, times, measure, target, unit, direction);
     }
 
     /// <summary>A goal: "Run 30 km this week", "Read 3 books in November". Its period is read against <paramref name="today"/>, the planning day.</summary>
@@ -326,7 +342,47 @@ public static partial class QuickAddLines
         return new GoalLine(read.Rest(), horizon, start, target is null ? GoalRules.ModeDone : GoalRules.ModeNumber, target, unit);
     }
 
-    private static (string Cadence, int? Weekdays, int? Times, int End, bool Fits)? CadenceAt(Reader read, int i)
+    // The first limit phrase, marked as used: "at most", "max", "maximum", "no more than" or "not more
+    // than" anywhere, or "no" or "never" as the line's first word.
+    private static Limit LimitAt(Reader read)
+    {
+        for (var i = 0; i < read.Count; i++)
+        {
+            string K(int offset) => read.Key(i + offset) ?? string.Empty;
+            var length = K(0) == "at" && K(1) == "most" ? 2
+                : K(0) is "max" or "maximum" ? 1
+                : K(0) is "no" or "not" && K(1) == "more" && K(2) == "than" ? 3
+                : 0;
+            if (length > 0)
+            {
+                read.Mark(i, i + length, Used);
+                return Limit.Most;
+            }
+        }
+
+        if (read.Key(0) is "no" or "never")
+        {
+            read.Mark(0, 1, Used);
+            return Limit.Zero;
+        }
+
+        return Limit.None;
+    }
+
+    // "a week", "per month", "this week" and the like at i: which period, and where it ends.
+    private static (bool Week, int End)? PeriodAt(Reader read, int i)
+    {
+        var first = read.Key(i) ?? string.Empty;
+        var second = read.Key(i + 1) ?? string.Empty;
+        if (!(Per.Contains(first) || first == "this") || second is not ("week" or "month"))
+        {
+            return null;
+        }
+
+        return (second == "week", i + 2);
+    }
+
+    private static (string Cadence, int? Weekdays, int? Times, int End, bool Fits)? CadenceAt(Reader read, int i, Limit limit)
     {
         if (read.Key(i) is not { } key)
         {
@@ -335,9 +391,30 @@ public static partial class QuickAddLines
 
         string K(int offset) => read.Key(i + offset) ?? string.Empty;
         static bool Period(string word) => word is "week" or "month";
-        static (string, int?, int?, int, bool) PerPeriod(int n, string period, int end) => period == "week"
-            ? (HabitRules.PerWeek, null, n, end, n is >= 1 and <= 7)
-            : (HabitRules.PerMonth, null, n, end, n is >= 1 and <= 31);
+        var least = limit == Limit.None ? 1 : 0;
+        (string, int?, int?, int, bool) PerPeriod(int n, string period, int end) => period == "week"
+            ? (HabitRules.PerWeek, null, n, end, n >= least && n <= 7)
+            : (HabitRules.PerMonth, null, n, end, n >= least && n <= 31);
+
+        if (limit != Limit.None && Whole().IsMatch(key))
+        {
+            // Under a limit a bare number, or a number of days, is how many days the period may have.
+            if (Per.Contains(K(1)) && Period(K(2)))
+            {
+                return PerPeriod(ParseWhole(key), K(2), i + 3);
+            }
+
+            if (K(1) is "days" or "day" && Per.Contains(K(2)) && Period(K(3)))
+            {
+                return PerPeriod(ParseWhole(key), K(3), i + 4);
+            }
+        }
+
+        if (limit == Limit.Zero && PeriodAt(read, i) is { } alone)
+        {
+            // "No casino this month": the period alone, and not once in it.
+            return PerPeriod(0, alone.Week ? "week" : "month", alone.End);
+        }
 
         var nx = TimesJoined().Match(key);
         if (Whole().IsMatch(key) && K(1) is "x" or "times" or "time" && Per.Contains(K(2)) && Period(K(3)))
@@ -473,6 +550,14 @@ public static partial class QuickAddLines
     private static partial Regex Year();
 
     private sealed record Word(string Text, string Key);
+
+    // How a line sets a limit: not at all, with a number to come ("at most"), or as not once ("no").
+    private enum Limit
+    {
+        None,
+        Most,
+        Zero,
+    }
 
     // Walks the words of a line, remembering which were read (used) and which were kept as text.
     private sealed class Reader(List<Word> words)

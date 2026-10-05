@@ -640,6 +640,9 @@
     <sys:String x:Key="Habits.BarTarget">Target {0}</sys:String>
     <sys:String x:Key="Habits.BarTargetUnit">Target {0} {1}</sys:String>
     <sys:String x:Key="Habits.BarCheck">A simple check</sys:String>
+    <sys:String x:Key="Habits.BarLimit">A limit</sys:String>
+    <sys:String x:Key="Habits.BarMost">At most {0}</sys:String>
+    <sys:String x:Key="Habits.BarMostUnit">At most {0} {1}</sys:String>
     <sys:String x:Key="Habits.Edit">Edit</sys:String>
     <sys:String x:Key="Habits.Name">Habit</sys:String>
     <sys:String x:Key="Habits.Emoji">Emoji (optional)</sys:String>
@@ -654,6 +657,10 @@
     <sys:String x:Key="Habits.TimesMonth">{0} times a month</sys:String>
     <sys:String x:Key="Habits.AtMostWeek">At most {0} days a week</sys:String>
     <sys:String x:Key="Habits.AtMostMonth">At most {0} days a month</sys:String>
+    <sys:String x:Key="Habits.NotOnceWeek">Not once a week</sys:String>
+    <sys:String x:Key="Habits.NotOnceMonth">Not once a month</sys:String>
+    <sys:String x:Key="Habits.EveryWeek">Every week</sys:String>
+    <sys:String x:Key="Habits.EveryMonth">Every month</sys:String>
     <sys:String x:Key="Habits.Fewer">Fewer</sys:String>
     <sys:String x:Key="Habits.MoreTimes">More</sys:String>
     <sys:String x:Key="Habits.Measure">Measured as</sys:String>
