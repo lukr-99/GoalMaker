@@ -3,7 +3,7 @@ import type { LifeGoal } from "../planner/lifeGoalList.ts";
 import type { Want } from "../planner/wantList.ts";
 import { type Day, daysBetween, weekday } from "../rules/day.ts";
 import type { GoalItem, GoalProgress, GoalStanding } from "../rules/goals.ts";
-import type { HabitStanding } from "../rules/habits.ts";
+import { type HabitStanding, isPeriodic, limit } from "../rules/habits.ts";
 import type { TimeLeft } from "../rules/lifeGoals.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
 import type { Column, ProjectItem, ProjectMilestone } from "../rules/projects.ts";
@@ -136,6 +136,8 @@ export interface HabitView {
   value: number;
   /** For a weekly or monthly habit, the days met so far in its period. */
   met: number;
+  /** For a limit, what its day, or its week or month so far, has had; the day's value when left out. */
+  used?: number;
   streak: number;
   /** The title of the goal it serves, when it serves one. */
   serves?: string | null;
@@ -143,8 +145,13 @@ export interface HabitView {
 
 const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** How often a habit asks: every day, on Mon, Wed, Fri, 3 times a week, 2 times a month. */
-export function cadenceText(habit: Pick<Habit, "cadence" | "times" | "weekdays">): string {
+/**
+ * How often a habit asks: every day, on Mon, Wed, Fri, 3 times a week, 2 times a month. A weekly or monthly
+ * limit is just weekly or monthly, since its number is in where it stands.
+ */
+export function cadenceText(habit: Pick<Habit, "cadence" | "times" | "weekdays"> & { direction?: string }): string {
+  if (habit.direction === "at_most" && habit.cadence === "per_week") return "weekly";
+  if (habit.direction === "at_most" && habit.cadence === "per_month") return "monthly";
   switch (habit.cadence) {
     case "per_week":
       return `${habit.times} times a week`;
@@ -162,7 +169,7 @@ export function cadenceText(habit: Pick<Habit, "cadence" | "times" | "weekdays">
 /**
  * Where a habit stands on the day, the way its card says it: the standing (done, left, skipped, failed, paused,
  * limit, not due today), then the count behind it ("3 of 8 glasses today", "1 of 3 this week",
- * "1 of at most 2 today").
+ * "1 of at most 2 today", "3 of at most 5 drinks this month").
  */
 export function standingText(habit: Habit, view: HabitView): string {
   const unit = habit.unit ? ` ${habit.unit}` : "";
@@ -174,9 +181,13 @@ export function standingText(habit: Habit, view: HabitView): string {
     case "failed":
       return view.standing;
     case "limit": {
-      if (habit.measure === "check") return view.value >= 1 ? "limit · over the line today" : "limit · none today";
-      const over = view.value > (habit.target ?? 0) ? ", over the line" : "";
-      return `limit · ${round(view.value)} of at most ${round(habit.target ?? 0)}${unit} today${over}`;
+      // A daily limit counts the day; a weekly or monthly one counts its period so far.
+      const had = view.used ?? view.value;
+      const most = limit(habit);
+      const when = !isPeriodic(habit) ? "today" : habit.cadence === "per_week" ? "this week" : "this month";
+      if (most <= 0) return had > 0 ? `limit · over the line ${when}` : `limit · none ${when}`;
+      const over = had > most ? ", over the line" : "";
+      return `limit · ${round(had)} of at most ${round(most)}${unit} ${when}${over}`;
     }
     default: {
       if (habit.cadence === "per_week" || habit.cadence === "per_month") {

@@ -86,8 +86,12 @@ internal fun HabitDialog(
     val scope = rememberCoroutineScope()
     val locale = LocalConfiguration.current.locales[0]
     val most = if (cadence == HabitRules.PER_MONTH) 31 else 7
-    // Only a day can be a limit (supabase/migrations/0014_habit_limits.sql).
-    val onDays = cadence == HabitRules.DAILY || cadence == HabitRules.WEEKDAYS
+    val periodic = cadence == HabitRules.PER_WEEK || cadence == HabitRules.PER_MONTH
+    // A limit may be 0, "not once"; a habit to build needs at least one (0024_habit_limits_any_period.sql).
+    val limit = direction == HabitRules.AT_MOST
+    val fewest = if (limit) 0 else 1
+    // A weekly or monthly count under a limit counts the period's total, so its times is not read.
+    val timesShown = periodic && !(limit && measure != HabitRules.CHECK)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -138,15 +142,16 @@ internal fun HabitDialog(
                             )
                         }
                     }
-                    HabitRules.PER_WEEK, HabitRules.PER_MONTH -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = { times = (times - 1).coerceAtLeast(1) }, enabled = times > 1) {
+                    HabitRules.PER_WEEK, HabitRules.PER_MONTH -> if (timesShown) Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { times = (times - 1).coerceAtLeast(fewest) }, enabled = times > fewest) {
                             Icon(Icons.Outlined.Remove, contentDescription = stringResource(R.string.habits_fewer))
                         }
                         Text(
-                            if (cadence == HabitRules.PER_WEEK) {
-                                pluralStringResource(R.plurals.habits_times_week, times, times)
-                            } else {
-                                pluralStringResource(R.plurals.habits_times_month, times, times)
+                            when {
+                                limit && cadence == HabitRules.PER_WEEK -> pluralStringResource(R.plurals.habits_at_most_days_week, times, times)
+                                limit -> pluralStringResource(R.plurals.habits_at_most_days_month, times, times)
+                                cadence == HabitRules.PER_WEEK -> pluralStringResource(R.plurals.habits_times_week, times, times)
+                                else -> pluralStringResource(R.plurals.habits_times_month, times, times)
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             modifier = Modifier.weight(1f),
@@ -173,8 +178,7 @@ internal fun HabitDialog(
                         )
                     }
                 }
-                val limit = onDays && direction == HabitRules.AT_MOST
-                if (onDays) {
+                run {
                     Label(stringResource(R.string.habits_direction))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(
@@ -185,6 +189,8 @@ internal fun HabitDialog(
                                 selected = direction == id,
                                 onClick = {
                                     direction = id
+                                    // A habit to build needs at least one a week or a month.
+                                    if (id == HabitRules.AT_LEAST) times = times.coerceAtLeast(1)
                                     refused = false
                                 },
                                 label = stringResource(label),
@@ -194,7 +200,12 @@ internal fun HabitDialog(
                     if (limit) {
                         Text(
                             stringResource(
-                                if (measure == HabitRules.CHECK) R.string.habits_limit_hint_check else R.string.habits_limit_hint,
+                                when {
+                                    periodic && measure == HabitRules.CHECK -> R.string.habits_limit_hint_period_check
+                                    periodic -> R.string.habits_limit_hint_period
+                                    measure == HabitRules.CHECK -> R.string.habits_limit_hint_check
+                                    else -> R.string.habits_limit_hint
+                                },
                             ),
                             style = MaterialTheme.typography.bodySmall,
                             color = AppTheme.colors.textMuted,
@@ -209,8 +220,18 @@ internal fun HabitDialog(
                                 target = it
                                 refused = false
                             },
-                            label = { Text(stringResource(R.string.habits_target)) },
-                            isError = refused && (parseAmount(target) ?: 0.0) <= 0.0,
+                            label = {
+                                Text(
+                                    stringResource(
+                                        when {
+                                            limit && cadence == HabitRules.PER_WEEK -> R.string.habits_target_week
+                                            limit && cadence == HabitRules.PER_MONTH -> R.string.habits_target_month
+                                            else -> R.string.habits_target
+                                        },
+                                    ),
+                                )
+                            },
+                            isError = refused && (parseAmount(target)?.let { if (limit) it < 0.0 else it <= 0.0 } ?: true),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.weight(1f),
@@ -244,9 +265,10 @@ internal fun HabitDialog(
                     startsOn = habit.startsOn,
                     cadence = cadence,
                     weekdays = weekdays.takeIf { cadence == HabitRules.WEEKDAYS && it != 0 },
-                    times = times.takeIf { cadence == HabitRules.PER_WEEK || cadence == HabitRules.PER_MONTH },
+                    // A weekly or monthly count under a limit keeps its times at 1; the target is its number.
+                    times = if (!periodic) null else if (timesShown) times else 1,
                     measure = measure,
-                    direction = if (onDays) direction else HabitRules.AT_LEAST,
+                    direction = direction,
                     target = parseAmount(target),
                     unit = unit,
                     emoji = emoji,

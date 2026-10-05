@@ -59,15 +59,37 @@ object HabitRules {
     /** Whether the habit's number is a limit rather than something to reach (docs/habits.md). */
     fun isLimit(habit: HabitItem): Boolean = habit.direction == AT_MOST
 
-    /** A limit habit's number: the target, or none at all for a check ("not once"). */
-    fun limit(habit: HabitItem): Double = if (habit.measure == CHECK) 0.0 else habit.target ?: 0.0
+    /** Whether the habit counts by the week or the month rather than by the day. */
+    fun isPeriodic(habit: HabitItem): Boolean = habit.cadence == PER_WEEK || habit.cadence == PER_MONTH
+
+    /**
+     * A limit habit's number. For a day: the target, or none at all for a check ("not once"). For a
+     * week or a month: how many days a check habit may have (`times`), or the most a count or an
+     * amount may add up to (the target). It may be 0.
+     */
+    fun limit(habit: HabitItem): Double = when {
+        isPeriodic(habit) && habit.measure == CHECK -> (habit.times ?: 0).toDouble()
+        habit.measure == CHECK -> 0.0
+        else -> habit.target ?: 0.0
+    }
 
     /** Whether a value goes over a limit habit's number. A habit to build is never over. */
     fun isOver(habit: HabitItem, value: Double): Boolean = isLimit(habit) && value > limit(habit)
 
-    /** Whether the day went over the limit: what turns the ring and the day red. */
+    /**
+     * What a limit habit has had in its period up to and including [day]: the day's value, or the week's
+     * or month's so far. Skipped and failed check-ins hold nothing.
+     */
+    fun used(habit: HabitItem, day: LocalDate, checkins: List<HabitCheckin>): Double {
+        val start = periodStart(habit, day)
+        return checkins
+            .filter { !it.deleted && !it.skipped && !it.failed && !it.day.isBefore(start) && !it.day.isAfter(day) }
+            .sumOf(HabitCheckin::value)
+    }
+
+    /** Whether the period went over the limit by [day]: what turns the ring and the day red. */
     fun wentOver(habit: HabitItem, day: LocalDate, checkins: List<HabitCheckin>): Boolean =
-        isLimit(habit) && checkins.any { !it.deleted && !it.skipped && it.day == day && isOver(habit, it.value) }
+        isLimit(habit) && used(habit, day, checkins) > limit(habit)
 
     /**
      * Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit, a
@@ -95,7 +117,7 @@ object HabitRules {
             return when {
                 pauses.any { !it.deleted && !it.from.isAfter(end) && (it.until == null || !it.until.isBefore(start)) } -> HabitPeriodState.PAUSED
                 inPeriod.any { it.skipped } -> HabitPeriodState.SKIPPED
-                inPeriod.any { it.failed || isOver(habit, it.value) } -> HabitPeriodState.MISSED
+                inPeriod.any { it.failed } || isOver(habit, inPeriod.sumOf(HabitCheckin::value)) -> HabitPeriodState.MISSED
                 !end.isBefore(today) -> HabitPeriodState.OPEN
                 else -> HabitPeriodState.MET
             }
@@ -144,14 +166,23 @@ object HabitRules {
         val checkin = checkins.firstOrNull { !it.deleted && it.day == day }
         if (checkin?.skipped == true) return HabitHeat.Skipped
         if (checkin?.failed == true) return if (isLimit(habit)) HabitHeat.Over else HabitHeat.Share(0.0)
-        val value = checkin?.value ?: 0.0
-        // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
-        if (isLimit(habit)) return if (isOver(habit, value)) HabitHeat.Over else HabitHeat.Share(1.0 - share(habit, value))
-        return HabitHeat.Share(share(habit, value))
+        // A limit's heatmap reads the other way round: a clean day is full, the shade fades as the day's
+        // or the period's allowance is used, and going over is its own mark.
+        if (isLimit(habit)) {
+            val had = used(habit, day, checkins)
+            return if (isOver(habit, had)) HabitHeat.Over else HabitHeat.Share(1.0 - limitShare(habit, had))
+        }
+        return HabitHeat.Share(share(habit, checkin?.value ?: 0.0))
     }
 
     /** Today's ring: the day against the target, or the days met so far against N; null when today isn't due. */
     fun ring(habit: HabitItem, today: LocalDate, checkins: List<HabitCheckin>): Double? {
+        // A limit's ring fills with what was had in the day, or in the week or month so far.
+        if (isLimit(habit)) {
+            if (!isPeriodic(habit) && !isDue(habit, today)) return null
+            if (checkins.any { !it.deleted && it.failed && it.day == today }) return 0.0
+            return limitShare(habit, used(habit, today, checkins))
+        }
         if (habit.cadence == PER_WEEK || habit.cadence == PER_MONTH) {
             val start = periodStart(habit, today)
             val end = periodEnd(habit, start)
@@ -198,7 +229,7 @@ object HabitRules {
         if (checkin?.failed == true) return if (isLimit(habit)) HabitDot.OVER else HabitDot.MISSED
         if (isLimit(habit)) {
             return when {
-                checkin != null && isOver(habit, checkin.value) -> HabitDot.OVER
+                checkin != null && wentOver(habit, day, checkins) -> HabitDot.OVER
                 !day.isBefore(today) -> HabitDot.OPEN
                 else -> HabitDot.MET
             }
@@ -238,6 +269,12 @@ object HabitRules {
 
     private fun covers(pause: HabitPause, start: LocalDate, end: LocalDate): Boolean =
         !pause.deleted && !pause.from.isAfter(end) && (pause.until == null || !pause.until.isBefore(start))
+
+    // How much of a limit [had] uses, 0 to 1; with a limit of 0, anything at all uses it up.
+    private fun limitShare(habit: HabitItem, had: Double): Double {
+        val most = limit(habit)
+        return if (most <= 0.0) (if (had > 0.0) 1.0 else 0.0) else (had / most).coerceIn(0.0, 1.0)
+    }
 
     private fun share(habit: HabitItem, value: Double): Double =
         if (habit.measure == CHECK) (if (value >= 1.0) 1.0 else 0.0) else (value / (habit.target ?: 1.0)).coerceIn(0.0, 1.0)

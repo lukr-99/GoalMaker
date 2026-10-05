@@ -55,6 +55,34 @@ public sealed class HabitListTests : IDisposable
     }
 
     [Fact]
+    public void AnyCadenceCanBeALimitAndOnlyALimitCanBeZero()
+    {
+        var takeaway = habits.Add(new HabitDraft("Takeaway", Today) { Cadence = HabitRules.PerWeek, Times = 2, Direction = HabitRules.AtMost })!;
+        var drinks = habits.Add(new HabitDraft("Drinks", Today)
+        {
+            Cadence = HabitRules.PerMonth,
+            Times = 1,
+            Measure = HabitRules.Count,
+            Target = 5,
+            Direction = HabitRules.AtMost,
+        })!;
+        var never = habits.Add(new HabitDraft("Smoke", Today) { Cadence = HabitRules.PerWeek, Times = 0, Direction = HabitRules.AtMost })!;
+        var sugar = habits.Add(new HabitDraft("Sugar", Today) { Measure = HabitRules.Amount, Target = 0, Direction = HabitRules.AtMost })!;
+
+        Assert.Equal((HabitRules.AtMost, 2), (takeaway.Direction, takeaway.Times));
+        Assert.Equal((HabitRules.AtMost, 5.0, 1), (drinks.Direction, drinks.Target, drinks.Times));
+        Assert.Equal((HabitRules.AtMost, 0), (never.Direction, never.Times));
+        Assert.Equal((HabitRules.AtMost, 0.0), (sugar.Direction, sugar.Target));
+
+        // A habit to build still needs a day and a target above zero, and a limit still can not go below zero.
+        Assert.Null(habits.Add(new HabitDraft("Run", Today) { Cadence = HabitRules.PerWeek, Times = 0 }));
+        Assert.Null(habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 0 }));
+        Assert.Null(habits.Add(new HabitDraft("Snacks", Today) { Measure = HabitRules.Count, Target = -1, Direction = HabitRules.AtMost }));
+        Assert.Null(habits.Add(new HabitDraft("Takeaway", Today) { Cadence = HabitRules.PerWeek, Times = 8, Direction = HabitRules.AtMost }));
+        Assert.Equal(4, habits.All().Count);
+    }
+
+    [Fact]
     public void ADayHasOneCheckinAndTappingAgainAddsToACount()
     {
         var water = habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Count, Target = 8, Unit = "glasses" })!;

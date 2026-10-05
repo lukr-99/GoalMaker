@@ -303,7 +303,7 @@ public sealed class HabitsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void TheEditorSavesALimitAndOnlyOffersItOnDays()
+    public void TheEditorSavesALimitOnAnyCadence()
     {
         var page = Page();
         page.NewHabitCommand.Execute(null);
@@ -314,11 +314,13 @@ public sealed class HabitsViewModelTests : IDisposable
         editor.TargetText = "2";
         Assert.True(editor.IsLimit);
         Assert.True(editor.HasLimitHint);
+        Assert.Equal("Habits.TargetMostDay", editor.TargetLabel);
 
-        // A week cannot hold a limit, so the choice goes away and the habit is one to build again.
+        // A week keeps the limit; a count's target is then the week's total, so the days are not asked.
         editor.Cadence = editor.Cadences.Single(choice => choice.Id == HabitRules.PerWeek);
-        Assert.False(editor.CanBeLimit);
-        Assert.False(editor.IsLimit);
+        Assert.True(editor.IsLimit);
+        Assert.False(editor.IsTimes);
+        Assert.Equal(("Habits.LimitHintWeek", "Habits.TargetMostWeek"), (editor.LimitHint, editor.TargetLabel));
 
         editor.Cadence = editor.Cadences.Single(choice => choice.Id == HabitRules.Daily);
         editor.SaveCommand.Execute(null);
@@ -329,6 +331,128 @@ public sealed class HabitsViewModelTests : IDisposable
 
         page.Edit(habit);
         Assert.Equal(HabitRules.AtMost, editor.Direction!.Id);
+    }
+
+    [Fact]
+    public void TheEditorSavesAWeeklyCheckLimitThatCanGoDownToZero()
+    {
+        var page = Page();
+        page.NewHabitCommand.Execute(null);
+        var editor = page.Editor;
+        editor.Name = "Smoke";
+        editor.Cadence = editor.Cadences.Single(choice => choice.Id == HabitRules.PerWeek);
+        editor.Direction = editor.Directions.Single(choice => choice.Id == HabitRules.AtMost);
+        Assert.True(editor.IsTimes);
+        Assert.Equal("Habits.LimitHintWeekCheck", editor.LimitHint);
+
+        for (var press = 0; press < 5; press++)
+        {
+            editor.FewerTimesCommand.Execute(null);
+        }
+
+        Assert.Equal((0, "Habits.AtMostWeek(0)"), (editor.Times, editor.TimesLabel));
+
+        // A habit to build needs at least one day, so going back to one lifts the stepper to 1.
+        editor.Direction = editor.Directions.Single(choice => choice.Id == HabitRules.AtLeast);
+        Assert.Equal((1, "Habits.TimesWeek(1)"), (editor.Times, editor.TimesLabel));
+        editor.Direction = editor.Directions.Single(choice => choice.Id == HabitRules.AtMost);
+        editor.FewerTimesCommand.Execute(null);
+        editor.SaveCommand.Execute(null);
+
+        Assert.False(editor.IsOpen);
+        var habit = planner.Habits.All().Single();
+        Assert.Equal((HabitRules.PerWeek, 0, HabitRules.AtMost), (habit.Cadence, habit.Times, habit.Direction));
+        Assert.Equal("Habits.NoneWeek", Page().Rows.Single().StatusText);
+    }
+
+    [Fact]
+    public void TheEditorSavesAMonthlyCountLimitWithOneDayAndRefusesABuildWithZero()
+    {
+        var page = Page();
+        page.NewHabitCommand.Execute(null);
+        var editor = page.Editor;
+        editor.Name = "Drinks";
+        editor.Cadence = editor.Cadences.Single(choice => choice.Id == HabitRules.PerMonth);
+        editor.Measure = editor.Measures.Single(choice => choice.Id == HabitRules.Count);
+        editor.TargetText = "0";
+
+        // Something to reach with a target of 0 says nothing to do.
+        editor.SaveCommand.Execute(null);
+        Assert.True(editor.IsOpen);
+        Assert.True(editor.HasError);
+
+        editor.Direction = editor.Directions.Single(choice => choice.Id == HabitRules.AtMost);
+        editor.TargetText = "5";
+        editor.SaveCommand.Execute(null);
+
+        Assert.False(editor.IsOpen);
+        var habit = planner.Habits.All().Single();
+        Assert.Equal((HabitRules.PerMonth, 1, 5.0, HabitRules.AtMost), (habit.Cadence, habit.Times, habit.Target, habit.Direction));
+    }
+
+    [Fact]
+    public void AWeeklyLimitCountsWhatTheWeekHadAndGoesOverMidWeek()
+    {
+        // 2026-09-18 is a Friday, so its week runs from Monday 14 September.
+        var takeaway = planner.Habits.Add(new HabitDraft("Takeaway", Today.AddDays(-4))
+        {
+            Cadence = HabitRules.PerWeek,
+            Times = 2,
+            Direction = HabitRules.AtMost,
+        })!;
+        planner.Habits.CheckIn(takeaway.Id, Today.AddDays(-3));
+        var row = Page().Rows.Single();
+        Assert.Equal(("Habits.TimesWeek(2)", "Habits.LimitWeek(1,2)"), (row.CadenceText, row.StatusText));
+        Assert.Equal(0.5, row.Fraction);
+        Assert.False(row.IsOver);
+        Assert.Equal([true, false], row.Pips.Select(pip => pip.IsOn));
+
+        planner.Habits.CheckIn(takeaway.Id, Today.AddDays(-2));
+        planner.Habits.CheckIn(takeaway.Id, Today);
+        row = Page().Rows.Single();
+        Assert.Equal("Habits.LimitWeek(3,2)", row.StatusText);
+        Assert.True(row.IsOver);
+        Assert.Equal([false, false, true], row.Pips.Select(pip => pip.IsOver));
+        Assert.True(row.Dots.Last().IsOver);
+    }
+
+    [Fact]
+    public void AMonthlyAmountLimitSaysWhatTheMonthHadInItsUnit()
+    {
+        var drinks = planner.Habits.Add(new HabitDraft("Drinks", new DateOnly(2026, 9, 1))
+        {
+            Cadence = HabitRules.PerMonth,
+            Times = 1,
+            Measure = HabitRules.Amount,
+            Target = 5,
+            Unit = "drinks",
+            Direction = HabitRules.AtMost,
+        })!;
+        planner.Habits.CheckIn(drinks.Id, Today.AddDays(-10), 2);
+        planner.Habits.CheckIn(drinks.Id, Today, 1);
+
+        var row = Page().Rows.Single();
+        Assert.Equal("Habits.LimitUnitMonth(3,5,drinks)", row.StatusText);
+        Assert.False(row.IsOver);
+    }
+
+    [Fact]
+    public void ADailyLimitOfZeroIsOverOnceAnythingIsHad()
+    {
+        var sweets = planner.Habits.Add(new HabitDraft("Sweets", Today)
+        {
+            Measure = HabitRules.Count,
+            Target = 0,
+            Direction = HabitRules.AtMost,
+        })!;
+        var row = Page().Rows.Single();
+        Assert.Equal(("Habits.Limit(0,0)", 0.0), (row.StatusText, row.Fraction));
+        Assert.False(row.IsOver);
+
+        planner.Habits.CheckIn(sweets.Id, Today, 1);
+        row = Page().Rows.Single();
+        Assert.Equal(1.0, row.Fraction);
+        Assert.True(row.IsOver);
     }
 
     [Fact]

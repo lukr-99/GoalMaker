@@ -55,6 +55,8 @@ Deno.test("a habit's line says how often it asks", () => {
   assertEquals(cadenceText(habit({ cadence: "weekdays", weekdays: 21 })), "on Mon, Wed, Fri");
   assertEquals(cadenceText(habit({ cadence: "per_week", times: 3 })), "3 times a week");
   assertEquals(cadenceText(habit({ cadence: "per_month", times: 2 })), "2 times a month");
+  assertEquals(cadenceText(habit({ cadence: "per_week", times: 2, direction: "at_most" })), "weekly");
+  assertEquals(cadenceText(habit({ cadence: "per_month", times: 1, direction: "at_most" })), "monthly");
 });
 
 Deno.test("a habit's line says where it stands, like its card", () => {
@@ -83,6 +85,34 @@ Deno.test("a habit's line says where it stands, like its card", () => {
   const smoke = habit({ direction: "at_most" });
   assertEquals(standingText(smoke, { ...none, standing: "limit" }), "limit · none today");
   assertEquals(standingText(smoke, { ...none, standing: "limit", value: 1 }), "limit · over the line today");
+
+  // A weekly or monthly limit counts what its period has had so far, not just the day.
+  const takeaway = habit({ direction: "at_most", cadence: "per_week", times: 2 });
+  assertEquals(
+    standingText(takeaway, { ...none, standing: "limit", value: 0, used: 1 }),
+    "limit · 1 of at most 2 this week",
+  );
+  assertEquals(
+    standingText(takeaway, { ...none, standing: "limit", value: 1, used: 3 }),
+    "limit · 3 of at most 2 this week, over the line",
+  );
+  const drinks = habit({
+    direction: "at_most",
+    cadence: "per_month",
+    times: 1,
+    measure: "count",
+    target: 5,
+    unit: "drinks",
+  });
+  assertEquals(
+    standingText(drinks, { ...none, standing: "limit", value: 1, used: 3 }),
+    "limit · 3 of at most 5 drinks this month",
+  );
+  const sweets = habit({ direction: "at_most", measure: "count", target: 0 });
+  assertEquals(standingText(sweets, { ...none, standing: "limit" }), "limit · none today");
+  assertEquals(standingText(sweets, { ...none, standing: "limit", value: 2 }), "limit · over the line today");
+  const noTakeaway = habit({ direction: "at_most", cadence: "per_week", times: 0 });
+  assertEquals(standingText(noTakeaway, { ...none, standing: "limit", used: 0 }), "limit · none this week");
 });
 
 Deno.test("a habit's line carries its streak, the goal it serves and Not on Today", () => {

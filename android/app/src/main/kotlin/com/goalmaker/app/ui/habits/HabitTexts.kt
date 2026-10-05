@@ -49,6 +49,7 @@ internal fun statusText(row: HabitRow): String {
         row.paused -> stringResource(R.string.habits_paused)
         row.skipped -> stringResource(R.string.habits_skipped)
         row.failed -> stringResource(R.string.habits_failed)
+        row.isLimit && HabitRules.isPeriodic(habit) -> periodLimitText(row, locale)
         habit.cadence == HabitRules.PER_WEEK -> pluralStringResource(R.plurals.habits_met_week, habit.times ?: 1, row.met, habit.times ?: 1)
         habit.cadence == HabitRules.PER_MONTH -> pluralStringResource(R.plurals.habits_met_month, habit.times ?: 1, row.met, habit.times ?: 1)
         row.ring == null -> stringResource(R.string.habits_not_due)
@@ -78,6 +79,29 @@ internal fun statusText(row: HabitRow): String {
                 else -> stringResource(if (row.onDay) R.string.habits_value_on_day else R.string.habits_value, value, target)
             }
         }
+    }
+}
+
+/**
+ * A weekly or monthly limit: "1 of at most 2 this week", "3 of at most 5 drinks this month", or for a
+ * limit of 0, "None this week" and "Over the line this week", like a daily check limit.
+ */
+@Composable
+private fun periodLimitText(row: HabitRow, locale: Locale): String {
+    val habit = row.habit
+    val value = amountText(row.value, locale)
+    val most = amountText(HabitRules.limit(habit), locale)
+    val unit = habit.unit?.takeIf { habit.measure != HabitRules.CHECK }
+    val week = habit.cadence == HabitRules.PER_WEEK
+    return when {
+        HabitRules.limit(habit) <= 0.0 -> stringResource(
+            when {
+                row.value > 0.0 -> if (week) R.string.habits_over_week else R.string.habits_over_month
+                else -> if (week) R.string.habits_none_week else R.string.habits_none_month
+            },
+        )
+        unit != null -> stringResource(if (week) R.string.habits_limit_unit_week else R.string.habits_limit_unit_month, value, most, unit)
+        else -> stringResource(if (week) R.string.habits_limit_week else R.string.habits_limit_month, value, most)
     }
 }
 

@@ -106,7 +106,12 @@ object HabitBoard {
             ring = HabitRules.ring(habit, today, checkins),
             streak = HabitRules.streak(habit, today, checkins, pauses),
             state = HabitRules.state(habit, start, today, checkins, pauses),
-            value = checkins.firstOrNull { it.day == today && !it.skipped }?.value ?: 0.0,
+            // A limit shows what it has had: the day's, or the week's or month's so far.
+            value = if (HabitRules.isLimit(habit)) {
+                HabitRules.used(habit, today, checkins)
+            } else {
+                checkins.firstOrNull { it.day == today && !it.skipped }?.value ?: 0.0
+            },
             met = inPeriod.count { HabitRules.dayMet(habit, it) },
             skipped = inPeriod.any { it.skipped },
             // A skip comes before a fail, as the standing reads them.

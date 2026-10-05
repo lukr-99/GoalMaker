@@ -135,20 +135,26 @@ class HabitsViewModelTest {
     }
 
     @Test
-    fun `only a day can be a limit`() = runTest {
-        val weekly = habits.add(
-            HabitDraft(
-                "Takeaway",
-                today,
-                cadence = HabitRules.PER_WEEK,
-                times = 2,
-                measure = HabitRules.COUNT,
-                target = 1.0,
-                direction = HabitRules.AT_MOST,
-            ),
+    fun `a week can be a limit, and its card counts the week so far`() = runTest {
+        val takeaway = habits.add(
+            HabitDraft("Takeaway", today.minusDays(14), cadence = HabitRules.PER_WEEK, times = 1, direction = HabitRules.AT_MOST),
         )!!
+        idle()
+        var row = viewModel.uiState.first { it.loaded && it.active.isNotEmpty() }.active.single()
+        assertEquals(HabitRules.AT_MOST, row.habit.direction)
+        assertFalse(row.isOver)
 
-        assertEquals(HabitRules.AT_LEAST, weekly.direction)
+        // Monday's is within the limit; one more on Friday (today) takes the week over.
+        habits.checkIn(takeaway.id, LocalDate.parse("2026-09-14"))
+        idle()
+        row = viewModel.uiState.first { it.active.single().value == 1.0 }.active.single()
+        assertFalse(row.isOver)
+
+        habits.checkIn(takeaway.id, today)
+        idle()
+        row = viewModel.uiState.first { it.active.single().value == 2.0 }.active.single()
+        assertTrue(row.isOver)
+        assertEquals(HabitPeriodState.MISSED, row.state)
     }
 
     @Test

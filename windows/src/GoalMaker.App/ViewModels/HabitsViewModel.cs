@@ -376,7 +376,8 @@ public sealed partial class HabitsViewModel : ObservableObject
                     .ToUpper(System.Globalization.CultureInfo.CurrentCulture),
                 day == today))],
             full,
-            day);
+            day,
+            HabitRules.IsLimit(habit) ? HabitRules.Used(habit, today, checkins) : null);
     }
 
     private static DateOnly Monday(DateOnly day) => day.AddDays(-(((int)day.DayOfWeek + 6) % 7));

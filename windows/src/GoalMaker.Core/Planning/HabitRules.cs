@@ -60,15 +60,39 @@ public static class HabitRules
     /// <summary>Whether the habit's number is a limit rather than something to reach (docs/habits.md).</summary>
     public static bool IsLimit(HabitItem habit) => habit.Direction == AtMost;
 
-    /// <summary>A limit habit's number: the target, or none at all for a check ("not once").</summary>
-    public static double Limit(HabitItem habit) => habit.Measure == Check ? 0 : habit.Target ?? 0;
+    /// <summary>Whether the habit counts by the week or the month rather than by the day.</summary>
+    public static bool IsPeriodic(HabitItem habit) => habit.Cadence is PerWeek or PerMonth;
+
+    /// <summary>
+    /// A limit habit's number. For a day: the target, or none at all for a check ("not once"). For a
+    /// week or a month: how many days a check habit may have (<c>times</c>), or the most a count or an
+    /// amount may add up to (the target). It may be 0.
+    /// </summary>
+    public static double Limit(HabitItem habit) => habit switch
+    {
+        _ when IsPeriodic(habit) && habit.Measure == Check => habit.Times ?? 0,
+        { Measure: Check } => 0,
+        _ => habit.Target ?? 0,
+    };
 
     /// <summary>Whether a value goes over a limit habit's number. A habit to build is never over.</summary>
     public static bool IsOver(HabitItem habit, double value) => IsLimit(habit) && value > Limit(habit);
 
-    /// <summary>Whether the day went over the limit: what turns the ring and the day red.</summary>
+    /// <summary>
+    /// What a limit habit has had in its period up to and including <paramref name="day"/>: the day's
+    /// value, or the week's or month's so far. Skipped and failed check-ins hold nothing.
+    /// </summary>
+    public static double Used(HabitItem habit, DateOnly day, IReadOnlyList<HabitCheckin> checkins)
+    {
+        var start = PeriodStart(habit, day);
+        return checkins
+            .Where(checkin => !checkin.Deleted && !checkin.Skipped && !checkin.Failed && checkin.Day >= start && checkin.Day <= day)
+            .Sum(checkin => checkin.Value);
+    }
+
+    /// <summary>Whether the period went over the limit by <paramref name="day"/>: what turns the ring and the day red.</summary>
     public static bool WentOver(HabitItem habit, DateOnly day, IReadOnlyList<HabitCheckin> checkins) =>
-        IsLimit(habit) && checkins.Any(checkin => !checkin.Deleted && !checkin.Skipped && checkin.Day == day && IsOver(habit, checkin.Value));
+        IsLimit(habit) && Used(habit, day, checkins) > Limit(habit);
 
     /// <summary>
     /// Whether a check-in meets its day: checked, or the day's value reaching the target. Under a limit,
@@ -126,7 +150,7 @@ public static class HabitRules
                 return HabitPeriodState.Skipped;
             }
 
-            if (inPeriod.Any(checkin => checkin.Failed || IsOver(habit, checkin.Value)))
+            if (inPeriod.Any(checkin => checkin.Failed) || IsOver(habit, inPeriod.Sum(checkin => checkin.Value)))
             {
                 return HabitPeriodState.Missed;
             }
@@ -220,8 +244,10 @@ public static class HabitRules
 
         if (IsLimit(habit))
         {
-            // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
-            return IsOver(habit, checkin?.Value ?? 0) ? HabitHeat.Over : HabitHeat.Share(1 - Share(habit, checkin?.Value ?? 0));
+            // A limit's heatmap reads the other way round: a clean day is full, the shade fades as the day's
+            // or the period's allowance is used, and going over is its own mark.
+            var had = Used(habit, day, checkins);
+            return IsOver(habit, had) ? HabitHeat.Over : HabitHeat.Share(1 - LimitShare(habit, had));
         }
 
         return HabitHeat.Share(Share(habit, checkin?.Value ?? 0));
@@ -230,6 +256,22 @@ public static class HabitRules
     /// <summary>Today's ring: the day against the target, or the days met so far against N; null when today isn't due.</summary>
     public static double? Ring(HabitItem habit, DateOnly today, IReadOnlyList<HabitCheckin> checkins)
     {
+        // A limit's ring fills with what was had in the day, or in the week or month so far.
+        if (IsLimit(habit))
+        {
+            if (!IsPeriodic(habit) && !IsDue(habit, today))
+            {
+                return null;
+            }
+
+            if (checkins.Any(checkin => !checkin.Deleted && checkin.Failed && checkin.Day == today))
+            {
+                return 0;
+            }
+
+            return LimitShare(habit, Used(habit, today, checkins));
+        }
+
         if (habit.Cadence is PerWeek or PerMonth)
         {
             var start = PeriodStart(habit, today);
@@ -323,7 +365,7 @@ public static class HabitRules
 
         if (IsLimit(habit))
         {
-            return checkin is not null && IsOver(habit, checkin.Value) ? HabitDot.Over : day >= today ? HabitDot.Open : HabitDot.Met;
+            return checkin is not null && WentOver(habit, day, checkins) ? HabitDot.Over : day >= today ? HabitDot.Open : HabitDot.Met;
         }
 
         if (checkin is not null && DayMet(habit, checkin))
@@ -371,6 +413,13 @@ public static class HabitRules
 
     private static bool Covers(HabitPause pause, DateOnly start, DateOnly end) =>
         !pause.Deleted && pause.From <= end && (pause.Until is null || pause.Until >= start);
+
+    // How much of a limit `had` uses, 0 to 1; with a limit of 0, anything at all uses it up.
+    private static double LimitShare(HabitItem habit, double had)
+    {
+        var most = Limit(habit);
+        return most <= 0 ? (had > 0 ? 1 : 0) : Math.Clamp(had / most, 0, 1);
+    }
 
     private static double Share(HabitItem habit, double value) =>
         habit.Measure == Check ? (value >= 1 ? 1 : 0) : Math.Clamp(value / (habit.Target ?? 1), 0, 1);

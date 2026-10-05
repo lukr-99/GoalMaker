@@ -8,7 +8,10 @@ import { nameBasedUuid } from "./nameBasedUuid.ts";
  */
 export type HabitCadence = "daily" | "weekdays" | "per_week" | "per_month";
 export type HabitMeasure = "check" | "count" | "amount";
-/** at_least: the target is something to reach. at_most: it is a limit and going over breaks the day. */
+/**
+ * at_least: the target is something to reach. at_most: it is a limit for the day, or for the week or month
+ * of a weekly or monthly habit, and going over breaks the period.
+ */
 export type HabitDirection = "at_least" | "at_most";
 export type HabitPeriodState = "none" | "met" | "paused" | "skipped" | "open" | "missed";
 
@@ -108,8 +111,18 @@ export function isLimit(habit: HabitItem): boolean {
   return habit.direction === "at_most";
 }
 
-/** A limit habit's number: the target, or none at all for a check ("not once"). */
-export function limit(habit: HabitItem): number {
+/** Whether the habit counts by the week or the month rather than by the day. */
+export function isPeriodic(habit: Pick<HabitItem, "cadence">): boolean {
+  return habit.cadence === "per_week" || habit.cadence === "per_month";
+}
+
+/**
+ * A limit habit's number. For a day: the target, or none at all for a check ("not once"). For a week or a
+ * month: how many days a check habit may have (`times`), or the most a count or an amount may add up to
+ * (the target). It may be 0.
+ */
+export function limit(habit: Pick<HabitItem, "cadence" | "measure" | "times" | "target">): number {
+  if (isPeriodic(habit) && habit.measure === "check") return habit.times ?? 0;
   return habit.measure === "check" ? 0 : habit.target ?? 0;
 }
 
@@ -118,12 +131,22 @@ export function isOver(habit: HabitItem, value: number): boolean {
   return isLimit(habit) && value > limit(habit);
 }
 
-/** Whether the day went over the limit: what turns the ring and the day red. */
+/**
+ * What a limit habit has had in its period up to and including `day`: the day's value, or the week's or
+ * month's so far. Skipped and failed check-ins hold nothing.
+ */
+export function used(habit: HabitItem, day: Day, checkins: HabitCheckin[]): number {
+  const start = habitPeriodStart(habit, day);
+  return checkins
+    .filter((checkin) =>
+      !checkin.deleted && !checkin.skipped && checkin.failed !== true && checkin.day >= start && checkin.day <= day
+    )
+    .reduce((sum, checkin) => sum + checkin.value, 0);
+}
+
+/** Whether the period went over the limit by `day`: what turns the ring and the day red. */
 export function wentOver(habit: HabitItem, day: Day, checkins: HabitCheckin[]): boolean {
-  return isLimit(habit) &&
-    checkins.some((checkin) =>
-      !checkin.deleted && !checkin.skipped && checkin.day === day && isOver(habit, checkin.value)
-    );
+  return isLimit(habit) && used(habit, day, checkins) > limit(habit);
 }
 
 /**
@@ -159,7 +182,8 @@ export function habitState(
     // the number is missed the moment it happens, today included.
     if (pauses.some((pause) => covers(pause, start, end))) return "paused";
     if (inPeriod.some((checkin) => checkin.skipped)) return "skipped";
-    if (inPeriod.some((checkin) => checkin.failed === true || isOver(habit, checkin.value))) return "missed";
+    if (inPeriod.some((checkin) => checkin.failed === true)) return "missed";
+    if (isOver(habit, inPeriod.reduce((sum, checkin) => sum + checkin.value, 0))) return "missed";
     return end >= today ? "open" : "met";
   }
   if (inPeriod.filter((checkin) => dayMet(habit, checkin)).length >= required(habit)) return "met";
@@ -200,14 +224,23 @@ export function heat(habit: HabitItem, day: Day, checkins: HabitCheckin[], pause
   const checkin = checkins.find((checkin) => !checkin.deleted && checkin.day === day);
   if (checkin?.skipped) return "skipped";
   if (checkin?.failed === true) return isLimit(habit) ? "over" : 0;
-  const value = checkin?.value ?? 0;
-  // A limit's heatmap reads the other way round: a clean day is full, and going over is its own mark.
-  if (isLimit(habit)) return isOver(habit, value) ? "over" : 1 - share(habit, value);
-  return share(habit, value);
+  // A limit's heatmap reads the other way round: a clean day is full, the shade fades as the day's or the
+  // period's allowance is used, and going over is its own mark.
+  if (isLimit(habit)) {
+    const had = used(habit, day, checkins);
+    return isOver(habit, had) ? "over" : 1 - limitShare(habit, had);
+  }
+  return share(habit, checkin?.value ?? 0);
 }
 
 /** Today's ring: the day against the target, or the days met so far against N; null when today isn't due. */
 export function ring(habit: HabitItem, today: Day, checkins: HabitCheckin[]): number | null {
+  // A limit's ring fills with what was had in the day, or in the week or month so far.
+  if (isLimit(habit)) {
+    if (!isPeriodic(habit) && !isDue(habit, today)) return null;
+    if (checkins.some((checkin) => !checkin.deleted && checkin.failed === true && checkin.day === today)) return 0;
+    return limitShare(habit, used(habit, today, checkins));
+  }
   if (habit.cadence === "per_week" || habit.cadence === "per_month") {
     const start = habitPeriodStart(habit, today);
     const end = habitPeriodEnd(habit, start);
@@ -268,7 +301,7 @@ export function dot(habit: HabitItem, day: Day, today: Day, checkins: HabitCheck
   if (checkin?.skipped) return "skipped";
   if (checkin?.failed === true) return isLimit(habit) ? "over" : "missed";
   if (isLimit(habit)) {
-    if (checkin !== undefined && isOver(habit, checkin.value)) return "over";
+    if (checkin !== undefined && wentOver(habit, day, checkins)) return "over";
     return day >= today ? "open" : "met";
   }
   if (checkin !== undefined && dayMet(habit, checkin)) return "met";
@@ -318,6 +351,13 @@ export function goalAmounts(
 
 function covers(pause: HabitPause, start: Day, end: Day): boolean {
   return !pause.deleted && pause.from <= end && (pause.until === null || pause.until >= start);
+}
+
+// How much of a limit `had` uses, 0 to 1; with a limit of 0, anything at all uses it up.
+function limitShare(habit: HabitItem, had: number): number {
+  const most = limit(habit);
+  if (most <= 0) return had > 0 ? 1 : 0;
+  return Math.min(1, Math.max(0, had / most));
 }
 
 function share(habit: HabitItem, value: number): number {

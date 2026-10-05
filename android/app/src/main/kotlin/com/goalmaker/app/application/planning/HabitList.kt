@@ -170,26 +170,27 @@ class HabitList(
     }
 
     // The draft as the server will take it, or null: a name, a cadence with the days it needs, and a
-    // positive target for a count or an amount (supabase/migrations/0010_habits.sql).
+    // target for a count or an amount, above 0 for a habit to build and from 0 for a limit
+    // (supabase/migrations/0010_habits.sql, 0024_habit_limits_any_period.sql).
     private fun check(draft: HabitDraft): HabitDraft? {
         val name = draft.name.trim().take(MAX_NAME)
         if (name.isEmpty()) return null
+        val limit = draft.direction == HabitRules.AT_MOST
+        val least = if (limit) 0 else 1
         val weekdays = draft.weekdays?.takeIf { draft.cadence == HabitRules.WEEKDAYS }
         val times = draft.times?.takeIf { draft.cadence == HabitRules.PER_WEEK || draft.cadence == HabitRules.PER_MONTH }
         when (draft.cadence) {
             HabitRules.DAILY -> Unit
             HabitRules.WEEKDAYS -> if (weekdays == null || weekdays !in 1..127) return null
-            HabitRules.PER_WEEK -> if (times == null || times !in 1..7) return null
-            HabitRules.PER_MONTH -> if (times == null || times !in 1..31) return null
+            HabitRules.PER_WEEK -> if (times == null || times !in least..7) return null
+            HabitRules.PER_MONTH -> if (times == null || times !in least..31) return null
             else -> return null
         }
         if (draft.measure !in setOf(HabitRules.CHECK, HabitRules.COUNT, HabitRules.AMOUNT)) return null
         val counted = draft.measure != HabitRules.CHECK
         val target = draft.target?.takeIf { counted }
-        if (counted && (target == null || target <= 0.0 || !target.isFinite())) return null
-        // Only a day can be a limit (supabase/migrations/0014_habit_limits.sql).
-        val onDays = draft.cadence == HabitRules.DAILY || draft.cadence == HabitRules.WEEKDAYS
-        val direction = if (draft.direction == HabitRules.AT_MOST && onDays) HabitRules.AT_MOST else HabitRules.AT_LEAST
+        if (counted && (target == null || target < least || (!limit && target <= 0.0) || !target.isFinite())) return null
+        val direction = if (limit) HabitRules.AT_MOST else HabitRules.AT_LEAST
         return draft.copy(
             name = name,
             weekdays = weekdays,

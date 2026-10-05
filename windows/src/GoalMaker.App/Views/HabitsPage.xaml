@@ -228,7 +228,7 @@
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Measure}" />
                     <ComboBox ItemsSource="{Binding Measures}" SelectedItem="{Binding Measure}" DisplayMemberPath="Label"
                               AutomationProperties.Name="{DynamicResource Habits.Measure}" />
-                    <StackPanel Visibility="{Binding CanBeLimit, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
                         <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Direction}" />
                         <ComboBox ItemsSource="{Binding Directions}" SelectedItem="{Binding Direction}" DisplayMemberPath="Label"
                                   AutomationProperties.Name="{DynamicResource Habits.Direction}" />
@@ -242,8 +242,8 @@
                             <ColumnDefinition />
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
-                            <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Target}" />
-                            <ui:TextBox Text="{Binding TargetText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Habits.Target}" />
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding TargetLabel}" />
+                            <ui:TextBox Text="{Binding TargetText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding TargetLabel}" />
                         </StackPanel>
                         <StackPanel Grid.Column="2">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Habits.Unit}" />
