@@ -5,6 +5,9 @@ import android.content.Context
 import android.os.Looper
 import androidx.core.content.edit
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.EventDraft
+import com.goalmaker.app.application.planning.EventItem
+import com.goalmaker.app.application.planning.EventList
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.HabitStanding
@@ -23,12 +26,17 @@ import com.goalmaker.app.domain.composer.ComposerParser
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -50,6 +58,7 @@ class CalendarViewModelTest {
     private lateinit var tags: TagList
     private lateinit var projects: ProjectList
     private lateinit var habits: HabitList
+    private lateinit var events: EventList
     private lateinit var viewModel: CalendarViewModel
     private val now = LocalDateTime.parse("2026-09-18T12:00")
     private val today = LocalDate.parse("2026-09-18")
@@ -62,6 +71,7 @@ class CalendarViewModelTest {
         tags = TagList(test.replica, rows, {})
         projects = ProjectList(test.replica, rows, {})
         habits = HabitList(test.replica, rows, {})
+        events = EventList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("calendar-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
@@ -72,6 +82,7 @@ class CalendarViewModelTest {
             tags,
             projects,
             habits,
+            events,
             SharedPreferencesSettingsStore(preferences),
             Dispatchers.Unconfined,
         ) { now }
@@ -181,5 +192,64 @@ class CalendarViewModelTest {
         val done = tasks.all().single()
         assertEquals(TaskState.DONE, done.state)
         assertEquals(monday, ProjectRules.completedOn(done, java.time.ZoneId.systemDefault(), 4))
+    }
+
+    @Test
+    fun `an event draws a bar in each week row it touches and lists on its days`() = runTest {
+        // Thursday 24 to Tuesday 29 September, across the week break.
+        val trip = events.add(EventDraft("Prague", LocalDate.parse("2026-09-24"), LocalDate.parse("2026-09-29")))!!
+
+        val state = viewModel.uiState.first { it.loaded && it.bars.flatten().isNotEmpty() }
+
+        // September's grid starts on Monday 31 August; the trip falls in its fourth and fifth rows.
+        val rows = state.bars.map { row -> row.map { Triple(it.from, it.to, it.lane) } }
+        assertEquals(listOf(Triple(3, 6, 0)), rows[3])
+        assertEquals(listOf(Triple(0, 1, 0)), rows[4])
+        assertTrue(rows.take(3).all { it.isEmpty() })
+        assertEquals(listOf(trip.id), state.days.single { it.day == LocalDate.parse("2026-09-28") }.events.map(EventItem::id))
+        assertEquals(emptyList<EventItem>(), state.days.single { it.day == LocalDate.parse("2026-09-30") }.events)
+    }
+
+    @Test
+    fun `the area filter keeps an area's events and a tag filter hides them all`() = runTest {
+        tasks.add(ComposerParser.parse("Pack @Work #errand", now))
+        val work = areas.all().single { it.name == "Work" }
+        events.add(EventDraft("Offsite", today, today.plusDays(1), areaId = work.id))
+        events.add(EventDraft("Grandma", today))
+        val errand = tags.all().single { it.name == "errand" }
+
+        viewModel.filterByArea(work.id)
+        settle()
+        val byArea = viewModel.uiState.first { it.filter.filter.areaId == work.id && it.bars.flatten().isNotEmpty() }
+        assertEquals(listOf("Offsite"), byArea.days.single { it.day == today }.events.map(EventItem::title))
+
+        viewModel.filterByArea(null)
+        viewModel.filterByTag(errand.id)
+        settle()
+        val byTag = viewModel.uiState.first { it.filter.filter.tagId == errand.id && it.filter.filter.areaId == null }
+        assertEquals(emptyList<EventItem>(), byTag.days.single { it.day == today }.events)
+        assertTrue(byTag.bars.flatten().isEmpty())
+    }
+
+    @Test
+    fun `the event sheet saves an edit, and a delete comes back with the undo`() = runTest {
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val prague = events.add(EventDraft("Prague", today, today.plusDays(2)))!!
+        val undone = mutableListOf<com.goalmaker.app.ui.lists.UndoEvent>()
+        scope.launch { viewModel.undo.collect { undone += it } }
+
+        assertTrue(viewModel.saveEvent(prague, EventDraft("Prague", today.plusDays(7), today.plusDays(9), notes = "Train")))
+        assertFalse(viewModel.saveEvent(prague, EventDraft(" ", today)))
+        assertEquals(today.plusDays(7), events.get(prague.id)!!.startsOn)
+        assertTrue(viewModel.saveEvent(null, EventDraft("Dentist", today)))
+        assertEquals(listOf("Dentist", "Prague"), events.all().map(EventItem::title))
+
+        viewModel.deleteEvent(events.get(prague.id)!!)
+        settle()
+        assertNull(events.get(prague.id))
+        undone.single().undo()
+        settle()
+        assertEquals("Train", events.get(prague.id)!!.notes)
+        scope.cancel()
     }
 }

@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.lists
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.ListFilter
 import com.goalmaker.app.application.planning.NewYearNudge
+import com.goalmaker.app.application.planning.OngoingEvent
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ProjectItem
@@ -19,7 +20,8 @@ import com.goalmaker.app.ui.habits.HabitRow
  * phone shows its tasks or its habits by [segment]; [shownHabits] are the habits without the done ones
  * while [hideDoneHabits] is on, [habitsLeft] counts the ones still to do, and [habitsAllDone] shows the
  * all done card (contracts/vectors/habits.json, standings and allDone). [newYear] is the January nudge
- * (docs/reviews.md), null when there is nothing to nudge about.
+ * (docs/reviews.md), null when there is nothing to nudge about. [ongoing] are the calendar events
+ * today falls inside, for Today's slim line above the tasks (docs/calendar.md, Events).
  */
 data class ListsUiState(
     val lists: PlanningLists?,
@@ -39,6 +41,7 @@ data class ListsUiState(
     val habitsLeft: Int = 0,
     val habitsAllDone: Boolean = false,
     val newYear: NewYearNudge? = null,
+    val ongoing: List<OngoingEvent> = emptyList(),
 ) {
     private val projectById by lazy { projects.associateBy(ProjectItem::id) }
 

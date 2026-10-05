@@ -4,6 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.EventDraft
+import com.goalmaker.app.application.planning.EventItem
+import com.goalmaker.app.application.planning.EventList
+import com.goalmaker.app.application.planning.EventRules
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.ReviewList
 import com.goalmaker.app.application.planning.ReviewRules
@@ -47,7 +51,8 @@ import kotlinx.coroutines.withContext
 /**
  * Today, Tomorrow and the Inbox (docs/lists.md), the composer with its live preview
  * (docs/composer.md), completing and deleting with undo, reminders (docs/reminders.md), Today's switch
- * between its tasks and its habits with Hide done and the all done card (docs/habits.md), this week's goals (docs/goals.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
+ * between its tasks and its habits with Hide done and the all done card (docs/habits.md), this week's goals (docs/goals.md), the
+ * calendar events going on today (docs/calendar.md) and the sync indicator. Disk work runs on [io]; [clock] is the local time the planning day and the
  * composer read.
  */
 class ListsViewModel(
@@ -58,6 +63,7 @@ class ListsViewModel(
     goals: GoalList,
     reviews: ReviewList,
     private val habits: HabitList,
+    private val events: EventList,
     private val settings: SettingsStore,
     private val reminders: ReminderService,
     private val sync: SyncCoordinator,
@@ -125,13 +131,21 @@ class ListsViewModel(
     }
     private val habitView = combine(segment, hideDoneHabits, newYear, ::Triple)
 
+    // The events today falls inside, narrowed by the lists' area filter like the tasks: an area keeps
+    // its events, and a tag hides them all, since events have no tags (docs/calendar.md).
+    private val ongoing = combine(events.watch().flowOn(io), filter.choices, settings.dayStartHour, minutes) { all, choices, startHour, _ ->
+        EventRules.ongoing(all.filter(choices.filter::keeps), PlanningDay.of(clock(), startHour))
+    }
+    private val todayView = combine(habitView, ongoing, ::Pair)
+
     val uiState: StateFlow<ListsUiState> = combine(
         lists,
         rows,
         refreshing,
         goalsAndHabits,
-        habitView,
-    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (shownSegment, hiding, nudge) ->
+        todayView,
+    ) { (planning, narrowed), context, pulled, (goalRows, habitRows), (habitShown, going) ->
+        val (shownSegment, hiding, nudge) = habitShown
         ListsUiState(
             lists = planning,
             refreshing = pulled,
@@ -150,6 +164,7 @@ class ListsViewModel(
             habitsLeft = habitRows.count(HabitRow::left),
             habitsAllDone = HabitRules.allDone(habitRows.map(HabitRow::standing)),
             newYear = nudge,
+            ongoing = going,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -206,6 +221,15 @@ class ListsViewModel(
         )
         viewModelScope.launch(io) { tasks.add(draft, notes.trim()) }
         return true
+    }
+
+    /** Saves the event sheet opened from Today's line. False when the draft is not one the server takes. */
+    suspend fun saveEvent(event: EventItem, draft: EventDraft): Boolean = withContext(io) { events.update(event.id, draft) }
+
+    /** Deletes an event from its sheet, with an undo on the snackbar. */
+    fun deleteEvent(event: EventItem) {
+        viewModelScope.launch(io) { events.delete(event.id) }
+        undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DELETED, event.title) { viewModelScope.launch(io) { events.restore(event.id) } })
     }
 
     fun complete(task: TaskItem) {

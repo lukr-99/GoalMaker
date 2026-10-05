@@ -5,6 +5,7 @@ import androidx.core.content.edit
 import com.goalmaker.app.application.assistant.AssistantReply
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.EventList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.NewRows
@@ -59,6 +60,7 @@ class ScreenPlanner : AutoCloseable {
     val habits = HabitList(test.replica, rows, {})
     val goals = GoalList(test.replica, rows, {})
     val reminderRows = ReminderList(test.replica, rows, {})
+    val events = EventList(test.replica, rows, {})
 
     val settings = SharedPreferencesSettingsStore(
         RuntimeEnvironment.getApplication().getSharedPreferences("screen-test", Context.MODE_PRIVATE).also { preferences ->
@@ -99,6 +101,7 @@ class ScreenPlanner : AutoCloseable {
         goals,
         ReviewList(test.replica, rows, {}),
         habits,
+        events,
         settings,
         reminders,
         sync,
@@ -109,7 +112,7 @@ class ScreenPlanner : AutoCloseable {
     fun habitsPage() = HabitsViewModel(habits, goals, MutableStateFlow(4), Dispatchers.Unconfined) { now }
 
     /** The calendar. */
-    fun calendar() = CalendarViewModel(tasks, reminderRows, areas, tags, projects, habits, settings, Dispatchers.Unconfined) { now }
+    fun calendar() = CalendarViewModel(tasks, reminderRows, areas, tags, projects, habits, events, settings, Dispatchers.Unconfined) { now }
 
     /** The bottom bar's quick chat, left on quick add; it never reaches a model. */
     fun chat() = ChatViewModel(
