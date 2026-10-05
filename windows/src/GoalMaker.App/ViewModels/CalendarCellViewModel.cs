@@ -11,7 +11,10 @@ public sealed class CalendarCellViewModel(
     bool inPeriod,
     bool isSelected,
     Action open,
-    string? automationName = null)
+    string? automationName = null,
+    bool isPicked = false,
+    Action? pick = null,
+    Action? pickRun = null)
 {
     public DateOnly Day { get; } = day;
 
@@ -39,5 +42,14 @@ public sealed class CalendarCellViewModel(
 
     public bool IsSelected { get; } = isSelected;
 
+    /// <summary>Whether the day is one of several picked, which outlines it.</summary>
+    public bool IsPicked { get; } = isPicked;
+
     public IRelayCommand OpenCommand { get; } = new RelayCommand(open);
+
+    /// <summary>Ctrl+click or Ctrl+Space: adds the day to the pick, or takes it out.</summary>
+    public IRelayCommand PickCommand { get; } = new RelayCommand(pick ?? open);
+
+    /// <summary>Shift+click or Shift+Space: picks the run of days from the last one picked.</summary>
+    public IRelayCommand PickRunCommand { get; } = new RelayCommand(pickRun ?? open);
 }

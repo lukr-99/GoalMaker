@@ -167,6 +167,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { WantsTab = value });
     }
 
+    /// <summary>A value the file doesn't know reads as one event.</summary>
+    public PickedDaysAdd PickedDaysAdd
+    {
+        get => Enum.IsDefined(document.PickedDaysAdd) ? document.PickedDaysAdd : PickedDaysAdd.OneEvent;
+        set => Save(document with { PickedDaysAdd = value });
+    }
+
     public int? NewYearDismissed
     {
         get => document.NewYearDismissed;

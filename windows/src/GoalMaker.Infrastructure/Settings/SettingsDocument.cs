@@ -68,6 +68,9 @@ public sealed record SettingsDocument
     /// <summary>The wants or the needs; missing from older files reads as the wants.</summary>
     public WantsTab WantsTab { get; init; } = WantsTab.Wants;
 
+    /// <summary>One event or a task on each day; missing from older files reads as one event.</summary>
+    public PickedDaysAdd PickedDaysAdd { get; init; } = PickedDaysAdd.OneEvent;
+
     public int? NewYearDismissed { get; init; }
 
     public string? WeeklyBackupFolder { get; init; }

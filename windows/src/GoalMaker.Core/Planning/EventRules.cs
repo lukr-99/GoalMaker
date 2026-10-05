@@ -1,9 +1,9 @@
 namespace GoalMaker.Core.Planning;
 
 /// <summary>
-/// Calendar events (docs/calendar.md, contracts/vectors/calendar.json 'eventDays', 'bars' and
-/// 'ongoing'): the events a day holds, the bars a grid draws and the ones going on, and what a
-/// valid event is (the server's checks in migration 0026).
+/// Calendar events (docs/calendar.md, contracts/vectors/calendar.json 'eventDays', 'bars', 'ongoing'
+/// and 'picked'): the events a day holds, the bars a grid draws and the ones going on, what a pick of
+/// days makes, and what a valid event is (the server's checks in migration 0026).
 /// </summary>
 public static class EventRules
 {
@@ -102,6 +102,26 @@ public static class EventRules
             .Where(item => Covers(item, day))
             .Select(item => new OngoingEvent(item, day.DayNumber - item.StartsOn.DayNumber + 1, item.Days)),
     ];
+
+    /// <summary>
+    /// The days one event made from a pick of days takes: the earliest picked day to the latest, gaps
+    /// included. Null for no days, or when they are more than <see cref="MaxSpan"/> days apart.
+    /// </summary>
+    public static (DateOnly StartsOn, DateOnly EndsOn)? PickedEvent(IEnumerable<DateOnly> days)
+    {
+        var picked = days.ToList();
+        if (picked.Count == 0)
+        {
+            return null;
+        }
+
+        var first = picked.Min();
+        var last = picked.Max();
+        return last.DayNumber - first.DayNumber > MaxSpan ? null : (first, last);
+    }
+
+    /// <summary>The days a copy of a task goes on for a pick of days: each picked day once, earliest first.</summary>
+    public static IReadOnlyList<DateOnly> PickedTaskDays(IEnumerable<DateOnly> days) => [.. days.Distinct().Order()];
 
     /// <summary>
     /// The draft as it is stored, trimmed, with empty notes as none; null when the server would refuse

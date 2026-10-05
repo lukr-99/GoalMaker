@@ -275,6 +275,8 @@ public sealed class AutoUpdateCheckTests : IDisposable
 
         public WantsTab WantsTab { get; set; }
 
+        public PickedDaysAdd PickedDaysAdd { get; set; }
+
         public int? NewYearDismissed { get; set; }
 
         public Core.Backend.BackendEnvironment? BackendOverride { get; set; }
