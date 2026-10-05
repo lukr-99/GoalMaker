@@ -24,6 +24,8 @@ export interface HabitLine {
   measure: "check" | "count" | "amount";
   target: number | null;
   unit: string | null;
+  /** at_most when the line sets a limit ("at most", "max", "no more than", or "no" or "never" first). */
+  direction: "at_least" | "at_most";
 }
 
 export interface GoalLine {
@@ -329,7 +331,10 @@ export function readWantLine(line: string): WantLine {
   return { title: read.rest(), reason: reason.length > 0 ? reason : null, price, currency, waitDays };
 }
 
-/** A habit: "Swim 2 times a week", "Read 20 minutes every day", "Piano every mon and thu". */
+/**
+ * A habit: "Swim 2 times a week", "Read 20 minutes every day", "Piano every mon and thu", or a limit:
+ * "Coffee at most 3 cups a day", "At most 2 takeaways a week", "No casino this month".
+ */
 export function readHabitLine(line: string): HabitLine {
   const read = new Reader(words(line));
   const habit: HabitLine = {
@@ -340,10 +345,14 @@ export function readHabitLine(line: string): HabitLine {
     measure: "check",
     target: null,
     unit: null,
+    direction: "at_least",
   };
 
+  const limit = limitAt(read);
+  if (limit !== "none") habit.direction = "at_most";
+
   for (let i = 0; i < read.words.length; i++) {
-    const found = cadenceAt(read, i);
+    const found = cadenceAt(read, i, limit);
     if (found === null) continue;
     if (!found.fits) {
       read.mark(i, found.end, KEPT);
@@ -371,11 +380,19 @@ export function readHabitLine(line: string): HabitLine {
       break;
     }
     const measure = read.measure(i);
-    if (measure === null || measure.value <= 0) continue;
+    if (measure === null || measure.value < 0 || (measure.value === 0 && limit === "none")) continue;
     habit.measure = measure.decimal || AMOUNT_UNITS.has(measure.unit.toLowerCase()) ? "amount" : "count";
     habit.target = measure.value;
     habit.unit = measure.unit;
-    read.mark(i, measure.end + read.perDay(measure.end), USED);
+    // Under a limit, "a week" or "a month" after the number makes it the most for the whole period.
+    const period = limit === "none" || habit.cadence !== "daily" ? null : periodAt(read, measure.end);
+    if (period !== null) {
+      habit.cadence = period.week ? "per_week" : "per_month";
+      habit.times = 1;
+      read.mark(i, period.end, USED);
+    } else {
+      read.mark(i, measure.end + read.perDay(measure.end), USED);
+    }
     break;
   }
 
@@ -385,7 +402,44 @@ export function readHabitLine(line: string): HabitLine {
 
 type Cadence = Pick<HabitLine, "cadence" | "weekdays" | "times"> & { end: number; fits: boolean };
 
-function cadenceAt(read: Reader, i: number): Cadence | null {
+/** How a line sets a limit: not at all, with a number to come ("at most"), or as not once ("no"). */
+type Limit = "none" | "most" | "zero";
+
+/**
+ * The first limit phrase, marked as used: "at most", "max", "maximum", "no more than" or "not more
+ * than" anywhere, or "no" or "never" as the line's first word.
+ */
+function limitAt(read: Reader): Limit {
+  for (let i = 0; i < read.words.length; i++) {
+    const k = (offset: number) => read.key(i + offset) ?? "";
+    const length = k(0) === "at" && k(1) === "most"
+      ? 2
+      : k(0) === "max" || k(0) === "maximum"
+      ? 1
+      : (k(0) === "no" || k(0) === "not") && k(1) === "more" && k(2) === "than"
+      ? 3
+      : 0;
+    if (length > 0) {
+      read.mark(i, i + length, USED);
+      return "most";
+    }
+  }
+  if (read.key(0) === "no" || read.key(0) === "never") {
+    read.mark(0, 1, USED);
+    return "zero";
+  }
+  return "none";
+}
+
+/** "a week", "per month", "this week" and the like at `i`: which period, and where it ends. */
+function periodAt(read: Reader, i: number): { week: boolean; end: number } | null {
+  const first = read.key(i) ?? "";
+  const second = read.key(i + 1) ?? "";
+  if (!(PER.includes(first) || first === "this") || !(second === "week" || second === "month")) return null;
+  return { week: second === "week", end: i + 2 };
+}
+
+function cadenceAt(read: Reader, i: number, limit: Limit): Cadence | null {
   const key = read.key(i);
   if (key === null) return null;
   const k = (offset: number) => read.key(i + offset) ?? "";
@@ -396,10 +450,21 @@ function cadenceAt(read: Reader, i: number): Cadence | null {
       weekdays: null,
       times: n,
       end,
-      fits: n >= 1 && n <= (week ? 7 : 31),
+      fits: n >= (limit === "none" ? 1 : 0) && n <= (week ? 7 : 31),
     };
   };
   const period = (word: string) => word === "week" || word === "month";
+
+  if (limit !== "none" && WHOLE.test(key)) {
+    // Under a limit a bare number, or a number of days, is how many days the period may have.
+    if (PER.includes(k(1)) && period(k(2))) return per(Number(key), k(2), i + 3);
+    if (["days", "day"].includes(k(1)) && PER.includes(k(2)) && period(k(3))) return per(Number(key), k(3), i + 4);
+  }
+  if (limit === "zero") {
+    // "No casino this month": the period alone, and not once in it.
+    const alone = periodAt(read, i);
+    if (alone !== null) return per(0, alone.week ? "week" : "month", alone.end);
+  }
 
   const nx = /^([0-9]+)x$/.exec(key);
   if (WHOLE.test(key) && ["x", "times", "time"].includes(k(1)) && PER.includes(k(2)) && period(k(3))) {
