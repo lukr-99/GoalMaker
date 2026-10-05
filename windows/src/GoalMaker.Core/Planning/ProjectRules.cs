@@ -12,6 +12,9 @@ public static class ProjectRules
     public const string Doing = "doing";
     public const string Done = "done";
 
+    /// <summary>The board's last column: every dropped item, whatever column it is stored in (docs/projects.md).</summary>
+    public const string Dropped = "dropped";
+
     public const string Task = "task";
     public const string Idea = "idea";
     public const string Bug = "bug";
@@ -37,8 +40,11 @@ public static class ProjectRules
 
     public const int MostArchiveDays = 365;
 
-    /// <summary>The four columns, left to right.</summary>
+    /// <summary>The four columns an item is stored in, left to right.</summary>
     public static readonly IReadOnlyList<string> Columns = [Backlog, Todo, Doing, Done];
+
+    /// <summary>The columns a board shows: the four, then <see cref="Dropped"/>.</summary>
+    public static readonly IReadOnlyList<string> BoardColumns = [.. Columns, Dropped];
 
     /// <summary>The priorities, most important first.</summary>
     public static readonly IReadOnlyList<string> Priorities = [Urgent, High, Normal, Low];
@@ -61,12 +67,15 @@ public static class ProjectRules
         _ => 1,
     };
 
-    /// <summary>What moving an item to a column does to a task in this state.</summary>
-    public static TaskState Moved(string column, TaskState state) => state switch
+    /// <summary>
+    /// What moving an item to a board column does to a task in this state: dropped drops it, done
+    /// finishes it, and any other column reopens a done or dropped one.
+    /// </summary>
+    public static TaskState Moved(string column, TaskState state) => column switch
     {
-        TaskState.Dropped => state,
-        _ when column == Done => TaskState.Done,
-        TaskState.Done => TaskState.Open,
+        Dropped => TaskState.Dropped,
+        Done => TaskState.Done,
+        _ when state is TaskState.Done or TaskState.Dropped => TaskState.Open,
         _ => state,
     };
 
@@ -124,10 +133,16 @@ public static class ProjectRules
         return today < finished.AddDays(days);
     }
 
-    /// <summary>The four columns of a project with their items in order; a column with nothing in it stays.</summary>
+    /// <summary>
+    /// The board columns of a project with their items in order; a column with nothing in it stays. A
+    /// dropped item is in <see cref="Dropped"/>, never in the column it is stored in.
+    /// </summary>
     public static IReadOnlyList<ProjectColumn> Board(IReadOnlyList<TaskItem> items) =>
     [
-        .. Columns.Select(column =>
-            new ProjectColumn(column, Order(items.Where(item => !item.Deleted && item.BoardColumn == column)))),
+        .. BoardColumns.Select(column =>
+            new ProjectColumn(column, Order(items.Where(item => !item.Deleted && ShownIn(item.State, item.BoardColumn) == column)))),
     ];
+
+    /// <summary>The board column an item shows in: <see cref="Dropped"/> for a dropped task, else the column it is stored in.</summary>
+    public static string? ShownIn(TaskState state, string? column) => state == TaskState.Dropped ? Dropped : column;
 }
