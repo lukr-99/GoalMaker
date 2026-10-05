@@ -76,10 +76,10 @@ class SharedPreferencesSettingsStoreTest {
     }
 
     @Test
-    fun `a board shows as columns with Done folded in the list, until changed, and every section can open`() {
+    fun `a board shows as columns with Done and Dropped folded in the list, until changed, and every section can open`() {
         val store = SharedPreferencesSettingsStore(preferences)
         assertEquals(BoardView.COLUMNS, store.boardView.value)
-        assertEquals(setOf("done"), store.collapsedColumns.value)
+        assertEquals(setOf("done", "dropped"), store.collapsedColumns.value)
 
         store.setBoardView(BoardView.LIST)
         store.setCollapsedColumns(emptySet())

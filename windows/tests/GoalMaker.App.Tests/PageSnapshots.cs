@@ -840,15 +840,21 @@ public sealed class PageSnapshots
         planner.Replica.Put("tasks", old);
         planner.Tasks.SetBoardArchived(planner.Task("The first board").Id, true);
         projects.Refresh();
+        // An idea let go of, which shows in Dropped, greyed out.
+        projects.NewItemType = ProjectRules.Idea;
+        projects.NewItemTitle = "Dark mode for the widget";
+        projects.AddItemCommand.Execute(null);
+        planner.Tasks.SetBoardColumn(planner.Task("Dark mode for the widget").Id, ProjectRules.Dropped);
         var done = projects.Columns.Single(column => column.Column == ProjectRules.Done);
         done.ToggleArchivedCommand.Execute(null);
         // A card just finished, so the undo bar is on show.
         projects.Columns.Single(column => column.Column == ProjectRules.Todo).Items[0].MoveCommand.Execute(ProjectRules.Done);
 
-        Save(new ProjectsPage(projects), folder, "projects", new Size(1100, 700));
+        Save(new ProjectsPage(projects), folder, "projects", new Size(1340, 700));
 
-        // Done folded to its strip, so the other columns take the room.
+        // Done and Dropped folded to their strips, so the other columns take the room.
         done.FoldCommand.Execute(null);
+        projects.Columns.Single(column => column.Column == ProjectRules.Dropped).FoldCommand.Execute(null);
         Save(new ProjectsPage(projects), folder, "projects-folded", new Size(1100, 700));
 
         // The new item window, from Doing's plus, with a milestone to pick and one item already added.

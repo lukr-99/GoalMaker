@@ -51,6 +51,7 @@ import {
 } from "./prompts.ts";
 import {
   board,
+  BOARD_COLUMNS,
   columnFor,
   COLUMNS,
   finishedIn,
@@ -213,6 +214,7 @@ Deno.test("projects.json: done items leave the board", async () => {
 Deno.test("projects.json: new items, moves, finishing, order and the board", async () => {
   const file = await vectors("projects.json");
   assertEquals(COLUMNS, file.columns);
+  assertEquals(BOARD_COLUMNS, file.boardColumns);
   assertEquals(PRIORITIES, file.priorities);
   for (const vector of file.newItems) {
     assertEquals(columnFor(vector.type), vector.expect, vector.name);
@@ -238,7 +240,7 @@ Deno.test("projects.json: new items, moves, finishing, order and the board", asy
   }
   for (const vector of file.board) {
     const columns = board(items(vector.items));
-    assertEquals(columns.map((column) => column.column), file.columns, vector.name);
+    assertEquals(columns.map((column) => column.column), file.boardColumns, vector.name);
     for (const column of columns) {
       assertEquals(
         column.items.map((item) => item.id),

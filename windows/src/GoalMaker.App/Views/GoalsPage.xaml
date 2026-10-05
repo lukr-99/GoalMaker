@@ -64,9 +64,13 @@
             </Setter>
         </Style>
 
-        <!-- The pace pill's fill: neutral on track, a faint danger when behind, the full accent on a hit. -->
+        <!--
+          The pace pill's fill: neutral on track, a faint danger when behind, the full accent on a hit,
+          as on the phone. Its corners are half its height (about 22, from the text and its margin): a
+          bigger radius makes WPF draw an ellipse rather than a pill.
+        -->
         <Style x:Key="PaceFill" TargetType="Border">
-            <Setter Property="CornerRadius" Value="99" />
+            <Setter Property="CornerRadius" Value="11" />
             <Setter Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
             <Setter Property="Opacity" Value="1" />
             <Style.Triggers>
@@ -80,8 +84,8 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="PaceText" TargetType="TextBlock">
-            <Setter Property="Margin" Value="7,2" />
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="10,3,10,4" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
             <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
             <Style.Triggers>

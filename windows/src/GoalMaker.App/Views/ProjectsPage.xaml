@@ -124,6 +124,7 @@
                                     <MenuItem Header="{DynamicResource Projects.Todo}" Command="{Binding MoveCommand}" CommandParameter="todo" />
                                     <MenuItem Header="{DynamicResource Projects.Doing}" Command="{Binding MoveCommand}" CommandParameter="doing" />
                                     <MenuItem Header="{DynamicResource Projects.Done}" Command="{Binding MoveCommand}" CommandParameter="done" />
+                                    <MenuItem Header="{DynamicResource Projects.Dropped}" Command="{Binding MoveCommand}" CommandParameter="dropped" />
                                     <Separator />
                                     <MenuItem Header="{DynamicResource Projects.OpenItem}" Command="{Binding OpenCommand}" />
                                     <MenuItem Header="{DynamicResource Projects.Archive}" Command="{Binding ArchiveCommand}"
@@ -133,7 +134,19 @@
                             </ui:Button.ContextMenu>
                             <ui:SymbolIcon Symbol="MoreVertical24" />
                         </ui:Button>
-                        <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <!-- A dropped item, in Dropped, steps back in the muted colour. -->
+                        <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Dropped}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </DockPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                         <!-- An idea and a bug wear their own icon and colour, so a board reads at a glance. -->
@@ -199,7 +212,7 @@
                                    AutomationProperties.Name="{Binding FoldText}">
                             <ui:SymbolIcon Symbol="ChevronLeft24" FontSize="12" />
                         </ui:Button>
-                        <!-- A new item in this column, in the new item window; Done has none. -->
+                        <!-- A new item in this column, in the new item window; Done and Dropped have none. -->
                         <ui:Button DockPanel.Dock="Right" TabIndex="0" Padding="4" Appearance="Transparent" VerticalAlignment="Center"
                                    Command="{Binding AddCommand}" ToolTip="{Binding AddText}"
                                    AutomationProperties.Name="{Binding AddText}"
@@ -399,11 +412,13 @@
                                 <ColumnDefinition DataContext="{Binding Columns[1]}" Style="{StaticResource BoardColumnWidth}" />
                                 <ColumnDefinition DataContext="{Binding Columns[2]}" Style="{StaticResource BoardColumnWidth}" />
                                 <ColumnDefinition DataContext="{Binding Columns[3]}" Style="{StaticResource BoardColumnWidth}" />
+                                <ColumnDefinition DataContext="{Binding Columns[4]}" Style="{StaticResource BoardColumnWidth}" />
                             </Grid.ColumnDefinitions>
                             <ContentControl Grid.Column="0" Focusable="False" Content="{Binding Columns[0]}" ContentTemplate="{StaticResource BoardColumn}" />
                             <ContentControl Grid.Column="1" Focusable="False" Content="{Binding Columns[1]}" ContentTemplate="{StaticResource BoardColumn}" />
                             <ContentControl Grid.Column="2" Focusable="False" Content="{Binding Columns[2]}" ContentTemplate="{StaticResource BoardColumn}" />
                             <ContentControl Grid.Column="3" Focusable="False" Content="{Binding Columns[3]}" ContentTemplate="{StaticResource BoardColumn}" />
+                            <ContentControl Grid.Column="4" Focusable="False" Content="{Binding Columns[4]}" ContentTemplate="{StaticResource BoardColumn}" />
                         </Grid>
                     </ScrollViewer>
                 </StackPanel>

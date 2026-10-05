@@ -141,7 +141,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
     override val collapsedColumns: StateFlow<Set<String>> = collapsed.asStateFlow()
 
     override fun setCollapsedColumns(columns: Set<String>) {
-        val kept = columns.filterTo(LinkedHashSet()) { it in ProjectRules.COLUMNS }
+        val kept = columns.filterTo(LinkedHashSet()) { it in ProjectRules.BOARD_COLUMNS }
         preferences.edit { putString(COLLAPSED_COLUMNS, kept.joinToString(",")) }
         collapsed.value = kept
     }
@@ -272,12 +272,12 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
     private fun readPins(): List<String> =
         PlaceRules.stored(preferences.getString(PINS, null)?.split(',')?.filter { it.isNotBlank() }, DeviceKind.PHONE)
 
-    // Nothing stored yet folds Done away; an empty string stored means every column is open.
+    // Nothing stored yet folds Done and Dropped away; an empty string stored means every column is open.
     private fun readCollapsedColumns(): Set<String> =
         preferences.getString(COLLAPSED_COLUMNS, null)
             ?.split(',')
-            ?.filterTo(LinkedHashSet()) { it in ProjectRules.COLUMNS }
-            ?: setOf(ProjectRules.DONE)
+            ?.filterTo(LinkedHashSet()) { it in ProjectRules.BOARD_COLUMNS }
+            ?: setOf(ProjectRules.DONE, ProjectRules.DROPPED)
 
     private fun readQuietHours(): QuietHours {
         val start = preferences.getInt(QUIET_START, 0)

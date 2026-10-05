@@ -51,14 +51,22 @@ public sealed class JsonSettingsStoreTests : IDisposable
     public void FoldedColumnsAreKeptInBoardOrderAndOnlyTheKnownOnes()
     {
         var store = new JsonSettingsStore(SettingsFile);
-        Assert.Empty(store.FoldedBoardColumns);
+        Assert.Equal(["dropped"], store.FoldedBoardColumns);
 
-        store.FoldedBoardColumns = ["done", "backlog"];
+        store.FoldedBoardColumns = ["dropped", "done", "backlog"];
 
-        Assert.Equal(["backlog", "done"], new JsonSettingsStore(SettingsFile).FoldedBoardColumns);
+        Assert.Equal(["backlog", "done", "dropped"], new JsonSettingsStore(SettingsFile).FoldedBoardColumns);
 
         File.WriteAllText(SettingsFile, """{ "Version": 1, "FoldedBoardColumns": ["done", "later", "done"] }""");
         Assert.Equal(["done"], new JsonSettingsStore(SettingsFile).FoldedBoardColumns);
+    }
+
+    [Fact]
+    public void EveryColumnOpenStaysOpen()
+    {
+        new JsonSettingsStore(SettingsFile).FoldedBoardColumns = [];
+
+        Assert.Empty(new JsonSettingsStore(SettingsFile).FoldedBoardColumns);
     }
 
     [Fact]

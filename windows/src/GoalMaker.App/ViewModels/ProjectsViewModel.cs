@@ -13,7 +13,7 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The Projects page (docs/projects.md, spec stories 43 to 50): the owner's projects and the board of
-/// the one on show, Backlog to Done. An item is a task, so moving a card writes through
+/// the one on show, Backlog to Done and then Dropped, which holds every dropped item. An item is a task, so moving a card writes through
 /// <see cref="TaskList"/> and the item turns up in Today when it has a day. The who-made-it switch
 /// shows every item, only the owner's, or only Claude's. Moving an item to Done or taking it out of
 /// the project can be undone for five seconds, as on the lists. An area and tag filter of its own
@@ -21,7 +21,8 @@ namespace GoalMaker.App.ViewModels;
 /// own counts as being in its project's, and a project stays listed while its own area is the one
 /// chosen (no tag chosen) or the filter keeps one of its items. Done items leave the board the
 /// project's number of days after the planning day they were finished, or when archived by hand, and
-/// Done counts them and lists them with a way back. Any column folds to a strip, remembered in settings.
+/// Done counts them and lists them with a way back. Any column folds to a strip, remembered in settings;
+/// Dropped starts folded.
 /// A new item goes in from the quick line above the board (a title and its type), or from the new item
 /// window, which the New item button, a column's plus and Ctrl+N open with every field.
 /// </summary>
@@ -137,7 +138,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var folded = settings.FoldedBoardColumns;
         Columns =
         [
-            .. ProjectRules.Columns.Select(column =>
+            .. ProjectRules.BoardColumns.Select(column =>
             {
                 var title = strings.Get(ColumnKey(column));
                 return new BoardColumnViewModel(
@@ -147,7 +148,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     strings.Get("Projects.Unfold", title),
                     folded.Contains(column),
                     Folded,
-                    column == ProjectRules.Done ? null : new BoardColumnAdd(strings.Get("Projects.AddTo", title), () => OpenItemWindow(column)));
+                    column is ProjectRules.Done or ProjectRules.Dropped ? null : new BoardColumnAdd(strings.Get("Projects.AddTo", title), () => OpenItemWindow(column)));
             }),
         ];
         ItemTypes =
@@ -176,7 +177,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The owner's projects the filter keeps, active ones first.</summary>
     public ObservableCollection<ProjectRowViewModel> Projects { get; } = [];
 
-    /// <summary>The four columns of the project on show.</summary>
+    /// <summary>The columns of the project on show: the four an item is stored in, then Dropped.</summary>
     public IReadOnlyList<BoardColumnViewModel> Columns { get; }
 
     /// <summary>The kinds an item can be, for the picker beside the quick line and in the new item window.</summary>
@@ -224,7 +225,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         {
             var id = project.Id;
             var own = everyItem.Where(task => task.ProjectId == id).ToList();
-            int Waiting(string column) => own.Count(task => task.BoardColumn == column);
+            int Waiting(string column) => own.Count(task => ProjectRules.ShownIn(task.State, task.BoardColumn) == column);
             Projects.Add(new ProjectRowViewModel(
                 id,
                 project.Name,
@@ -251,7 +252,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         foreach (var column in Columns)
         {
             column.Items.Clear();
-            foreach (var item in ProjectRules.Order(onBoard.Where(task => task.BoardColumn == column.Column)))
+            foreach (var item in ProjectRules.Order(onBoard.Where(task => ProjectRules.ShownIn(task.State, task.BoardColumn) == column.Column)))
             {
                 var id = item.Id;
                 var card = item;
@@ -460,17 +461,18 @@ public sealed partial class ProjectsViewModel : ObservableObject
         OpenItemWindowCommand.NotifyCanExecuteChanged();
     }
 
-    // Moving to Done can be taken back, to the column the item came from.
+    // Moving to Done can be taken back, to the column the item showed in: a dropped one goes back to Dropped.
     private void Move(TaskItem item, string column)
     {
         tasks.SetBoardColumn(item.Id, column);
-        if (column == ProjectRules.Done && item.BoardColumn is { } from && from != ProjectRules.Done)
+        if (column == ProjectRules.Done && ProjectRules.ShownIn(item.State, item.BoardColumn) is { } from && from != ProjectRules.Done)
         {
             ShowUndo(strings.Get("Lists.Done", item.Title), () => tasks.SetBoardColumn(item.Id, from));
         }
     }
 
-    // Taking an item out can be taken back: it returns with its type, column and milestone.
+    // Taking an item out can be taken back: it returns with its type, column and milestone. A dropped
+    // item stays dropped, since moving it to its stored column would open it again.
     private void RemoveFromProject(TaskItem item)
     {
         if (item.ProjectId is not { } projectId)
@@ -482,7 +484,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ShowUndo(strings.Get("Projects.Removed", item.Title), () =>
         {
             tasks.SetProject(item.Id, projectId, item.ItemType);
-            if (item.BoardColumn is { } column)
+            if (item.BoardColumn is { } column && item.State != TaskState.Dropped)
             {
                 tasks.SetBoardColumn(item.Id, column);
             }
@@ -607,6 +609,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ProjectRules.Backlog => "Projects.Backlog",
         ProjectRules.Todo => "Projects.Todo",
         ProjectRules.Doing => "Projects.Doing",
+        ProjectRules.Dropped => "Projects.Dropped",
         _ => "Projects.Done",
     };
 

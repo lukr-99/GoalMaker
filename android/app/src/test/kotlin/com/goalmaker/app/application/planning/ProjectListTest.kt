@@ -95,6 +95,31 @@ class ProjectListTest {
     }
 
     @Test
+    fun `moving an item to Dropped drops it where it sits, and moving it out reopens or finishes it`() {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val item = tasks.add("Rewrite the sync")!!
+        tasks.setProject(item.id, project.id)
+        tasks.setBoardColumn(item.id, ProjectRules.DOING)
+
+        tasks.setBoardColumn(item.id, ProjectRules.DROPPED)
+        var stored = tasks.find(item.id)!!
+        assertEquals(TaskState.DROPPED, stored.state)
+        assertEquals(ProjectRules.DOING, stored.boardColumn)
+        val board = ProjectRules.board(listOf(stored))
+        assertEquals(listOf(item.id), board.single { it.column == ProjectRules.DROPPED }.items.map(TaskItem::id))
+        assertTrue(board.single { it.column == ProjectRules.DOING }.items.isEmpty())
+
+        tasks.setBoardColumn(item.id, ProjectRules.TODO)
+        stored = tasks.find(item.id)!!
+        assertEquals(TaskState.OPEN, stored.state)
+        assertEquals(ProjectRules.TODO, stored.boardColumn)
+
+        tasks.setBoardColumn(item.id, ProjectRules.DROPPED)
+        tasks.setBoardColumn(item.id, ProjectRules.DONE)
+        assertEquals(TaskState.DONE, tasks.find(item.id)!!.state)
+    }
+
+    @Test
     fun `the board shows the items of one project in order`() {
         val project = projects.add(ProjectDraft("GoalMaker"))!!
         val other = projects.add(ProjectDraft("Something else"))!!
@@ -108,7 +133,7 @@ class ProjectListTest {
 
         val board = ProjectRules.board(tasks.all().filter { it.projectId == project.id })
 
-        assertEquals(ProjectRules.COLUMNS, board.map(ProjectColumn::column))
+        assertEquals(ProjectRules.BOARD_COLUMNS, board.map(ProjectColumn::column))
         assertEquals(
             listOf("Fix the crash", "Write the docs"),
             board.first { it.column == ProjectRules.TODO }.items.map(TaskItem::title),

@@ -6,7 +6,7 @@ import type { GoalItem, GoalProgress, GoalStanding } from "../rules/goals.ts";
 import { type HabitStanding, isPeriodic, limit } from "../rules/habits.ts";
 import type { TimeLeft } from "../rules/lifeGoals.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
-import type { Column, ProjectItem, ProjectMilestone } from "../rules/projects.ts";
+import { type Column, type ProjectItem, type ProjectMilestone, shownColumn } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
 import { NEED, needLate, type WantState } from "../rules/wants.ts";
 
@@ -384,6 +384,7 @@ export const COLUMN_NAMES: Record<string, string> = {
   todo: "To do",
   doing: "Doing",
   done: "Done",
+  dropped: "Dropped",
 };
 
 /** A project with its status, area, repository and folder, and how much of it is still open. */
@@ -399,7 +400,7 @@ export function projectLine(project: ProjectItem, names: Names, items: TaskItem[
   return `- ${parts.join(" · ")} (project id ${project.id})`;
 }
 
-/** One project's board: its four columns with their items in order, its milestones and its notes. */
+/** One project's board: its columns (the four, then Dropped) with their items in order, its milestones and its notes. */
 export function board(
   project: ProjectItem,
   columns: Column[],
@@ -449,10 +450,11 @@ export function taskDetail(
   milestones: ProjectMilestone[] = [],
 ): string {
   const lines = [taskLine(task, names, { showDay: true, showMaker: true })];
-  if (task.boardColumn) {
+  const column = shownColumn(task);
+  if (column) {
     const milestone = milestones.find((one) => one.id === task.milestoneId);
     lines.push(
-      `On the board in ${COLUMN_NAMES[task.boardColumn] ?? task.boardColumn}` +
+      `On the board in ${COLUMN_NAMES[column] ?? column}` +
         (milestone === undefined ? "." : `, milestone ${milestone.name}.`),
     );
   }

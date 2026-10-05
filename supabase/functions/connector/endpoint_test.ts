@@ -1119,6 +1119,63 @@ Deno.test({
         assert(tooMany.isError, tooMany.text);
       });
 
+      await t.step("an item moved to Dropped is dropped, shows there, and comes back when moved out", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const made = await client.tool("create_project", { name: "Dropped test" });
+        assert(!made.isError, made.text);
+        const projectId = /\(project id ([0-9a-f-]{36})\)/.exec(made.text)![1];
+        const added = await client.tool("add_project_item", { project: projectId, title: "Old plan", column: "doing" });
+        assert(!added.isError, added.text);
+        const itemId = /\(id ([0-9a-f-]{36})\)/.exec(added.text)![1];
+        const row = async () => (await sql`select status, board_column from public.tasks where id = ${itemId}`)[0];
+        const changes = async () =>
+          (await sql`select id::text from public.activity_log where entity_id = ${itemId} order by id`).map(
+            (change: Json) => change.id as string,
+          );
+        // The heading of a board column and the first item under it.
+        const under = (text: string, heading: string) => {
+          const lines = text.split("\n");
+          const at = lines.indexOf(heading);
+          assert(at >= 0, `no ${heading} in ${text}`);
+          return lines[at + 1] ?? "";
+        };
+
+        let before = (await changes()).length;
+        const dropped = await client.tool("move_project_item", { id: itemId, column: "dropped" });
+        assert(!dropped.isError, dropped.text);
+        assertStringIncludes(dropped.text, "Moved to Dropped in Dropped test:");
+        assertEquals(await row(), { status: "dropped", board_column: "doing" }, "dropping keeps the stored column");
+        const dropChanges = await changes();
+        assertEquals(dropChanges.length, before + 1, "a move to Dropped is one change");
+
+        let board = await client.tool("get_project_board", { project: projectId });
+        assertStringIncludes(board.text, "Doing: nothing.");
+        assert(board.text.indexOf("Done: nothing.") < board.text.indexOf("Dropped (1):"), board.text);
+        assertStringIncludes(under(board.text, "Dropped (1):"), "Old plan");
+
+        const undone = await client.tool("undo_change", { id: dropChanges.at(-1)! });
+        assert(!undone.isError, undone.text);
+        assertEquals(await row(), { status: "open", board_column: "doing" }, "one undo takes the drop back");
+
+        await client.tool("move_project_item", { id: itemId, column: "dropped" });
+        before = (await changes()).length;
+        const back = await client.tool("move_project_item", { id: itemId, column: "todo" });
+        assert(!back.isError, back.text);
+        assertStringIncludes(back.text, "Moved to To do in Dropped test:");
+        assertEquals(await row(), { status: "open", board_column: "todo" }, "moved out of Dropped, it is open again");
+        assertEquals((await changes()).length, before + 1, "a move out of Dropped is one change");
+        board = await client.tool("get_project_board", { project: projectId });
+        assertStringIncludes(under(board.text, "To do (1):"), "Old plan");
+        assertStringIncludes(board.text, "Dropped: nothing.");
+
+        await client.tool("move_project_item", { id: itemId, column: "dropped" });
+        const done = await client.tool("move_project_item", { id: itemId, column: "done" });
+        assert(!done.isError, done.text);
+        assertEquals(await row(), { status: "done", board_column: "done" }, "a dropped item moved to Done is done");
+        board = await client.tool("get_project_board", { project: projectId });
+        assertStringIncludes(under(board.text, "Done (1):"), "Old plan");
+      });
+
       await t.step("life goals are added, read, achieved, reopened and undone through the connector", async () => {
         // This step makes more calls than the minute's budget has left after the ones before it.
         await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;

@@ -6,12 +6,20 @@ import { compareText, type TaskItem, type TaskState } from "./task.ts";
  * how a column and the task's own state move together, and the order items sit in.
  */
 export type BoardColumn = "backlog" | "todo" | "doing" | "done";
+/** A column a board shows: the four an item is stored in, then dropped. */
+export type ShownColumn = BoardColumn | "dropped";
 export type ItemType = "task" | "idea" | "bug";
 export type Priority = "low" | "normal" | "high" | "urgent";
 export type ProjectStatus = "active" | "paused" | "done";
 
-/** The four columns, left to right. */
+/** The four columns an item is stored in, left to right. */
 export const COLUMNS: BoardColumn[] = ["backlog", "todo", "doing", "done"];
+
+/** The board's last column: every dropped item, whatever column it is stored in (docs/projects.md). */
+export const DROPPED = "dropped";
+
+/** The columns a board shows: the four, then dropped. */
+export const BOARD_COLUMNS: ShownColumn[] = [...COLUMNS, DROPPED];
 
 /** The priorities, most important first. */
 export const PRIORITIES: Priority[] = ["urgent", "high", "normal", "low"];
@@ -51,7 +59,7 @@ export interface ProjectMilestone {
 
 /** One column with the items in it, in the order the board shows them. */
 export interface Column {
-  column: BoardColumn;
+  column: ShownColumn;
   items: TaskItem[];
 }
 
@@ -91,11 +99,20 @@ export function rank(priority: string | undefined): number {
   return RANK[priority ?? "normal"] ?? 1;
 }
 
-/** What moving an item to a column does to a task in this state. */
+/**
+ * What moving an item to a board column does to a task in this state: dropped drops it, done
+ * finishes it, and any other column reopens a done or dropped one.
+ */
 export function moved(column: string, state: TaskState): TaskState {
-  if (state === "dropped") return state;
+  if (column === DROPPED) return "dropped";
   if (column === "done") return "done";
-  return state === "done" ? "open" : state;
+  return state === "done" || state === "dropped" ? "open" : state;
+}
+
+/** The board column an item shows in: dropped for a dropped item, else the column it is stored in. */
+export function shownColumn(item: TaskItem): string | null {
+  if (!item.boardColumn) return null;
+  return item.state === "dropped" ? DROPPED : item.boardColumn;
 }
 
 /** What finishing or reopening a task does to the column it sits in. */
@@ -114,12 +131,22 @@ export function order(items: TaskItem[]): TaskItem[] {
   );
 }
 
-/** The four columns of a project with their items in order; a column with nothing in it stays. */
+/**
+ * The board columns of a project with their items in order; a column with nothing in it stays. A
+ * dropped item is in the dropped column, never in the column it is stored in.
+ */
 export function board(items: TaskItem[]): Column[] {
-  return COLUMNS.map((column) => ({
-    column,
-    items: order(items.filter((item) => !item.deleted && item.boardColumn === column)),
-  }));
+  return BOARD_COLUMNS.map((column) => {
+    const dropped = column === DROPPED;
+    return {
+      column,
+      items: order(
+        items.filter((item) =>
+          !item.deleted && (item.state === "dropped") === dropped && (dropped || item.boardColumn === column)
+        ),
+      ),
+    };
+  });
 }
 
 /**

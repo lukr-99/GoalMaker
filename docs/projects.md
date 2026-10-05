@@ -22,7 +22,7 @@ area, tags, steps, reminders and repeat, and a project item with a planned day t
 to everything else (story 50). Every task, in or out of a project, carries a **priority**: low,
 normal, high or urgent.
 
-An item is typed **task**, **idea** or **bug**, and sits in one of four **board columns**:
+An item is typed **task**, **idea** or **bug**, and is stored in one of four **board columns**:
 
 | Column | What it holds |
 |---|---|
@@ -31,12 +31,18 @@ An item is typed **task**, **idea** or **bug**, and sits in one of four **board 
 | Doing | In hand now. |
 | Done | Finished. |
 
+After them the board shows a fifth column, **Dropped**: every dropped item, whatever column it is
+stored in. It is a shown column, not a stored one, so `tasks.board_column` keeps its four values and
+an app from before it still reads every row (the owner's pick, 2026-10-05).
+
 The column and the task's own state move together, so a board and a list never disagree:
 
 - Moving an item to **Done** completes the task, exactly as ticking it does.
 - Completing a task that is a project item moves it to **Done**.
 - Moving a done item back to any other column reopens it.
-- Dropping a task leaves its column alone: a dropped item stays where it was, greyed out.
+- Dropping a task leaves its stored column alone, and the board shows it in **Dropped**, greyed out.
+- Moving an item to **Dropped** drops the task. Moving a dropped item to **Done** finishes it, and to
+  any other column reopens it there.
 
 Items are ordered inside a column by priority (urgent, high, normal, low), then by the position the
 owner dragged them to, then by when they were created.
@@ -54,7 +60,7 @@ can reopen one too. The rule is pinned by the `archive` group of `contracts/vect
 
 On the phone the board has two views, switched in its header and remembered on the device: one
 column at a time with tabs and counts, or the columns stacked with each section folding away (Done
-folded at first). On Windows the columns stay side by side, and each can fold to a narrow strip with
+and Dropped folded at first). On Windows the columns stay side by side, and each can fold to a narrow strip with
 its name and count. A done item's menu has Archive, with Undo. In the list of archived items, one
 archived by hand can be put back, and one that left with time can be reopened into To do. The
 project's edit form sets the days: 7, 14, 30, 90 or never.
@@ -97,8 +103,8 @@ edit form on both apps, and a new project made while an area filter is on starts
 
 ## In the apps
 
-Windows shows the four columns side by side as a board. Android shows one column at a time under
-tabs, or all four as a list with a section per column, and moves an item from its menu. Android reaches Projects from the bottom bar, beside Today,
+Windows shows the five columns side by side as a board. Android shows one column at a time under
+tabs, or all five as a list with a section per column, and moves an item from its menu. Android reaches Projects from the bottom bar, beside Today,
 Tomorrow, the Inbox and the Calendar, and starts a new project from the + beside its project picker.
 Both offer the project list with its status, area, repository
 and folder, how many items each project still has waiting, and the milestones of the project on show.
