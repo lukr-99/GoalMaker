@@ -13,6 +13,8 @@ namespace GoalMaker.App.ViewModels;
 /// The Calendar page (docs/calendar.md, spec story 68): a week or a month of planned tasks, deadlines
 /// and reminders, with a day showing what it holds and a task opening from there. An area and tag
 /// filter of its own narrows what the grid counts and the day lists, the same filter the lists use.
+/// Events are drawn as bars across the days they take up, listed above the open day's tasks, and open
+/// an editor over the page; a deleted one can be brought back for five seconds.
 /// </summary>
 public sealed partial class CalendarViewModel : ObservableObject
 {
@@ -26,7 +28,14 @@ public sealed partial class CalendarViewModel : ObservableObject
     private readonly TimeProvider time;
     private readonly Action<string> openTask;
     private readonly Action<string>? openProject;
+    private static readonly TimeSpan UndoFor = TimeSpan.FromSeconds(5);
     private readonly HabitsViewModel? habitsPage;
+    private readonly EventList? events;
+    private readonly AreaList areas;
+    private readonly Func<string, Brush?> areaBrush;
+    private readonly Action<Action> runOnUi;
+    private Action? undo;
+    private ITimer? undoTimer;
     private DateOnly? anchor;
     private DateOnly? selected;
 
@@ -59,6 +68,12 @@ public sealed partial class CalendarViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasDayHabits))]
     private IReadOnlyList<HabitRowViewModel> dayHabits = [];
 
+    [ObservableProperty]
+    private bool hasUndo;
+
+    [ObservableProperty]
+    private string undoText = string.Empty;
+
     public CalendarViewModel(
         TaskList tasks,
         ReminderList reminders,
@@ -73,8 +88,21 @@ public sealed partial class CalendarViewModel : ObservableObject
         Action<Action> runOnUi,
         Action<string>? openProject = null,
         HabitsViewModel? habitsPage = null,
-        HabitList? habitList = null)
+        HabitList? habitList = null,
+        EventList? events = null)
     {
+        this.events = events;
+        this.areas = areas;
+        this.areaBrush = areaBrush;
+        this.runOnUi = runOnUi;
+        Editor = events is null ? null : new EventEditorViewModel(events, areas, strings);
+        if (events is not null)
+        {
+            events.Changed += (_, _) => runOnUi(Refresh);
+            areas.Changed += (_, _) => runOnUi(Refresh);
+            Editor!.Deleted += (_, item) => ShowUndo(strings.Get("Event.Deleted", item.Title), () => events.Restore(item.Id));
+        }
+
         this.openProject = openProject;
         this.habitsPage = habitsPage;
         if (habitList is not null)
@@ -117,6 +145,15 @@ public sealed partial class CalendarViewModel : ObservableObject
     /// <summary>The days of the grid, seven to a row.</summary>
     public ObservableCollection<CalendarCellViewModel> Cells { get; } = [];
 
+    /// <summary>The grid's week rows: the same cells, with the event bars across them.</summary>
+    public ObservableCollection<CalendarWeekViewModel> Weeks { get; } = [];
+
+    /// <summary>The events of the day the owner picked, listed above its tasks.</summary>
+    public ObservableCollection<CalendarEventViewModel> DayEvents { get; } = [];
+
+    /// <summary>The event editor over the page; null where there are no events.</summary>
+    public EventEditorViewModel? Editor { get; }
+
     /// <summary>What the day the owner picked holds.</summary>
     public ObservableCollection<CalendarEntryViewModel> DayEntries { get; } = [];
 
@@ -124,7 +161,7 @@ public sealed partial class CalendarViewModel : ObservableObject
     /// What a reader says for a day's cell: "Saturday, 3 October 2026, today, 2 planned, 1 due", or that
     /// nothing is on it. The same parts, in the same order, as the phone's cell.
     /// </summary>
-    private string CellName(CalendarDay day, bool isToday, bool isOpen)
+    private string CellName(CalendarDay day, int eventCount, bool isToday, bool isOpen)
     {
         var parts = new List<string> { day.Day.ToString("D", CultureInfo.CurrentCulture) };
         if (isToday)
@@ -149,7 +186,8 @@ public sealed partial class CalendarViewModel : ObservableObject
         Count(day.Deadlines.Count, "Calendar.CellDue");
         Count(day.Repeats.Count, "Calendar.CellRepeats");
         Count(day.Reminders, "Calendar.CellReminders");
-        if (day.Empty)
+        Count(eventCount, "Calendar.CellEvents");
+        if (day.Empty && eventCount == 0)
         {
             parts.Add(strings.Get("Calendar.CellEmpty"));
         }
@@ -164,12 +202,16 @@ public sealed partial class CalendarViewModel : ObservableObject
         var narrowed = filter.Current;
         var links = narrowed.IsEmpty ? null : tags.TagLinks();
         var projectAreas = narrowed.IsEmpty ? null : projects.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal);
+        var start = CalendarRules.Start(Kind, shown);
+        var end = CalendarRules.End(Kind, shown);
         var days = CalendarRules.Build(
             tasks.All(),
             reminders.All(),
-            CalendarRules.Start(Kind, shown),
-            CalendarRules.End(Kind, shown),
+            start,
+            end,
             links is null ? null : task => narrowed.Keeps(task, links, projectAreas));
+        var shownEvents = (events?.Between(start, end) ?? []).Where(item => EventRules.Keeps(narrowed, item)).ToList();
+        var eventDays = EventRules.Days(shownEvents, start, end);
 
         Cells.Clear();
         foreach (var day in days)
@@ -183,8 +225,10 @@ public sealed partial class CalendarViewModel : ObservableObject
                 Kind == CalendarRules.Week || date.Month == shown.Month,
                 date == selected,
                 () => Open(date),
-                CellName(day, date == today, date == selected)));
+                CellName(day, eventDays[date].Count, date == today, date == selected)));
         }
+
+        ShowWeeks(shownEvents, start, end);
 
         Period = Kind == CalendarRules.Month
             ? shown.ToString("MMMM yyyy", CultureInfo.CurrentCulture)
@@ -194,6 +238,14 @@ public sealed partial class CalendarViewModel : ObservableObject
                 CalendarRules.End(CalendarRules.Week, shown).ToString("d MMM", CultureInfo.CurrentCulture));
 
         var open = days.FirstOrDefault(day => day.Day == selected);
+        DayEvents.Clear();
+        IReadOnlyList<EventItem> openEvents = open is null ? [] : eventDays[open.Day];
+        foreach (var item in openEvents)
+        {
+            DayEvents.Add(new CalendarEventViewModel(
+                item.Id, item.Title, EventText.Days(item, strings), ColourOf(item), EventText.Name(item, strings), () => OpenEvent(item.Id)));
+        }
+
         DayEntries.Clear();
         if (open is not null)
         {
@@ -219,7 +271,7 @@ public sealed partial class CalendarViewModel : ObservableObject
 
         DayTitle = open is null ? string.Empty : open.Day.ToString("D", CultureInfo.CurrentCulture);
         HasDay = open is not null;
-        IsDayEmpty = open is not null && open.Empty;
+        IsDayEmpty = open is not null && open.Empty && DayEvents.Count == 0;
         HasReminders = open is { Reminders: > 0 };
         DayReminders = HasReminders ? strings.Get("Calendar.Reminders", open!.Reminders) : string.Empty;
     }
@@ -276,6 +328,15 @@ public sealed partial class CalendarViewModel : ObservableObject
         Refresh();
     }
 
+    /// <summary>Opens an event's editor over the page, from its bar, the open day or Today's line.</summary>
+    public void OpenEvent(string id)
+    {
+        if (events?.Get(id) is { } item)
+        {
+            Editor!.Open(item);
+        }
+    }
+
     /// <summary>Opens a day, or closes it when it is already open.</summary>
     public void Open(DateOnly day)
     {
@@ -289,6 +350,66 @@ public sealed partial class CalendarViewModel : ObservableObject
         .. day.Deadlines.Select(task => (task, "Calendar.Deadline")),
         .. day.Repeats.Select(task => (task, "Calendar.Repeat")),
     ];
+
+    [RelayCommand]
+    private void Undo()
+    {
+        var action = undo;
+        HideUndo();
+        action?.Invoke();
+    }
+
+    // The week rows over the cells already built: each row's bars on the first three lanes, and "+N"
+    // under a day whose events need more.
+    private void ShowWeeks(IReadOnlyList<EventItem> shownEvents, DateOnly start, DateOnly end)
+    {
+        var rows = EventRules.Bars(shownEvents, start, end);
+        Weeks.Clear();
+        for (var row = 0; row < rows.Count; row++)
+        {
+            var bars = rows[row];
+            var drawn = bars
+                .Where(bar => bar.Lane < CalendarWeekViewModel.Lanes)
+                .Select(bar => new CalendarBarViewModel(
+                    bar.Event.Id,
+                    bar.Event.Title,
+                    bar.From,
+                    bar.To - bar.From + 1,
+                    bar.Lane,
+                    bar.Before,
+                    bar.After,
+                    ColourOf(bar.Event),
+                    EventText.Name(bar.Event, strings),
+                    () => OpenEvent(bar.Event.Id)))
+                .ToList();
+            var more = Enumerable.Range(0, 7)
+                .Select(column => (Column: column, Count: bars.Count(bar => bar.Lane >= CalendarWeekViewModel.Lanes && bar.From <= column && bar.To >= column)))
+                .Where(day => day.Count > 0)
+                .Select(day => new CalendarMoreViewModel(day.Column, strings.Get("Calendar.EventsMore", day.Count), strings.Get("Calendar.EventsMoreName", day.Count)))
+                .ToList();
+            Weeks.Add(new CalendarWeekViewModel([.. Cells.Skip(row * 7).Take(7)], drawn, more));
+        }
+    }
+
+    private Brush? ColourOf(EventItem item) =>
+        item.AreaId is { } id && areas.All().FirstOrDefault(area => area.Id == id) is { } area ? areaBrush(area.ColorId) : null;
+
+    private void ShowUndo(string text, Action action)
+    {
+        undoTimer?.Dispose();
+        undo = action;
+        UndoText = text;
+        HasUndo = true;
+        undoTimer = time.CreateTimer(_ => runOnUi(HideUndo), null, UndoFor, Timeout.InfiniteTimeSpan);
+    }
+
+    private void HideUndo()
+    {
+        undoTimer?.Dispose();
+        undoTimer = null;
+        undo = null;
+        HasUndo = false;
+    }
 
     private void Step(int by)
     {

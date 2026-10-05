@@ -37,6 +37,7 @@ fun activitySentence(row: ActivityRow): String {
         "want_cooldowns" -> stringResource(R.string.activity_want_cooldowns)
         "life_goals" -> stringResource(R.string.activity_life_goal, subject)
         "life_goal_pictures" -> stringResource(R.string.activity_life_goal_picture)
+        "events" -> stringResource(R.string.activity_event, subject)
         "tally_categories" -> stringResource(R.string.activity_tally_category, subject)
         "tally_rules" -> stringResource(R.string.activity_tally_rule)
         else -> entry.entity

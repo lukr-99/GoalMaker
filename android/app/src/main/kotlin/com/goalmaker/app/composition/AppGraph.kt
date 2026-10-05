@@ -29,6 +29,7 @@ import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.TallyDefaults
 import com.goalmaker.app.application.planning.TallyList
 import com.goalmaker.app.application.planning.TallyTracker
+import com.goalmaker.app.application.planning.EventList
 import com.goalmaker.app.application.planning.LifeGoalList
 import com.goalmaker.app.application.planning.LifeGoalPictures
 import com.goalmaker.app.application.planning.LifeGoalRules
@@ -347,6 +348,9 @@ class AppGraph(context: Context) {
 
     /** Life goals and their pictures' rows (docs/life-goals.md). */
     val lifeGoals = LifeGoalList(replica, newRows, sync::request)
+
+    /** Calendar events: trips, holidays and the like that take up days (docs/calendar.md, ADR 0019). */
+    val events = EventList(replica, newRows, sync::request)
 
     /**
      * Life goal picture files (ADR 0018): kept in private app storage, sent to the owner's folder in

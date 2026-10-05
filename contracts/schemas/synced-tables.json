@@ -1411,6 +1411,66 @@
           "required": false
         }
       ]
+    },
+    {
+      "name": "events",
+      "columns": [
+        {
+          "name": "id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "owner_id",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "title",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "starts_on",
+          "kind": "date",
+          "required": true
+        },
+        {
+          "name": "ends_on",
+          "kind": "date",
+          "required": true
+        },
+        {
+          "name": "notes",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "area_id",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "made_by",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "created_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "updated_at",
+          "kind": "timestamp",
+          "required": true
+        },
+        {
+          "name": "deleted_at",
+          "kind": "timestamp",
+          "required": false
+        }
+      ]
     }
   ]
 }

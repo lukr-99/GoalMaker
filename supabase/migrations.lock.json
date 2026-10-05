@@ -25,6 +25,7 @@
     "0022_habit_reminders.sql": "5ff9c31c59eb65a3a1edc67966ab3cab6e196f56287fac185b10a9734934be6c",
     "0023_life_goals.sql": "b4ba55dc70c75cf95b9216a04c0d697a3336f2910c1fee972d4ab726cc988920",
     "0024_habit_limits_any_period.sql": "7b782f0d4ae405beb79b2f570b730ea349a8b940724d38cd8ccb39183ee4dab3",
-    "0025_wants_needs.sql": "aa1b289881a3afbd6b35e60ece26e9eaad5d101cae11afab892ff5fb028e76b3"
+    "0025_wants_needs.sql": "aa1b289881a3afbd6b35e60ece26e9eaad5d101cae11afab892ff5fb028e76b3",
+    "0026_calendar_events.sql": "bb5412b95ed36ca956993bf30bd85ef205e571c678dc89b747453f50745deb71"
   }
 }

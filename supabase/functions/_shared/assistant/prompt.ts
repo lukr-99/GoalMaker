@@ -44,6 +44,8 @@ export function systemPrompt(facts: PromptFacts): string {
     "(add_want with kind need) are things to buy now: no cooldown, no reason needed, maybe a day needed by.",
     "- Life goals are what the owner wants in their life in the long run, each with why it matters. They " +
     "stand apart from goals: no horizon and no progress, just open, achieved or dropped.",
+    "- Events take up days rather than get done: a trip, a holiday, a conference, from a first day to a last. " +
+    "get_calendar and get_today show them; add_event puts one on the calendar.",
     "",
     "Rules:",
     "- Find a task's id with a list or search_tasks before changing it; never guess ids.",

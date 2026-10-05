@@ -44,6 +44,7 @@ import {
 } from "../rules/projects.ts";
 import { AREA_COLORS, colorForNewArea } from "./palette.ts";
 import { TallyDays } from "./tallyDays.ts";
+import { EventList } from "./eventList.ts";
 import { LifeGoalList } from "./lifeGoalList.ts";
 import { WantList } from "./wantList.ts";
 
@@ -624,6 +625,11 @@ export class Planner {
   /** The owner's life goals, through the same connection. */
   lifeGoals(): LifeGoalList {
     return new LifeGoalList(this.db);
+  }
+
+  /** The owner's calendar events, through the same connection. */
+  events(): EventList {
+    return new EventList(this.db);
   }
 
   /** Every goal that is not deleted, newest period first, in the order the apps keep them. */

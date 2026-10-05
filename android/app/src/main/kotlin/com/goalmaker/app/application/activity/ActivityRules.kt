@@ -8,9 +8,9 @@ import kotlinx.serialization.json.JsonPrimitive
 object ActivityRules {
     fun change(entity: String, action: String, before: JsonObject?, after: JsonObject): ActivityChange {
         val subject = when (entity) {
-            "tasks", "task_steps", "goals", "wants", "life_goals" -> after.text("title")
+            "tasks", "task_steps", "goals", "wants", "life_goals", "events" -> after.text("title")
             "areas", "tags", "habits", "tally_categories" -> after.text("name")
-        "tally_rules" -> after.text("pattern")
+            "tally_rules" -> after.text("pattern")
             else -> null
         }
         val change = when {
@@ -21,7 +21,9 @@ object ActivityRules {
             action == "restore" -> "restored"
             else -> updated(entity, before, after)
         }
-        return ActivityChange(change, subject, if (change == "moved") after.text("planned_date") else null)
+        // An event moves to its new first day; a task to its new planned day.
+        val day = if (change != "moved") null else after.text(if (entity == "events") "starts_on" else "planned_date")
+        return ActivityChange(change, subject, day)
     }
 
     private fun updated(entity: String, before: JsonObject?, after: JsonObject): String {
@@ -80,6 +82,11 @@ object ActivityRules {
                 changed("status") && after.text("status") == "achieved" -> "achieved"
                 changed("status") && after.text("status") == "dropped" -> "dropped"
                 changed("status") && after.text("status") == "open" -> "reopened"
+                changed("title") -> "renamed"
+                else -> "edited"
+            }
+            "events" -> when {
+                changed("starts_on") || changed("ends_on") -> "moved"
                 changed("title") -> "renamed"
                 else -> "edited"
             }

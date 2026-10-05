@@ -3,12 +3,14 @@ package com.goalmaker.app.ui.lists
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.EventDraft
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.domain.composer.ComposerDraft
 import com.goalmaker.app.ui.ScreenPlanner
@@ -93,5 +95,22 @@ class TodayScreenTest {
                 )
             }
         }
+    }
+
+    @Test
+    fun `Today's line shows an event going on, and opens its sheet`() {
+        planner.events.add(EventDraft("Prague", planner.today.minusDays(1), planner.today.plusDays(2)))
+        planner.events.add(EventDraft("Talk", planner.today))
+        planner.events.add(EventDraft("Over", planner.today.minusDays(3), planner.today.minusDays(1)))
+        showToday()
+
+        // The line reads its words and the event's days: "Prague · day 2 of 4, 17 to 20 September".
+        compose.onNode(hasContentDescription(context.getString(R.string.today_event_day, "Prague", 2, 4) + ", 17 to 20 September")).assertIsDisplayed()
+        compose.onNode(hasContentDescription("Talk, 18 September")).assertIsDisplayed()
+        compose.onNode(hasContentDescription("Over", substring = true)).assertDoesNotExist()
+
+        compose.onNode(hasContentDescription("Talk, 18 September")).performClick()
+        // The sheet holds the event's title, ready to edit.
+        compose.onNode(hasSetTextAction() and hasText("Talk")).assertExists()
     }
 }

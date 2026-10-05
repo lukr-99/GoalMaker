@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
  * Every list that writes rows fills the columns the server needs a value in
  * (contracts/schemas/synced-tables.json). A row carries every column, so a null in one of those is
  * refused on the push whatever default the column has, and the apps' own tests never meet a server.
- * This walks all twenty-two synced tables, so a table nobody writes here is caught too.
+ * This walks all twenty-three synced tables, so a table nobody writes here is caught too.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
@@ -55,6 +55,7 @@ class RequiredColumnsTest {
         val wants = WantList(test.replica, rows, {}) { day }
         val tally = TallyList(test.replica, rows, {}) { "d1e57000-0000-4000-8000-00000000aaaa" }
         val lifeGoals = LifeGoalList(test.replica, rows, {})
+        val events = EventList(test.replica, rows, {})
 
         // One row in every synced table, each through the list that owns it.
         assertNotNull(areas.create("Health"))
@@ -84,6 +85,7 @@ class RequiredColumnsTest {
         val lifeGoal = lifeGoals.add(LifeGoalDraft("Own an Audi R8", "Proof that the work paid off", day.plusYears(10)))
         assertNotNull(lifeGoal)
         assertNotNull(lifeGoals.addPicture(lifeGoal!!.id, 1600, 900))
+        assertNotNull(events.add(EventDraft("Prague", day.plusDays(24), day.plusDays(27))))
 
         // Every table was written, and every row of every table fills what the server needs.
         val written = test.catalog.tables.associate { table -> table.name to test.replica.all(table.name) }

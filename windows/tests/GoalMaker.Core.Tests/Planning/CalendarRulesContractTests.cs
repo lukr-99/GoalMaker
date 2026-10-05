@@ -76,6 +76,77 @@ public sealed class CalendarRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryDaysEvents()
+    {
+        foreach (var testCase in vectors.GetProperty("eventDays").EnumerateArray())
+        {
+            var name = testCase.GetProperty("name").GetString();
+            var filter = new ListFilter(Text(testCase, "area"), Text(testCase, "tag"));
+            var days = EventRules.Days(Events(testCase), Day(testCase, "from"), Day(testCase, "to"), filter);
+            var expect = testCase.GetProperty("expect");
+            Assert.True(expect.EnumerateObject().Count() == days.Count, $"{name}: {days.Count} days");
+            foreach (var (day, events) in days)
+            {
+                var row = expect.GetProperty(day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                Assert.True(
+                    row.EnumerateArray().Select(id => id.GetString()).SequenceEqual(events.Select(item => item.Id)),
+                    $"{name} {day}: {string.Join(", ", events.Select(item => item.Id))}");
+            }
+        }
+    }
+
+    [Fact]
+    public void EveryGridsBars()
+    {
+        foreach (var testCase in vectors.GetProperty("bars").EnumerateArray())
+        {
+            var name = testCase.GetProperty("name").GetString();
+            var rows = EventRules.Bars(Events(testCase), Day(testCase, "start"), Day(testCase, "end"));
+            var expect = testCase.GetProperty("rows").EnumerateArray().ToList();
+            Assert.True(expect.Count == rows.Count, $"{name}: {rows.Count} rows");
+            for (var index = 0; index < rows.Count; index++)
+            {
+                var wanted = expect[index].EnumerateArray().Select(bar => (
+                    bar.GetProperty("id").GetString(),
+                    bar.GetProperty("from").GetInt32(),
+                    bar.GetProperty("to").GetInt32(),
+                    bar.GetProperty("lane").GetInt32(),
+                    bar.GetProperty("before").GetBoolean(),
+                    bar.GetProperty("after").GetBoolean())).ToList();
+                var got = rows[index].Select(bar => ((string?)bar.Event.Id, bar.From, bar.To, bar.Lane, bar.Before, bar.After)).ToList();
+                Assert.True(wanted.SequenceEqual(got), $"{name}, row {index}: {string.Join("; ", got)}");
+            }
+        }
+    }
+
+    [Fact]
+    public void EveryOngoingDay()
+    {
+        foreach (var testCase in vectors.GetProperty("ongoing").EnumerateArray())
+        {
+            var name = testCase.GetProperty("name").GetString();
+            var ongoing = EventRules.Ongoing(Events(testCase), Day(testCase, "day"));
+            var wanted = testCase.GetProperty("expect").EnumerateArray().Select(item => (
+                item.GetProperty("id").GetString(),
+                item.GetProperty("dayOf").GetInt32(),
+                item.GetProperty("days").GetInt32())).ToList();
+            var got = ongoing.Select(item => ((string?)item.Event.Id, item.DayOf, item.Days)).ToList();
+            Assert.True(wanted.SequenceEqual(got), $"{name}: {string.Join("; ", got)}");
+        }
+    }
+
+    private static List<EventItem> Events(JsonElement testCase) =>
+    [
+        .. testCase.GetProperty("events").EnumerateArray().Select(item => new EventItem(
+            item.GetProperty("id").GetString()!,
+            item.GetProperty("title").GetString()!,
+            Day(item, "startsOn"),
+            Day(item, "endsOn"),
+            AreaId: Text(item, "area"),
+            Deleted: item.GetProperty("deleted").GetBoolean())),
+    ];
+
     private static IEnumerable<string?> Ids(JsonElement row, string field) =>
         row.GetProperty(field).EnumerateArray().Select(id => id.GetString());
 

@@ -29,6 +29,12 @@ data class ListFilter(val areaId: String? = null, val tagId: String? = null) {
         matches(task, tagLinks[task.id].orEmpty(), task.projectId?.let(projectAreas::get))
 
     /**
+     * Whether a calendar event stays (docs/calendar.md): an area keeps that area's events, and a tag
+     * keeps none, since events have no tags.
+     */
+    fun keeps(event: EventItem): Boolean = tagId == null && (areaId == null || event.areaId == areaId)
+
+    /**
      * Whether a project in [projectAreaId] stays in the project list: always without a filter; else
      * when its own area is the one chosen and no tag is, or when the filter keeps one of its [items].
      */

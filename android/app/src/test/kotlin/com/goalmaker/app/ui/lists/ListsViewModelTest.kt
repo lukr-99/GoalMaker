@@ -5,6 +5,8 @@ import android.content.Context
 import android.os.Looper
 import androidx.core.content.edit
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.EventDraft
+import com.goalmaker.app.application.planning.EventList
 import com.goalmaker.app.application.planning.GoalList
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
@@ -37,6 +39,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -64,6 +67,7 @@ class ListsViewModelTest {
     private lateinit var tasks: TaskList
     private lateinit var areas: AreaList
     private lateinit var projects: ProjectList
+    private lateinit var events: EventList
     private lateinit var viewModel: ListsViewModel
     private lateinit var settings: SharedPreferencesSettingsStore
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
@@ -81,6 +85,7 @@ class ListsViewModelTest {
         projects = ProjectList(test.replica, rows, {})
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         habits = HabitList(test.replica, rows, {})
+        events = EventList(test.replica, rows, {})
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("lists-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
         settings = SharedPreferencesSettingsStore(preferences)
@@ -106,7 +111,7 @@ class ListsViewModelTest {
             now = { Instant.parse("2026-09-18T10:00:00Z") },
             debounce = 2.seconds,
         )
-        viewModel = ListsViewModel(tasks, areas, tags, projects, GoalList(test.replica, rows, {}), ReviewList(test.replica, rows, {}), habits, settings, reminders, sync, Dispatchers.Unconfined) { now }
+        viewModel = ListsViewModel(tasks, areas, tags, projects, GoalList(test.replica, rows, {}), ReviewList(test.replica, rows, {}), habits, events, settings, reminders, sync, Dispatchers.Unconfined) { now }
     }
 
     @After
@@ -229,6 +234,36 @@ class ListsViewModelTest {
     }
 
     private suspend fun loaded(until: (ListsUiState) -> Boolean): ListsUiState = viewModel.uiState.first { it.lists != null && until(it) }
+
+    @Test
+    fun `Today's line shows the events going on, only while they last`() = runTest {
+        events.add(EventDraft("Prague", today.minusDays(1), today.plusDays(2)))
+        events.add(EventDraft("Talk", today))
+        events.add(EventDraft("Yesterday", today.minusDays(1)))
+        events.add(EventDraft("Next week", today.plusDays(7), today.plusDays(9)))
+
+        val ongoing = loaded { it.ongoing.isNotEmpty() }.ongoing
+
+        assertEquals(listOf("Prague" to 2, "Talk" to 1), ongoing.map { it.event.title to it.dayOf })
+        assertEquals(listOf(4, 1), ongoing.map { it.days })
+    }
+
+    @Test
+    fun `an event deleted from Today's line comes back with the undo`() = runTest {
+        val prague = events.add(EventDraft("Prague", today, today.plusDays(2)))!!
+        val undone = mutableListOf<UndoEvent>()
+        val collecting = scope.launch { viewModel.undo.collect { undone += it } }
+
+        assertTrue(viewModel.saveEvent(prague, EventDraft("Prague and Brno", today, today.plusDays(3))))
+        assertFalse(viewModel.saveEvent(prague, EventDraft("Prague", today, today.minusDays(1))))
+        assertEquals(4, events.get(prague.id)!!.days)
+        viewModel.deleteEvent(prague)
+        assertNull(events.get(prague.id))
+
+        undone.single().undo()
+        assertEquals("Prague and Brno", events.get(prague.id)!!.title)
+        collecting.cancel()
+    }
 
     // The flows re-emit on the main looper while the state is collected.
     @Test

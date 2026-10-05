@@ -12,7 +12,8 @@ import {
 } from "../planner/planner.ts";
 import { AREA_COLORS } from "../planner/palette.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
-import { addDays, type Day, mondayOf } from "../rules/day.ts";
+import { addDays, type Day, daysBetween, mondayOf } from "../rules/day.ts";
+import { eventDays, ongoingEvents } from "../rules/events.ts";
 import {
   byPace,
   type GoalHorizon,
@@ -59,6 +60,7 @@ import { byCreation, byTime, type TaskItem } from "../rules/task.ts";
 import { newYear, type NewYearNudge } from "../rules/reviews.ts";
 import * as format from "./format.ts";
 import { digestTools } from "./digestTools.ts";
+import { eventTools } from "./eventTools.ts";
 import { lifeGoalTools } from "./lifeGoalTools.ts";
 import { tallyTools } from "./tallyTools.ts";
 import { wantTools } from "./wantTools.ts";
@@ -385,6 +387,14 @@ async function line(planner: Planner, taskId: string): Promise<string> {
  * The January nudge as the connector sees it (docs/reviews.md): this year's year goals and last year's
  * yearly review. Putting it away with Not now is kept on each device, so the connector never counts it.
  */
+/** The events going on on `today`, as Today's first lines; none gives no lines. */
+async function goingOn(planner: Planner, today: Day): Promise<string[]> {
+  const going = ongoingEvents(await planner.events().between(today, today), today);
+  if (going.length === 0) return [];
+  const areas = format.names(await planner.areas(), [], new Map());
+  return ["Going on:", ...going.map((on) => format.eventLine(on.event, areas, on))];
+}
+
 async function newYearOf(planner: Planner, today: Day): Promise<NewYearNudge | null> {
   if (today.slice(5, 7) !== "01") return null;
   const year = today.slice(0, 4);
@@ -409,7 +419,8 @@ export const tools: Tool[] = [
       "tasks from earlier days, with how many of today's tasks are done, then today's habits. A habit the owner " +
       "keeps off Today is only counted; get_habits shows it. Today is the owner's planning day, which starts at " +
       "their day-start hour, not midnight. In January it also says when last year has no yearly review or this " +
-      "year no year goals yet (the apps' January nudge).",
+      "year no year goals yet (the apps' January nudge). Events going on today (a trip, a holiday) come first, with " +
+      "which of their days it is.",
     input: {},
     readOnly: true,
     destructive: false,
@@ -420,8 +431,10 @@ export const tools: Tool[] = [
         await namesOf(planner),
         await todayHabits(planner, today),
       );
+      const going = await goingOn(planner, today);
+      const withEvents = going.length === 0 ? text : [...going, "", text].join("\n");
       const nudge = await newYearOf(planner, today);
-      return nudge === null ? text : `${text}\n\n${format.newYearLine(nudge)}`;
+      return nudge === null ? withEvents : `${withEvents}\n\n${format.newYearLine(nudge)}`;
     },
   },
   {
@@ -1768,7 +1781,7 @@ export const tools: Tool[] = [
     name: "get_calendar",
     title: "The calendar",
     description:
-      "The plan across a stretch of days: what is planned on each one, what is due then, where a repeating task " +
+      "The plan across a stretch of days: its events, what is planned on each one, what is due then, where a repeating task " +
       "would come round to, and which of them carry a reminder. A week or a month at a time reads best. Each day " +
       "runs earliest time first with untimed tasks after, the same order Today uses. A repeat has no row of its " +
       "own yet, so it is worked out from the task's rule and marked would come round.",
@@ -1789,14 +1802,24 @@ export const tools: Tool[] = [
       const planned = live.filter((task) => task.state !== "dropped" && task.plannedDate !== null);
       const due = live.filter((task) => task.state === "open" && task.deadline !== null);
       const repeats = projectedRepeats(live, first, last);
+      const events = eventDays(await planner.events().between(first, last), first, last);
+      const areas = format.names(await planner.areas(), [], new Map());
       const span = `${format.longDay(first)} to ${format.longDay(last)}`;
       const lines: string[] = [];
       for (let date = first; date <= last; date = addDays(date, 1)) {
         const onDay = planned.filter((task) => task.plannedDate === date).sort(byTime);
         const dueOn = due.filter((task) => task.deadline === date).sort(byTime);
         const around = [...(repeats.get(date) ?? [])].sort(byTime);
-        if (onDay.length === 0 && dueOn.length === 0 && around.length === 0) continue;
+        const eventsOn = events.get(date) ?? [];
+        if (eventsOn.length === 0 && onDay.length === 0 && dueOn.length === 0 && around.length === 0) continue;
         lines.push(`${format.longDay(date)}:`);
+        for (const event of eventsOn) {
+          const on = {
+            dayOf: daysBetween(event.startsOn, date) + 1,
+            days: daysBetween(event.startsOn, event.endsOn) + 1,
+          };
+          lines.push(format.eventLine(event, areas, on).replace("- ", "- Event: "));
+        }
         for (const task of onDay) {
           lines.push(format.taskLine(task, names) + (reminded.has(task.id) ? " · reminder" : ""));
         }
@@ -1865,6 +1888,7 @@ export const tools: Tool[] = [
   },
   ...wantTools,
   ...lifeGoalTools,
+  ...eventTools,
   ...digestTools,
   ...tallyTools,
 ];

@@ -254,6 +254,29 @@
                 </Grid.ColumnDefinitions>
                 <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
+                        <!-- The events going on (docs/calendar.md): a slim line above the tasks, "Prague · day 2 of 4"; each opens its editor. -->
+                        <ItemsControl Margin="0,0,0,4" ItemsSource="{Binding OngoingEvents}" Focusable="False"
+                                      Visibility="{Binding HasOngoingEvents, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:OngoingEventViewModel}">
+                                    <ui:Button Margin="0,0,8,4" Padding="8,3" Appearance="Transparent" Command="{Binding OpenCommand}"
+                                               AutomationProperties.Name="{Binding AutomationName}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Grid Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center">
+                                                <Border CornerRadius="4" Background="{DynamicResource GM.AccentBrush}" />
+                                                <Border CornerRadius="4" Background="{Binding Brush}" />
+                                            </Grid>
+                                            <TextBlock VerticalAlignment="Center" Text="{Binding Text}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </ui:Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                         <!-- The January nudge (docs/reviews.md): last year's review and this year's goals. -->
                         <Border Margin="0,4,0,8" Padding="16,14" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}"
                                 Visibility="{Binding HasNewYear, Converter={StaticResource BoolToVisibility}}">

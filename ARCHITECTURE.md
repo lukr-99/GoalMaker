@@ -49,10 +49,10 @@ composition root creates everything
   `ReleaseChannel`, `SignatureVerifier` and `UpdateInstaller` seams, `settings/SettingsStore`,
   `sync/` (`Replica` and `RemoteTables` ports, `SyncEngine`, `SyncCoordinator`),
   `planning/`: the lists that read and write the replica (`TaskList`, `StepList`, `GoalList`,
-  `HabitList`, `ReviewList`, `ProjectList`, `ReminderList`, `RitualRunList`, `LifeGoalList`) and the
+  `HabitList`, `ReviewList`, `ProjectList`, `ReminderList`, `RitualRunList`, `LifeGoalList`, `EventList`) and the
   rules beside them (`ListRules`, `PlanRules`, `ArchiveRules`, `GoalRules`, `HabitRules`,
   `ReviewRules`, `ReviewLookBack`, `StatsRules`, `ProjectRules`, `CalendarRules`, `ReminderRules`,
-  `LifeGoalRules`, `WhyReminder`),
+  `LifeGoalRules`, `WhyReminder`, `EventRules`),
   `assistant/` (the `AssistantClient` port for the quick chat and its replies), `composer/`
   (`QuickAddLines`: what the bottom bar reads from a want, habit or goal line).
 - `data/`: `SupabaseAuthGateway`, `GitHubReleaseChannel`, `EcdsaSignatureVerifier`,

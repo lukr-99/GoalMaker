@@ -2,19 +2,27 @@ package com.goalmaker.app.ui.calendar
 
 import android.app.Application
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.EventDraft
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.domain.composer.ComposerDraft
@@ -24,6 +32,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -104,5 +114,45 @@ class CalendarScreenTest {
                 CalendarScreen(viewModel = calendar, onOpenTask = {}, actions = {})
             }
         }
+    }
+
+    @Test
+    fun `an event across a week break draws a bar in each row, over its own days`() {
+        planner.events.add(EventDraft("Prague", LocalDate.parse("2026-09-24"), LocalDate.parse("2026-09-29")))
+        showCalendar()
+
+        val bars = compose.onAllNodesWithContentDescription("Prague, 24 to 29 September")
+        bars.assertCountEquals(2)
+        // The first piece runs from Thursday 24 to the row's Sunday, 27.
+        val piece = bars.onFirst().getUnclippedBoundsInRoot()
+        val thursday = day(24).getUnclippedBoundsInRoot()
+        val sunday = day(27).getUnclippedBoundsInRoot()
+        assertTrue("$piece starts on Thursday $thursday", piece.left >= thursday.left - 4.dp && piece.left <= thursday.right)
+        assertTrue("$piece ends on Sunday $sunday", piece.right <= sunday.right + 4.dp && piece.right >= sunday.left)
+        // The cell under it counts the event for a screen reader.
+        compose.onNode(hasContentDescription("Thursday 24 September, 1 event")).assertExists()
+    }
+
+    @Test
+    fun `an event on the open day opens its sheet, which saves and deletes with an undo`() {
+        val trip = planner.events.add(EventDraft("Prague", LocalDate.parse("2026-09-24"), LocalDate.parse("2026-09-26")))!!
+        showCalendar()
+
+        day(25).performClick()
+        shown(hasText("Prague")).performClick()
+        compose.onNode(hasSetTextAction() and hasText("Prague")).performTextReplacement("Prague and Brno")
+        compose.onNodeWithText(context.getString(R.string.event_save)).performClick()
+        compose.waitForIdle()
+        assertEquals("Prague and Brno", planner.events.get(trip.id)!!.title)
+
+        shown(hasText("Prague and Brno")).performClick()
+        compose.onNodeWithText(context.getString(R.string.event_delete)).performClick()
+        compose.waitForIdle()
+        assertNull(planner.events.get(trip.id))
+        compose.onNodeWithText(context.getString(R.string.lists_deleted_message, "Prague and Brno")).assertIsDisplayed()
+
+        compose.onNodeWithText(context.getString(R.string.lists_undo)).performClick()
+        compose.waitForIdle()
+        assertEquals("Prague and Brno", planner.events.get(trip.id)!!.title)
     }
 }

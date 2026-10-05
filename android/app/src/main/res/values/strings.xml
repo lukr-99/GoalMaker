@@ -998,6 +998,32 @@
         <item quantity="one">%1$d reminder</item>
         <item quantity="other">%1$d reminders</item>
     </plurals>
+    <plurals name="calendar_cell_events">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <!-- Calendar events (docs/calendar.md, Events). -->
+    <string name="calendar_events">Events</string>
+    <!-- A day's events past the three lanes a cell shows. -->
+    <string name="calendar_more_events">+%1$d</string>
+    <!-- An event's bar or row as a screen reader says it: "Prague, 12 to 15 October". -->
+    <string name="calendar_event_span">%1$s, %2$s</string>
+    <string name="calendar_event_range">%1$s to %2$s</string>
+    <!-- Today's line for an event going on: "Prague · day 2 of 4". -->
+    <string name="today_event_day">%1$s · day %2$d of %3$d</string>
+    <string name="event_add">New event</string>
+    <string name="event_edit">Event</string>
+    <string name="event_title_field">Title</string>
+    <string name="event_days">Days</string>
+    <string name="event_pick_days">Pick the days</string>
+    <string name="event_notes_field">Notes</string>
+    <string name="event_area">Area</string>
+    <string name="event_no_area">No area</string>
+    <string name="event_save">Save</string>
+    <string name="event_delete">Delete</string>
+    <string name="event_cancel">Cancel</string>
+    <string name="event_ok">OK</string>
+    <string name="event_too_long">An event can last at most 367 days.</string>
 
     <!-- Projects (docs/projects.md) -->
     <string name="projects_title">Projects</string>
@@ -1099,6 +1125,7 @@
     <string name="activity_want_cooldowns">the want cooldowns</string>
     <string name="activity_life_goal">the life goal “%1$s”</string>
     <string name="activity_life_goal_picture">a life goal picture</string>
+    <string name="activity_event">the event “%1$s”</string>
     <string name="activity_tally_category">the Tally category “%1$s”</string>
     <string name="activity_tally_rule">a Tally rule</string>
     <string name="activity_bought">%1$s bought %2$s</string>

@@ -1,12 +1,14 @@
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 using GoalMaker.App.ViewModels;
 
 namespace GoalMaker.App.Views;
 
 /// <summary>
 /// The Calendar page. Behavior is in <see cref="CalendarViewModel"/>; the page only shows it, and
-/// carries the drag of a task from a day's list onto another day of the grid (docs/calendar.md).
+/// carries the drag of a task from a day's list onto another day of the grid (docs/calendar.md), and
+/// moves the keyboard into the event editor when it opens.
 /// </summary>
 public partial class CalendarPage
 {
@@ -19,7 +21,26 @@ public partial class CalendarPage
     {
         InitializeComponent();
         DataContext = viewModel;
-        Loaded += (_, _) => viewModel.Refresh();
+        Loaded += (_, _) =>
+        {
+            viewModel.Refresh();
+
+            // Opened from Today's line before the page was on screen.
+            if (viewModel.Editor is { IsOpen: true })
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Input, () => EventTitleBox.Focus());
+            }
+        };
+        if (viewModel.Editor is { } editor)
+        {
+            editor.PropertyChanged += (_, change) =>
+            {
+                if (change.PropertyName == nameof(EventEditorViewModel.IsOpen) && editor.IsOpen)
+                {
+                    Dispatcher.BeginInvoke(DispatcherPriority.Input, () => EventTitleBox.Focus());
+                }
+            };
+        }
     }
 
     private void OnEntryPressed(object sender, MouseButtonEventArgs e)

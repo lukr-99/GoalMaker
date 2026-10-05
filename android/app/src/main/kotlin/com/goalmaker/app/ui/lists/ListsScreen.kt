@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.EventItem
 import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.WantRules
@@ -78,6 +79,7 @@ import com.goalmaker.app.application.planning.PlanningLists
 import com.goalmaker.app.application.planning.ReminderItem
 import com.goalmaker.app.application.planning.ReviewRules
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.ui.calendar.EventSheet
 import com.goalmaker.app.ui.chat.ChatViewModel
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ConfettiBurst
@@ -134,6 +136,7 @@ fun ListsScreen(
     var logging by remember { mutableStateOf<HabitItem?>(null) }
     var habitMenu by remember { mutableStateOf<String?>(null) }
     var newTask by rememberSaveable { mutableStateOf(false) }
+    var editingEvent by remember { mutableStateOf<EventItem?>(null) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
@@ -192,6 +195,17 @@ fun ListsScreen(
             areas = state.areas,
             onSave = viewModel::addTask,
             onDismiss = { newTask = false },
+        )
+    }
+
+    editingEvent?.let { event ->
+        EventSheet(
+            initial = event,
+            firstDay = event.startsOn,
+            areas = state.areas,
+            onSave = { draft -> viewModel.saveEvent(event, draft) },
+            onDelete = { viewModel.deleteEvent(event) },
+            onDismiss = { editingEvent = null },
         )
     }
 
@@ -307,6 +321,7 @@ fun ListsScreen(
                                 onHabitMenu = { habitMenu = it.habit.id },
                                 onRemind = { remindFor = it },
                                 onOpenProject = onOpenProject,
+                                onOpenEvent = { editingEvent = it },
                             )
                         }
                     }
@@ -334,6 +349,7 @@ private fun ListContent(
     onHabitMenu: (HabitRow) -> Unit,
     onRemind: (TaskItem) -> Unit,
     onOpenProject: ((String) -> Unit)?,
+    onOpenEvent: (EventItem) -> Unit,
 ) {
     var overdueOpen by rememberSaveable { mutableStateOf(false) }
     var goalsOpen by rememberSaveable { mutableStateOf(false) }
@@ -375,6 +391,12 @@ private fun ListContent(
                             onDismiss = viewModel::dismissNewYear,
                             modifier = Modifier.padding(top = 4.dp, bottom = 8.dp).animateItem(),
                         )
+                    }
+                }
+                // The events going on today, as a slim line each above the tasks (docs/calendar.md).
+                state.ongoing.forEach { ongoing ->
+                    item(key = "event-" + ongoing.event.id) {
+                        TodayEventLine(ongoing, state.areas, onOpen = { onOpenEvent(ongoing.event) }, modifier = Modifier.animateItem())
                     }
                 }
                 if (state.habits.isNotEmpty() || state.segment == TodaySegment.HABITS) item(key = "switch") {

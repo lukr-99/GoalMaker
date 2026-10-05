@@ -94,4 +94,67 @@ class CalendarRulesContractTest {
             }
         }
     }
+
+    private fun events(case: JsonObject): List<EventItem> = case.getValue("events").jsonArray.map { element ->
+        val event = element.jsonObject
+        EventItem(
+            id = event.text("id")!!,
+            title = event.text("title")!!,
+            startsOn = event.day("startsOn"),
+            endsOn = event.day("endsOn"),
+            areaId = event.text("area"),
+            deleted = event["deleted"]?.jsonPrimitive?.boolean ?: false,
+        )
+    }
+
+    @Test
+    fun `every day's events`() {
+        vectors.cases("eventDays").forEach { case ->
+            val name = case.text("name")
+            val filter = ListFilter(areaId = case.text("area"), tagId = case.text("tag"))
+            val days = EventRules.days(events(case), case.day("from"), case.day("to"), filter::keeps)
+            val expect = case.getValue("expect").jsonObject
+            assertEquals(name, expect.keys.map(LocalDate::parse), days.keys.toList())
+            days.forEach { (day, held) ->
+                val ids = expect.getValue(day.toString()).jsonArray.map { it.jsonPrimitive.content }
+                assertEquals("$name $day", ids, held.map(EventItem::id))
+                assertEquals("$name $day on its own", ids, EventRules.onDay(events(case), day, filter::keeps).map(EventItem::id))
+            }
+        }
+    }
+
+    @Test
+    fun `every grid's bars`() {
+        vectors.cases("bars").forEach { case ->
+            val name = case.text("name")
+            val rows = EventRules.bars(events(case), case.day("start"), case.day("end"))
+            val expect = case.getValue("rows").jsonArray.map { row ->
+                row.jsonArray.map { element ->
+                    val bar = element.jsonObject
+                    listOf(
+                        bar.text("id"),
+                        bar.getValue("from").jsonPrimitive.int,
+                        bar.getValue("to").jsonPrimitive.int,
+                        bar.getValue("lane").jsonPrimitive.int,
+                        bar.getValue("before").jsonPrimitive.boolean,
+                        bar.getValue("after").jsonPrimitive.boolean,
+                    )
+                }
+            }
+            val actual = rows.map { row -> row.map { listOf(it.event.id, it.from, it.to, it.lane, it.before, it.after) } }
+            assertEquals(name, expect, actual)
+        }
+    }
+
+    @Test
+    fun `every ongoing event`() {
+        vectors.cases("ongoing").forEach { case ->
+            val expect = case.getValue("expect").jsonArray.map { element ->
+                val on = element.jsonObject
+                Triple(on.text("id"), on.getValue("dayOf").jsonPrimitive.int, on.getValue("days").jsonPrimitive.int)
+            }
+            val actual = EventRules.ongoing(events(case), case.day("day")).map { Triple(it.event.id, it.dayOf, it.days) }
+            assertEquals(case.text("name"), expect, actual)
+        }
+    }
 }

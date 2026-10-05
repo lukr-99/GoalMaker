@@ -38,6 +38,15 @@
                 </DataTrigger>
             </Style.Triggers>
         </Style>
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,10,0,4" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+        </Style>
+        <!-- The event editor takes the page while it is open. -->
+        <Style x:Key="Overlay" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource GM.BackgroundBrush}" />
+        </Style>
         <Style x:Key="Weekday" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="0,0,0,4" />
@@ -45,15 +54,17 @@
             <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
         </Style>
 
-        <!-- One day of the grid. -->
+        <!-- One day of the grid, as tall as its week row's event bars need: its number at the top, the bars under it. -->
         <DataTemplate x:Key="DayCell" DataType="{x:Type vm:CalendarCellViewModel}">
-            <ui:Button Margin="2" Padding="0" Height="64" HorizontalAlignment="Stretch"
+            <ui:Button Margin="2" Padding="0" HorizontalAlignment="Stretch"
+                       Height="{Binding DataContext.CellHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        AllowDrop="True" DragOver="OnCellDragOver" Drop="OnCellDrop"
                        AutomationProperties.Name="{Binding AutomationName}">
-                <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
-                    <StackPanel VerticalAlignment="Center">
+                <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
+                        Height="{Binding DataContext.FaceHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                    <StackPanel VerticalAlignment="Top" Margin="0,8,0,0">
                         <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -79,6 +90,126 @@
                                 Visibility="{Binding HasAnything, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </Border>
+            </ui:Button>
+        </DataTemplate>
+
+        <!--
+            An event's piece of bar in a week row (docs/calendar.md): a tint of its area's colour, or the
+            accent, under its title; square where it goes on into the row before or after. A button, so Tab
+            reaches it and Enter opens the editor; the dashed frame shows where the keyboard is.
+        -->
+        <DataTemplate x:Key="EventBar" DataType="{x:Type vm:CalendarBarViewModel}">
+            <Button Height="16" Margin="{Binding Margin}" HorizontalAlignment="Stretch" Cursor="Hand" Command="{Binding OpenCommand}"
+                    ToolTip="{Binding AutomationName}" AutomationProperties.Name="{Binding AutomationName}">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Tint" CornerRadius="{Binding Corners}" Opacity="0.3">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{Binding Brush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Brush}" Value="{x:Null}">
+                                                <Setter Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                            </Border>
+                            <!-- The event's first day wears its colour in full. -->
+                            <Border Width="3" HorizontalAlignment="Left" CornerRadius="2,0,0,2"
+                                    Background="{Binding Background, ElementName=Tint}"
+                                    Visibility="{Binding StartsHere, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Margin="6,0,4,0" VerticalAlignment="Center" Text="{Binding Title}" FontSize="11"
+                                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextBrush}" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Tint" Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+        </DataTemplate>
+
+        <!-- "+2" under a day with more events than the three lanes show. -->
+        <DataTemplate x:Key="EventsMore" DataType="{x:Type vm:CalendarMoreViewModel}">
+            <TextBlock Margin="{Binding Margin}" Text="{Binding Text}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}"
+                       AutomationProperties.Name="{Binding AutomationName}" />
+        </DataTemplate>
+
+        <!-- Lays a row's bars out over its seven days. -->
+        <ItemsPanelTemplate x:Key="WeekColumns">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+            </Grid>
+        </ItemsPanelTemplate>
+
+        <!--
+            One week row: the seven day cells, and over their lower part the event bars, each on its lane
+            across its days. Tab reads the row's days, then its bars by lane, then the next row.
+        -->
+        <DataTemplate x:Key="WeekRow" DataType="{x:Type vm:CalendarWeekViewModel}">
+            <Grid>
+                <ItemsControl ItemsSource="{Binding Cells}" ItemTemplate="{StaticResource DayCell}" Focusable="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <primitives:UniformGrid Columns="7" Rows="1" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <Grid Margin="2,38,2,0" VerticalAlignment="Top"
+                      Visibility="{Binding HasBars, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl ItemsSource="{Binding Bars}" ItemTemplate="{StaticResource EventBar}"
+                                  ItemsPanel="{StaticResource WeekColumns}" Focusable="False">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Grid.Column" Value="{Binding Column}" />
+                                <Setter Property="Grid.ColumnSpan" Value="{Binding Span}" />
+                                <Setter Property="VerticalAlignment" Value="Top" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding More}" ItemTemplate="{StaticResource EventsMore}"
+                                  ItemsPanel="{StaticResource WeekColumns}" Focusable="False" IsHitTestVisible="False">
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Grid.Column" Value="{Binding Column}" />
+                                <Setter Property="VerticalAlignment" Value="Top" />
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                </Grid>
+            </Grid>
+        </DataTemplate>
+
+        <!-- An event on the open day, above its tasks: its title and days, in its area's colour. -->
+        <DataTemplate x:Key="DayEvent" DataType="{x:Type vm:CalendarEventViewModel}">
+            <ui:Button Margin="0,0,0,6" Padding="12,8" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                       Appearance="Transparent" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding AutomationName}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid Width="4" Margin="0,2,10,2">
+                        <Border CornerRadius="2" Background="{DynamicResource GM.AccentBrush}" />
+                        <Border CornerRadius="2" Background="{Binding Brush}" />
+                    </Grid>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Days}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    </StackPanel>
+                </Grid>
             </ui:Button>
         </DataTemplate>
 
@@ -111,83 +242,155 @@
         </DataTemplate>
     </Page.Resources>
 
-    <!-- The calendar (docs/calendar.md): the grid on the left, the day the owner picked beside it. -->
-    <Grid Margin="{DynamicResource GM.PagePadding}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="280" />
-        </Grid.ColumnDefinitions>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-        <StackPanel Grid.Column="0" Margin="0,0,16,0">
-            <controls:HeadlineText Title="{DynamicResource Calendar.Title}" FontSize="32" />
-            <DockPanel Margin="0,8,0,12" KeyboardNavigation.TabNavigation="Local">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <ui:Button Padding="8,4" Appearance="Transparent" Command="{Binding BackCommand}"
-                               ToolTip="{DynamicResource Calendar.Back}" AutomationProperties.Name="{DynamicResource Calendar.Back}">
-                        <ui:SymbolIcon Symbol="ChevronLeft24" />
-                    </ui:Button>
-                    <ui:Button Margin="4,0,0,0" Padding="8,4" Appearance="Transparent" Command="{Binding Today_Command}"
-                               Content="{DynamicResource Calendar.Today}" />
-                    <ui:Button Margin="4,0,0,0" Padding="8,4" Appearance="Transparent" Command="{Binding ForwardCommand}"
-                               ToolTip="{DynamicResource Calendar.Forward}" AutomationProperties.Name="{DynamicResource Calendar.Forward}">
-                        <ui:SymbolIcon Symbol="ChevronRight24" />
-                    </ui:Button>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Period}" FontSize="16" FontFamily="{DynamicResource GM.BodyStrongFont}"
-                               VerticalAlignment="Center" />
-                    <ui:Button Style="{StaticResource WeekButton}" TabIndex="0" Command="{Binding ShowCommand}"
-                               CommandParameter="week" Content="{DynamicResource Calendar.Week}" />
-                    <ui:Button Style="{StaticResource MonthButton}" TabIndex="1" Command="{Binding ShowCommand}"
-                               CommandParameter="month" Content="{DynamicResource Calendar.Month}" />
-                </StackPanel>
-            </DockPanel>
+        <!-- The calendar (docs/calendar.md): the grid on the left, the day the owner picked beside it. -->
+        <Grid Margin="{DynamicResource GM.PagePadding}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="280" />
+            </Grid.ColumnDefinitions>
 
-            <!-- The area and tag filter narrows what the grid counts and the day lists, as on the lists. -->
-            <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
-                            Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
-                            Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
-
-            <primitives:UniformGrid Columns="7">
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[0]}" />
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[1]}" />
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[2]}" />
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[3]}" />
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[4]}" />
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[5]}" />
-                <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[6]}" />
-            </primitives:UniformGrid>
-
-            <ItemsControl ItemsSource="{Binding Cells}" ItemTemplate="{StaticResource DayCell}" Focusable="False">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <primitives:UniformGrid Columns="7" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
-        </StackPanel>
-
-        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Calendar.PickADay}"
-                           Visibility="{Binding HasNoDay, Converter={StaticResource BoolToVisibility}}" />
-                <StackPanel Visibility="{Binding HasDay, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="{Binding DayTitle}" FontSize="16" FontFamily="{DynamicResource GM.BodyStrongFont}"
-                               Margin="0,0,0,8" TextWrapping="Wrap" />
-                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Calendar.DayEmpty}"
-                               Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisibility}}" />
-                    <!-- The open day's habits, checked in, skipped or failed on that day (docs/calendar.md). -->
-                    <StackPanel Margin="0,0,0,8" Visibility="{Binding HasDayHabits, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="{DynamicResource Calendar.Habits}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
-                                   Foreground="{DynamicResource GM.AccentBrush}" Margin="0,0,0,6" />
-                        <ItemsControl ItemsSource="{Binding DayHabits}" ItemTemplate="{StaticResource HabitCard}" Focusable="False" />
+            <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                <controls:HeadlineText Title="{DynamicResource Calendar.Title}" FontSize="32" />
+                <DockPanel Margin="0,8,0,12" KeyboardNavigation.TabNavigation="Local">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                        <ui:Button Padding="8,4" Appearance="Transparent" Command="{Binding BackCommand}"
+                                   ToolTip="{DynamicResource Calendar.Back}" AutomationProperties.Name="{DynamicResource Calendar.Back}">
+                            <ui:SymbolIcon Symbol="ChevronLeft24" />
+                        </ui:Button>
+                        <ui:Button Margin="4,0,0,0" Padding="8,4" Appearance="Transparent" Command="{Binding Today_Command}"
+                                   Content="{DynamicResource Calendar.Today}" />
+                        <ui:Button Margin="4,0,0,0" Padding="8,4" Appearance="Transparent" Command="{Binding ForwardCommand}"
+                                   ToolTip="{DynamicResource Calendar.Forward}" AutomationProperties.Name="{DynamicResource Calendar.Forward}">
+                            <ui:SymbolIcon Symbol="ChevronRight24" />
+                        </ui:Button>
                     </StackPanel>
-                    <ItemsControl ItemsSource="{Binding DayEntries}" ItemTemplate="{StaticResource DayEntry}" Focusable="False" />
-                    <TextBlock Text="{Binding DayReminders}" FontSize="11" Margin="0,4,0,0"
-                               Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding HasReminders, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Period}" FontSize="16" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                   VerticalAlignment="Center" />
+                        <ui:Button Style="{StaticResource WeekButton}" TabIndex="0" Command="{Binding ShowCommand}"
+                                   CommandParameter="week" Content="{DynamicResource Calendar.Week}" />
+                        <ui:Button Style="{StaticResource MonthButton}" TabIndex="1" Command="{Binding ShowCommand}"
+                                   CommandParameter="month" Content="{DynamicResource Calendar.Month}" />
+                    </StackPanel>
+                </DockPanel>
+
+                <!-- The area and tag filter narrows what the grid counts and the day lists, as on the lists. -->
+                <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+
+                <primitives:UniformGrid Columns="7">
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[0]}" />
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[1]}" />
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[2]}" />
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[3]}" />
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[4]}" />
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[5]}" />
+                    <TextBlock Style="{StaticResource Weekday}" Text="{Binding Weekdays[6]}" />
+                </primitives:UniformGrid>
+
+                <ItemsControl ItemsSource="{Binding Weeks}" ItemTemplate="{StaticResource WeekRow}" Focusable="False" />
             </StackPanel>
-        </ScrollViewer>
+
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Calendar.PickADay}"
+                               Visibility="{Binding HasNoDay, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Visibility="{Binding HasDay, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding DayTitle}" FontSize="16" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                   Margin="0,0,0,8" TextWrapping="Wrap" />
+                        <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Calendar.DayEmpty}"
+                                   Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisibility}}" />
+                        <ItemsControl Margin="0,0,0,4" ItemsSource="{Binding DayEvents}" ItemTemplate="{StaticResource DayEvent}" Focusable="False" />
+                        <!-- The open day's habits, checked in, skipped or failed on that day (docs/calendar.md). -->
+                        <StackPanel Margin="0,0,0,8" Visibility="{Binding HasDayHabits, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{DynamicResource Calendar.Habits}" FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                       Foreground="{DynamicResource GM.AccentBrush}" Margin="0,0,0,6" />
+                            <ItemsControl ItemsSource="{Binding DayHabits}" ItemTemplate="{StaticResource HabitCard}" Focusable="False" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding DayEntries}" ItemTemplate="{StaticResource DayEntry}" Focusable="False" />
+                        <TextBlock Text="{Binding DayReminders}" FontSize="11" Margin="0,4,0,0"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding HasReminders, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Undo for the event just deleted, for five seconds. -->
+        <Border Grid.Row="1" Margin="24,0,24,16" Padding="16,6,6,6" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.HeroBrush}"
+                Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Text="{Binding UndoText}" Foreground="{DynamicResource GM.OnHeroBrush}" TextTrimming="CharacterEllipsis" />
+                <ui:Button Grid.Column="1" Appearance="Transparent" Foreground="{DynamicResource GM.HeroAccentBrush}"
+                           Content="{DynamicResource Lists.Undo}" Command="{Binding UndoCommand}" />
+            </Grid>
+        </Border>
+
+        <!-- An event's editor (docs/calendar.md): the title, its days, its area and notes. -->
+        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}"
+                Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ui:Card Margin="24" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" DataContext="{Binding Editor}">
+                    <ui:Card.InputBindings>
+                        <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding SaveCommand}" />
+                        <KeyBinding Key="Escape" Command="{Binding CancelCommand}" />
+                    </ui:Card.InputBindings>
+                    <StackPanel Width="440">
+                        <TextBlock Margin="0,0,0,8" Text="{Binding Heading}" FontSize="20" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Event.What}" />
+                        <ui:TextBox x:Name="EventTitleBox" MaxLength="200" Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                                    AutomationProperties.Name="{DynamicResource Event.What}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Event.FirstDay}" />
+                                <DatePicker SelectedDate="{Binding FirstDay}" AutomationProperties.Name="{DynamicResource Event.FirstDay}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Event.LastDay}" />
+                                <DatePicker SelectedDate="{Binding LastDay}" AutomationProperties.Name="{DynamicResource Event.LastDay}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Margin="0,6,0,0" Text="{Binding Problem}" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}"
+                                   Visibility="{Binding HasProblem, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Event.Area}" />
+                        <ComboBox ItemsSource="{Binding AreaChoices}" SelectedItem="{Binding Area}" DisplayMemberPath="Label"
+                                  AutomationProperties.Name="{DynamicResource Event.Area}" />
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="{DynamicResource Event.Notes}" />
+                        <ui:TextBox MaxLength="10000" MinLines="3" TextWrapping="Wrap" AcceptsReturn="True"
+                                    Text="{Binding Notes, UpdateSourceTrigger=PropertyChanged}"
+                                    AutomationProperties.Name="{DynamicResource Event.Notes}" />
+                        <!-- Delete on the left, away from Save; Tab reads Delete, Cancel, Save as they stand. -->
+                        <Grid Margin="0,20,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:Button Appearance="Danger" Command="{Binding DeleteCommand}" Content="{DynamicResource Event.Delete}"
+                                       Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}" />
+                            <ui:Button Grid.Column="2" Command="{Binding CancelCommand}" Content="{DynamicResource Event.Cancel}" />
+                            <ui:Button Grid.Column="3" Margin="8,0,0,0" Appearance="Primary" Command="{Binding SaveCommand}" Content="{DynamicResource Event.Save}" />
+                        </Grid>
+                    </StackPanel>
+                </ui:Card>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Page>

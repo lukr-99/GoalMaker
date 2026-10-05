@@ -36,6 +36,7 @@ public sealed class RequiredColumnsTests : IDisposable
         var wants = new WantList(test.Replica, rows, () => { }, () => Day);
         var tally = new TallyList(test.Replica, rows, () => "d1e57000-0000-4000-8000-00000000aaaa", () => { });
         var lifeGoals = new LifeGoalList(test.Replica, rows, () => { });
+        var events = new EventList(test.Replica, rows, () => { });
 
         // One row in every synced table, each through the list that owns it.
         Assert.NotNull(areas.Create("Health"));
@@ -65,6 +66,7 @@ public sealed class RequiredColumnsTests : IDisposable
         var lifeGoal = lifeGoals.Add(new LifeGoalDraft("Own an Audi R8", "Proof that the work paid off", Day.AddYears(10)));
         Assert.NotNull(lifeGoal);
         Assert.NotNull(lifeGoals.AddPicture(lifeGoal.Id, 1600, 900));
+        Assert.NotNull(events.Add(new EventDraft("Prague", Day, Day.AddDays(3), "Hotel near the river")));
 
         // Every table was written, and every row of every table fills what the server needs.
         foreach (var table in test.Catalog.Tables)

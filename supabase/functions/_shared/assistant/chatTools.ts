@@ -53,6 +53,7 @@ export const CHAT_TOOLS = new Set([
   "add_want",
   "get_life_goals",
   "add_life_goal",
+  "add_event",
   "get_activity",
 ]);
 
@@ -64,6 +65,8 @@ export const CHAT_INPUTS: Record<string, Set<string>> = {
   add_habit: new Set(["line", "emoji", "direction", "show_on_today"]),
   add_goal: new Set(["line", "emoji", "parent"]),
   add_life_goal: new Set(["title", "why", "by"]),
+  add_event: new Set(["title", "from", "to"]),
+  add_project_item: new Set(["project", "title", "type", "priority", "column", "day", "notes"]),
   add_want: new Set(["line", "reason", "kind", "need_by", "area", "link"]),
 };
 

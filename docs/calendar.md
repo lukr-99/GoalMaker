@@ -28,6 +28,31 @@ A repeat is only projected for a task that is still open, never onto the day it 
 for, and never onto a day another occurrence of the same series is planned for, so a task that has
 already moved on is never drawn twice.
 
+## Events
+
+An **event** takes up days rather than gets done: a trip, a holiday, a conference (spec, stories 120
+to 123; ADR 0019). It has a title, a first and a last day (the same day for a one-day event, at most
+366 days apart), and maybe notes and an area. It is never ticked off. The rules are pinned by the
+`eventDays`, `bars` and `ongoing` groups of
+[`contracts/vectors/calendar.json`](../contracts/vectors/calendar.json), run by both apps and (all but
+the bars) the connector.
+
+- **A day's events** are every event whose first day is on or before it and whose last day is on or
+  after it. They come earliest first day first, then the longest, then by title. The area filter
+  keeps an area's events; a tag filter hides them all, since events have no tags.
+- **Bars:** the grid draws an event as one bar across its days, a piece per week row. Each event gets
+  a lane, the lowest one free on all of its days, and keeps it from row to row, so a trip across a
+  weekend stays on one line.
+- **Going on:** Today shows the events the planning day falls inside, with "day 2 of 4" for one longer
+  than a day.
+
+In the apps the bars sit over the cells of each week row, in the area's colour (the accent without
+one), with the title on each row's piece and square ends where the event goes on past the row. A
+cell shows three lanes at most, then "+N". The open day lists its events above its tasks; one opens
+the event sheet (title, days, area, notes, Delete with undo). Today's line above the tasks opens the
+same sheet, and like the calendar it follows the lists' area and tag filter. A screen reader reads a
+bar as "Prague, 12 to 15 October", and a cell's name counts its events.
+
 ## In the apps
 
 Android reaches the calendar from the bottom bar, beside Today, Tomorrow, the Inbox and Projects,

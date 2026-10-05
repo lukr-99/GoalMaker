@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); life_goals: achieved (status to achieved), dropped (status to dropped), reopened (status to open), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals, wants, life_goals), name (areas, tags, habits, tally_categories) or pattern (tally_rules) from 'after', else null.",
+  "description": "What an activity log entry did, for the Activity screens (docs/activity.md). Input: the entity (table), the action the server logged (create, update, delete, restore) and the before and after rows (only the columns that matter are listed). Output 'change': create is added, delete is deleted, restore is restored; an update is the first that applies of: tasks: completed (status to done), dropped (status to dropped), reopened (status from done or dropped to open), moved (planned_date changed; 'day' is the new date, null for none), renamed (title changed); goals: completed, dropped and reopened the same way, renamed (title changed); areas: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); tags: renamed; task_steps: checked (done to true), unchecked (done to false), renamed; reminders: handled (state to done or dismissed), snoozed (state to snoozed); habits: archived (archived_at set), unarchived (archived_at cleared), renamed (name changed); habit_checkins: skipped (skipped true), checked (value 1 or more), unchecked (value below 1); habit_pauses: resumed (ends_on set), paused (a create, and otherwise); wants: bought (decision to bought), dropped (decision to dropped), reopened (decision cleared), renamed (title changed); life_goals: achieved (status to achieved), dropped (status to dropped), reopened (status to open), renamed (title changed); events: moved (starts_on or ends_on changed; 'day' is the new starts_on), renamed (title changed); otherwise edited. 'subject' is the row's title (tasks, task_steps, goals, wants, life_goals, events), name (areas, tags, habits, tally_categories) or pattern (tally_rules) from 'after', else null.",
   "cases": [
     {
       "name": "a new task is added",
@@ -860,6 +860,119 @@
       "expect": {
         "change": "added",
         "subject": null
+      }
+    },
+    {
+      "name": "an event is added",
+      "entity": "events",
+      "action": "create",
+      "before": null,
+      "after": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "expect": {
+        "change": "added",
+        "subject": "Prague"
+      }
+    },
+    {
+      "name": "an event moves to other days",
+      "entity": "events",
+      "action": "update",
+      "before": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "after": {
+        "title": "Prague",
+        "starts_on": "2026-10-19",
+        "ends_on": "2026-10-22"
+      },
+      "expect": {
+        "change": "moved",
+        "subject": "Prague",
+        "day": "2026-10-19"
+      }
+    },
+    {
+      "name": "an event gets one more day",
+      "entity": "events",
+      "action": "update",
+      "before": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "after": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-16"
+      },
+      "expect": {
+        "change": "moved",
+        "subject": "Prague",
+        "day": "2026-10-12"
+      }
+    },
+    {
+      "name": "an event is renamed",
+      "entity": "events",
+      "action": "update",
+      "before": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "after": {
+        "title": "Prague and Brno",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "expect": {
+        "change": "renamed",
+        "subject": "Prague and Brno"
+      }
+    },
+    {
+      "name": "an event's notes change",
+      "entity": "events",
+      "action": "update",
+      "before": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "after": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15",
+        "notes": "Hotel near the river"
+      },
+      "expect": {
+        "change": "edited",
+        "subject": "Prague"
+      }
+    },
+    {
+      "name": "an event is deleted",
+      "entity": "events",
+      "action": "delete",
+      "before": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "after": {
+        "title": "Prague",
+        "starts_on": "2026-10-12",
+        "ends_on": "2026-10-15"
+      },
+      "expect": {
+        "change": "deleted",
+        "subject": "Prague"
       }
     }
   ]

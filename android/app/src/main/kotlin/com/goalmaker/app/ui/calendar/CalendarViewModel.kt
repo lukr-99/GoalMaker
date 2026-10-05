@@ -2,8 +2,13 @@ package com.goalmaker.app.ui.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.CalendarRules
+import com.goalmaker.app.application.planning.EventDraft
+import com.goalmaker.app.application.planning.EventItem
+import com.goalmaker.app.application.planning.EventList
+import com.goalmaker.app.application.planning.EventRules
 import com.goalmaker.app.application.planning.HabitData
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.application.planning.ProjectItem
@@ -17,13 +22,17 @@ import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.ui.habits.HabitBoard
 import com.goalmaker.app.ui.lists.PlaceFilter
+import com.goalmaker.app.ui.lists.UndoEvent
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -36,7 +45,9 @@ import kotlinx.coroutines.withContext
  * reminders, with a day opening what it holds and a task moving to another day from there. The area
  * and tag filter narrows what the grid counts and the day lists, as it narrows the lists, and a project
  * item on the day wears its project's chip ([projects], docs/lists.md). A day gone by can be put right:
- * its tasks ticked off on that day and its habits checked in, skipped or failed there.
+ * its tasks ticked off on that day and its habits checked in, skipped or failed there. Events draw as
+ * bars across their days, narrowed by the area filter, and open in the event sheet, which saves and
+ * deletes them (docs/calendar.md, Events).
  */
 class CalendarViewModel(
     private val tasks: TaskList,
@@ -45,43 +56,70 @@ class CalendarViewModel(
     tags: TagList,
     projects: ProjectList,
     private val habits: HabitList,
+    private val events: EventList,
     private val settings: SettingsStore,
     private val io: CoroutineDispatcher,
     private val clock: () -> LocalDateTime,
 ) : ViewModel() {
     private val view = MutableStateFlow(View(CalendarRules.MONTH, null, null))
     private val filter = PlaceFilter(areas, tags, io)
+    private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
 
     private val data = combine(
         tasks.watchAll().flowOn(io),
         reminders.watchAll().flowOn(io),
         projects.watch().flowOn(io).map { it.projects },
         habits.watch().flowOn(io),
+        combine(events.watch().flowOn(io), areas.watch().flowOn(io), ::Pair),
         ::Data,
     )
 
-    val uiState: StateFlow<CalendarUiState> = combine(data, view, filter.choices) { (taskList, reminderList, projectList, habitData), showing, choices ->
+    val uiState: StateFlow<CalendarUiState> = combine(data, view, filter.choices) { (taskList, reminderList, projectList, habitData, eventsAndAreas), showing, choices ->
+        val (eventList, areaList) = eventsAndAreas
         val areasOfProjects = projectList.associate { it.id to it.areaId }
         val today = today()
         val anchor = showing.anchor ?: today
+        val start = CalendarRules.start(showing.kind, anchor)
+        val end = CalendarRules.end(showing.kind, anchor)
+        // Events have no tags, so the area filter keeps an area's events and a tag filter hides them all.
+        val eventDays = EventRules.days(eventList, start, end, choices.filter::keeps)
         CalendarUiState(
             loaded = true,
             kind = showing.kind,
             anchor = anchor,
             today = today,
-            days = CalendarRules.build(
-                taskList,
-                reminderList,
-                CalendarRules.start(showing.kind, anchor),
-                CalendarRules.end(showing.kind, anchor),
-            ) { task -> choices.filter.keeps(task, choices.links, areasOfProjects) },
+            days = CalendarRules.build(taskList, reminderList, start, end) { task ->
+                choices.filter.keeps(task, choices.links, areasOfProjects)
+            }.map { day -> day.copy(events = eventDays[day.day].orEmpty()) },
             selected = showing.selected,
             projects = projectList,
             filter = choices,
             // A day gone by, or today, can still be checked in; a day to come can't (docs/calendar.md).
             dayHabits = showing.selected?.takeUnless { it.isAfter(today) }?.let { HabitBoard.due(habitData, it, onDay = it != today) }.orEmpty(),
+            bars = EventRules.bars(eventList, start, end, choices.filter::keeps),
+            areas = areaList,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState())
+
+    /** Event deletions the screen offers to undo. */
+    val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
+
+    /**
+     * Saves the event sheet: a new event when [initial] is null, else the changes to it. False when the
+     * draft is not one the server takes, so the sheet stays open.
+     */
+    suspend fun saveEvent(initial: EventItem?, draft: EventDraft): Boolean = withContext(io) {
+        if (initial == null) events.add(draft) != null else events.update(initial.id, draft)
+    }
+
+    /** Deletes an event, with an undo on the snackbar. */
+    fun deleteEvent(event: EventItem) {
+        viewModelScope.launch(io) {
+            if (events.delete(event.id)) {
+                undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DELETED, event.title) { viewModelScope.launch(io) { events.restore(event.id) } })
+            }
+        }
+    }
 
     /** Switches between the week and the month view, keeping the day in sight. */
     fun show(kind: String) = view.update { it.copy(kind = kind) }
@@ -156,5 +194,6 @@ class CalendarViewModel(
         val reminders: List<ReminderItem>,
         val projects: List<ProjectItem>,
         val habits: HabitData,
+        val eventsAndAreas: Pair<List<EventItem>, List<AreaItem>>,
     )
 }

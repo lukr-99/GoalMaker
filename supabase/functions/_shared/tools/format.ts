@@ -1,4 +1,5 @@
 import type { Area, Habit, Reminder, Step, Tag } from "../planner/planner.ts";
+import type { CalendarEvent } from "../planner/eventList.ts";
 import type { LifeGoal } from "../planner/lifeGoalList.ts";
 import type { Want } from "../planner/wantList.ts";
 import { type Day, daysBetween, weekday } from "../rules/day.ts";
@@ -303,6 +304,31 @@ export function lifeGoalLine(goal: LifeGoal, left: TimeLeft | null, names: Names
   if (goal.madeBy === "claude") parts.push("by Claude");
   parts.push(picturesText(goal.pictures));
   return [`- ${parts.join(" · ")} (life goal id ${goal.id})`, `  Why: ${goal.why}`].join("\n");
+}
+
+/** `12 to 15 October 2026`, `30 September to 2 October 2026`, or one day for a one-day event. */
+export function eventDays(event: Pick<CalendarEvent, "startsOn" | "endsOn">): string {
+  const [y1, m1, d1] = event.startsOn.split("-").map(Number);
+  const [y2, m2, d2] = event.endsOn.split("-").map(Number);
+  if (event.startsOn === event.endsOn) return `${d1} ${MONTHS[m1 - 1]} ${y1}`;
+  if (y1 !== y2) return `${d1} ${MONTHS[m1 - 1]} ${y1} to ${d2} ${MONTHS[m2 - 1]} ${y2}`;
+  if (m1 !== m2) return `${d1} ${MONTHS[m1 - 1]} to ${d2} ${MONTHS[m2 - 1]} ${y2}`;
+  return `${d1} to ${d2} ${MONTHS[m2 - 1]} ${y2}`;
+}
+
+/**
+ * One event on one line: its title, its days (or which day of it this is), its area, who made it and
+ * its id, then its notes.
+ */
+export function eventLine(event: CalendarEvent, names: Names, on?: { dayOf: number; days: number }): string {
+  const parts = [event.title];
+  if (on === undefined) parts.push(eventDays(event));
+  else if (on.days > 1) parts.push(`day ${on.dayOf} of ${on.days}`);
+  const area = event.areaId ? names.areas.get(event.areaId) : undefined;
+  if (area) parts.push(`@${area.name}`);
+  if (event.madeBy === "claude") parts.push("by Claude");
+  const line = `- ${parts.join(" · ")} (event id ${event.id})`;
+  return event.notes ? [line, `  Notes: ${event.notes}`].join("\n") : line;
 }
 
 /** A number without a trailing .0, so "5 of 20 km" reads like a person wrote it. */

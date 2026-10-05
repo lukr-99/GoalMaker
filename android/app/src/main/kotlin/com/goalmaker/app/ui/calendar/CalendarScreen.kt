@@ -33,9 +33,13 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -58,14 +63,18 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.CalendarDay
+import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.CalendarRules
+import com.goalmaker.app.application.planning.EventItem
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
+import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProjectChip
@@ -76,6 +85,7 @@ import com.goalmaker.app.ui.habits.HabitRow
 import com.goalmaker.app.ui.habits.HabitSheet
 import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.lists.SectionHeader
+import com.goalmaker.app.ui.lists.UndoEvent
 import com.goalmaker.app.ui.nav.AppMark
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
@@ -86,7 +96,10 @@ import java.time.format.TextStyle
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
-/** A week or a month of planned tasks, deadlines and reminders (docs/calendar.md). */
+/**
+ * A week or a month of planned tasks, deadlines and reminders, with events drawn as bars across their
+ * days (docs/calendar.md). An event on the open day opens the event sheet.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
@@ -102,6 +115,20 @@ fun CalendarScreen(
     val scope = rememberCoroutineScope()
     var logging by remember { mutableStateOf<HabitRow?>(null) }
     var habitMenu by remember { mutableStateOf<String?>(null) }
+    var editing by remember { mutableStateOf<EventItem?>(null) }
+    val snackbars = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+
+    LaunchedEffect(viewModel) {
+        viewModel.undo.collect { event ->
+            val message = resources.getString(
+                if (event.kind == UndoEvent.Kind.DONE) R.string.lists_done_message else R.string.lists_deleted_message,
+                event.title,
+            )
+            val result = snackbars.showSnackbar(message, actionLabel = resources.getString(R.string.lists_undo), duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) event.undo()
+        }
+    }
 
     // A habit's button on the open day: undo a skip or a fail, or check in; an amount asks for its value.
     fun checkIn(row: HabitRow, day: LocalDate) {
@@ -114,6 +141,7 @@ fun CalendarScreen(
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { AppSnackbarHost(snackbars) },
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.calendar_title)) },
@@ -165,19 +193,30 @@ fun CalendarScreen(
 
             state.weeks.forEachIndexed { index, week ->
                 item("week-$index") {
+                    val bars = state.bars.getOrElse(index) { emptyList() }
+                    val space = eventSpace(bars)
                     // A week's days share one height, the tallest a cell needs at the system's text size.
-                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                        week.forEach { day ->
-                            DayCell(
-                                day = day,
-                                today = day.day == state.today,
-                                inPeriod = state.kind == CalendarRules.WEEK || day.day.month == state.anchor.month,
-                                selected = day.day == state.selected,
-                                onClick = { viewModel.open(day.day) },
-                                onDropTask = { id -> viewModel.plan(id, day.day) },
-                                modifier = Modifier.weight(1f),
-                            )
+                    // The row's event bars lie over the bottom of its cells, which grow to hold them.
+                    Box(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                        Row(Modifier.fillMaxWidth()) {
+                            week.forEach { day ->
+                                DayCell(
+                                    day = day,
+                                    today = day.day == state.today,
+                                    inPeriod = state.kind == CalendarRules.WEEK || day.day.month == state.anchor.month,
+                                    selected = day.day == state.selected,
+                                    onClick = { viewModel.open(day.day) },
+                                    onDropTask = { id -> viewModel.plan(id, day.day) },
+                                    modifier = Modifier.weight(1f),
+                                    eventSpace = space,
+                                )
+                            }
                         }
+                        EventLanes(
+                            bars = bars,
+                            areaOf = state::areaOf,
+                            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(bottom = 4.dp),
+                        )
                     }
                 }
             }
@@ -213,6 +252,10 @@ fun CalendarScreen(
                         color = AppTheme.colors.textMuted,
                         modifier = Modifier.padding(start = 8.dp),
                     )
+                }
+                // The day's events come first: they take the whole day, and a tap opens the event sheet.
+                open.events.forEach { event ->
+                    item("event-" + event.id) { EventRow(event, state.areaOf(event.areaId)) { editing = event } }
                 }
                 if (state.dayHabits.isNotEmpty()) {
                     item("h-habits") { SectionHeader(stringResource(R.string.calendar_habits)) }
@@ -261,6 +304,17 @@ fun CalendarScreen(
                 }
             }
         }
+    }
+
+    editing?.let { event ->
+        EventSheet(
+            initial = event,
+            firstDay = event.startsOn,
+            areas = state.areas,
+            onSave = { draft -> viewModel.saveEvent(event, draft) },
+            onDelete = { viewModel.deleteEvent(event) },
+            onDismiss = { editing = null },
+        )
     }
 
     val day = state.openDay?.day
@@ -315,6 +369,7 @@ internal fun DayCell(
     onClick: () -> Unit,
     onDropTask: (String) -> Unit,
     modifier: Modifier = Modifier,
+    eventSpace: Dp = 0.dp,
 ) {
     var hovered by remember { mutableStateOf(false) }
     val target = remember(day.day) {
@@ -388,6 +443,8 @@ internal fun DayCell(
                     .background(if (selected) AppTheme.colors.onAccent else AppTheme.colors.accent),
             )
         }
+        // The row's event bars are drawn over this room.
+        if (eventSpace > 0.dp) Spacer(Modifier.height(eventSpace))
     }
 }
 
@@ -403,7 +460,38 @@ private fun dayDescription(day: CalendarDay, today: Boolean, selected: Boolean):
     if (day.deadlines.isNotEmpty()) parts += pluralStringResource(R.plurals.calendar_cell_due, day.deadlines.size, day.deadlines.size)
     if (day.repeats.isNotEmpty()) parts += pluralStringResource(R.plurals.calendar_cell_repeats, day.repeats.size, day.repeats.size)
     if (day.reminders > 0) parts += pluralStringResource(R.plurals.calendar_cell_reminders, day.reminders, day.reminders)
+    if (day.events.isNotEmpty()) parts += pluralStringResource(R.plurals.calendar_cell_events, day.events.size, day.events.size)
     return parts.joinToString(", ")
+}
+
+/** One of the open day's events: its area's colour, its title and its days; a tap opens the event sheet. */
+@Composable
+private fun EventRow(event: EventItem, area: AreaItem?, onOpen: () -> Unit) {
+    val palette = area?.let { chosen -> AppTheme.areaColors.firstOrNull { it.id == chosen.colorId } }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppTheme.colors.surface, AppTheme.shapes.row)
+            .clickable(onClick = onOpen)
+            .padding(end = 12.dp, top = 10.dp, bottom = 10.dp),
+    ) {
+        Box(
+            Modifier
+                .padding(start = 8.dp, end = 10.dp)
+                .size(width = 4.dp, height = 32.dp)
+                .clip(CircleShape)
+                .background(palette?.let { AppTheme.colors.areaContent(it) } ?: AppTheme.colors.accent),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(event.title, style = MaterialTheme.typography.bodyLarge, color = AppTheme.colors.text, maxLines = 2)
+            Text(
+                eventDays(event.startsOn, event.endsOn),
+                style = MaterialTheme.typography.labelSmall,
+                color = AppTheme.colors.textMuted,
+            )
+        }
+    }
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday. A case with 'area' or 'tag' is narrowed by the lists' filter (contracts/vectors/lists.json, 'filter', a task without an area taking its project's from 'projects'): the planned tasks, deadlines, repeats and reminders of the tasks it leaves out don't show, but an occurrence it leaves out still keeps its day from being a repeat.",
+  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday. A case with 'area' or 'tag' is narrowed by the lists' filter (contracts/vectors/lists.json, 'filter', a task without an area taking its project's from 'projects'): the planned tasks, deadlines, repeats and reminders of the tasks it leaves out don't show, but an occurrence it leaves out still keeps its day from being a repeat. 'eventDays': the events each day from 'from' to 'to' holds: every event whose first day is on or before it and whose last day on or after it, deleted ones left out, earliest first day first, then the longest, then by title, then by id; an 'area' keeps that area's events, and a 'tag' keeps none, since events have no tags. 'bars': for a grid from 'start' (a Monday) to 'end' (a Sunday), the bars each week row draws, one per event that touches the row: its first and last column in the row (0 is Monday), whether it goes on before the row or after it, and its lane. Lanes are given over the whole grid in the day order above, each event taking the lowest lane whose last event ended before its first day in the grid, so an event keeps its lane from row to row; a row lists its bars by lane. 'ongoing': the events 'day' falls inside, in the same order, with which day of the event it is and how many days it has (Today says 'day 2 of 4' when it has more than one).",
   "grids": [
     {
       "kind": "week",
@@ -529,6 +529,496 @@
           ]
         }
       }
+    }
+  ],
+  "eventDays": [
+    {
+      "name": "a one-day event and a trip across a month end, in order",
+      "from": "2026-09-28",
+      "to": "2026-10-03",
+      "events": [
+        {
+          "id": "prague",
+          "title": "Prague",
+          "startsOn": "2026-09-30",
+          "endsOn": "2026-10-02",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "dentist",
+          "title": "Dentist",
+          "startsOn": "2026-09-29",
+          "endsOn": "2026-09-29",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "gone",
+          "title": "Gone",
+          "startsOn": "2026-09-30",
+          "endsOn": "2026-09-30",
+          "area": null,
+          "deleted": true
+        }
+      ],
+      "expect": {
+        "2026-09-28": [],
+        "2026-09-29": [
+          "dentist"
+        ],
+        "2026-09-30": [
+          "prague"
+        ],
+        "2026-10-01": [
+          "prague"
+        ],
+        "2026-10-02": [
+          "prague"
+        ],
+        "2026-10-03": []
+      }
+    },
+    {
+      "name": "the same first day: the longest first, then by title",
+      "from": "2026-10-05",
+      "to": "2026-10-07",
+      "events": [
+        {
+          "id": "b",
+          "title": "Beach",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-05",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "a",
+          "title": "Alps",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-05",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "long",
+          "title": "Conference",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-07",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "2026-10-05": [
+          "long",
+          "a",
+          "b"
+        ],
+        "2026-10-06": [
+          "long"
+        ],
+        "2026-10-07": [
+          "long"
+        ]
+      }
+    },
+    {
+      "name": "an area filter keeps that area's events",
+      "from": "2026-10-05",
+      "to": "2026-10-06",
+      "area": "work",
+      "tag": null,
+      "events": [
+        {
+          "id": "w",
+          "title": "Offsite",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-06",
+          "area": "work",
+          "deleted": false
+        },
+        {
+          "id": "h",
+          "title": "Grandma",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-05",
+          "area": "home",
+          "deleted": false
+        },
+        {
+          "id": "n",
+          "title": "Festival",
+          "startsOn": "2026-10-06",
+          "endsOn": "2026-10-06",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "2026-10-05": [
+          "w"
+        ],
+        "2026-10-06": [
+          "w"
+        ]
+      }
+    },
+    {
+      "name": "a tag filter hides every event, since events have no tags",
+      "from": "2026-10-05",
+      "to": "2026-10-05",
+      "area": null,
+      "tag": "deep",
+      "events": [
+        {
+          "id": "w",
+          "title": "Offsite",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-06",
+          "area": "work",
+          "deleted": false
+        }
+      ],
+      "expect": {
+        "2026-10-05": []
+      }
+    }
+  ],
+  "bars": [
+    {
+      "name": "one event inside a week",
+      "start": "2026-10-05",
+      "end": "2026-10-11",
+      "events": [
+        {
+          "id": "trip",
+          "title": "Trip",
+          "startsOn": "2026-10-07",
+          "endsOn": "2026-10-09",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "rows": [
+        [
+          {
+            "id": "trip",
+            "from": 2,
+            "to": 4,
+            "lane": 0,
+            "before": false,
+            "after": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "an event across a week break keeps its lane in both rows",
+      "start": "2026-09-28",
+      "end": "2026-10-11",
+      "events": [
+        {
+          "id": "trip",
+          "title": "Trip",
+          "startsOn": "2026-10-02",
+          "endsOn": "2026-10-06",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "early",
+          "title": "Early",
+          "startsOn": "2026-09-28",
+          "endsOn": "2026-09-30",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "rows": [
+        [
+          {
+            "id": "early",
+            "from": 0,
+            "to": 2,
+            "lane": 0,
+            "before": false,
+            "after": false
+          },
+          {
+            "id": "trip",
+            "from": 4,
+            "to": 6,
+            "lane": 0,
+            "before": false,
+            "after": true
+          }
+        ],
+        [
+          {
+            "id": "trip",
+            "from": 0,
+            "to": 1,
+            "lane": 0,
+            "before": true,
+            "after": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "two that overlap take two lanes, and a freed lane is taken again",
+      "start": "2026-10-05",
+      "end": "2026-10-11",
+      "events": [
+        {
+          "id": "a",
+          "title": "Conference",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-07",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "b",
+          "title": "Dinner",
+          "startsOn": "2026-10-06",
+          "endsOn": "2026-10-06",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "c",
+          "title": "Move",
+          "startsOn": "2026-10-08",
+          "endsOn": "2026-10-10",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "d",
+          "title": "Party",
+          "startsOn": "2026-10-07",
+          "endsOn": "2026-10-08",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "rows": [
+        [
+          {
+            "id": "a",
+            "from": 0,
+            "to": 2,
+            "lane": 0,
+            "before": false,
+            "after": false
+          },
+          {
+            "id": "c",
+            "from": 3,
+            "to": 5,
+            "lane": 0,
+            "before": false,
+            "after": false
+          },
+          {
+            "id": "b",
+            "from": 1,
+            "to": 1,
+            "lane": 1,
+            "before": false,
+            "after": false
+          },
+          {
+            "id": "d",
+            "from": 2,
+            "to": 3,
+            "lane": 1,
+            "before": false,
+            "after": false
+          }
+        ]
+      ]
+    },
+    {
+      "name": "an event that starts before the grid and ends after it",
+      "start": "2026-08-31",
+      "end": "2026-10-04",
+      "events": [
+        {
+          "id": "long",
+          "title": "Sabbatical",
+          "startsOn": "2026-08-20",
+          "endsOn": "2026-10-15",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "gone",
+          "title": "Gone",
+          "startsOn": "2026-09-01",
+          "endsOn": "2026-09-01",
+          "area": null,
+          "deleted": true
+        },
+        {
+          "id": "mid",
+          "title": "Wedding",
+          "startsOn": "2026-09-19",
+          "endsOn": "2026-09-20",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "rows": [
+        [
+          {
+            "id": "long",
+            "from": 0,
+            "to": 6,
+            "lane": 0,
+            "before": true,
+            "after": true
+          }
+        ],
+        [
+          {
+            "id": "long",
+            "from": 0,
+            "to": 6,
+            "lane": 0,
+            "before": true,
+            "after": true
+          }
+        ],
+        [
+          {
+            "id": "long",
+            "from": 0,
+            "to": 6,
+            "lane": 0,
+            "before": true,
+            "after": true
+          },
+          {
+            "id": "mid",
+            "from": 5,
+            "to": 6,
+            "lane": 1,
+            "before": false,
+            "after": false
+          }
+        ],
+        [
+          {
+            "id": "long",
+            "from": 0,
+            "to": 6,
+            "lane": 0,
+            "before": true,
+            "after": true
+          }
+        ],
+        [
+          {
+            "id": "long",
+            "from": 0,
+            "to": 6,
+            "lane": 0,
+            "before": true,
+            "after": true
+          }
+        ]
+      ]
+    }
+  ],
+  "ongoing": [
+    {
+      "name": "day 2 of 4, and a one-day event",
+      "day": "2026-10-06",
+      "events": [
+        {
+          "id": "trip",
+          "title": "Trip",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-08",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "talk",
+          "title": "Talk",
+          "startsOn": "2026-10-06",
+          "endsOn": "2026-10-06",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "later",
+          "title": "Later",
+          "startsOn": "2026-10-07",
+          "endsOn": "2026-10-09",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "expect": [
+        {
+          "id": "trip",
+          "dayOf": 2,
+          "days": 4
+        },
+        {
+          "id": "talk",
+          "dayOf": 1,
+          "days": 1
+        }
+      ]
+    },
+    {
+      "name": "the last day still counts, the day after does not",
+      "day": "2026-10-08",
+      "events": [
+        {
+          "id": "trip",
+          "title": "Trip",
+          "startsOn": "2026-10-05",
+          "endsOn": "2026-10-08",
+          "area": null,
+          "deleted": false
+        },
+        {
+          "id": "over",
+          "title": "Over",
+          "startsOn": "2026-10-01",
+          "endsOn": "2026-10-07",
+          "area": null,
+          "deleted": false
+        }
+      ],
+      "expect": [
+        {
+          "id": "trip",
+          "dayOf": 4,
+          "days": 4
+        }
+      ]
+    },
+    {
+      "name": "a deleted event is not on",
+      "day": "2026-10-06",
+      "events": [
+        {
+          "id": "gone",
+          "title": "Gone",
+          "startsOn": "2026-10-06",
+          "endsOn": "2026-10-06",
+          "area": null,
+          "deleted": true
+        }
+      ],
+      "expect": []
     }
   ]
 }
