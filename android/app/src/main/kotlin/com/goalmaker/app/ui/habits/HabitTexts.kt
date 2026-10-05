@@ -12,10 +12,26 @@ import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
 
-/** How often a habit runs: "Every day", "Mon, Wed, Fri", "3 times a week". */
+/**
+ * How often a habit runs: "Every day", "Mon, Wed, Fri", "3 times a week". A weekly or monthly check
+ * limit says how many days it may have: "At most 2 days a week", or "Not once a month" for 0. A
+ * weekly or monthly count or amount limit is "Every week": its number is in the limit text.
+ */
 @Composable
 internal fun cadenceText(habit: HabitItem): String {
     val locale = LocalConfiguration.current.locales[0]
+    if (HabitRules.isLimit(habit) && HabitRules.isPeriodic(habit)) {
+        val week = habit.cadence == HabitRules.PER_WEEK
+        if (habit.measure != HabitRules.CHECK) {
+            return stringResource(if (week) R.string.habits_every_week else R.string.habits_every_month)
+        }
+        val times = habit.times ?: 0
+        return if (times == 0) {
+            stringResource(if (week) R.string.habits_not_once_week else R.string.habits_not_once_month)
+        } else {
+            pluralStringResource(if (week) R.plurals.habits_at_most_days_week else R.plurals.habits_at_most_days_month, times, times)
+        }
+    }
     return when (habit.cadence) {
         HabitRules.WEEKDAYS -> when (val mask = habit.weekdays ?: 0) {
             WORKDAYS -> stringResource(R.string.habits_workdays)

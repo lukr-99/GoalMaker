@@ -372,6 +372,23 @@ class HabitsViewModelTest {
     }
 
     @Test
+    fun `a limit line adds a limit, a zero one included`() = runTest {
+        assertEquals(LineOutcome.Added, viewModel.addLine("Coffee at most 3 cups a day"))
+        assertEquals(LineOutcome.Added, viewModel.addLine("No casino this month"))
+
+        val coffee = habits.all().single { it.name == "Coffee" }
+        assertEquals(HabitRules.AT_MOST, coffee.direction)
+        assertEquals(HabitRules.DAILY, coffee.cadence)
+        assertEquals(HabitRules.COUNT, coffee.measure)
+        assertEquals(3.0, coffee.target!!, 1e-9)
+        val casino = habits.all().single { it.name == "casino" }
+        assertEquals(HabitRules.AT_MOST, casino.direction)
+        assertEquals(HabitRules.PER_MONTH, casino.cadence)
+        assertEquals(0, casino.times)
+        assertEquals(HabitRules.CHECK, casino.measure)
+    }
+
+    @Test
     fun `a line with no name left opens the habit form filled in, and adds nothing`() = runTest {
         val outcome = viewModel.addLine("3 times a week")
 

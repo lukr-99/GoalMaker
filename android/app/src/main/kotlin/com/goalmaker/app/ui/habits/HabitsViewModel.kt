@@ -74,6 +74,7 @@ class HabitsViewModel(
             measure = read.measure,
             target = read.target,
             unit = read.unit,
+            direction = read.direction,
             showOnToday = true,
         )
     }

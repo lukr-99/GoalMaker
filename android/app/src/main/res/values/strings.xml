@@ -659,6 +659,10 @@
         <item quantity="one">At most %1$d day a month</item>
         <item quantity="other">At most %1$d days a month</item>
     </plurals>
+    <string name="habits_not_once_week">Not once a week</string>
+    <string name="habits_not_once_month">Not once a month</string>
+    <string name="habits_every_week">Every week</string>
+    <string name="habits_every_month">Every month</string>
     <string name="habits_none_week">None this week</string>
     <string name="habits_none_month">None this month</string>
     <string name="habits_over_week">Over the line this week</string>
