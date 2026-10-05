@@ -26,9 +26,9 @@ import {
   type HabitMeasure,
 } from "../rules/habits.ts";
 import {
-  type BoardColumn,
+  BOARD_COLUMNS,
   columnFor,
-  COLUMNS,
+  DROPPED,
   finishedIn,
   folderKey,
   type ItemType,
@@ -40,6 +40,7 @@ import {
   type ProjectMilestone,
   type ProjectStatus,
   repositoryKey,
+  type ShownColumn,
 } from "../rules/projects.ts";
 import { AREA_COLORS, colorForNewArea } from "./palette.ts";
 import { TallyDays } from "./tallyDays.ts";
@@ -419,15 +420,18 @@ export class Planner {
     return { task: (await this.task(id))!, next };
   }
 
-  /** Open again, planned for `day` when given (null: the Inbox); a finished occurrence takes back its next one. */
-  async reopen(id: string, day?: Day | null): Promise<TaskItem> {
+  /**
+   * Open again, planned for `day` when given (null: the Inbox); a finished occurrence takes back its
+   * next one. A project item goes to `column` when given, in the same change.
+   */
+  async reopen(id: string, day?: Day | null, column?: string): Promise<TaskItem> {
     const task = await this.live(id);
     const planned = day === undefined ? task.plannedDate : day;
     await this.db`
       update public.tasks set status = 'open', completed_at = null, planned_date = ${planned},
         moved_count = ${moves(task.plannedDate, planned, task.movedCount ?? 0)},
         planned_time = ${planned === null ? null : task.plannedTime},
-        board_column = ${columnAfter(task, "open")}
+        board_column = ${column !== undefined && task.boardColumn ? column : columnAfter(task, "open")}
       where id = ${id}`;
     if (task.state !== "open") {
       const next = await this.task(await successorId(id));
@@ -916,20 +920,26 @@ export class Planner {
   }
 
   /**
-   * Moves an item to a board column, the way dragging its card does: the done column completes the
-   * task (so a repeating one moves on), any other column reopens a done one, and a dropped item
-   * keeps its state wherever it sits (docs/projects.md).
+   * Moves an item to a board column, the way dragging its card does: the dropped column drops the
+   * task and keeps the column it is stored in, the done column completes it (so a repeating one moves
+   * on), and any other column reopens a done or dropped one (docs/projects.md). Each move is one
+   * change of the task in the activity log, so one undo takes it back.
    */
-  async moveItem(id: string, column: BoardColumn): Promise<{ task: TaskItem; next: TaskItem | null }> {
+  async moveItem(id: string, column: ShownColumn): Promise<{ task: TaskItem; next: TaskItem | null }> {
     const task = await this.live(id);
     if (!task.projectId) throw new PlannerError(`"${task.title}" is not a project item, so it has no board column.`);
     const wanted = moved(column, task.state);
     let next: TaskItem | null = null;
-    if (wanted !== task.state) {
-      if (wanted === "done") next = (await this.finish(id, "done")).next;
-      else await this.reopen(id);
+    if (column === DROPPED) {
+      if (task.state !== "dropped") next = (await this.finish(id, "dropped")).next;
+    } else if (wanted === "done") {
+      if (task.state !== "done") next = (await this.finish(id, "done")).next;
+      await this.db`update public.tasks set board_column = ${column} where id = ${id}`;
+    } else if (wanted !== task.state) {
+      await this.reopen(id, undefined, column);
+    } else {
+      await this.db`update public.tasks set board_column = ${column} where id = ${id}`;
     }
-    await this.db`update public.tasks set board_column = ${column} where id = ${id}`;
     return { task: (await this.task(id))!, next };
   }
 
@@ -1625,9 +1635,11 @@ function cleanPriority(text: string | undefined): Priority {
   return priority;
 }
 
-export function cleanColumn(text: string): BoardColumn {
-  const column = text.trim().toLowerCase() as BoardColumn;
-  if (!COLUMNS.includes(column)) throw new PlannerError("A board column is backlog, todo, doing or done.");
+export function cleanColumn(text: string): ShownColumn {
+  const column = text.trim().toLowerCase() as ShownColumn;
+  if (!BOARD_COLUMNS.includes(column)) {
+    throw new PlannerError("A board column is backlog, todo, doing, done or dropped.");
+  }
   return column;
 }
 

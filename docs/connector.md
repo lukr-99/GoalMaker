@@ -40,11 +40,11 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_habits`, `check_in_habit`, `skip_habit`, `fail_habit` | Habits in the Habits page's groups with where each stands, its streak and the goal it serves, and "not on Today" for one kept off Today; check one in, skip a period, or fail one (missed at once) |
 | `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction, the goal it feeds and whether it shows on Today (`show_on_today`); a new one also from a short `line` |
 | `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
-| `get_projects`, `get_project_board` | The projects with what is open in each; one project's four columns in board order, all of them or only the owner's or Claude's items |
+| `get_projects`, `get_project_board` | The projects with what is open in each; one project's columns in board order (Backlog, To do, Doing, Done, then Dropped with every dropped item), all of them or only the owner's or Claude's items |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
 | `create_project`, `create_milestone` | A project with its area, repository, folder and milestones; a milestone on one that already exists |
 | `add_project_item`, `update_project_item` | An item with its type, priority, milestone, column and who made it; its project can change |
-| `move_project_item` | Moves an item between columns, which finishes or reopens the task with it |
+| `move_project_item` | Moves an item between columns, which finishes or reopens the task with it; Dropped drops it and keeps its stored column |
 | `update_project`, `delete_project` | A project's own fields, its status, or the project itself; its items stay |
 | `update_milestone`, `delete_milestone` | Renames or removes a milestone; the items that carried it stay |
 | `get_activity`, `undo_change` | The latest changes with who made each (owner, Claude or GoalMaker), and undo |
@@ -69,7 +69,9 @@ is, and both apps keep those in step with the device.
 A **project item is an ordinary task**, so `update_task`, reminders and steps work on it as on
 anything else, and an item with a planned day turns up in Today with its project's name after it.
 The board and the list never disagree: moving an item to Done completes the task, completing a task
-moves it to Done, and reopening a done item puts it back in To do ([projects](projects.md)).
+moves it to Done, and reopening a done item puts it back in To do. A dropped item shows in Dropped,
+whatever column it is stored in. Moved to Done it is done, and moved to any other column it is open
+again ([projects](projects.md)).
 
 A project is named by whatever is at hand: its id, its repository URL (https or ssh, with or
 without `.git`), the folder being worked in (a folder inside the project's own counts), or its
