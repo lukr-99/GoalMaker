@@ -29,7 +29,7 @@ public static class WantReminder
         return ready.Count == 0 ? null : new WantsDue(today, [.. ready.Select(want => want.Id)]);
     }
 
-    /// <summary>The moment the alarm waits for after <paramref name="now"/>: the time on the first day an undecided want cools.</summary>
+    /// <summary>The moment the alarm waits for after <paramref name="now"/>: the time on the first day an undecided want cools; needs never ring.</summary>
     public static DateTime? Next(TimeOnly? time, int dayStartHour, IReadOnlyList<WantItem> wants, DateTime now)
     {
         if (time is not { } at)
@@ -39,7 +39,7 @@ public static class WantReminder
 
         var today = PlanningDay.Of(now, dayStartHour);
         var moments = wants
-            .Where(want => !want.Deleted && want.Decision is null && want.CoolsUntil >= today)
+            .Where(want => !want.Deleted && want.Kind != WantRules.Need && want.Decision is null && want.CoolsUntil >= today)
             .Select(want => RitualReminder.MomentOf(want.CoolsUntil, at, dayStartHour))
             .Where(moment => moment > now)
             .ToList();

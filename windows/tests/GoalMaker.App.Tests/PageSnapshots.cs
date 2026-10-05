@@ -1049,6 +1049,49 @@ public sealed class PageSnapshots
         Save(new LifeGoalsPage(page), folder, "life-goals-delete", new Size(852, 600));
     });
 
+    [Fact(Explicit = true)]
+    public void WantsAndNeeds() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        planner.Wants.Add(new WantDraft("Kindle", "Reading at night", Price: 3290, PickedDays: 0));
+        planner.Wants.Add(new WantDraft("Standing desk", "My back after long days", Price: 12990));
+        planner.Wants.Add(new WantDraft("Winter tyres", string.Empty, Price: 12900, Kind: WantRules.Need, NeedBy: new DateOnly(2026, 10, 31)));
+        planner.Wants.Add(new WantDraft("Coat", "The zip broke; size L", Price: 2490, Kind: WantRules.Need, NeedBy: Today.AddDays(-2)));
+        var ink = planner.Wants.Add(new WantDraft("Printer ink", "HP 305, black", Kind: WantRules.Need))!;
+        var batteries = planner.Wants.Add(new WantDraft("AA batteries", string.Empty, Price: 189, Kind: WantRules.Need))!;
+        planner.Wants.Decide(batteries.Id, WantRules.Bought);
+        var dropped = planner.Wants.Add(new WantDraft("Dish rack", string.Empty, Kind: WantRules.Need))!;
+        planner.Wants.Decide(dropped.Id, WantRules.Dropped);
+
+        // Claude added the ink through the connector.
+        var row = planner.Replica.Get("wants", ink.Id)!;
+        row["made_by"] = ProjectRules.Claude;
+        planner.Replica.Put("wants", row);
+        using var theme = Theme(planner);
+        var size = new Size(852, 900);
+
+        foreach (var (id, mode) in new[] { ("track", GoalMaker.Core.Settings.ThemeMode.Dark), ("electric", GoalMaker.Core.Settings.ThemeMode.Light) })
+        {
+            theme.Apply(planner.Settings.Appearance with { ThemeId = id, Mode = mode });
+            var look = $"{id}-{mode}".ToLowerInvariant();
+            var page = new WantsViewModel(planner.Wants, planner.Settings, strings, planner.Time, action => action());
+            page.IsWantsTab = true;
+            Save(new WantsPage(page), folder, $"wants-tab-{look}", size);
+
+            page.IsNeedsTab = true;
+            page.ToggleNeedsDoneCommand.Execute(null);
+            page.NeedRows[2].ToggleCommand.Execute(null);
+            Save(new WantsPage(page), folder, $"needs-tab-{look}", size);
+
+            page.AddCommand.Execute(null);
+            page.DraftTitle = "Running socks";
+            page.DraftPrice = "390";
+            page.DraftNeedBy = Today.AddDays(5).ToDateTime(TimeOnly.MinValue);
+            Save(new WantsPage(page), folder, $"needs-add-{look}", size);
+        }
+    });
+
     // A made-up photo: a soft diagonal from one color to another, as a JPEG.
     private static byte[] Gradient(Color from, Color to)
     {

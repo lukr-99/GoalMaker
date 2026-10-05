@@ -133,6 +133,111 @@
                 </DataTrigger>
             </DataTemplate.Triggers>
         </DataTemplate>
+
+        <!-- The header's Wants or Needs choice: a small segment, filled with the accent while it is the one shown. -->
+        <Style x:Key="TabChoice" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="GroupName" Value="WantsTab" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Segment" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent" BorderThickness="1" CornerRadius="{DynamicResource GM.ChipCorner}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Segment" Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Segment" Property="BorderBrush" Value="{DynamicResource GM.TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Segment" Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
+          One need: what, its price, the day it is needed by (in the danger colour once that day has passed)
+          and who added it, with Bought and Drop at hand; a bought or dropped one offers Reopen and Delete.
+          It opens to its note, its link and Edit.
+        -->
+        <DataTemplate x:Key="NeedRow" DataType="{x:Type vm:WantRowViewModel}">
+            <Border x:Name="Row" Margin="0,0,0,6" Padding="12,8" CornerRadius="{DynamicResource GM.RowCorner}"
+                    Background="{DynamicResource GM.SurfaceBrush}">
+                <StackPanel>
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                                    Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button Appearance="Primary" Command="{Binding BuyCommand}" Margin="0,0,8,0" Content="{DynamicResource Wants.Buy}">
+                                <ui:Button.Icon>
+                                    <ui:SymbolIcon Symbol="Checkmark20" />
+                                </ui:Button.Icon>
+                            </ui:Button>
+                            <ui:Button Appearance="Secondary" Command="{Binding DropCommand}" Content="{DynamicResource Wants.Drop}" />
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                                    Visibility="{Binding IsDecided, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button Appearance="Secondary" Command="{Binding ReopenCommand}" Content="{DynamicResource Wants.Reopen}" Margin="0,0,8,0" />
+                            <ui:Button Appearance="Transparent" Command="{Binding DeleteCommand}" Content="{DynamicResource Wants.Delete}"
+                                       Foreground="{DynamicResource GM.DangerBrush}" />
+                        </StackPanel>
+                        <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                HorizontalContentAlignment="Stretch" Command="{Binding ToggleCommand}"
+                                AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Subtitle}">
+                            <DockPanel>
+                                <ui:SymbolIcon x:Name="Mark" DockPanel.Dock="Left" Margin="2,0,14,0" FontSize="20" VerticalAlignment="Center"
+                                               Symbol="Cart24" Foreground="{DynamicResource GM.AccentBrush}" />
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Title}" FontSize="14" FontFamily="{DynamicResource GM.BodyStrongFont}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Need.Before, Mode=OneWay}" /><Run Text="{Binding Need.Due, Mode=OneWay}">
+                                            <Run.Style>
+                                                <Style TargetType="Run">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLate}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                                                            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Run.Style>
+                                        </Run><Run Text="{Binding Need.After, Mode=OneWay}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </DockPanel>
+                        </Button>
+                    </DockPanel>
+                    <StackPanel Margin="36,8,0,0" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Visibility="{Binding HasReason, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource SectionLabel}" Margin="0,0,0,2" Text="{DynamicResource Wants.Note}" />
+                            <TextBlock Text="{Binding Reason}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <TextBlock Margin="0,6,0,0" Visibility="{Binding HasLink, Converter={StaticResource BoolToVisibility}}">
+                            <Hyperlink NavigateUri="{Binding Link}" RequestNavigate="OnLink" Foreground="{DynamicResource GM.AccentBrush}">
+                                <Run Text="{Binding Link, Mode=OneWay}" />
+                            </Hyperlink>
+                        </TextBlock>
+                        <ui:Button Margin="0,6,0,0" Appearance="Transparent" Content="{DynamicResource Wants.EditOne}" Command="{Binding EditCommand}"
+                                   Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsDecided}" Value="True">
+                    <Setter TargetName="Mark" Property="Symbol" Value="Checkmark20" />
+                    <Setter TargetName="Mark" Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
     </Page.Resources>
 
     <Page.InputBindings>
@@ -149,10 +254,34 @@
 
         <!-- Wants (docs/wants.md): the thresholds, the filters, the wants, and the panels to add and to change the thresholds. -->
         <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Center">
-                <controls:HeadlineText Title="{DynamicResource Wants.Title}" FontSize="40" />
+            <StackPanel Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}" HorizontalAlignment="Stretch">
+                <DockPanel>
+                    <!-- The wants or the needs; this PC remembers the choice. -->
+                    <Border DockPanel.Dock="Right" VerticalAlignment="Center" Padding="2" CornerRadius="{DynamicResource GM.ChipCorner}"
+                            BorderBrush="{DynamicResource GM.OutlineBrush}" BorderThickness="1">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Style="{StaticResource TabChoice}" IsChecked="{Binding IsWantsTab, Mode=TwoWay}"
+                                         ToolTip="{DynamicResource Wants.TabWantsName}"
+                                         AutomationProperties.Name="{DynamicResource Wants.TabWantsName}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="HourglassHalf24" />
+                                    <TextBlock VerticalAlignment="Center" Text="{DynamicResource Wants.TabWants}" />
+                                </StackPanel>
+                            </RadioButton>
+                            <RadioButton Style="{StaticResource TabChoice}" IsChecked="{Binding IsNeedsTab, Mode=TwoWay}"
+                                         ToolTip="{DynamicResource Wants.TabNeedsName}"
+                                         AutomationProperties.Name="{DynamicResource Wants.TabNeedsName}">
+                                <StackPanel Orientation="Horizontal">
+                                    <ui:SymbolIcon Margin="0,0,6,0" FontSize="16" Symbol="Cart24" />
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding NeedsLabel}" />
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+                    <controls:HeadlineText Title="{DynamicResource Wants.Title}" FontSize="40" />
+                </DockPanel>
 
-                <DockPanel Margin="0,8,0,10">
+                <DockPanel Margin="0,8,0,10" Visibility="{Binding IsWantsTab, Converter={StaticResource BoolToVisibility}}">
                     <ui:Button DockPanel.Dock="Right" Appearance="Transparent" Command="{Binding EditCooldownsCommand}"
                                ToolTip="{DynamicResource Wants.CooldownsEdit}" AutomationProperties.Name="{DynamicResource Wants.CooldownsEdit}">
                         <ui:SymbolIcon Symbol="Options24" Foreground="{DynamicResource GM.AccentBrush}" />
@@ -214,9 +343,9 @@
                         <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.What}" />
                         <ui:TextBox x:Name="DraftTitle" Text="{Binding DraftTitle, UpdateSourceTrigger=PropertyChanged}" MaxLength="200"
                                     AutomationProperties.Name="{DynamicResource Wants.What}" />
-                        <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.WhyField}" />
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{Binding ReasonLabel}" />
                         <ui:TextBox x:Name="DraftReason" Text="{Binding DraftReason, UpdateSourceTrigger=PropertyChanged}" MaxLength="2000" MinLines="2" TextWrapping="Wrap" AcceptsReturn="True"
-                                    PlaceholderText="{DynamicResource Wants.WhyHint}" AutomationProperties.Name="{DynamicResource Wants.WhyField}" />
+                                    PlaceholderText="{Binding ReasonHint}" AutomationProperties.Name="{Binding ReasonLabel}" />
                         <Grid Margin="0,0,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -233,9 +362,14 @@
                                             AutomationProperties.Name="{DynamicResource Wants.Currency}" />
                             </StackPanel>
                         </Grid>
+                        <StackPanel Visibility="{Binding IsDraftNeed, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.NeededBy}" />
+                            <DatePicker Width="200" HorizontalAlignment="Left" SelectedDate="{Binding DraftNeedBy}"
+                                        AutomationProperties.Name="{DynamicResource Wants.NeededBy}" />
+                        </StackPanel>
                         <TextBlock Style="{StaticResource SectionLabel}" Text="{DynamicResource Wants.Link}" />
                         <ui:TextBox Text="{Binding DraftLink, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Wants.Link}" />
-                        <DockPanel Margin="0,12,0,0" Visibility="{Binding IsAdding, Converter={StaticResource BoolToVisibility}}">
+                        <DockPanel Margin="0,12,0,0" Visibility="{Binding ShowsDraftDays, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                                 <ui:Button Appearance="Transparent" Command="{Binding FewerDaysCommand}" ToolTip="{DynamicResource Wants.FewerDays}"
                                            AutomationProperties.Name="{DynamicResource Wants.FewerDays}">
@@ -258,6 +392,7 @@
                     </StackPanel>
                 </Border>
 
+                <StackPanel Visibility="{Binding IsWantsTab, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                     <RadioButton Style="{StaticResource FilterChip}" Content="{Binding ReadyLabel}" IsChecked="{Binding ShowsReady, Mode=OneWay}"
                                  Command="{Binding ShowCommand}" CommandParameter="{x:Static planning:WantState.Ready}" />
@@ -269,6 +404,35 @@
 
                 <TextBlock Style="{StaticResource Hint}" Text="{Binding EmptyText}" Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
                 <ItemsControl ItemsSource="{Binding Rows}" ItemTemplate="{StaticResource WantRow}" Focusable="False" />
+                </StackPanel>
+
+                <!-- Needs: the open ones by the day they are needed by, then the bought and dropped ones folded below. -->
+                <StackPanel Visibility="{Binding IsNeedsTab, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Style="{StaticResource Hint}" Margin="0,8,0,12" Text="{DynamicResource Wants.NeedsHint}" />
+                    <TextBlock Style="{StaticResource Hint}" Text="{Binding NeedsEmptyText}" Visibility="{Binding HasNoOpenNeeds, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding NeedRows}" ItemTemplate="{StaticResource NeedRow}" Focusable="False" />
+                    <StackPanel Margin="0,8,0,0" Visibility="{Binding HasNeedsDone, Converter={StaticResource BoolToVisibility}}">
+                        <ui:Button Appearance="Transparent" Padding="4,4" Command="{Binding ToggleNeedsDoneCommand}" Margin="0,0,0,6">
+                            <StackPanel Orientation="Horizontal">
+                                <ui:SymbolIcon Margin="0,0,6,0" FontSize="14">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Symbol" Value="ChevronRight20" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsNeedsDoneOpen}" Value="True">
+                                                    <Setter Property="Symbol" Value="ChevronDown20" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+                                <TextBlock VerticalAlignment="Center" Text="{Binding NeedsDoneLabel}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            </StackPanel>
+                        </ui:Button>
+                        <ItemsControl ItemsSource="{Binding NeedsDoneRows}" ItemTemplate="{StaticResource NeedRow}" Focusable="False"
+                                      Visibility="{Binding IsNeedsDoneOpen, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 

@@ -124,7 +124,10 @@ public sealed partial class WantList
         return true;
     }
 
-    /// <summary>Adds a want with the cooldown its price or the owner's pick gives. Null without a title or a reason.</summary>
+    /// <summary>
+    /// Adds a want with the cooldown its price or the owner's pick gives, or a need with none. Null
+    /// without a title, or a want without a reason.
+    /// </summary>
     public WantItem? Add(WantDraft draft)
     {
         if (Check(draft) is not { } clean)
@@ -133,12 +136,13 @@ public sealed partial class WantList
         }
 
         var addedOn = today();
-        var days = WantRules.CooldownDays(clean.Price, clean.Currency, Cooldowns(), clean.PickedDays);
+        var days = WantRules.CooldownDays(clean.Price, clean.Currency, Cooldowns(), clean.PickedDays, clean.Kind);
         var values = Values(clean);
         values["cooldown_days"] = days;
         values["added_on"] = addedOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         values["cools_until"] = WantRules.CoolsUntil(addedOn, days).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         values["made_by"] = ProjectRules.Owner;
+        values["kind"] = clean.Kind;
         values["decision_note"] = string.Empty;
         values["checked_note"] = string.Empty;
         if (rows.Create(Table, values) is not { } row)
@@ -209,7 +213,11 @@ public sealed partial class WantList
 
     private static WantDraft? Check(WantDraft draft)
     {
-        if (Clip(draft.Title, MaxTitle) is not { } title || Clip(draft.Reason, MaxReason) is not { } reason)
+        var need = draft.Kind == WantRules.Need;
+        var reason = Clip(draft.Reason, MaxReason);
+
+        // A want says why it is wanted; a need may leave it out (supabase/migrations/0025_wants_needs.sql).
+        if (Clip(draft.Title, MaxTitle) is not { } title || (reason is null && !need))
         {
             return null;
         }
@@ -218,10 +226,12 @@ public sealed partial class WantList
         return draft with
         {
             Title = title,
-            Reason = reason,
+            Reason = reason ?? string.Empty,
             Link = Clip(draft.Link, MaxLink),
             Price = draft.Price is >= 0 and <= MaxPrice ? draft.Price : null,
             Currency = Currency().IsMatch(currency) ? currency : WantCooldowns.Default.Currency,
+            Kind = need ? WantRules.Need : WantRules.Want,
+            NeedBy = need ? draft.NeedBy : null,
         };
     }
 
@@ -233,6 +243,7 @@ public sealed partial class WantList
         ["price"] = draft.Price,
         ["currency"] = draft.Currency,
         ["area_id"] = draft.AreaId,
+        ["need_by"] = draft.NeedBy?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
     };
 
     private static WantItem ToItem(JsonObject row) => new(
@@ -253,7 +264,9 @@ public sealed partial class WantList
         CheckedAt: (string?)row["checked_at"],
         CheckedNote: (string?)row["checked_note"] ?? string.Empty,
         MadeBy: (string?)row["made_by"] ?? ProjectRules.Owner,
-        Deleted: row[SyncedTable.DeletedAt] is not null);
+        Deleted: row[SyncedTable.DeletedAt] is not null,
+        Kind: (string?)row["kind"] ?? WantRules.Want,
+        NeedBy: (string?)row["need_by"] is { } needBy ? DateOnly.ParseExact(needBy, "yyyy-MM-dd", CultureInfo.InvariantCulture) : null);
 
     private static double? Number(JsonNode? node) => node is JsonValue value
         ? value.TryGetValue<double>(out var number) ? number

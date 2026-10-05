@@ -191,6 +191,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public GoalsView GoalsView { get; set; }
 
+        public WantsTab WantsTab { get; set; }
+
         public int? NewYearDismissed { get; set; }
 
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =

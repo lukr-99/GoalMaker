@@ -65,6 +65,9 @@ public sealed record SettingsDocument
     /// <summary>The ladder or the list; missing from older files reads as the ladder.</summary>
     public GoalsView GoalsView { get; init; } = GoalsView.Ladder;
 
+    /// <summary>The wants or the needs; missing from older files reads as the wants.</summary>
+    public WantsTab WantsTab { get; init; } = WantsTab.Wants;
+
     public int? NewYearDismissed { get; init; }
 
     public string? WeeklyBackupFolder { get; init; }

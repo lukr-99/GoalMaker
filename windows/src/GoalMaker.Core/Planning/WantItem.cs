@@ -2,7 +2,8 @@ namespace GoalMaker.Core.Planning;
 
 /// <summary>
 /// A want as the Wants page shows it (docs/wants.md): what, why, what it costs, and the cooldown it
-/// waits out before it is decided. <see cref="CheckedPrice"/> is the last price Claude found.
+/// waits out before it is decided. <see cref="CheckedPrice"/> is the last price Claude found. A
+/// <see cref="Kind"/> of need is something to buy, with no cooldown and maybe a day it is <see cref="NeedBy"/>.
 /// </summary>
 public sealed record WantItem(
     string Id,
@@ -22,4 +23,6 @@ public sealed record WantItem(
     string? CheckedAt = null,
     string CheckedNote = "",
     string MadeBy = ProjectRules.Owner,
-    bool Deleted = false);
+    bool Deleted = false,
+    string Kind = WantRules.Want,
+    DateOnly? NeedBy = null);

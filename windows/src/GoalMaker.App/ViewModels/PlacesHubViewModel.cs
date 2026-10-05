@@ -102,7 +102,8 @@ public sealed partial class PlacesHubViewModel : ObservableObject
         var habitRows = habitsPage.DueRows();
         var goalRows = GoalsViewModel.ThisWeek(goals, tasks, today, strings, habits);
         var openLifeGoals = lifeGoals.All().Count(goal => goal.Status == LifeGoalRules.Open);
-        var wantStates = wants.All().Select(want => WantRules.State(want, today)).ToList();
+        // Needs have no cooldown, so the tile counts only wants ready or cooling, as the Wants tab does.
+        var wantStates = wants.All().Where(want => want.Kind != WantRules.Need).Select(want => WantRules.State(want, today)).ToList();
         var ready = wantStates.Count(state => state == WantState.Ready);
         var labels = tallyLabels(tally.Categories());
         var todays = TallyRules.ByCategory(tally.Days(today, today));

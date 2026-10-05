@@ -157,6 +157,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { GoalsView = value });
     }
 
+    /// <summary>A value the file doesn't know reads as the wants.</summary>
+    public WantsTab WantsTab
+    {
+        get => Enum.IsDefined(document.WantsTab) ? document.WantsTab : WantsTab.Wants;
+        set => Save(document with { WantsTab = value });
+    }
+
     public int? NewYearDismissed
     {
         get => document.NewYearDismissed;
