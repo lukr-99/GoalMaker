@@ -31,7 +31,8 @@ public sealed class HabitRowViewModel
         HabitStanding standing = HabitStanding.None,
         IReadOnlyList<HabitDotViewModel>? dots = null,
         bool full = false,
-        DateOnly? day = null)
+        DateOnly? day = null,
+        double? used = null)
     {
         this.owner = owner;
         Habit = habit;
@@ -41,12 +42,13 @@ public sealed class HabitRowViewModel
         Ring = ring;
         Streak = streak;
         Value = value;
+        Used = used ?? value;
         IsSkipped = skipped;
         IsPaused = paused;
         Heat = heat;
         Serves = goalTitle is null ? string.Empty : strings.Get("Habits.Serves", goalTitle);
         CadenceText = Cadence(habit, strings);
-        StatusText = Status(habit, ring, value, met, skipped, standing == HabitStanding.Failed, paused, day is not null, strings);
+        StatusText = Status(habit, ring, value, Used, met, skipped, standing == HabitStanding.Failed, paused, day is not null, strings);
         StreakText = streak <= 0 ? string.Empty : strings.Get(habit.Cadence switch
         {
             HabitRules.PerWeek => "Habits.StreakWeeks",
@@ -74,7 +76,7 @@ public sealed class HabitRowViewModel
             Dots.Count(dot => dot.IsMet),
             Dots.Count(dot => dot.IsMissed || dot.IsOver),
             Dots.Count(dot => dot.IsSkipped));
-        Pips = PipsFor(habit, value, met);
+        Pips = PipsFor(habit, Used, met);
         HasBar = Pips.Count == 0 && (habit.Measure != HabitRules.Check || habit.Cadence is HabitRules.PerWeek or HabitRules.PerMonth);
         var share = Math.Clamp(ring ?? 0, 0, 1);
         BarFilled = new GridLength(share, GridUnitType.Star);
@@ -124,6 +126,12 @@ public sealed class HabitRowViewModel
 
     public double Value { get; }
 
+    /// <summary>
+    /// What a limit has had in its period by the row's day: the day's value, or the week's or month's so
+    /// far (contracts/vectors/habits.json, over). For a habit to build it is the day's value.
+    /// </summary>
+    public double Used { get; }
+
     public IReadOnlyList<HabitHeat> Heat { get; }
 
     public bool IsSkipped { get; }
@@ -138,8 +146,8 @@ public sealed class HabitRowViewModel
     /// <summary>The habit's number is a limit, so the ring fills with what has been had (docs/habits.md).</summary>
     public bool IsLimit => HabitRules.IsLimit(Habit);
 
-    /// <summary>Today went over the limit: the ring, the number and the day turn to the danger colour.</summary>
-    public bool IsOver => !IsSkipped && !IsFailed && HabitRules.IsOver(Habit, Value);
+    /// <summary>The period went over the limit by today: the ring, the number and the day turn to the danger colour.</summary>
+    public bool IsOver => !IsSkipped && !IsFailed && HabitRules.IsOver(Habit, Used);
 
     /// <summary>Where the habit stands today (contracts/vectors/habits.json, standings).</summary>
     public HabitStanding Standing { get; }
@@ -165,7 +173,10 @@ public sealed class HabitRowViewModel
     /// <summary>The week's dots in words, for a screen reader.</summary>
     public string DotsText { get; }
 
-    /// <summary>A pip for each glass of a small count or each day a weekly habit needs; none for the rest.</summary>
+    /// <summary>
+    /// A pip for each glass of a small count, each day a weekly habit needs, or each day a weekly limit
+    /// allows; none for the rest.
+    /// </summary>
     public IReadOnlyList<HabitPipViewModel> Pips { get; }
 
     public bool HasPips => Pips.Count > 0;
@@ -341,9 +352,23 @@ public sealed class HabitRowViewModel
     // More pips than this read as a bar.
     private const int MaxPips = 12;
 
-    private static List<HabitPipViewModel> PipsFor(HabitItem habit, double value, int met)
+    // The used value is the day's value, or what a limit has had in its week or month so far.
+    private static List<HabitPipViewModel> PipsFor(HabitItem habit, double used, int met)
     {
-        if (habit.Cadence is HabitRules.PerWeek or HabitRules.PerMonth)
+        // A limit's pips fill with what was had; the ones past its number turn to the danger colour.
+        if (HabitRules.IsLimit(habit))
+        {
+            if (habit.Measure == HabitRules.Amount || (habit.Measure == HabitRules.Check && !HabitRules.IsPeriodic(habit)))
+            {
+                return [];
+            }
+
+            var most = (int)Math.Ceiling(HabitRules.Limit(habit));
+            var had = Math.Max(most, (int)Math.Ceiling(used));
+            return had > MaxPips ? [] : [.. Enumerable.Range(0, had).Select(index => new HabitPipViewModel(index < used, index >= most && index < used))];
+        }
+
+        if (HabitRules.IsPeriodic(habit))
         {
             var times = habit.Times ?? 1;
             return times > MaxPips ? [] : [.. Enumerable.Range(0, times).Select(index => new HabitPipViewModel(index < met, false))];
@@ -355,10 +380,23 @@ public sealed class HabitRowViewModel
         }
 
         var target = (int)Math.Ceiling(habit.Target ?? 1);
-        var count = Math.Max(target, (int)Math.Ceiling(value));
-        return count > MaxPips
-            ? []
-            : [.. Enumerable.Range(0, count).Select(index => new HabitPipViewModel(index < value, HabitRules.IsLimit(habit) && index >= target && index < value))];
+        var count = Math.Max(target, (int)Math.Ceiling(used));
+        return count > MaxPips ? [] : [.. Enumerable.Range(0, count).Select(index => new HabitPipViewModel(index < used, false))];
+    }
+
+    // "1 of at most 2 this week", "3 of at most 5 drinks this month", or for a limit of 0 "None this week".
+    private static string PeriodLimit(HabitItem habit, double used, IStrings strings)
+    {
+        var period = habit.Cadence == HabitRules.PerMonth ? "Month" : "Week";
+        var most = HabitRules.Limit(habit);
+        if (most <= 0)
+        {
+            return strings.Get((used > 0 ? "Habits.Over" : "Habits.None") + period);
+        }
+
+        return habit.Measure != HabitRules.Check && habit.Unit is { } unit
+            ? strings.Get("Habits.LimitUnit" + period, Amount(used), Amount(most), unit)
+            : strings.Get("Habits.Limit" + period, Amount(used), Amount(most));
     }
 
     /// <summary>An amount as people write it here: "12.5", no ".0" on whole numbers.</summary>
@@ -373,7 +411,7 @@ public sealed class HabitRowViewModel
             .Select(day => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7])),
     };
 
-    private static string Status(HabitItem habit, double? ring, double value, int met, bool skipped, bool failed, bool paused, bool onDay, IStrings strings)
+    private static string Status(HabitItem habit, double? ring, double value, double used, int met, bool skipped, bool failed, bool paused, bool onDay, IStrings strings)
     {
         // A day other than today (the calendar's) says what happened without "today".
         string Key(string key) => onDay ? key + "OnDay" : key;
@@ -382,6 +420,7 @@ public sealed class HabitRowViewModel
             _ when paused => strings.Get("Habits.Paused"),
             _ when skipped => strings.Get("Habits.Skipped"),
             _ when failed => strings.Get("Habits.Failed"),
+            ({ Direction: HabitRules.AtMost, Cadence: HabitRules.PerWeek or HabitRules.PerMonth }, _) => PeriodLimit(habit, used, strings),
             ({ Cadence: HabitRules.PerWeek }, _) => strings.Get("Habits.MetWeek", met, habit.Times ?? 1),
             ({ Cadence: HabitRules.PerMonth }, _) => strings.Get("Habits.MetMonth", met, habit.Times ?? 1),
             (_, null) => strings.Get("Habits.NotDue"),

@@ -11,7 +11,7 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// Adds or edits a habit on the Habits page: name and emoji, how often it runs (weekdays get their own
 /// boxes, a week or a month a number of times), how it is measured, whether the number is something to
-/// reach or a limit to stay under, whether it shows on Today, and the goal it serves. Save refuses what the habit list refuses and
+/// reach or a limit to stay under (for a day, or for the whole week or month), whether it shows on Today, and the goal it serves. Save refuses what the habit list refuses and
 /// says why.
 /// </summary>
 public sealed partial class HabitEditorViewModel : ObservableObject
@@ -37,7 +37,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     private string emoji = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsWeekdays), nameof(IsTimes), nameof(TimesLabel), nameof(CanBeLimit), nameof(IsLimit), nameof(LimitHint))]
+    [NotifyPropertyChangedFor(nameof(IsWeekdays), nameof(IsTimes), nameof(TimesLabel), nameof(LimitHint), nameof(HasLimitHint), nameof(TargetLabel))]
     private ChoiceViewModel? cadence;
 
     [ObservableProperty]
@@ -45,11 +45,11 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     private int times = 3;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsCounted), nameof(LimitHint))]
+    [NotifyPropertyChangedFor(nameof(IsCounted), nameof(IsTimes), nameof(TimesLabel), nameof(LimitHint), nameof(HasLimitHint))]
     private ChoiceViewModel? measure;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLimit), nameof(LimitHint))]
+    [NotifyPropertyChangedFor(nameof(IsLimit), nameof(IsTimes), nameof(TimesLabel), nameof(LimitHint), nameof(HasLimitHint), nameof(TargetLabel))]
     private ChoiceViewModel? direction;
 
     [ObservableProperty]
@@ -133,28 +133,52 @@ public sealed partial class HabitEditorViewModel : ObservableObject
 
     public bool IsWeekdays => Cadence?.Id == HabitRules.OnWeekdays;
 
-    public bool IsTimes => Cadence?.Id is HabitRules.PerWeek or HabitRules.PerMonth;
+    /// <summary>
+    /// The stepper shows for a week or a month, except for a count or an amount under a limit: its target
+    /// is the period's total then, and the number of days is not read.
+    /// </summary>
+    public bool IsTimes => IsPeriodic && !(IsLimit && IsCounted);
 
     public bool IsCounted => Measure?.Id != HabitRules.Check;
 
-    /// <summary>Only a day can be a limit: a week of "at most two on three days" says nothing to act on.</summary>
-    public bool CanBeLimit => Cadence?.Id is HabitRules.Daily or HabitRules.OnWeekdays;
-
-    public bool IsLimit => CanBeLimit && Direction?.Id == HabitRules.AtMost;
+    /// <summary>Any habit can be a limit: two snacks a day, takeaway at most twice a week, or not once.</summary>
+    public bool IsLimit => Direction?.Id == HabitRules.AtMost;
 
     /// <summary>What a limit means, under the choice, so nobody has to find out by going over.</summary>
     public string LimitHint => !IsLimit
         ? string.Empty
-        : strings.Get(Measure?.Id == HabitRules.Check ? "Habits.LimitHintCheck" : "Habits.LimitHint");
+        : strings.Get((Cadence?.Id, IsCounted) switch
+        {
+            (HabitRules.PerWeek, false) => "Habits.LimitHintWeekCheck",
+            (HabitRules.PerWeek, true) => "Habits.LimitHintWeek",
+            (HabitRules.PerMonth, false) => "Habits.LimitHintMonthCheck",
+            (HabitRules.PerMonth, true) => "Habits.LimitHintMonth",
+            (_, false) => "Habits.LimitHintCheck",
+            _ => "Habits.LimitHint",
+        });
 
     public bool HasLimitHint => LimitHint.Length > 0;
 
+    /// <summary>What the target field holds: a day's target, or the most a day, a week or a month may have.</summary>
+    public string TargetLabel => strings.Get(!IsLimit ? "Habits.Target" : Cadence?.Id switch
+    {
+        HabitRules.PerWeek => "Habits.TargetMostWeek",
+        HabitRules.PerMonth => "Habits.TargetMostMonth",
+        _ => "Habits.TargetMostDay",
+    });
+
     public bool HasError => Error.Length > 0;
 
-    /// <summary>"3 times a week", beside the stepper.</summary>
-    public string TimesLabel => Cadence?.Id == HabitRules.PerMonth
-        ? strings.Get("Habits.TimesMonth", Times)
-        : strings.Get("Habits.TimesWeek", Times);
+    /// <summary>"3 times a week", or "At most 2 days a week" for a limit, beside the stepper.</summary>
+    public string TimesLabel => (Cadence?.Id == HabitRules.PerMonth, IsLimit) switch
+    {
+        (true, true) => strings.Get("Habits.AtMostMonth", Times),
+        (true, false) => strings.Get("Habits.TimesMonth", Times),
+        (false, true) => strings.Get("Habits.AtMostWeek", Times),
+        (false, false) => strings.Get("Habits.TimesWeek", Times),
+    };
+
+    private bool IsPeriodic => Cadence?.Id is HabitRules.PerWeek or HabitRules.PerMonth;
 
     /// <summary>A new habit, starting today.</summary>
     public void OpenNew() => Open(null, new HabitItem(string.Empty, string.Empty, today()));
@@ -175,6 +199,15 @@ public sealed partial class HabitEditorViewModel : ObservableObject
 
     partial void OnTargetTextChanged(string value) => Error = string.Empty;
 
+    // A limit may have no day at all in a week, but a habit to build needs at least one.
+    partial void OnDirectionChanged(ChoiceViewModel? value)
+    {
+        if (!IsLimit && Times < 1)
+        {
+            Times = 1;
+        }
+    }
+
     [RelayCommand]
     private void Save()
     {
@@ -184,7 +217,8 @@ public sealed partial class HabitEditorViewModel : ObservableObject
         {
             Cadence = cadenceId,
             Weekdays = cadenceId == HabitRules.OnWeekdays ? mask : null,
-            Times = IsTimes ? Times : null,
+            // A count or an amount under a weekly or monthly limit doesn't read its days, but the server needs one.
+            Times = IsTimes ? Times : IsPeriodic ? 1 : null,
             Measure = Measure?.Id ?? HabitRules.Check,
             Direction = IsLimit ? HabitRules.AtMost : HabitRules.AtLeast,
             Target = GoalEditorViewModel.ParseAmount(TargetText),
@@ -231,7 +265,7 @@ public sealed partial class HabitEditorViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void FewerTimes() => Times = Math.Max(1, Times - 1);
+    private void FewerTimes() => Times = Math.Max(IsLimit ? 0 : 1, Times - 1);
 
     [RelayCommand]
     private void MoreTimes() => Times = Math.Min(Cadence?.Id == HabitRules.PerMonth ? 31 : 7, Times + 1);

@@ -253,7 +253,8 @@ public sealed class HabitList
     }
 
     // The draft as the server will take it, or null: a name, a cadence with the days it needs, and a
-    // positive target for a count or an amount (supabase/migrations/0010_habits.sql).
+    // positive target for a count or an amount. A limit may go down to 0: a target of 0, or a week or a
+    // month with no day at all (supabase/migrations/0024_habit_limits_any_period.sql).
     private HabitDraft? Check(HabitDraft draft)
     {
         if (Clip(draft.Name, MaxName) is not { } name)
@@ -261,14 +262,16 @@ public sealed class HabitList
             return null;
         }
 
+        var limit = draft.Direction == HabitRules.AtMost;
+        var least = limit ? 0 : 1;
         var weekdays = draft.Cadence == HabitRules.OnWeekdays ? draft.Weekdays : null;
         var times = draft.Cadence is HabitRules.PerWeek or HabitRules.PerMonth ? draft.Times : null;
         var fits = draft.Cadence switch
         {
             HabitRules.Daily => true,
             HabitRules.OnWeekdays => weekdays is >= 1 and <= 127,
-            HabitRules.PerWeek => times is >= 1 and <= 7,
-            HabitRules.PerMonth => times is >= 1 and <= 31,
+            HabitRules.PerWeek => times >= least && times <= 7,
+            HabitRules.PerMonth => times >= least && times <= 31,
             _ => false,
         };
         if (!fits || draft.Measure is not (HabitRules.Check or HabitRules.Count or HabitRules.Amount))
@@ -278,20 +281,18 @@ public sealed class HabitList
 
         var counted = draft.Measure != HabitRules.Check;
         var target = counted ? draft.Target : null;
-        if (counted && (target is not { } value || value <= 0 || !double.IsFinite(value)))
+        if (counted && (target is not { } value || (limit ? value < 0 : value <= 0) || !double.IsFinite(value)))
         {
             return null;
         }
 
-        // Only a day can be a limit (supabase/migrations/0014_habit_limits.sql).
-        var onDays = draft.Cadence is HabitRules.Daily or HabitRules.OnWeekdays;
         return draft with
         {
             Name = name,
             Weekdays = weekdays,
             Times = times,
             Target = target,
-            Direction = draft.Direction == HabitRules.AtMost && onDays ? HabitRules.AtMost : HabitRules.AtLeast,
+            Direction = limit ? HabitRules.AtMost : HabitRules.AtLeast,
             Unit = counted ? Clip(draft.Unit, MaxUnit) : null,
             Emoji = Clip(draft.Emoji, MaxEmoji),
             GoalId = string.IsNullOrEmpty(draft.GoalId) ? null : draft.GoalId,
