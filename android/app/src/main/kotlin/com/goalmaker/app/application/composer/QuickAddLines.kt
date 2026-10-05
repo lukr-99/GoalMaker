@@ -143,7 +143,10 @@ object QuickAddLines {
         return WantLine(read.rest(), reason.ifEmpty { null }, price, currency, waitDays)
     }
 
-    /** A habit: "Swim 2 times a week", "Read 20 minutes every day", "Piano every mon and thu". */
+    /**
+     * A habit: "Swim 2 times a week", "Read 20 minutes every day", "Piano every mon and thu", or a limit:
+     * "Coffee at most 3 cups a day", "At most 2 takeaways a week", "No casino this month".
+     */
     fun readHabit(line: String): HabitLine {
         val read = Reader(words(line))
         var cadence = HabitRules.DAILY
@@ -153,8 +156,11 @@ object QuickAddLines {
         var target: Double? = null
         var unit: String? = null
 
+        val limit = limitAt(read)
+        val direction = if (limit == Limit.NONE) HabitRules.AT_LEAST else HabitRules.AT_MOST
+
         for (i in read.words.indices) {
-            val found = cadenceAt(read, i) ?: continue
+            val found = cadenceAt(read, i, limit) ?: continue
             if (!found.fits) {
                 read.mark(i, found.end, KEPT)
                 continue
@@ -180,15 +186,23 @@ object QuickAddLines {
                 break
             }
             val found = read.measure(i)
-            if (found == null || found.value <= 0) continue
+            if (found == null || found.value < 0 || (found.value == 0.0 && limit == Limit.NONE)) continue
             measure = if (found.decimal || found.unit.lowercase(Locale.ROOT) in AMOUNT_UNITS) HabitRules.AMOUNT else HabitRules.COUNT
             target = found.value
             unit = found.unit
-            read.mark(i, found.end + read.perDay(found.end), USED)
+            // Under a limit, "a week" or "a month" after the number makes it the most for the whole period.
+            val period = if (limit == Limit.NONE || cadence != HabitRules.DAILY) null else periodAt(read, found.end)
+            if (period != null) {
+                cadence = if (period.week) HabitRules.PER_WEEK else HabitRules.PER_MONTH
+                times = 1
+                read.mark(i, period.end, USED)
+            } else {
+                read.mark(i, found.end + read.perDay(found.end), USED)
+            }
             break
         }
 
-        return HabitLine(read.rest(), cadence, weekdays, times, measure, target, unit)
+        return HabitLine(read.rest(), cadence, weekdays, times, measure, target, unit, direction)
     }
 
     /** A goal: "Run 30 km this week", "Read 3 books in November". */
@@ -249,6 +263,11 @@ object QuickAddLines {
     private class Measure(val value: Double, val decimal: Boolean, val unit: String, val end: Int)
 
     private class Cadence(val cadence: String, val weekdays: Int?, val times: Double?, val end: Int, val fits: Boolean)
+
+    private class Period(val week: Boolean, val end: Int)
+
+    /** How a line sets a limit: not at all, with a number to come ("at most"), or as not once ("no"). */
+    private enum class Limit { NONE, MOST, ZERO }
 
     private fun words(line: String): List<Word> = line.split(SPACES).filter { it.isNotEmpty() }.map { text ->
         Word(text, text.lowercase(Locale.ROOT).replace(TRAILING, ""))
@@ -312,14 +331,59 @@ object QuickAddLines {
         fun perDay(i: Int): Int = if ((key(i) ?: "") in PER && key(i + 1) == "day") 2 else 0
     }
 
-    private fun cadenceAt(read: Reader, i: Int): Cadence? {
+    /**
+     * The first limit phrase, marked as used: "at most", "max", "maximum", "no more than" or "not more
+     * than" anywhere, or "no" or "never" as the line's first word.
+     */
+    private fun limitAt(read: Reader): Limit {
+        for (i in read.words.indices) {
+            fun k(offset: Int) = read.key(i + offset) ?: ""
+            val length = when {
+                k(0) == "at" && k(1) == "most" -> 2
+                k(0) == "max" || k(0) == "maximum" -> 1
+                (k(0) == "no" || k(0) == "not") && k(1) == "more" && k(2) == "than" -> 3
+                else -> 0
+            }
+            if (length > 0) {
+                read.mark(i, i + length, USED)
+                return Limit.MOST
+            }
+        }
+        if (read.key(0) == "no" || read.key(0) == "never") {
+            read.mark(0, 1, USED)
+            return Limit.ZERO
+        }
+        return Limit.NONE
+    }
+
+    /** "a week", "per month", "this week" and the like at [i]: which period, and where it ends. */
+    private fun periodAt(read: Reader, i: Int): Period? {
+        val first = read.key(i) ?: ""
+        val second = read.key(i + 1) ?: ""
+        if (!(first in PER || first == "this") || !(second == "week" || second == "month")) return null
+        return Period(second == "week", i + 2)
+    }
+
+    private fun cadenceAt(read: Reader, i: Int, limit: Limit): Cadence? {
         val key = read.key(i) ?: return null
         fun k(offset: Int) = read.key(i + offset) ?: ""
         fun per(n: Double, period: String, end: Int): Cadence {
             val week = period == "week"
-            return Cadence(if (week) HabitRules.PER_WEEK else HabitRules.PER_MONTH, null, n, end, n >= 1 && n <= (if (week) 7 else 31))
+            val fits = n >= (if (limit == Limit.NONE) 1 else 0) && n <= (if (week) 7 else 31)
+            return Cadence(if (week) HabitRules.PER_WEEK else HabitRules.PER_MONTH, null, n, end, fits)
         }
         fun period(word: String) = word == "week" || word == "month"
+
+        if (limit != Limit.NONE && WHOLE.matches(key)) {
+            // Under a limit a bare number, or a number of days, is how many days the period may have.
+            if (k(1) in PER && period(k(2))) return per(key.toDouble(), k(2), i + 3)
+            if (k(1) in setOf("days", "day") && k(2) in PER && period(k(3))) return per(key.toDouble(), k(3), i + 4)
+        }
+        if (limit == Limit.ZERO) {
+            // "No casino this month": the period alone, and not once in it.
+            val alone = periodAt(read, i)
+            if (alone != null) return per(0.0, if (alone.week) "week" else "month", alone.end)
+        }
 
         val nx = NX.find(key)
         if (WHOLE.matches(key) && k(1) in setOf("x", "times", "time") && k(2) in PER && period(k(3))) {

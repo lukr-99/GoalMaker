@@ -116,6 +116,28 @@ Deno.test("add_habit reads how often and how much from a line", async () => {
   assertEquals(kept.habit?.weekdays, undefined);
 });
 
+Deno.test("add_habit reads a limit from a line", async () => {
+  const { planner, saved } = stub();
+  await tool("add_habit").run(planner, { line: "At most 2 takeaways a week" });
+  assertEquals(
+    [saved.habit?.direction, saved.habit?.cadence, saved.habit?.times, saved.habit?.measure, saved.habit?.target],
+    ["at_most", "per_week", 1, "count", 2],
+  );
+
+  const { planner: zero, saved: none } = stub();
+  await tool("add_habit").run(zero, { line: "No casino this month" });
+  assertEquals([none.habit?.name, none.habit?.direction, none.habit?.cadence, none.habit?.times], [
+    "casino",
+    "at_most",
+    "per_month",
+    0,
+  ]);
+
+  const { planner: given, saved: kept } = stub();
+  await tool("add_habit").run(given, { line: "No sugar", direction: "at_least" });
+  assertEquals(kept.habit?.direction, "at_least", "a direction given apart wins");
+});
+
 Deno.test("add_goal reads the period and the target from a line", async () => {
   const { planner, saved } = stub();
   await tool("add_goal").run(planner, { line: "Read 3 books this month" });

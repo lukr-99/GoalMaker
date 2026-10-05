@@ -391,6 +391,20 @@ public sealed class HabitsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AWeeklyOrMonthlyLimitReadsAsTheMostDaysOrNotOnce()
+    {
+        string Cadence(string cadence, int times, string measure = HabitRules.Check, string direction = HabitRules.AtMost) =>
+            HabitRowViewModel.Cadence(new HabitItem(string.Empty, "Habit", Today) { Cadence = cadence, Times = times, Measure = measure, Direction = direction }, planner.Strings);
+
+        Assert.Equal("Habits.AtMostWeek(2)", Cadence(HabitRules.PerWeek, 2));
+        Assert.Equal("Habits.AtMostMonth(5)", Cadence(HabitRules.PerMonth, 5));
+        Assert.Equal("Habits.NotOnceWeek", Cadence(HabitRules.PerWeek, 0));
+        Assert.Equal("Habits.NotOnceMonth", Cadence(HabitRules.PerMonth, 0));
+        Assert.Equal("Habits.EveryWeek", Cadence(HabitRules.PerWeek, 1, HabitRules.Count));
+        Assert.Equal("Habits.TimesWeek(2)", Cadence(HabitRules.PerWeek, 2, direction: HabitRules.AtLeast));
+    }
+
+    [Fact]
     public void AWeeklyLimitCountsWhatTheWeekHadAndGoesOverMidWeek()
     {
         // 2026-09-18 is a Friday, so its week runs from Monday 14 September.
@@ -402,7 +416,7 @@ public sealed class HabitsViewModelTests : IDisposable
         })!;
         planner.Habits.CheckIn(takeaway.Id, Today.AddDays(-3));
         var row = Page().Rows.Single();
-        Assert.Equal(("Habits.TimesWeek(2)", "Habits.LimitWeek(1,2)"), (row.CadenceText, row.StatusText));
+        Assert.Equal(("Habits.AtMostWeek(2)", "Habits.LimitWeek(1,2)"), (row.CadenceText, row.StatusText));
         Assert.Equal(0.5, row.Fraction);
         Assert.False(row.IsOver);
         Assert.Equal([true, false], row.Pips.Select(pip => pip.IsOn));

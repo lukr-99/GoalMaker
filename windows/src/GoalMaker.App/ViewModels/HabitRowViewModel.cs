@@ -340,14 +340,32 @@ public sealed class HabitRowViewModel
 
     public IRelayCommand DeleteCommand { get; }
 
-    /// <summary>How often a habit runs: "Every day", "Mon, Wed, Fri", "3 times a week".</summary>
-    public static string Cadence(HabitItem habit, IStrings strings) => habit.Cadence switch
+    /// <summary>
+    /// How often a habit runs: "Every day", "Mon, Wed, Fri", "3 times a week". A weekly or monthly limit
+    /// reads "At most 2 days a week" or "Not once a month" for a check, and "Every week" for a count
+    /// or an amount, whose number is the most for the whole week.
+    /// </summary>
+    public static string Cadence(HabitItem habit, IStrings strings)
     {
-        HabitRules.OnWeekdays => Weekdays(habit.Weekdays ?? 0, strings),
-        HabitRules.PerWeek => strings.Get("Habits.TimesWeek", habit.Times ?? 1),
-        HabitRules.PerMonth => strings.Get("Habits.TimesMonth", habit.Times ?? 1),
-        _ => strings.Get("Habits.CadenceDaily"),
-    };
+        if (habit.Cadence is not (HabitRules.PerWeek or HabitRules.PerMonth))
+        {
+            return habit.Cadence == HabitRules.OnWeekdays ? Weekdays(habit.Weekdays ?? 0, strings) : strings.Get("Habits.CadenceDaily");
+        }
+
+        var period = habit.Cadence == HabitRules.PerMonth ? "Month" : "Week";
+        var times = habit.Times ?? 1;
+        if (!HabitRules.IsLimit(habit))
+        {
+            return strings.Get("Habits.Times" + period, times);
+        }
+
+        if (habit.Measure != HabitRules.Check)
+        {
+            return strings.Get("Habits.Every" + period);
+        }
+
+        return times == 0 ? strings.Get("Habits.NotOnce" + period) : strings.Get("Habits.AtMost" + period, times);
+    }
 
     // More pips than this read as a bar.
     private const int MaxPips = 12;

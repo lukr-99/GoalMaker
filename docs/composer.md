@@ -143,8 +143,9 @@ the reason is missing.
 |---|---|
 | how often | `daily`, `every day`; `N times a week` (`3x a week`, `3 x per week`, `once`, `twice`), 1 to 7, and `N times a month`, 1 to 31; `weekly` and `monthly` (once); `weekdays`, `weekends`; `every` or `on` with day names (`every mon, wed and fri`, `on tue thu`). Nothing said is every day. |
 | how much | `N times` (`twice`) `a day` is a count; N and a unit (`8 glasses`, `30 min`, `5km`), maybe with `a day`, is an amount when the unit is time, distance, steps, pages, volume, energy or weight, or N has decimals, and a count otherwise. A small word is never a unit (`2 of my friends`). Nothing said is a plain check. |
+| limit | `at most`, `max`, `maximum`, `no more than` or `not more than` anywhere makes it a limit (at most); `no` or `never` as the first word makes it a limit of not once. Under a limit a number may be 0, and three more forms are read: `N a week` (`3 a week`) and `N days a week` are how many days the week or month may have; a number and unit followed by `a week`, `per month` or `this week` is the most for the whole period (`at most 2 takeaways a week`). After `no` or `never` the period alone (`no casino this month`) is not once in it. Without a limit these stay text. |
 
-Both leave the name. A limit (at most) is set in the form.
+Both leave the name. The limit's rules are those of [habits](habits.md#something-to-reach-or-a-limit).
 
 **A goal** (`Read 3 books this month`):
 

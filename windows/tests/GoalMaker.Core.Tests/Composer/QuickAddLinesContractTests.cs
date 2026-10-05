@@ -37,6 +37,7 @@ public sealed class QuickAddLinesContractTests
             ["measure"] = habit.Measure,
             ["target"] = habit.Target,
             ["unit"] = habit.Unit,
+            ["direction"] = habit.Direction,
         };
     });
 
