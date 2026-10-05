@@ -64,6 +64,9 @@ public interface ISettingsStore
     /// <summary>The tab the Wants page last showed on this PC (docs/wants.md); the wants unless changed.</summary>
     WantsTab WantsTab { get; set; }
 
+    /// <summary>What the calendar's bar last added on several picked days on this PC (docs/calendar.md); one event unless changed.</summary>
+    PickedDaysAdd PickedDaysAdd { get; set; }
+
     /// <summary>The year the January nudge was last put away with Not now on this PC (docs/reviews.md); null for never.</summary>
     int? NewYearDismissed { get; set; }
 

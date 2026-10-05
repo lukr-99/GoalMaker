@@ -8,7 +8,8 @@
       Title="{DynamicResource Calendar.Title}"
       Background="{DynamicResource GM.BackgroundBrush}"
       FontFamily="{DynamicResource GM.BodyFont}"
-      Foreground="{DynamicResource GM.TextBrush}">
+      Foreground="{DynamicResource GM.TextBrush}"
+      controls:EscapeRuns.Command="{Binding LeavePickingCommand}">
     <Page.Resources>
         <Style x:Key="Hint" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,2,0,8" />
@@ -54,6 +55,43 @@
             <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
         </Style>
 
+        <!-- What the bar adds: a task or an event on one day, one event or a task on each of several. -->
+        <Style x:Key="AddChoice" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="10,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Segment" Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent" BorderThickness="1" CornerRadius="{DynamicResource GM.ChipCorner}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Segment" Property="Background" Value="{DynamicResource GM.SurfaceVariantBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Segment" Property="BorderBrush" Value="{DynamicResource GM.TextBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Segment" Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="AddChoices" TargetType="Border">
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="CornerRadius" Value="{DynamicResource GM.ChipCorner}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+
         <!-- One day of the grid, as tall as its week row's event bars need: its number at the top, the bars under it. -->
         <DataTemplate x:Key="DayCell" DataType="{x:Type vm:CalendarCellViewModel}">
             <ui:Button Margin="2" Padding="0" HorizontalAlignment="Stretch"
@@ -61,10 +99,23 @@
                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                        Appearance="Transparent" Command="{Binding OpenCommand}"
                        AllowDrop="True" DragOver="OnCellDragOver" Drop="OnCellDrop"
-                       AutomationProperties.Name="{Binding AutomationName}">
-                <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
+                       PreviewMouseLeftButtonDown="OnCellPressed" PreviewKeyDown="OnCellKey"
+                       AutomationProperties.Name="{Binding AutomationName}"
+                       AutomationProperties.HelpText="{DynamicResource Calendar.PickHint}">
+                <!-- A picked day of several is outlined. -->
+                <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}" BorderThickness="2"
                         Height="{Binding DataContext.FaceHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                    <StackPanel VerticalAlignment="Top" Margin="0,8,0,0">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPicked}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel VerticalAlignment="Top" Margin="0,6,0,0">
                         <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -242,9 +293,15 @@
         </DataTemplate>
     </Page.Resources>
 
+    <Page.InputBindings>
+        <!-- The event editor on the picked days, from anywhere on the page, when the bar adds events (docs/composer.md). -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding Bar.OpenFormCommand}" />
+    </Page.InputBindings>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -323,7 +380,7 @@
             </ScrollViewer>
         </Grid>
 
-        <!-- Undo for the event just deleted, for five seconds. -->
+        <!-- Undo for the event just deleted, or what the bar just added, for five seconds. -->
         <Border Grid.Row="1" Margin="24,0,24,16" Padding="16,6,6,6" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.HeroBrush}"
                 Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}">
             <Grid>
@@ -337,8 +394,43 @@
             </Grid>
         </Border>
 
+        <!--
+            The bottom bar (docs/calendar.md, "Adding from the calendar"): where the line lands, the Task or
+            Event switch for one day or the choice for several, then the composer. Tab reads them in that order.
+        -->
+        <StackPanel Grid.Row="2" Margin="{DynamicResource GM.BarMargin}" MaxWidth="{DynamicResource GM.PageWidth}" DataContext="{Binding Bar}">
+            <Grid Margin="12,0,12,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="0,0,12,0" VerticalAlignment="Center" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                           Text="{Binding DaysText}" AutomationProperties.Name="{Binding DaysName}" AutomationProperties.LiveSetting="Polite" />
+                <Border Grid.Column="1" Style="{StaticResource AddChoices}" AutomationProperties.Name="{DynamicResource Calendar.BarKind}"
+                        Visibility="{Binding ShowsSwitch, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource AddChoice}" GroupName="CalendarAddKind" IsChecked="{Binding IsTask, Mode=TwoWay}"
+                                     Content="{DynamicResource Calendar.BarTask}" AutomationProperties.Name="{DynamicResource Calendar.BarTask}" />
+                        <RadioButton Style="{StaticResource AddChoice}" GroupName="CalendarAddKind" IsChecked="{Binding IsEvent, Mode=TwoWay}"
+                                     Content="{DynamicResource Calendar.BarEvent}" AutomationProperties.Name="{DynamicResource Calendar.BarEvent}" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource AddChoices}" AutomationProperties.Name="{DynamicResource Calendar.BarPickKind}"
+                        Visibility="{Binding ShowsChoice, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Style="{StaticResource AddChoice}" GroupName="CalendarPickKind" IsChecked="{Binding IsEvent, Mode=TwoWay}"
+                                     Content="{DynamicResource Calendar.BarOneEvent}" AutomationProperties.Name="{DynamicResource Calendar.BarOneEventName}" />
+                        <RadioButton Style="{StaticResource AddChoice}" GroupName="CalendarPickKind" IsChecked="{Binding IsTask, Mode=TwoWay}"
+                                     Content="{DynamicResource Calendar.BarTaskOnEach}" AutomationProperties.Name="{DynamicResource Calendar.BarTaskOnEachName}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+            <ContentControl Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource ComposerTemplate}" />
+        </StackPanel>
+
         <!-- An event's editor (docs/calendar.md): the title, its days, its area and notes. -->
-        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}"
+        <Border Grid.RowSpan="3" Style="{StaticResource Overlay}"
                 Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ui:Card Margin="24" Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" DataContext="{Binding Editor}">

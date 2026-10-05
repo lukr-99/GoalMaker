@@ -210,6 +210,37 @@ public sealed class KeyboardReachTests : IDisposable
         Assert.Equal("Dinner", calendar.Editor.Title);
     });
 
+    [Fact]
+    public void TheCalendarsBarReadsItsDaysSwitchLineAndButtonInOrderAndEscLeavesPicking() => WpfApp.Run(() =>
+    {
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, planner.Strings, _ => null, planner.Time,
+            _ => { }, action => action(), events: planner.Events);
+        calendar.Open(Today);
+        var page = new Views.CalendarPage(calendar);
+        using var host = TabOrder.Host(page, 1000, 900);
+
+        // After the grid and the open day: the switch, then the line (the round button waits for a line).
+        var names = TabOrder.Stops(page).Select(TabOrder.Name).ToList();
+        Assert.Equal(["Task", "Event", "Composer.Placeholder"], names.Skip(names.IndexOf("Task")).Take(3));
+
+        calendar.Pick(Today.AddDays(2));
+        TabOrder.Settle();
+        names = [.. TabOrder.Stops(page).Select(TabOrder.Name)];
+        Assert.DoesNotContain("Task", names);
+        Assert.Equal(
+            ["One event from the first picked day to the last", "A copy of the task on each picked day", "Calendar.BarEventPlaceholder", "Event.Add"],
+            names.Skip(names.IndexOf("One event from the first picked day to the last")).Take(4));
+
+        // Esc on a cell goes back to one day.
+        var cell = TabOrder.Stops(page).First(stop => ((FrameworkElement)stop).DataContext is CalendarCellViewModel);
+        Assert.True(PressEscape(cell));
+        Assert.False(calendar.IsPicking);
+        TabOrder.Settle();
+        cell = TabOrder.Stops(page).First(stop => ((FrameworkElement)stop).DataContext is CalendarCellViewModel);
+        Assert.False(PressEscape(cell));
+    });
+
     private static ContentControl Bar(ComposerViewModel composer)
     {
         var bar = new ContentControl { Content = composer, Focusable = false };

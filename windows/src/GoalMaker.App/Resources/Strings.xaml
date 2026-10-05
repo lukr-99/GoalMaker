@@ -819,6 +819,25 @@
     <sys:String x:Key="Calendar.CellReminders">{0} reminders</sys:String>
     <sys:String x:Key="Calendar.CellEventsOne">1 event</sys:String>
     <sys:String x:Key="Calendar.CellEvents">{0} events</sys:String>
+    <sys:String x:Key="Calendar.CellPicked">picked</sys:String>
+    <!-- The calendar's bottom bar and picking several days (docs/calendar.md, "Adding from the calendar"). -->
+    <sys:String x:Key="Calendar.BarDays">{0} days</sys:String>
+    <sys:String x:Key="Calendar.BarDaysName">{0} days picked</sys:String>
+    <sys:String x:Key="Calendar.BarDayName">Adds to {0}</sys:String>
+    <sys:String x:Key="Calendar.BarKind">Add as</sys:String>
+    <sys:String x:Key="Calendar.BarTask">Task</sys:String>
+    <sys:String x:Key="Calendar.BarEvent">Event</sys:String>
+    <sys:String x:Key="Calendar.BarPickKind">What to add on the picked days</sys:String>
+    <sys:String x:Key="Calendar.BarOneEvent">One event</sys:String>
+    <sys:String x:Key="Calendar.BarOneEventName">One event from the first picked day to the last</sys:String>
+    <sys:String x:Key="Calendar.BarTaskOnEach">A task on each day</sys:String>
+    <sys:String x:Key="Calendar.BarTaskOnEachName">A copy of the task on each picked day</sys:String>
+    <sys:String x:Key="Calendar.BarEventPlaceholder">Add an event…</sys:String>
+    <sys:String x:Key="Calendar.BarAddEvent">Add event</sys:String>
+    <sys:String x:Key="Calendar.BarAddTasks">Add a task to each of {0} days</sys:String>
+    <sys:String x:Key="Calendar.PickHint">Ctrl+click picks more days, Shift+click a run</sys:String>
+    <sys:String x:Key="Calendar.Added">Added: {0}</sys:String>
+    <sys:String x:Key="Calendar.AddedEach">Added {0} to {1} days</sys:String>
     <!-- Calendar events (docs/calendar.md, ADR 0019) -->
     <sys:String x:Key="Calendar.Events">Events</sys:String>
     <sys:String x:Key="Calendar.EventSpan">{0} to {1}</sys:String>

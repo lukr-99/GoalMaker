@@ -843,6 +843,38 @@ public sealed class PageSnapshots
         Save(new TodayPage(today), folder, "calendar-events-today", new Size(900, 520));
     });
 
+    /// <summary>Adding from the calendar (M10-04): one day with the Task or Event switch, and three picked days with the bar asking.</summary>
+    [Fact(Explicit = true)]
+    public void CalendarAdding() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var travel = planner.Areas.Create("Travel")!;
+        planner.Events.Add(new EventDraft("Conference", Today.AddDays(-2), Today, AreaId: travel.Id));
+        planner.Events.Add(new EventDraft("Dentist", Today.AddDays(5), Today.AddDays(5)));
+        foreach (var (line, day) in new[] { ("Call the bank 9:00", Today), ("Water the plants", Today.AddDays(2)) })
+        {
+            var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
+            planner.Tasks.Plan(task.Id, day);
+        }
+
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time,
+            _ => { }, action => action(), events: planner.Events);
+        calendar.Open(Today.AddDays(3));
+        calendar.Bar.Line = "Pack #trip";
+        Save(new CalendarPage(calendar), folder, "calendar-bar-one-day", new Size(1100, 820));
+
+        calendar.Bar.Line = string.Empty;
+        calendar.PickRun(Today.AddDays(5));
+        calendar.Bar.Line = "Prague";
+        Save(new CalendarPage(calendar), folder, "calendar-picking", new Size(1100, 820));
+        calendar.Bar.IsTask = true;
+        calendar.Bar.Line = "Pack #trip";
+        Save(new CalendarPage(calendar), folder, "calendar-picking-tasks", new Size(1100, 820));
+    });
+
     [Fact(Explicit = true)]
     public void ProjectsPage_() => OnUiThread(folder =>
     {

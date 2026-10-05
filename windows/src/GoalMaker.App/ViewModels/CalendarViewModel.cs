@@ -14,7 +14,9 @@ namespace GoalMaker.App.ViewModels;
 /// and reminders, with a day showing what it holds and a task opening from there. An area and tag
 /// filter of its own narrows what the grid counts and the day lists, the same filter the lists use.
 /// Events are drawn as bars across the days they take up, listed above the open day's tasks, and open
-/// an editor over the page; a deleted one can be brought back for five seconds.
+/// an editor over the page; a deleted one can be brought back for five seconds. The bottom bar adds a
+/// task or an event to the picked day; Ctrl+click and Shift+click (Ctrl+Space and Shift+Space on a
+/// cell) pick several days, and Esc or a plain click goes back to one.
 /// </summary>
 public sealed partial class CalendarViewModel : ObservableObject
 {
@@ -38,6 +40,9 @@ public sealed partial class CalendarViewModel : ObservableObject
     private ITimer? undoTimer;
     private DateOnly? anchor;
     private DateOnly? selected;
+
+    // The days picked with Ctrl or Shift, in the order they were picked; empty while only one day is.
+    private List<DateOnly> picks = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsWeek))]
@@ -74,6 +79,11 @@ public sealed partial class CalendarViewModel : ObservableObject
     [ObservableProperty]
     private string undoText = string.Empty;
 
+    /// <summary>Whether several days are picked, so Esc goes back to one.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LeavePickingCommand))]
+    private bool isPicking;
+
     public CalendarViewModel(
         TaskList tasks,
         ReminderList reminders,
@@ -89,7 +99,8 @@ public sealed partial class CalendarViewModel : ObservableObject
         Action<string>? openProject = null,
         HabitsViewModel? habitsPage = null,
         HabitList? habitList = null,
-        EventList? events = null)
+        EventList? events = null,
+        ChatViewModel? chat = null)
     {
         this.events = events;
         this.areas = areas;
@@ -125,8 +136,26 @@ public sealed partial class CalendarViewModel : ObservableObject
         filter.Changed += (_, _) => runOnUi(Refresh);
         Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
         Weekdays = [.. Enumerable.Range(0, 7).Select(day => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7])];
+        Bar = new CalendarComposerViewModel(
+            tasks,
+            events,
+            areas,
+            tags,
+            projects,
+            settings,
+            strings,
+            time,
+            areaBrush,
+            PickedDays,
+            ShowUndo,
+            runOnUi,
+            events is null ? null : (first, last, title) => Editor!.OpenNew(first, last, title),
+            chat);
         Refresh();
     }
+
+    /// <summary>The bottom bar, which adds to the picked days.</summary>
+    public CalendarComposerViewModel Bar { get; }
 
     /// <summary>Which of the two views is on show, so its button reads as chosen.</summary>
     public bool IsWeek => Kind == CalendarRules.Week;
@@ -161,12 +190,17 @@ public sealed partial class CalendarViewModel : ObservableObject
     /// What a reader says for a day's cell: "Saturday, 3 October 2026, today, 2 planned, 1 due", or that
     /// nothing is on it. The same parts, in the same order, as the phone's cell.
     /// </summary>
-    private string CellName(CalendarDay day, int eventCount, bool isToday, bool isOpen)
+    private string CellName(CalendarDay day, int eventCount, bool isToday, bool isOpen, bool isPicked)
     {
         var parts = new List<string> { day.Day.ToString("D", CultureInfo.CurrentCulture) };
         if (isToday)
         {
             parts.Add(strings.Get("Calendar.CellToday"));
+        }
+
+        if (isPicked)
+        {
+            parts.Add(strings.Get("Calendar.CellPicked"));
         }
 
         if (isOpen)
@@ -217,6 +251,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         foreach (var day in days)
         {
             var date = day.Day;
+            var picked = picks.Contains(date);
             Cells.Add(new CalendarCellViewModel(
                 date,
                 date.Day.ToString(CultureInfo.CurrentCulture),
@@ -225,7 +260,10 @@ public sealed partial class CalendarViewModel : ObservableObject
                 Kind == CalendarRules.Week || date.Month == shown.Month,
                 date == selected,
                 () => Open(date),
-                CellName(day, eventDays[date].Count, date == today, date == selected)));
+                CellName(day, eventDays[date].Count, date == today, date == selected, picked),
+                picked,
+                () => Pick(date),
+                () => PickRun(date)));
         }
 
         ShowWeeks(shownEvents, start, end);
@@ -274,6 +312,73 @@ public sealed partial class CalendarViewModel : ObservableObject
         IsDayEmpty = open is not null && open.Empty && DayEvents.Count == 0;
         HasReminders = open is { Reminders: > 0 };
         DayReminders = HasReminders ? strings.Get("Calendar.Reminders", open!.Reminders) : string.Empty;
+        IsPicking = picks.Count > 1;
+        Bar?.DaysChanged();
+    }
+
+    /// <summary>
+    /// The days the bar adds to, in the order they were picked: the picked ones while several are, else
+    /// the open day, else today.
+    /// </summary>
+    public IReadOnlyList<DateOnly> PickedDays() => picks.Count > 1 ? [.. picks] : [selected ?? Today()];
+
+    /// <summary>Ctrl+click or Ctrl+Space on a cell: adds the day to the pick, or takes it out.</summary>
+    public void Pick(DateOnly day)
+    {
+        var days = Current();
+        if (!days.Remove(day))
+        {
+            days.Add(day);
+        }
+
+        Keep(days, days.Contains(day) ? day : null);
+    }
+
+    /// <summary>Shift+click or Shift+Space on a cell: adds the run of days from the last one picked to this one.</summary>
+    public void PickRun(DateOnly day)
+    {
+        var days = Current();
+        if (days.Count == 0)
+        {
+            Keep([day], day);
+            return;
+        }
+
+        var from = days[^1];
+        var step = day >= from ? 1 : -1;
+        for (var next = from; next != day.AddDays(step); next = next.AddDays(step))
+        {
+            if (!days.Contains(next))
+            {
+                days.Add(next);
+            }
+        }
+
+        Keep(days, day);
+    }
+
+    /// <summary>Esc: back to one day, the open one.</summary>
+    [RelayCommand(CanExecute = nameof(IsPicking))]
+    private void LeavePicking()
+    {
+        picks = [];
+        Refresh();
+    }
+
+    // The days picked now: the pick, or the open day alone.
+    private List<DateOnly> Current() => picks.Count > 1 ? [.. picks] : selected is { } open ? [open] : [];
+
+    // Keeps a pick: several days stay picked with the one just touched open; one is just the open day.
+    private void Keep(List<DateOnly> days, DateOnly? touched)
+    {
+        picks = days.Count > 1 ? days : [];
+        selected = days.Count switch
+        {
+            0 => null,
+            1 => days[0],
+            _ => touched ?? days[^1],
+        };
+        Refresh();
     }
 
     /// <summary>Whether the open day lists habits to check in.</summary>
@@ -337,10 +442,11 @@ public sealed partial class CalendarViewModel : ObservableObject
         }
     }
 
-    /// <summary>Opens a day, or closes it when it is already open.</summary>
+    /// <summary>Opens a day, or closes it when it is already open. While several days are picked, it goes back to this one.</summary>
     public void Open(DateOnly day)
     {
-        selected = selected == day ? null : day;
+        selected = picks.Count > 1 || selected != day ? day : null;
+        picks = [];
         Refresh();
     }
 

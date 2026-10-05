@@ -136,6 +136,30 @@ public sealed class CalendarRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryPickOfDays()
+    {
+        foreach (var testCase in vectors.GetProperty("picked").EnumerateArray())
+        {
+            var name = testCase.GetProperty("name").GetString();
+            var days = testCase.GetProperty("days").EnumerateArray().Select(day => DateOnly.Parse(day.GetString()!, CultureInfo.InvariantCulture)).ToList();
+            var expect = testCase.GetProperty("event");
+            var made = EventRules.PickedEvent(days);
+            if (expect.ValueKind == JsonValueKind.Null)
+            {
+                Assert.True(made is null, $"{name}: {made}");
+            }
+            else
+            {
+                Assert.True((Day(expect, "startsOn"), Day(expect, "endsOn")) == made, $"{name}: {made}");
+            }
+
+            var wanted = testCase.GetProperty("tasks").EnumerateArray().Select(day => DateOnly.Parse(day.GetString()!, CultureInfo.InvariantCulture));
+            var got = EventRules.PickedTaskDays(days);
+            Assert.True(wanted.SequenceEqual(got), $"{name}: {string.Join(", ", got)}");
+        }
+    }
+
     private static List<EventItem> Events(JsonElement testCase) =>
     [
         .. testCase.GetProperty("events").EnumerateArray().Select(item => new EventItem(

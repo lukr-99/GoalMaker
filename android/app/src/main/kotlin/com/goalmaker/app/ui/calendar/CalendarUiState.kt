@@ -4,6 +4,7 @@ import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.CalendarDay
 import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.EventBar
+import com.goalmaker.app.application.planning.EventRules
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.habits.HabitRow
@@ -13,7 +14,9 @@ import java.time.LocalDate
 /**
  * The calendar screen: the grid on show, the day the owner has opened, the [projects] its items' chips
  * name, and the area and tag [filter]. [bars] are the event bars of each week row, and [areas] every
- * area, archived ones too, for a bar's colour and the event sheet's picker.
+ * area, archived ones too, for a bar's colour and the event sheet's picker. While [picking], the owner
+ * has [picked] several days (docs/calendar.md); the bottom bar adds to [addDays], an event when
+ * [addsEvent] and a task otherwise.
  */
 data class CalendarUiState(
     val loaded: Boolean = false,
@@ -28,7 +31,18 @@ data class CalendarUiState(
     val dayHabits: List<HabitRow> = emptyList(),
     val bars: List<List<EventBar>> = emptyList(),
     val areas: List<AreaItem> = emptyList(),
+    val picking: Boolean = false,
+    val picked: Set<LocalDate> = emptySet(),
+    /** The days the bar adds to: the picked ones, earliest first, or else the open day or today. */
+    val addDays: List<LocalDate> = emptyList(),
+    val addsEvent: Boolean = false,
 ) {
+    /** Whether the bar adds across several days, so it asks for one event or a task on each. */
+    val several: Boolean get() = addDays.size > 1
+
+    /** The days of the event the bar would add; null when the pick is wider than an event may be. */
+    val eventSpan: ClosedRange<LocalDate>? get() = EventRules.pickedSpan(addDays)
+
     /** The project a task is an item of, while that project is still there. */
     fun projectOf(task: TaskItem): ProjectItem? = task.projectId?.let { id -> projects.firstOrNull { it.id == id } }
 

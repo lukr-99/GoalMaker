@@ -1,5 +1,7 @@
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using GoalMaker.App.ViewModels;
 
@@ -7,8 +9,9 @@ namespace GoalMaker.App.Views;
 
 /// <summary>
 /// The Calendar page. Behavior is in <see cref="CalendarViewModel"/>; the page only shows it, and
-/// carries the drag of a task from a day's list onto another day of the grid (docs/calendar.md), and
-/// moves the keyboard into the event editor when it opens.
+/// carries the drag of a task from a day's list onto another day of the grid (docs/calendar.md), the
+/// picking of several days with Ctrl and Shift (a click, or Space on a cell), and moves the keyboard
+/// into the event editor when it opens.
 /// </summary>
 public partial class CalendarPage
 {
@@ -64,6 +67,63 @@ public partial class CalendarPage
 
         pressedId = null;
         DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(string), id), DragDropEffects.Move);
+    }
+
+    // Ctrl+click adds a day to the pick or takes it out, Shift+click picks a run; a plain click opens the day.
+    private void OnCellPressed(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: CalendarCellViewModel cell } && PickWith(cell, Keyboard.Modifiers))
+        {
+            e.Handled = true;
+        }
+    }
+
+    // Ctrl+Space and Shift+Space do the same on the cell the keyboard is on, and the keyboard stays there.
+    private void OnCellKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Space && sender is FrameworkElement { DataContext: CalendarCellViewModel cell } && PickWith(cell, Keyboard.Modifiers))
+        {
+            e.Handled = true;
+            var day = cell.Day;
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => FocusCell(this, day));
+        }
+    }
+
+    private static bool PickWith(CalendarCellViewModel cell, ModifierKeys modifiers)
+    {
+        if (modifiers == ModifierKeys.Control)
+        {
+            cell.PickCommand.Execute(null);
+            return true;
+        }
+
+        if (modifiers == ModifierKeys.Shift)
+        {
+            cell.PickRunCommand.Execute(null);
+            return true;
+        }
+
+        return false;
+    }
+
+    // The grid is built again after a pick, so the keyboard goes back to the new cell of the same day.
+    private static bool FocusCell(DependencyObject parent, DateOnly day)
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, index);
+            if (child is ButtonBase { DataContext: CalendarCellViewModel cell } button && cell.Day == day)
+            {
+                return button.Focus();
+            }
+
+            if (FocusCell(child, day))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void OnCellDragOver(object sender, DragEventArgs e)

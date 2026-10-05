@@ -8,6 +8,7 @@ import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.settings.ComposerMode
 import com.goalmaker.app.domain.settings.GoalsView
+import com.goalmaker.app.domain.settings.PickedDaysAdd
 import java.time.Instant
 import java.time.LocalTime
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Device-local settings that are not synced: the appearance, when the planning day starts, quiet
  * hours, the evening reminder, the pinned places, how project boards and goals show, the composer's
- * mode, the app lock, Tally, what the phone knows about a found update and, in dev builds, a backend
+ * mode, what the calendar adds across picked days, the app lock, Tally, what the phone knows about a found update and, in dev builds, a backend
  * override.
  */
 interface SettingsStore : UpdateMemory {
@@ -84,6 +85,11 @@ interface SettingsStore : UpdateMemory {
     val goalsView: StateFlow<GoalsView>
 
     fun setGoalsView(view: GoalsView)
+
+    /** What the calendar's bar adds across several picked days, the choice used last time (docs/calendar.md); one event unless changed. */
+    val pickedDaysAdd: StateFlow<PickedDaysAdd>
+
+    fun setPickedDaysAdd(choice: PickedDaysAdd)
 
     /** The year the January nudge was last put away with Not now on this phone (docs/reviews.md); null for never. */
     val newYearDismissed: StateFlow<Int?>

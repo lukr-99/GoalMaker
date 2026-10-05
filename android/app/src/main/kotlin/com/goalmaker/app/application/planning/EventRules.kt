@@ -4,9 +4,10 @@ import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 /**
- * Calendar events (docs/calendar.md, ADR 0019), pinned by the 'eventDays', 'bars' and 'ongoing' groups
- * of contracts/vectors/calendar.json, which the Windows app and the connector run too: which events a
- * day holds, the bars a grid's week rows draw, and the events going on today.
+ * Calendar events (docs/calendar.md, ADR 0019), pinned by the 'eventDays', 'bars', 'ongoing' and
+ * 'picked' groups of contracts/vectors/calendar.json, which the Windows app and the connector run too:
+ * which events a day holds, the bars a grid's week rows draw, the events going on today, and what the
+ * calendar's bottom bar makes from the days picked.
  */
 object EventRules {
     const val MAX_TITLE = 200
@@ -86,6 +87,19 @@ object EventRules {
     fun ongoing(events: List<EventItem>, day: LocalDate): List<OngoingEvent> = onDay(events, day).map { event ->
         OngoingEvent(event, ChronoUnit.DAYS.between(event.startsOn, day).toInt() + 1, event.days)
     }
+
+    /**
+     * The first and last day of the one event a pick of days makes: the earliest picked day to the
+     * latest, gaps included. Null when nothing is picked or the pick is wider than an event may be.
+     */
+    fun pickedSpan(picked: Collection<LocalDate>): ClosedRange<LocalDate>? {
+        val first = picked.minOrNull() ?: return null
+        val last = picked.max()
+        return (first..last).takeIf { validSpan(first, last) }
+    }
+
+    /** The days a pick puts a copy of a task on: each picked day once, earliest first. */
+    fun pickedDays(picked: Collection<LocalDate>): List<LocalDate> = picked.distinct().sorted()
 
     private fun touching(events: List<EventItem>, from: LocalDate, to: LocalDate, keep: (EventItem) -> Boolean) =
         events.filter { !it.deleted && !it.startsOn.isAfter(to) && !it.endsOn.isBefore(from) && keep(it) }.sortedWith(ORDER)

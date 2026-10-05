@@ -7,6 +7,7 @@ import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.settings.ComposerMode
 import com.goalmaker.app.domain.settings.GoalsView
+import com.goalmaker.app.domain.settings.PickedDaysAdd
 import com.goalmaker.app.domain.settings.ReduceMotion
 import com.goalmaker.app.domain.settings.ThemeMode
 import com.goalmaker.app.domain.update.UpdatePostponement
@@ -103,6 +104,16 @@ class SharedPreferencesSettingsStoreTest {
 
         preferences.edit(commit = true) { putString("goals_view", "TREE") }
         assertEquals(GoalsView.LADDER, SharedPreferencesSettingsStore(preferences).goalsView.value)
+    }
+
+    @Test
+    fun `the calendar adds one event across picked days until the other choice is used`() {
+        val store = SharedPreferencesSettingsStore(preferences)
+        assertEquals(PickedDaysAdd.ONE_EVENT, store.pickedDaysAdd.value)
+
+        store.setPickedDaysAdd(PickedDaysAdd.TASK_ON_EACH)
+
+        assertEquals(PickedDaysAdd.TASK_ON_EACH, SharedPreferencesSettingsStore(preferences).pickedDaysAdd.value)
     }
 
     @Test

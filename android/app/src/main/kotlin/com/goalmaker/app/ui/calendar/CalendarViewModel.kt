@@ -19,6 +19,10 @@ import com.goalmaker.app.application.planning.ReminderList
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
+import com.goalmaker.app.domain.composer.ComposerDraft
+import com.goalmaker.app.domain.composer.ComposerParser
+import com.goalmaker.app.domain.composer.SpanKind
+import com.goalmaker.app.domain.settings.PickedDaysAdd
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.ui.habits.HabitBoard
 import com.goalmaker.app.ui.lists.PlaceFilter
@@ -48,6 +52,11 @@ import kotlinx.coroutines.withContext
  * its tasks ticked off on that day and its habits checked in, skipped or failed there. Events draw as
  * bars across their days, narrowed by the area filter, and open in the event sheet, which saves and
  * deletes them (docs/calendar.md, Events).
+ *
+ * The bottom bar adds to the open day (today when none is open): a task by the composer's rules, or an
+ * event whose title is the line. A long-press starts picking several days, and then the bar adds one
+ * event from the first picked day to the last, or a copy of the task on each picked day; the choice
+ * starts at the one used last time on this device. Every add can be taken back as a whole.
  */
 class CalendarViewModel(
     private val tasks: TaskList,
@@ -62,6 +71,7 @@ class CalendarViewModel(
     private val clock: () -> LocalDateTime,
 ) : ViewModel() {
     private val view = MutableStateFlow(View(CalendarRules.MONTH, null, null))
+    private val viewAndChoice = combine(view, settings.pickedDaysAdd, ::Pair)
     private val filter = PlaceFilter(areas, tags, io)
     private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
 
@@ -74,7 +84,7 @@ class CalendarViewModel(
         ::Data,
     )
 
-    val uiState: StateFlow<CalendarUiState> = combine(data, view, filter.choices) { (taskList, reminderList, projectList, habitData, eventsAndAreas), showing, choices ->
+    val uiState: StateFlow<CalendarUiState> = combine(data, viewAndChoice, filter.choices) { (taskList, reminderList, projectList, habitData, eventsAndAreas), (showing, lastChoice), choices ->
         val (eventList, areaList) = eventsAndAreas
         val areasOfProjects = projectList.associate { it.id to it.areaId }
         val today = today()
@@ -98,10 +108,14 @@ class CalendarViewModel(
             dayHabits = showing.selected?.takeUnless { it.isAfter(today) }?.let { HabitBoard.due(habitData, it, onDay = it != today) }.orEmpty(),
             bars = EventRules.bars(eventList, start, end, choices.filter::keeps),
             areas = areaList,
+            picking = showing.picking,
+            picked = showing.picked.toSet(),
+            addDays = addDays(showing, today),
+            addsEvent = addsEvent(showing, today, lastChoice),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), CalendarUiState())
 
-    /** Event deletions the screen offers to undo. */
+    /** Event deletions and what the bar added, which the screen offers to undo. */
     val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
 
     /**
@@ -133,8 +147,121 @@ class CalendarViewModel(
     /** Back to the week or month holding today. */
     fun today(reset: Boolean) = view.update { it.copy(anchor = null, selected = null) }
 
-    /** Opens a day, or closes it when it is already open. */
-    fun open(day: LocalDate) = view.update { it.copy(selected = if (it.selected == day) null else day) }
+    /** Opens a day, or closes it when it is already open. While picking, a tap picks the day or unpicks it. */
+    fun open(day: LocalDate) = view.update { showing ->
+        when {
+            !showing.picking -> showing.copy(selected = if (showing.selected == day) null else day)
+            day in showing.picked -> {
+                val left = showing.picked - day
+                // Unpicking the last day leaves picking, with that day still open.
+                if (left.isEmpty()) showing.leavePicking() else showing.copy(picked = left, selected = left.last())
+            }
+            else -> showing.copy(picked = showing.picked + day, selected = day)
+        }
+    }
+
+    /**
+     * A long-press on [day]: starts picking several days with it, or adds it while picking already. A
+     * drag that follows picks a run from it ([pickRun]).
+     */
+    fun startPicking(day: LocalDate) = view.update { showing ->
+        val picked = if (showing.picking) (showing.picked - day) + day else listOf(day)
+        showing.copy(
+            picking = true,
+            picked = picked,
+            runBase = picked,
+            selected = day,
+            choice = if (showing.picking) showing.choice else null,
+        )
+    }
+
+    /** A drag from [from] to [to] after a long-press: every day between them is picked, on top of what was before. */
+    fun pickRun(from: LocalDate, to: LocalDate) = view.update { showing ->
+        if (!showing.picking) return@update showing
+        val last = maxOf(from, to)
+        val run = generateSequence(minOf(from, to)) { it.plusDays(1) }.takeWhile { !it.isAfter(last) }.toList()
+        showing.copy(picked = (showing.runBase + run).distinct(), selected = to)
+    }
+
+    /** Leaves picking (Back or Done) and goes back to one day, the one open. */
+    fun stopPicking() = view.update { it.leavePicking() }
+
+    /**
+     * The bar's switch: an event or a task. Across several picked days it is the choice between one
+     * event and a task on each day, which the next add remembers for next time.
+     */
+    fun chooseEvent(event: Boolean) = view.update { showing ->
+        if (addDays(showing, today()).size > 1) {
+            showing.copy(choice = if (event) PickedDaysAdd.ONE_EVENT else PickedDaysAdd.TASK_ON_EACH)
+        } else {
+            showing.copy(event = event)
+        }
+    }
+
+    /**
+     * What the bar's line says as a task right now. Pure and fast, so it runs on every keystroke. Across
+     * several picked days each copy is a plain task on its own day, so a day or repeat the line names
+     * is read out of the title but left out of the task.
+     */
+    fun preview(line: String): ComposerDraft {
+        val draft = ComposerParser.parse(line, clock(), settings.dayStartHour.value)
+        if (addDays(view.value, today()).size <= 1) return draft
+        return draft.copy(
+            plannedDate = null,
+            repeat = null,
+            spans = draft.spans.filterNot { it.kind == SpanKind.DATE || it.kind == SpanKind.REPEAT },
+        )
+    }
+
+    /** The planning day, which the bar's chips read dates against. */
+    fun today(): LocalDate = PlanningDay.of(clock(), settings.dayStartHour.value)
+
+    /**
+     * Adds what the bar's line says to the days it adds to (docs/calendar.md): an event whose title is
+     * the line, across the picked days, or a task, a copy on each picked day. A task on one day keeps a
+     * day or repeat the line names, as Tomorrow's bar does; else it is planned for that day, at the time
+     * the line names. False when there is nothing to add, so the bar keeps its text.
+     */
+    fun add(line: String): Boolean {
+        val showing = view.value
+        val today = today()
+        val days = addDays(showing, today)
+        val event = addsEvent(showing, today, settings.pickedDaysAdd.value)
+        val added = if (event) addEvent(line.trim(), days) else addTasks(preview(line), days)
+        if (added && days.size > 1) {
+            val choice = if (event) PickedDaysAdd.ONE_EVENT else PickedDaysAdd.TASK_ON_EACH
+            settings.setPickedDaysAdd(choice)
+            view.update { it.copy(choice = choice) }
+        }
+        return added
+    }
+
+    private fun addEvent(title: String, days: List<LocalDate>): Boolean {
+        if (title.isEmpty() || title.length > EventRules.MAX_TITLE) return false
+        val span = EventRules.pickedSpan(days) ?: return false
+        viewModelScope.launch(io) {
+            val made = events.add(EventDraft(title, span.start, span.endInclusive)) ?: return@launch
+            undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.ADDED, made.title) { viewModelScope.launch(io) { events.delete(made.id) } })
+        }
+        return true
+    }
+
+    private fun addTasks(draft: ComposerDraft, days: List<LocalDate>): Boolean {
+        if (draft.command != null || draft.title.isBlank() || days.isEmpty()) return false
+        val named = draft.spans.any { it.kind == SpanKind.DATE || it.kind == SpanKind.REPEAT }
+        val drafts = when {
+            days.size == 1 && named -> listOf(draft)
+            days.size == 1 -> listOf(draft.copy(plannedDate = days.single()))
+            // Each copy is a plain task on its picked day; preview has already left out the line's own day and repeat.
+            else -> days.map { draft.copy(plannedDate = it, repeat = null) }
+        }
+        viewModelScope.launch(io) {
+            val made = drafts.mapNotNull { tasks.add(it) }
+            if (made.isEmpty()) return@launch
+            undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.ADDED, made.first().title) { viewModelScope.launch(io) { made.forEach { tasks.delete(it.id) } } })
+        }
+        return true
+    }
 
     /** Narrows the calendar to an area, or stops narrowing by area when [areaId] is null. */
     fun filterByArea(areaId: String?) = filter.byArea(areaId)
@@ -181,13 +308,34 @@ class CalendarViewModel(
         return if (showing.kind == CalendarRules.WEEK) anchor.plusWeeks(by) else anchor.plusMonths(by)
     }
 
-    private fun today(): LocalDate = PlanningDay.of(clock(), settings.dayStartHour.value)
-
     private fun MutableStateFlow<View>.update(edit: (View) -> View) {
         value = edit(value)
     }
 
-    private data class View(val kind: String, val anchor: LocalDate?, val selected: LocalDate?)
+    // The days the bar adds to: the picked ones, else the open day, else today.
+    private fun addDays(showing: View, today: LocalDate): List<LocalDate> =
+        if (showing.picking) EventRules.pickedDays(showing.picked) else listOf(showing.selected ?: today)
+
+    private fun addsEvent(showing: View, today: LocalDate, lastChoice: PickedDaysAdd): Boolean =
+        if (addDays(showing, today).size > 1) (showing.choice ?: lastChoice) == PickedDaysAdd.ONE_EVENT else showing.event
+
+    /**
+     * What the calendar shows. While [picking], [picked] holds the days in the order they were picked,
+     * and [runBase] what was picked before the drag going on now. [event] is the switch on one day, and
+     * [choice] the choice across several, null until it changes after picking starts.
+     */
+    private data class View(
+        val kind: String,
+        val anchor: LocalDate?,
+        val selected: LocalDate?,
+        val picking: Boolean = false,
+        val picked: List<LocalDate> = emptyList(),
+        val runBase: List<LocalDate> = emptyList(),
+        val event: Boolean = false,
+        val choice: PickedDaysAdd? = null,
+    ) {
+        fun leavePicking() = copy(picking = false, picked = emptyList(), runBase = emptyList(), choice = null)
+    }
 
     private data class Data(
         val tasks: List<TaskItem>,

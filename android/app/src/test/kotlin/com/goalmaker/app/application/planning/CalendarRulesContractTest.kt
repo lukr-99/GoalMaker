@@ -157,4 +157,17 @@ class CalendarRulesContractTest {
             assertEquals(case.text("name"), expect, actual)
         }
     }
+
+    @Test
+    fun `every pick of days`() {
+        vectors.cases("picked").forEach { case ->
+            val name = case.text("name")
+            val days = case.getValue("days").jsonArray.map { LocalDate.parse(it.jsonPrimitive.content) }
+            val event = case["event"]?.takeUnless { it == JsonNull }?.jsonObject
+            val span = EventRules.pickedSpan(days)
+            assertEquals("$name event", event?.let { it.day("startsOn") to it.day("endsOn") }, span?.let { it.start to it.endInclusive })
+            val tasks = case.getValue("tasks").jsonArray.map { LocalDate.parse(it.jsonPrimitive.content) }
+            assertEquals("$name tasks", tasks, EventRules.pickedDays(days))
+        }
+    }
 }

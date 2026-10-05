@@ -193,6 +193,8 @@ public sealed class WeeklyBackupTests : IDisposable
 
         public WantsTab WantsTab { get; set; }
 
+        public PickedDaysAdd PickedDaysAdd { get; set; }
+
         public int? NewYearDismissed { get; set; }
 
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =

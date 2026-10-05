@@ -81,11 +81,11 @@ public sealed partial class EventEditorViewModel : ObservableObject
         Fill(item.Title, item.StartsOn, item.EndsOn, item.Notes, item.AreaId);
     }
 
-    /// <summary>Opens the editor blank, on the days given.</summary>
-    public void OpenNew(DateOnly first, DateOnly last)
+    /// <summary>Opens the editor blank, on the days given, maybe with a title already typed.</summary>
+    public void OpenNew(DateOnly first, DateOnly last, string title = "")
     {
         editing = null;
-        Fill(string.Empty, first, last, null, null);
+        Fill(title, first, last, null, null);
     }
 
     /// <summary>Keeps the event; null when it could not be (not valid, or deleted meanwhile).</summary>

@@ -164,6 +164,8 @@ public sealed class SignInWatchTests
 
         public WantsTab WantsTab { get; set; }
 
+        public PickedDaysAdd PickedDaysAdd { get; set; }
+
         public int? NewYearDismissed { get; set; }
 
         public IReadOnlyDictionary<string, MiniWindowState> MiniWindows { get; set; } =
