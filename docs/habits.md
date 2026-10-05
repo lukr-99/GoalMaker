@@ -36,15 +36,26 @@ A habit's number points one of two ways (`direction`):
 | `at_least` | something to reach: eight glasses, thirty minutes. The default. |
 | `at_most` | a limit to stay under: two snacks a day, and a check habit means not once. |
 
-A limit turns the day around. It is kept unless a check-in goes over the number, so a day nobody
-logged anything on is a day kept, and going over misses the day the moment it happens, today
-included. A pause or a skip is read before the day is judged, so a slip while paused costs nothing.
-Only a daily or weekday habit can be a limit: "at most two on three days a week" says nothing anyone
-can act on.
+A limit turns the period around. It is kept unless what it had goes over the number, so a period
+nobody logged anything in is kept, and going over misses it the moment it happens, today included. A
+pause or a skip is read before the period is judged, so a slip while paused costs nothing.
 
-On screen a limit's ring fills with what has been had rather than what is left, never shows the done
-check, and turns to the danger colour once the day is over the line, as does the line under the name
-and the day on the heatmap. The heatmap reads the other way round for a limit: a clean day is full,
+A limit's number may be 0, which is "not once". What it covers depends on the cadence:
+
+| Cadence | The number | Example |
+|---|---|---|
+| daily, weekdays | the day's most: a count's or an amount's target; a check has none, so any check-in goes over | at most 2 snacks a day |
+| per_week, per_month, check | how many days in the period it may happen (`times`, from 0) | takeaway at most 2 days a week |
+| per_week, per_month, count or amount | the most the period's check-ins may add up to (the target; `times` is not read) | at most 5 drinks a month |
+
+What a limit **had** by a day is the sum of its check-ins in the period up to and including that day,
+skipped and failed ones left out. On a daily habit that is just the day's value (Supabase migration
+0024 let a week or a month be a limit, and a limit be 0).
+
+On screen a limit's ring fills with what has been had rather than what is left (the day's, or the
+week's or month's so far: "1 of at most 2 this week"), never shows the done check, and turns to the
+danger colour once the period is over the line, as does the line under the name and the day on the
+heatmap. The heatmap reads the other way round for a limit: a clean day is full,
 and the shade fades as the allowance is used.
 
 ## Check-ins
@@ -85,8 +96,8 @@ Each period of a habit is in one state, the first that applies:
 So a weekly habit already met stays met when a later day of the week fails.
 
 A limit is read in a different order, because it is kept by default: **paused**, then **skipped**,
-then **missed** as soon as a check-in goes over the number or is failed, then **open** while the day
-is still on, and **met** once the day is over with nothing over the line.
+then **missed** as soon as what the period had goes over the number or a check-in is failed, then
+**open** while the period is still on, and **met** once it is over with nothing over the line.
 
 The **streak** counts met periods back from the current one: an open, paused, skipped or none period
 is passed over without counting or breaking it, and the first missed one ends the streak. So a "3
