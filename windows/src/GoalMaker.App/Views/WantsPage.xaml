@@ -174,23 +174,13 @@
             <Border x:Name="Row" Margin="0,0,0,6" Padding="12,8" CornerRadius="{DynamicResource GM.RowCorner}"
                     Background="{DynamicResource GM.SurfaceBrush}">
                 <StackPanel>
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
-                                    Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}">
-                            <ui:Button Appearance="Primary" Command="{Binding BuyCommand}" Margin="0,0,8,0" Content="{DynamicResource Wants.Buy}">
-                                <ui:Button.Icon>
-                                    <ui:SymbolIcon Symbol="Checkmark20" />
-                                </ui:Button.Icon>
-                            </ui:Button>
-                            <ui:Button Appearance="Secondary" Command="{Binding DropCommand}" Content="{DynamicResource Wants.Drop}" />
-                        </StackPanel>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
-                                    Visibility="{Binding IsDecided, Converter={StaticResource BoolToVisibility}}">
-                            <ui:Button Appearance="Secondary" Command="{Binding ReopenCommand}" Content="{DynamicResource Wants.Reopen}" Margin="0,0,8,0" />
-                            <ui:Button Appearance="Transparent" Command="{Binding DeleteCommand}" Content="{DynamicResource Wants.Delete}"
-                                       Foreground="{DynamicResource GM.DangerBrush}" />
-                        </StackPanel>
-                        <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                    <!-- A grid, not a dock: the row is written before its buttons, so Tab reads it the way the screen does. -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
                                 HorizontalContentAlignment="Stretch" Command="{Binding ToggleCommand}"
                                 AutomationProperties.Name="{Binding Title}" AutomationProperties.HelpText="{Binding Subtitle}">
                             <DockPanel>
@@ -215,7 +205,22 @@
                                 </StackPanel>
                             </DockPanel>
                         </Button>
-                    </DockPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                                    Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button Appearance="Primary" Command="{Binding BuyCommand}" Margin="0,0,8,0" Content="{DynamicResource Wants.Buy}">
+                                <ui:Button.Icon>
+                                    <ui:SymbolIcon Symbol="Checkmark20" />
+                                </ui:Button.Icon>
+                            </ui:Button>
+                            <ui:Button Appearance="Secondary" Command="{Binding DropCommand}" Content="{DynamicResource Wants.Drop}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0"
+                                    Visibility="{Binding IsDecided, Converter={StaticResource BoolToVisibility}}">
+                            <ui:Button Appearance="Secondary" Command="{Binding ReopenCommand}" Content="{DynamicResource Wants.Reopen}" Margin="0,0,8,0" />
+                            <ui:Button Appearance="Transparent" Command="{Binding DeleteCommand}" Content="{DynamicResource Wants.Delete}"
+                                       Foreground="{DynamicResource GM.DangerBrush}" />
+                        </StackPanel>
+                    </Grid>
                     <StackPanel Margin="36,8,0,0" Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel Visibility="{Binding HasReason, Converter={StaticResource BoolToVisibility}}">
                             <TextBlock Style="{StaticResource SectionLabel}" Margin="0,0,0,2" Text="{DynamicResource Wants.Note}" />
