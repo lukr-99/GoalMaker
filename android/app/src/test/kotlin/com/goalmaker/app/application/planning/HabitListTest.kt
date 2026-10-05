@@ -63,6 +63,25 @@ class HabitListTest {
     }
 
     @Test
+    fun `a week or a month can be a limit, and a limit can be 0`() {
+        val takeaway = habits.add(HabitDraft("Takeaway", today, HabitRules.PER_WEEK, times = 2, direction = HabitRules.AT_MOST))!!
+        val casino = habits.add(HabitDraft("Casino", today, HabitRules.PER_WEEK, times = 0, direction = HabitRules.AT_MOST))!!
+        val drinks = habits.add(
+            HabitDraft("Drinks", today, HabitRules.PER_MONTH, times = 1, measure = HabitRules.COUNT, target = 5.0, direction = HabitRules.AT_MOST),
+        )!!
+        val cigarettes = habits.add(HabitDraft("Cigarettes", today, measure = HabitRules.COUNT, target = 0.0, direction = HabitRules.AT_MOST))!!
+
+        assertEquals(HabitRules.AT_MOST to 2, takeaway.direction to takeaway.times)
+        assertEquals(0, casino.times)
+        assertEquals(HabitRules.AT_MOST, drinks.direction)
+        assertEquals(0.0, cigarettes.target!!, 1e-9)
+        // A habit to build still needs at least one.
+        assertNull(habits.add(HabitDraft("Gym", today, HabitRules.PER_WEEK, times = 0)))
+        assertNull(habits.add(HabitDraft("Takeaway", today, HabitRules.PER_WEEK, times = 8, direction = HabitRules.AT_MOST)))
+        assertNull(habits.add(HabitDraft("Snacks", today, measure = HabitRules.COUNT, target = -1.0, direction = HabitRules.AT_MOST)))
+    }
+
+    @Test
     fun `a day has one check-in, and tapping again adds to a count`() {
         val water = habits.add(HabitDraft("Water", today, measure = HabitRules.COUNT, target = 8.0, unit = "glasses"))!!
 

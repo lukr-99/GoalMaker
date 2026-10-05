@@ -645,8 +645,28 @@
     <string name="habits_direction">The number is</string>
     <string name="habits_at_least">Something to reach</string>
     <string name="habits_at_most">A limit to stay under</string>
-    <string name="habits_limit_hint">Going over breaks the day. A day you log nothing on is a day you kept it.</string>
+    <string name="habits_limit_hint">Going over breaks the day, and 0 means not once. A day you log nothing on is a day you kept it.</string>
     <string name="habits_limit_hint_check">Checking in means you had one, and that breaks the day.</string>
+    <string name="habits_limit_hint_period_check">Each check-in is one day you had it. Going over the number breaks the whole week or month, and 0 means not once.</string>
+    <string name="habits_limit_hint_period">Everything you log in the week or month adds up. Going over breaks it, and 0 means not once.</string>
+    <string name="habits_target_week">Most in a week</string>
+    <string name="habits_target_month">Most in a month</string>
+    <plurals name="habits_at_most_days_week">
+        <item quantity="one">At most %1$d day a week</item>
+        <item quantity="other">At most %1$d days a week</item>
+    </plurals>
+    <plurals name="habits_at_most_days_month">
+        <item quantity="one">At most %1$d day a month</item>
+        <item quantity="other">At most %1$d days a month</item>
+    </plurals>
+    <string name="habits_none_week">None this week</string>
+    <string name="habits_none_month">None this month</string>
+    <string name="habits_over_week">Over the line this week</string>
+    <string name="habits_over_month">Over the line this month</string>
+    <string name="habits_limit_week">%1$s of at most %2$s this week</string>
+    <string name="habits_limit_unit_week">%1$s of at most %2$s %3$s this week</string>
+    <string name="habits_limit_month">%1$s of at most %2$s this month</string>
+    <string name="habits_limit_unit_month">%1$s of at most %2$s %3$s this month</string>
     <string name="habits_unit">Unit (optional)</string>
     <string name="habits_show_on_today">Show on Today</string>
     <string name="habits_show_on_today_hint">Off keeps it to this page. It still counts and keeps its streak.</string>
