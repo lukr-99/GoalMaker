@@ -90,18 +90,20 @@ Gemini gave it, thought signatures included, which newer models require.
 A message takes at least two model rounds (one picks the tools, one writes the answer), and every
 round sends the whole thread and every tool's declaration again. So the chat keeps each round small:
 
-- It offers only its everyday tools (`CHAT_TOOLS` in `chatTools.ts`, 31 of the connector's), each
+- It offers only its everyday tools (`CHAT_TOOLS` in `chatTools.ts`, 32 of the connector's), each
   with the first sentence of its description. The connector's longer notes are written for Claude.
 - A tool with a long input offers the chat only some of it (`CHAT_INPUTS`): `add_life_goal` takes the
-  title, the why and the by date, without `in_years` or the area, which keeps the tools under the
-  16,000-character cap; `add_want` takes the owner's `line` ("Kindle 3290 Kč"), the reason, whether it
+  title, the why and the by date, without `in_years` or the area, and `add_event` the title and the
+  first and last day, which keeps the tools under the 16,000-character cap; `add_project_item` takes
+  the project, the title, the type, the priority, the column, the day and the notes, leaving the
+  milestone, time, deadline, area and tags to the connector; `add_want` takes the owner's `line` ("Kindle 3290 Kč"), the reason, whether it
   is a want or a need with the day a need is needed by, the area and the link; `add_habit` and
   `add_goal` take the owner's `line` ("Swim 2 times a week 40 min", "Read 3 books this month") with
   an emoji, a limit or Show on Today, and the goal fed, and the line, read with the bottom bar's
   rules ([composer](composer.md#adding-on-wants-habits-and-goals)), says the rest. `add_want` takes a
   line too. The system prompt says to pass the owner's words as the line, and to ask for a want's
   reason when it has none.
-- `assistant_test.ts` keeps every round's declarations under 16,000 characters (about 15,300 now).
+- `assistant_test.ts` keeps every round's declarations under 16,000 characters (about 15,800 now).
 - The system prompt names the owner's areas, tags and active projects, so the model doesn't spend a
   round looking them up.
 - Thinking is set to minimal: choosing a planner tool needs little of it, and it was most of a

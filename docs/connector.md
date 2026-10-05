@@ -21,7 +21,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 
 | Tool | What it does |
 |---|---|
-| `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules; Today also lists its habits with where each stands, says how many are left, and counts the ones kept off it |
+| `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules; Today also lists its habits with where each stands, says how many are left, and counts the ones kept off it; the events going on come first ("Prague · day 2 of 4") |
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat; a new task also says who made it |
@@ -49,13 +49,14 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `update_milestone`, `delete_milestone` | Renames or removes a milestone; the items that carried it stay |
 | `get_activity`, `undo_change` | The latest changes with who made each (owner, Claude or GoalMaker), and undo |
 | `get_settings`, `update_settings` | The time zone and day start every planning day is worked out from |
-| `get_calendar` | A stretch of days with what is planned, what is due, and where a repeat would come round |
+| `get_calendar` | A stretch of days with its events, what is planned, what is due, and where a repeat would come round |
 | `get_wants` | The open needs first (by the day they are needed by, the ones without a day last, "late" once the day passed), then the wants that are ready, cooling or decided, each with its reason, price, last price check and note; `kind` picks only wants or only needs |
 | `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after; a new one also from a short `line`. With `kind` need it is a need: no cooldown, the reason may be left out, and `need_by` is the day it is needed by |
 | `decide_want` | Bought or dropped with a note, or reopened, for a want or a need; only what the owner decided in the conversation |
 | `record_price_check` | The price Claude found with its own web search, where, and the alternatives; GoalMaker never fetches from a shop |
 | `get_life_goals` | The life goals, open ones first in the owner's order, each with its time left ("10 years left", "Today", "Past its date"), by date, area, how many pictures and its why |
 | `add_life_goal`, `update_life_goal` | A life goal with its why (required), a by date as a day or `in_years`, and its area; mark it achieved, dropped or open again. No delete, and pictures are added in the apps |
+| `add_event`, `update_event`, `delete_event` | An event across days (a trip, a holiday) with its first and last day, area and notes; moving only the first day keeps its length; undo brings a deleted one back ([calendar](calendar.md#events)) |
 
 Prompts: `plan_tomorrow`, `weekly_review` (optionally a week's Monday) and `monthly_review`
 (optionally a month like `2026-09`). Each carries the owner's real tasks for the period and the
