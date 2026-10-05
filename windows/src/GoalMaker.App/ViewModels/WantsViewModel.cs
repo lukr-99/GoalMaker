@@ -10,9 +10,11 @@ using GoalMaker.Core.Settings;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The Wants page (docs/wants.md, M8-04): the thresholds on top, filters for Ready, Cooling and
-/// Decided, a row per want with its ring, the add and edit panel with the cooldown a price gives,
-/// and the thresholds panel. Deciding and deleting offer undo for five seconds.
+/// The Wants page (docs/wants.md, M8-04): a Wants and Needs switch on top, which this PC remembers.
+/// Under Wants: the thresholds, filters for Ready, Cooling and Decided, a row per want with its ring,
+/// the add and edit panel with the cooldown a price gives, and the thresholds panel. Under Needs: the
+/// open needs by the day they are needed by, and the bought and dropped ones folded below. Deciding
+/// and deleting offer undo for five seconds.
 /// </summary>
 public sealed partial class WantsViewModel : ObservableObject
 {
@@ -27,6 +29,11 @@ public sealed partial class WantsViewModel : ObservableObject
     private Action? undo;
     private ITimer? undoTimer;
     private Action? onAdded;
+    private string draftKind = WantRules.Want;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWantsTab), nameof(IsNeedsTab))]
+    private WantsTab tab;
 
     [ObservableProperty]
     private WantState filter = WantState.Ready;
@@ -48,6 +55,25 @@ public sealed partial class WantsViewModel : ObservableObject
 
     [ObservableProperty]
     private string cooldownsLine = string.Empty;
+
+    // The Needs tab.
+    [ObservableProperty]
+    private string needsLabel = string.Empty;
+
+    [ObservableProperty]
+    private bool hasNoOpenNeeds;
+
+    [ObservableProperty]
+    private string needsEmptyText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasNeedsDone;
+
+    [ObservableProperty]
+    private string needsDoneLabel = string.Empty;
+
+    [ObservableProperty]
+    private bool isNeedsDoneOpen;
 
     [ObservableProperty]
     private bool hasUndo;
@@ -81,6 +107,9 @@ public sealed partial class WantsViewModel : ObservableObject
 
     [ObservableProperty]
     private string draftDays = string.Empty;
+
+    [ObservableProperty]
+    private DateTime? draftNeedBy;
 
     private int? pickedDays;
 
@@ -121,11 +150,51 @@ public sealed partial class WantsViewModel : ObservableObject
         this.strings = strings;
         this.time = time;
         this.runOnUi = runOnUi;
+        Tab = settings.WantsTab;
+        Bar.ForNeeds = Tab == WantsTab.Needs;
         wants.Changed += (_, _) => runOnUi(Refresh);
         Refresh();
     }
 
     public ObservableCollection<WantRowViewModel> Rows { get; } = [];
+
+    /// <summary>The open needs, by the day they are needed by (none last), then when they were added.</summary>
+    public ObservableCollection<WantRowViewModel> NeedRows { get; } = [];
+
+    /// <summary>The bought and dropped needs, folded below the open ones, the last decided first.</summary>
+    public ObservableCollection<WantRowViewModel> NeedsDoneRows { get; } = [];
+
+    /// <summary>The wants that wait out a cooldown show; the switch's Wants choice.</summary>
+    public bool IsWantsTab
+    {
+        get => Tab == WantsTab.Wants;
+        set
+        {
+            if (value)
+            {
+                Tab = WantsTab.Wants;
+            }
+        }
+    }
+
+    /// <summary>The needs to buy show; the switch's Needs choice.</summary>
+    public bool IsNeedsTab
+    {
+        get => Tab == WantsTab.Needs;
+        set
+        {
+            if (value)
+            {
+                Tab = WantsTab.Needs;
+            }
+        }
+    }
+
+    /// <summary>Whether the add and edit panel holds a need: no cooldown, a day it is needed by, and the reason optional.</summary>
+    public bool IsDraftNeed => draftKind == WantRules.Need;
+
+    /// <summary>The cooldown a new want gets shows in the panel; a need has none.</summary>
+    public bool ShowsDraftDays => IsAdding && !IsDraftNeed;
 
     /// <summary>The bottom bar: type a want to add it, or open the add panel with its plus.</summary>
     public WantBarViewModel Bar { get; }
@@ -136,12 +205,25 @@ public sealed partial class WantsViewModel : ObservableObject
 
     public bool ShowsDecided => Filter == WantState.Decided;
 
-    public string PanelTitle => strings.Get(IsAdding ? "Wants.Add" : "Wants.Edit");
+    public string PanelTitle => strings.Get((IsAdding, IsDraftNeed) switch
+    {
+        (true, false) => "Wants.Add",
+        (false, false) => "Wants.Edit",
+        (true, true) => "Wants.AddNeed",
+        (false, true) => "Wants.EditNeed",
+    });
+
+    /// <summary>What the reason field is called: why it is wanted, or for a need an optional note.</summary>
+    public string ReasonLabel => strings.Get(IsDraftNeed ? "Wants.NeedNoteField" : "Wants.WhyField");
+
+    public string ReasonHint => strings.Get(IsDraftNeed ? "Wants.NeedNoteHint" : "Wants.WhyHint");
 
     public void Refresh()
     {
         var today = Today();
-        var all = wants.All()
+        var everything = wants.All();
+        var all = everything
+            .Where(want => want.Kind != WantRules.Need)
             .Select(want => (Want: want, State: WantRules.State(want, today)))
             .Where(pair => pair.State is not null)
             .ToList();
@@ -185,14 +267,20 @@ public sealed partial class WantsViewModel : ObservableObject
             _ => "Wants.NoneDecided",
         });
 
+        RefreshNeeds(everything, today);
+
         var c = wants.Cooldowns();
         CooldownsLine = strings.Get(
             "Wants.CooldownsLine", Money(c.SmallUnder, c.Currency), c.SmallDays, Money(c.MediumUnder, c.Currency), c.MediumDays, c.LargeDays, c.UnpricedDays);
         UpdateDraftDays();
     }
 
-    /// <summary>Opens the add panel with <paramref name="title"/> filled in (from <c>/want</c> in a composer).</summary>
-    public void StartAdding(string title) => StartAdding(new WantLine(title.Trim(), null, null, null, null), null);
+    /// <summary>Opens the add panel with <paramref name="title"/> filled in (from <c>/want</c> in a composer), on the Wants tab.</summary>
+    public void StartAdding(string title)
+    {
+        Tab = WantsTab.Wants;
+        StartAdding(new WantLine(title.Trim(), null, null, null, null), null);
+    }
 
     /// <summary>
     /// Opens the add panel filled in with what the bottom bar read (null: blank); <paramref name="added"/>
@@ -203,6 +291,8 @@ public sealed partial class WantsViewModel : ObservableObject
         editingId = null;
         onAdded = added;
         IsAdding = true;
+        SetDraftKind(Tab == WantsTab.Needs ? WantRules.Need : WantRules.Want);
+        DraftNeedBy = null;
         DraftTitle = line?.Title ?? string.Empty;
         DraftReason = line?.Reason ?? string.Empty;
         DraftPrice = line?.Price is { } price ? price.ToString(CultureInfo.CurrentCulture) : string.Empty;
@@ -219,6 +309,8 @@ public sealed partial class WantsViewModel : ObservableObject
         editingId = row.Want.Id;
         onAdded = null;
         IsAdding = false;
+        SetDraftKind(row.Want.Kind);
+        DraftNeedBy = row.Want.NeedBy?.ToDateTime(TimeOnly.MinValue);
         DraftTitle = row.Want.Title;
         DraftReason = row.Want.Reason;
         DraftPrice = row.Want.Price is { } price ? price.ToString(CultureInfo.CurrentCulture) : string.Empty;
@@ -256,12 +348,20 @@ public sealed partial class WantsViewModel : ObservableObject
     [RelayCommand]
     private void Add() => StartAdding(null, null);
 
-    private bool CanSaveDraft() => DraftTitle.Trim().Length > 0 && DraftReason.Trim().Length > 0;
+    [RelayCommand]
+    private void ToggleNeedsDone() => IsNeedsDoneOpen = !IsNeedsDoneOpen;
+
+    // A want says why it is wanted; a need may leave it out.
+    private bool CanSaveDraft() => DraftTitle.Trim().Length > 0 && (IsDraftNeed || DraftReason.Trim().Length > 0);
 
     [RelayCommand(CanExecute = nameof(CanSaveDraft))]
     private void SaveDraft()
     {
-        var draft = new WantDraft(DraftTitle, DraftReason, DraftLink, ParseMoney(DraftPrice), DraftCurrency, PickedDays: pickedDays);
+        var draft = IsDraftNeed
+            ? new WantDraft(
+                DraftTitle, DraftReason, DraftLink, ParseMoney(DraftPrice), DraftCurrency,
+                Kind: WantRules.Need, NeedBy: DraftNeedBy is { } day ? DateOnly.FromDateTime(day) : null)
+            : new WantDraft(DraftTitle, DraftReason, DraftLink, ParseMoney(DraftPrice), DraftCurrency, PickedDays: pickedDays);
         var saved = editingId is null ? wants.Add(draft) is not null : wants.Update(editingId, draft);
         if (saved)
         {
@@ -328,6 +428,22 @@ public sealed partial class WantsViewModel : ObservableObject
         action?.Invoke();
     }
 
+    partial void OnTabChanged(WantsTab value)
+    {
+        if (settings.WantsTab != value)
+        {
+            settings.WantsTab = value;
+        }
+
+        // A panel opened for the other tab would add the wrong kind, so it closes.
+        onAdded = null;
+        IsEditing = false;
+        IsEditingCooldowns = false;
+        Bar.ForNeeds = value == WantsTab.Needs;
+    }
+
+    partial void OnIsAddingChanged(bool value) => OnPropertyChanged(nameof(ShowsDraftDays));
+
     partial void OnFilterChanged(WantState value)
     {
         OnPropertyChanged(nameof(ShowsReady));
@@ -338,6 +454,73 @@ public sealed partial class WantsViewModel : ObservableObject
     partial void OnDraftPriceChanged(string value) => UpdateDraftDays();
 
     partial void OnDraftCurrencyChanged(string value) => UpdateDraftDays();
+
+    private void SetDraftKind(string kind)
+    {
+        draftKind = kind == WantRules.Need ? WantRules.Need : WantRules.Want;
+        OnPropertyChanged(nameof(IsDraftNeed));
+        OnPropertyChanged(nameof(ShowsDraftDays));
+        OnPropertyChanged(nameof(ReasonLabel));
+        OnPropertyChanged(nameof(ReasonHint));
+        SaveDraftCommand.NotifyCanExecuteChanged();
+    }
+
+    private void RefreshNeeds(IReadOnlyList<WantItem> everything, DateOnly today)
+    {
+        var open = WantRules.Needs(everything);
+        var done = everything
+            .Where(want => want.Kind == WantRules.Need && want.Decision is not null)
+            .OrderByDescending(want => want.DecidedAt, StringComparer.Ordinal)
+            .ToList();
+
+        NeedRows.Clear();
+        foreach (var need in open)
+        {
+            NeedRows.Add(NeedRow(need, today));
+        }
+
+        NeedsDoneRows.Clear();
+        foreach (var need in done)
+        {
+            NeedsDoneRows.Add(NeedRow(need, today));
+        }
+
+        NeedsLabel = Label("Wants.Needs", open.Count);
+        HasNoOpenNeeds = open.Count == 0;
+        NeedsEmptyText = strings.Get(done.Count == 0 ? "Wants.NeedsEmpty" : "Wants.NoNeedsOpen");
+        HasNeedsDone = done.Count > 0;
+        NeedsDoneLabel = strings.Get("Wants.NeedsDone", done.Count);
+    }
+
+    // The price, the day it is needed by, then by Claude, and bought or dropped once decided.
+    private WantRowViewModel NeedRow(WantItem need, DateOnly today)
+    {
+        const string Separator = " · ";
+        var price = need.Price is { } amount ? Money(amount, need.Currency) : null;
+        var due = need.NeedBy is { } day
+            ? strings.Get("Wants.NeedBy", day.ToString(day.Year == today.Year ? "ddd d MMM" : "ddd d MMM yyyy", CultureInfo.CurrentCulture))
+            : null;
+        var after = new List<string>();
+        if (need.MadeBy == ProjectRules.Claude)
+        {
+            after.Add(strings.Get("Wants.ByClaude"));
+        }
+
+        if (need.Decision is { } decision)
+        {
+            after.Add(strings.Get(decision == WantRules.Bought ? "Wants.StatusBought" : "Wants.StatusDropped"));
+        }
+
+        var afterText = string.Join(Separator, after);
+        var line = new NeedLine(
+            price is null ? string.Empty : price + (due is not null || afterText.Length > 0 ? Separator : string.Empty),
+            due ?? string.Empty,
+            afterText.Length > 0 && due is not null ? Separator + afterText : afterText,
+            WantRules.NeedLate(need, today));
+        var subtitle = string.Join(Separator, new[] { price, due }.Concat(after).Where(part => part is not null));
+        var state = WantRules.State(need, today) ?? WantState.Ready;
+        return new WantRowViewModel(this, need, state, 1, 0, subtitle, null, line);
+    }
 
     private void Pick(int step)
     {

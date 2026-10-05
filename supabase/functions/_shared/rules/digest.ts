@@ -12,7 +12,7 @@ import {
 import { type PeriodFacts, type Trigger, triggers } from "./prompts.ts";
 import { periodStart, type ReviewKind } from "./reviews.ts";
 import { compareText, type TaskItem } from "./task.ts";
-import type { WantItem } from "./wants.ts";
+import { NEED, type WantItem } from "./wants.ts";
 
 /**
  * One period of GoalMaker in one piece (docs/letter.md, contracts/vectors/reviews.json 'digest'):
@@ -207,7 +207,8 @@ export function digest(input: DigestInput): Digest {
   const reviewOf = (first: Day) =>
     input.reviews.find((review) => review.kind === period.kind && review.periodStart === first) ?? null;
   const last = reviewOf(periodStart(period.kind, addDays(start, -1)));
-  const wants = input.wants.filter((want) => !want.deleted);
+  // Needs skip the cooldown and stay out of bought against dropped (docs/wants.md), so only wants count.
+  const wants = input.wants.filter((want) => !want.deleted && want.kind !== NEED);
   const inPeriod = (day: Day | null) => day !== null && day >= start && day <= end;
 
   return {

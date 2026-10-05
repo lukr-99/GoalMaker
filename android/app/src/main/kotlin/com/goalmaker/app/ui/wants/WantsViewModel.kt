@@ -41,6 +41,9 @@ class WantsViewModel(
 
     /** The filter the owner picked; null until they pick, so Ready leads while anything is ready. */
     private val chosen = MutableStateFlow<WantState?>(null)
+
+    /** Which tab is on screen: the wants, or the needs (docs/wants.md, "Needs"). */
+    private val tab = MutableStateFlow(WantRules.WANT)
     private val undoEvents = MutableSharedFlow<WantUndo>(extraBufferCapacity = 4)
 
     /** Ticks every minute so a want turns ready when the planning day does. */
@@ -55,10 +58,12 @@ class WantsViewModel(
         wants.watch().flowOn(io),
         wants.watchCooldowns().flowOn(io),
         dayStartHour,
-        chosen,
+        combine(chosen, tab, ::Pair),
         minutes,
-    ) { all, cooldowns, startHour, picked, _ ->
+    ) { every, cooldowns, startHour, (picked, kind), _ ->
         val today = PlanningDay.of(clock(), startHour)
+        val all = every.filter { it.kind != WantRules.NEED }
+        val needs = every.filter { it.kind == WantRules.NEED && !it.deleted }
         val rows = all.mapNotNull { want ->
             val state = WantRules.state(want, today) ?: return@mapNotNull null
             WantRow(
@@ -79,8 +84,16 @@ class WantsViewModel(
             },
             counts = counts,
             cooldowns = cooldowns,
+            kind = kind,
+            needs = WantRules.needs(needs).map { NeedRow(it, late = WantRules.needLate(it, today)) },
+            closedNeeds = needs.filter { it.decision != null }.sortedByDescending { it.decidedAt }.map { NeedRow(it, late = false) },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WantsUiState())
+
+    /** Shows the wants or the needs. */
+    fun showKind(kind: String) {
+        tab.value = if (kind == WantRules.NEED) WantRules.NEED else WantRules.WANT
+    }
 
     /** Decisions and deletions the screen offers to undo. */
     val undo: SharedFlow<WantUndo> = undoEvents.asSharedFlow()
@@ -118,6 +131,23 @@ class WantsViewModel(
     suspend fun addLine(line: String): LineOutcome<WantDraft> {
         val draft = preview(line)
         if (draft.title.isBlank() || draft.reason.isBlank()) return LineOutcome.OpenForm(draft)
+        return if (add(draft) != null) LineOutcome.Added else LineOutcome.OpenForm(draft)
+    }
+
+    /**
+     * Adds the need a bottom bar line says ("Winter tyres 4000 Kč"): a title is enough, since a need
+     * skips the cooldown and need not say why; without one the need form opens.
+     */
+    suspend fun addNeedLine(line: String): LineOutcome<WantDraft> {
+        val read = QuickAddLines.readWant(line)
+        val draft = WantDraft(
+            title = read.title,
+            reason = read.reason.orEmpty(),
+            price = read.price,
+            currency = read.currency ?: uiState.value.cooldowns.currency,
+            kind = WantRules.NEED,
+        )
+        if (draft.title.isBlank()) return LineOutcome.OpenForm(draft)
         return if (add(draft) != null) LineOutcome.Added else LineOutcome.OpenForm(draft)
     }
 

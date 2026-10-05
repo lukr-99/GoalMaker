@@ -12,4 +12,8 @@ data class WantDraft(
     val currency: String = WantCooldowns.DEFAULT.currency,
     val areaId: String? = null,
     val pickedDays: Int? = null,
+    /** A want, or a need, which skips the cooldown and need not say why. */
+    val kind: String = WantRules.WANT,
+    /** For a need: the day it is needed by. */
+    val needBy: java.time.LocalDate? = null,
 )

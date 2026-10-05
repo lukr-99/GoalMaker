@@ -8,7 +8,7 @@ import type { TimeLeft } from "../rules/lifeGoals.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
 import { type Column, type ProjectItem, type ProjectMilestone, shownColumn } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
-import type { WantState } from "../rules/wants.ts";
+import { NEED, needLate, type WantState } from "../rules/wants.ts";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const MONTHS = [
@@ -232,12 +232,18 @@ export function money(amount: number, currency: string): string {
 
 /**
  * A want the way the Wants place shows it, with its reason, link, last price check and decision note
- * on the lines under it, so Claude can talk the decision through without another call.
+ * on the lines under it, so Claude can talk the decision through without another call. A need says so,
+ * with the day it is needed by and "late" once that day passed.
  */
 export function wantLine(want: Want, state: WantState, today: Day, names: Names): string {
   const parts = [want.title];
+  if (want.kind === NEED) parts.push("need");
   if (want.price !== null) parts.push(money(want.price, want.currency));
-  if (state === "cooling") {
+  if (want.kind === NEED) {
+    if (want.needBy !== null) parts.push(`needed by ${want.needBy}`);
+    if (needLate(want, today)) parts.push("late");
+    if (want.decision !== null) parts.push(want.decision);
+  } else if (state === "cooling") {
     const left = daysBetween(today, want.coolsUntil);
     parts.push(`cooling, ready on ${want.coolsUntil} (${left} ${left === 1 ? "day" : "days"} to go)`);
   } else if (state === "ready") {
@@ -248,7 +254,8 @@ export function wantLine(want: Want, state: WantState, today: Day, names: Names)
   const area = want.areaId ? names.areas.get(want.areaId) : undefined;
   if (area) parts.push(`@${area.name}`);
   if (want.madeBy === "claude") parts.push("by Claude");
-  const lines = [`- ${parts.join(" · ")} (want id ${want.id})`, `  Why: ${want.reason}`];
+  const lines = [`- ${parts.join(" · ")} (want id ${want.id})`];
+  if (want.reason.trim().length > 0) lines.push(`  Why: ${want.reason}`);
   if (want.link) lines.push(`  Link: ${want.link}`);
   if (want.checkedPrice !== null) {
     const note = want.checkedNote.trim().replace(/\s*\n\s*/g, " · ");

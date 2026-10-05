@@ -91,4 +91,32 @@ public sealed class WantListTests : IDisposable
         Assert.Equal(90, edited.CooldownDays);
         Assert.Equal(new DateOnly(2026, 12, 27), edited.CoolsUntil);
     }
+
+    [Fact]
+    public void ANeedSkipsTheCooldownAndNeedNotSayWhy()
+    {
+        var tyres = wants.Add(new WantDraft(
+            "Winter tyres", " ", Price: 12900, PickedDays: 40, Kind: WantRules.Need, NeedBy: new DateOnly(2026, 11, 1)))!;
+
+        Assert.Equal(WantRules.Need, tyres.Kind);
+        Assert.Equal(string.Empty, tyres.Reason);
+        Assert.Equal(0, tyres.CooldownDays);
+        Assert.Equal(day, tyres.CoolsUntil);
+        Assert.Equal(WantState.Ready, WantRules.State(tyres, day));
+        Assert.Equal(new DateOnly(2026, 11, 1), wants.Get(tyres.Id)!.NeedBy);
+        Assert.Equal([tyres.Id], WantRules.Needs(wants.All()).Select(need => need.Id));
+    }
+
+    [Fact]
+    public void AWantStillNeedsAReasonAndNeverKeepsADay()
+    {
+        Assert.Null(wants.Add(new WantDraft("Boat", "", Price: 900)));
+
+        var lamp = wants.Add(new WantDraft("Lamp", "Dark desk", Price: 900, NeedBy: new DateOnly(2026, 10, 1)))!;
+
+        Assert.Equal(WantRules.Want, lamp.Kind);
+        Assert.Null(lamp.NeedBy);
+        Assert.Equal(7, lamp.CooldownDays);
+        Assert.Empty(WantRules.Needs(wants.All()));
+    }
 }

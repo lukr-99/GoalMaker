@@ -50,6 +50,8 @@ class WantRulesContractTest {
             currency = value.text("currency") ?: "CZK",
             decision = value.text("decision"),
             deleted = value["deleted"]?.jsonPrimitive?.boolean ?: false,
+            kind = value.text("kind") ?: WantRules.WANT,
+            needBy = value.day("needBy"),
         )
     }
 
@@ -66,7 +68,7 @@ class WantRulesContractTest {
             assertEquals(
                 case.text("name"),
                 case.getValue("expect").jsonPrimitive.int,
-                WantRules.cooldownDays(case["price"].number(), case.text("currency")!!, thresholds, picked),
+                WantRules.cooldownDays(case["price"].number(), case.text("currency")!!, thresholds, picked, case.text("kind") ?: WantRules.WANT),
             )
         }
     }
@@ -169,6 +171,29 @@ class WantRulesContractTest {
             val wants = case.getValue("wants").jsonArray.map { want(it.jsonObject) }
             val shown = case.getValue("shown").jsonArray.map { it.jsonPrimitive.content }
             assertEquals(case.text("name"), case.getValue("expect").jsonPrimitive.boolean, WantReminder.stale(shown, wants))
+        }
+    }
+
+    @Test
+    fun `every list of open needs`() {
+        vectors.cases("needs").forEach { case ->
+            val wants = case.getValue("wants").jsonArray.map { want(it.jsonObject) }
+            assertEquals(
+                case.text("name"),
+                case.getValue("expect").jsonArray.map { it.jsonPrimitive.content },
+                WantRules.needs(wants).map(WantItem::id),
+            )
+        }
+    }
+
+    @Test
+    fun `every late need`() {
+        vectors.cases("needLate").forEach { case ->
+            assertEquals(
+                case.text("name"),
+                case.getValue("expect").jsonPrimitive.boolean,
+                WantRules.needLate(want(case.getValue("want").jsonObject), case.day("today")!!),
+            )
         }
     }
 }

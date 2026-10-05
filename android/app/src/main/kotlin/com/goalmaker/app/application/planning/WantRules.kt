@@ -14,6 +14,10 @@ object WantRules {
     const val BOUGHT = "bought"
     const val DROPPED = "dropped"
 
+    /** What a row is (supabase/migrations/0025_wants_needs.sql): a want to wait out, or a need to buy. */
+    const val WANT = "want"
+    const val NEED = "need"
+
     /** The composer command that opens the Wants place with a new want (`/want Trail shoes`). */
     const val COMMAND = "want"
 
@@ -25,8 +29,9 @@ object WantRules {
     /** The id of [owner]'s one row of thresholds, the same on every device. */
     fun cooldownsId(owner: String): String = NameBasedUuid.of(NAMESPACE, "want-cooldowns/${owner.lowercase(Locale.ROOT)}")
 
-    /** The days a new want waits: [picked] when the owner chose, otherwise by its price. */
-    fun cooldownDays(price: Double?, currency: String, cooldowns: WantCooldowns, picked: Int? = null): Int {
+    /** The days a new want waits: none for a need, [picked] when the owner chose, otherwise by its price. */
+    fun cooldownDays(price: Double?, currency: String, cooldowns: WantCooldowns, picked: Int? = null, kind: String = WANT): Int {
+        if (kind == NEED) return 0
         if (picked != null) return picked.coerceIn(0, MAX_DAYS)
         if (price == null || currency != cooldowns.currency) return cooldowns.unpricedDays
         return when {
@@ -61,14 +66,14 @@ object WantRules {
      */
     fun ready(wants: List<WantItem>, lastNotified: LocalDate?, today: LocalDate): List<WantItem> = wants
         .filter { want ->
-            !want.deleted && want.decision == null && !want.coolsUntil.isAfter(today) &&
+            !want.deleted && want.kind != NEED && want.decision == null && !want.coolsUntil.isAfter(today) &&
                 (if (lastNotified == null) want.coolsUntil == today else want.coolsUntil.isAfter(lastNotified))
         }
         .sortedWith(compareBy<WantItem> { it.coolsUntil }.thenBy { it.title.lowercase(Locale.ROOT) })
 
     /** Bought and dropped, and the dropped prices in [currency] added up; deleted wants never count. */
     fun stats(wants: List<WantItem>, currency: String): WantStats {
-        val kept = wants.filterNot(WantItem::deleted)
+        val kept = wants.filter { !it.deleted && it.kind != NEED }
         val dropped = kept.filter { it.decision == DROPPED }
         return WantStats(
             bought = kept.count { it.decision == BOUGHT },
@@ -76,4 +81,15 @@ object WantRules {
             notSpent = dropped.filter { it.currency == currency }.sumOf { it.price ?: 0.0 },
         )
     }
+
+    /** The open needs: by the day they are needed by (none last), then when they were added, then title. */
+    fun needs(wants: List<WantItem>): List<WantItem> = wants
+        .filter { !it.deleted && it.kind == NEED && it.decision == null }
+        .sortedWith(
+            compareBy<WantItem>({ it.needBy == null }, { it.needBy }, { it.addedOn }, { it.title.lowercase(Locale.ROOT) }),
+        )
+
+    /** Whether an open need's day passed before the planning day [today]. */
+    fun needLate(want: WantItem, today: LocalDate): Boolean =
+        want.kind == NEED && want.decision == null && want.needBy?.isBefore(today) == true
 }

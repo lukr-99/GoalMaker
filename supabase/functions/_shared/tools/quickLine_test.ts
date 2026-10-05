@@ -63,11 +63,13 @@ function stub() {
         return Promise.resolve({
           id: ID,
           title: fields.title,
-          reason: fields.reason,
+          reason: fields.reason ?? "",
           price: fields.price ?? null,
           currency: fields.currency ?? "CZK",
-          cooldownDays: fields.days ?? 30,
-          coolsUntil: "2026-10-16",
+          cooldownDays: fields.kind === "need" ? 0 : fields.days ?? 30,
+          coolsUntil: fields.kind === "need" ? TODAY : "2026-10-16",
+          kind: fields.kind ?? "want",
+          needBy: fields.needBy ?? null,
           addedOn: TODAY,
           link: null,
           areaId: null,
@@ -146,4 +148,18 @@ Deno.test("add_want reads the price, the wait and the reason from a line", async
   await tool("add_want").run(other, { line: "Tent €120", reason: "Summer trips", price: 99 });
   assertEquals([kept.want?.title, kept.want?.reason, kept.want?.price], ["Tent", "Summer trips", 99]);
   assertEquals(kept.want?.currency, undefined, "a price given apart keeps the owner's currency");
+});
+
+Deno.test("add_want writes down a need with its day and no reason", async () => {
+  const { planner, saved } = stub();
+  const text = await tool("add_want").run(planner, {
+    line: "Winter tyres 4 500 Kč",
+    kind: "need",
+    need_by: "2026-11-01",
+  });
+  assertEquals([saved.want?.title, saved.want?.reason, saved.want?.kind], ["Winter tyres", undefined, "need"]);
+  assertEquals([saved.want?.price, saved.want?.needBy], [4500, "2026-11-01"]);
+  assertStringIncludes(text, "Added a need, ready to buy:");
+  assertStringIncludes(text, "Winter tyres · need · 4500 CZK · needed by 2026-11-01 · by Claude (want id");
+  assertEquals(text.includes("Why:"), false, "a need without a reason shows none");
 });

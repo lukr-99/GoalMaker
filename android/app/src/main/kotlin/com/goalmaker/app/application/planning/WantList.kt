@@ -82,7 +82,7 @@ class WantList(
     fun add(draft: WantDraft): WantItem? {
         val clean = check(draft) ?: return null
         val addedOn = today()
-        val days = WantRules.cooldownDays(clean.price, clean.currency, cooldowns(), clean.pickedDays)
+        val days = WantRules.cooldownDays(clean.price, clean.currency, cooldowns(), clean.pickedDays, clean.kind)
         val row = rows.create(
             TABLE,
             values(clean) + mapOf(
@@ -90,6 +90,7 @@ class WantList(
                 "added_on" to JsonPrimitive(addedOn.toString()),
                 "cools_until" to JsonPrimitive(WantRules.coolsUntil(addedOn, days).toString()),
                 "made_by" to JsonPrimitive(ProjectRules.OWNER),
+                "kind" to JsonPrimitive(clean.kind),
                 "decision_note" to JsonPrimitive(""),
                 "checked_note" to JsonPrimitive(""),
             ),
@@ -137,7 +138,9 @@ class WantList(
     private fun check(draft: WantDraft): WantDraft? {
         val title = draft.title.trim().take(MAX_TITLE)
         val reason = draft.reason.trim().take(MAX_REASON)
-        if (title.isEmpty() || reason.isEmpty()) return null
+        val need = draft.kind == WantRules.NEED
+        // A want says why it is wanted; a need may leave it out (supabase/migrations/0025_wants_needs.sql).
+        if (title.isEmpty() || (reason.isEmpty() && !need)) return null
         val currency = draft.currency.trim().uppercase(Locale.ROOT).takeIf(CURRENCY::matches) ?: WantCooldowns.DEFAULT.currency
         return draft.copy(
             title = title,
@@ -145,6 +148,8 @@ class WantList(
             link = draft.link?.trim()?.take(MAX_LINK)?.takeIf(String::isNotEmpty),
             price = draft.price?.takeIf { it >= 0 && it <= MAX_PRICE },
             currency = currency,
+            kind = if (need) WantRules.NEED else WantRules.WANT,
+            needBy = draft.needBy.takeIf { need },
         )
     }
 
@@ -155,6 +160,7 @@ class WantList(
         "price" to (draft.price?.let(::JsonPrimitive) ?: JsonNull),
         "currency" to JsonPrimitive(draft.currency),
         "area_id" to (draft.areaId?.let(::JsonPrimitive) ?: JsonNull),
+        "need_by" to (draft.needBy?.let { JsonPrimitive(it.toString()) } ?: JsonNull),
     )
 
     private fun change(id: String, edit: (MutableMap<String, JsonElement>) -> Unit): Boolean {
@@ -185,6 +191,8 @@ class WantList(
         checkedNote = row.text("checked_note").orEmpty(),
         madeBy = row.text("made_by") ?: ProjectRules.OWNER,
         deleted = row.text(SyncedTable.DELETED_AT) != null,
+        kind = row.text("kind") ?: WantRules.WANT,
+        needBy = row.text("need_by")?.let(LocalDate::parse),
     )
 
     private fun toCooldowns(row: JsonObject): WantCooldowns {

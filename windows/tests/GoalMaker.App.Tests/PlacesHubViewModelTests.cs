@@ -120,6 +120,17 @@ public sealed class PlacesHubViewModelTests : IDisposable
     }
 
     [Fact]
+    public void ANeedIsNeitherAReadyWantNorACoolingOne()
+    {
+        planner.Wants.Add(new WantDraft("Lamp", "Dark desk", PickedDays: 30));
+        planner.Wants.Add(new WantDraft("Winter tyres", string.Empty, Price: 12900, Kind: WantRules.Need));
+
+        var wants = Tile(Hub(), "wants");
+
+        Assert.Equal((PlaceTileLook.Line, "Places.WantsCooling(1)"), (wants.Look, wants.Detail));
+    }
+
+    [Fact]
     public void TallyIsTodaysBarFromEveryDevice()
     {
         var hub = Hub();

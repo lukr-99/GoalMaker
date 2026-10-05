@@ -43,6 +43,16 @@ import com.goalmaker.app.application.planning.WantItem
 import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.theme.AppTheme
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 
 /**
@@ -71,9 +81,13 @@ internal fun WantSheet(
     var currency by rememberSaveable { mutableStateOf(initial?.currency ?: prefill?.currency ?: viewModel.uiState.value.cooldowns.currency) }
     var link by rememberSaveable { mutableStateOf(initial?.link.orEmpty()) }
     var picked by rememberSaveable { mutableStateOf(prefill?.pickedDays) }
+    // A need skips the cooldown and need not say why (docs/wants.md, "Needs").
+    val need = (initial?.kind ?: prefill?.kind) == WantRules.NEED
+    var needBy by rememberSaveable { mutableStateOf((initial?.needBy ?: prefill?.needBy)?.toString()) }
+    var pickingDay by remember { mutableStateOf(false) }
     val price = WantMoney.parse(priceText)
     val days = viewModel.cooldownFor(price, currency.trim().uppercase(), picked)
-    val canSave = title.isNotBlank() && reason.isNotBlank()
+    val canSave = title.isNotBlank() && (need || reason.isNotBlank())
 
     fun save() {
         if (!canSave) return
@@ -84,6 +98,8 @@ internal fun WantSheet(
             price = price,
             currency = currency,
             pickedDays = picked,
+            kind = if (need) WantRules.NEED else WantRules.WANT,
+            needBy = needBy?.let(LocalDate::parse),
         )
         scope.launch {
             val saved = if (initial == null) viewModel.add(draft) != null else viewModel.update(initial.id, draft)
@@ -93,6 +109,10 @@ internal fun WantSheet(
             }
             onDismiss()
         }
+    }
+
+    if (pickingDay) {
+        NeedByPicker(needBy?.let(LocalDate::parse), onPick = { needBy = it.toString(); pickingDay = false }, onDismiss = { pickingDay = false })
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheet) {
@@ -105,7 +125,16 @@ internal fun WantSheet(
                 .padding(bottom = 16.dp)
                 .navigationBarsPadding(),
         ) {
-            ScreenTitle(stringResource(if (initial == null) R.string.wants_add else R.string.wants_edit))
+            ScreenTitle(
+                stringResource(
+                    when {
+                        need && initial == null -> R.string.needs_add
+                        need -> R.string.needs_edit
+                        initial == null -> R.string.wants_add
+                        else -> R.string.wants_edit
+                    },
+                ),
+            )
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it.take(200) },
@@ -117,8 +146,8 @@ internal fun WantSheet(
             OutlinedTextField(
                 value = reason,
                 onValueChange = { reason = it.take(2000) },
-                label = { Text(stringResource(R.string.wants_reason_field)) },
-                supportingText = { Text(stringResource(R.string.wants_reason_hint)) },
+                label = { Text(stringResource(if (need) R.string.needs_note_field else R.string.wants_reason_field)) },
+                supportingText = if (need) null else ({ Text(stringResource(R.string.wants_reason_hint)) }),
                 minLines = 2,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
@@ -150,7 +179,28 @@ internal fun WantSheet(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (initial == null) {
+            if (need) {
+                // The day it is needed by, optional.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.needs_by_field).uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = AppTheme.colors.accent,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            needBy?.let { LocalDate.parse(it).format(DateTimeFormatter.ofPattern("EEE d MMM", LocalConfiguration.current.locales[0])) }
+                                ?: stringResource(R.string.needs_by_none),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = AppTheme.colors.text,
+                        )
+                    }
+                    if (needBy != null) TextButton(onClick = { needBy = null }) { Text(stringResource(R.string.needs_by_clear)) }
+                    TextButton(onClick = { pickingDay = true }) { Text(stringResource(R.string.needs_by_pick)) }
+                }
+            }
+            if (initial == null && !need) {
                 // The cooldown it will get, in the accent, and the owner can pick another.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -179,5 +229,24 @@ internal fun WantSheet(
                 Button(onClick = ::save, enabled = canSave) { Text(stringResource(R.string.wants_save)) }
             }
         }
+    }
+}
+
+/** The calendar for the day a need is needed by. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NeedByPicker(current: LocalDate?, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
+    val state = rememberDatePickerState(initialSelectedDateMillis = current?.atStartOfDay(ZoneOffset.UTC)?.toInstant()?.toEpochMilli())
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { state.selectedDateMillis?.let { onPick(Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate()) } },
+                enabled = state.selectedDateMillis != null,
+            ) { Text(stringResource(R.string.needs_by_pick)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.needs_cancel)) } },
+    ) {
+        DatePicker(state = state)
     }
 }

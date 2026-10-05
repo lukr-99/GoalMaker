@@ -50,9 +50,9 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_activity`, `undo_change` | The latest changes with who made each (owner, Claude or GoalMaker), and undo |
 | `get_settings`, `update_settings` | The time zone and day start every planning day is worked out from |
 | `get_calendar` | A stretch of days with what is planned, what is due, and where a repeat would come round |
-| `get_wants` | The wants that are ready, cooling or decided, each with its reason, price, last price check and note |
-| `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after; a new one also from a short `line` |
-| `decide_want` | Bought or dropped with a note, or reopened; only what the owner decided in the conversation |
+| `get_wants` | The open needs first (by the day they are needed by, the ones without a day last, "late" once the day passed), then the wants that are ready, cooling or decided, each with its reason, price, last price check and note; `kind` picks only wants or only needs |
+| `add_want`, `update_want` | A want with its reason, price, link and area; its cooldown comes from the owner's thresholds unless picked, and never moves after; a new one also from a short `line`. With `kind` need it is a need: no cooldown, the reason may be left out, and `need_by` is the day it is needed by |
+| `decide_want` | Bought or dropped with a note, or reopened, for a want or a need; only what the owner decided in the conversation |
 | `record_price_check` | The price Claude found with its own web search, where, and the alternatives; GoalMaker never fetches from a shop |
 | `get_life_goals` | The life goals, open ones first in the owner's order, each with its time left ("10 years left", "Today", "Past its date"), by date, area, how many pictures and its why |
 | `add_life_goal`, `update_life_goal` | A life goal with its why (required), a by date as a day or `in_years`, and its area; mark it achieved, dropped or open again. No delete, and pictures are added in the apps |
@@ -88,6 +88,12 @@ Wants are decided with the owner, not for them ([wants](wants.md)). For example:
 Claude reads the ready wants, looks each price up with its own web search, records what it found
 with `record_price_check`, and asks whether the owner still wants it before `decide_want` marks it
 bought or dropped. A want Claude adds says "by Claude" in both apps.
+
+A need is something the owner has to buy, like winter tyres, rather than wait out. It is ready the
+day it is added, may have a day it is needed by, and is bought or dropped like a want. Needs stay
+out of `get_review_digest`'s wants, which are about bought against dropped.
+
+> Use GoalMaker. I need new winter tyres by November.
 
 Life goals are what the owner wants in their life in the long run, each with why it matters
 ([life goals](life-goals.md)). For example:

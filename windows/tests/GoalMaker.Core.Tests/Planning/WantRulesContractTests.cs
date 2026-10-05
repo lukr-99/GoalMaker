@@ -20,7 +20,8 @@ public sealed class WantRulesContractTests
         {
             var thresholds = testCase.TryGetProperty("cooldowns", out var own) ? Cooldowns(own) : WantCooldowns.Default;
             int? picked = testCase.TryGetProperty("picked", out var days) ? days.GetInt32() : null;
-            var actual = WantRules.CooldownDays(Number(testCase, "price"), testCase.GetProperty("currency").GetString()!, thresholds, picked);
+            var kind = Text(testCase, "kind") ?? WantRules.Want;
+            var actual = WantRules.CooldownDays(Number(testCase, "price"), testCase.GetProperty("currency").GetString()!, thresholds, picked, kind);
             Assert.True(testCase.GetProperty("expect").GetInt32() == actual, Name(testCase));
         }
     }
@@ -137,6 +138,27 @@ public sealed class WantRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryListOfOpenNeeds()
+    {
+        foreach (var testCase in vectors.GetProperty("needs").EnumerateArray())
+        {
+            var wants = testCase.GetProperty("wants").EnumerateArray().Select(Want).ToList();
+            var expected = testCase.GetProperty("expect").EnumerateArray().Select(id => id.GetString()!);
+            Assert.True(expected.SequenceEqual(WantRules.Needs(wants).Select(want => want.Id)), Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryLateNeed()
+    {
+        foreach (var testCase in vectors.GetProperty("needLate").EnumerateArray())
+        {
+            var late = WantRules.NeedLate(Want(testCase.GetProperty("want")), Day(testCase, "today")!.Value);
+            Assert.True(testCase.GetProperty("expect").GetBoolean() == late, Name(testCase));
+        }
+    }
+
     private static TimeOnly? Time(JsonElement testCase) =>
         Text(testCase, "time") is { } text ? TimeOnly.ParseExact(text, "HH:mm", CultureInfo.InvariantCulture) : null;
 
@@ -166,7 +188,9 @@ public sealed class WantRulesContractTests
             Price: Number(value, "price"),
             Currency: Text(value, "currency") ?? "CZK",
             Decision: Text(value, "decision"),
-            Deleted: value.TryGetProperty("deleted", out var deleted) && deleted.GetBoolean());
+            Deleted: value.TryGetProperty("deleted", out var deleted) && deleted.GetBoolean(),
+            Kind: Text(value, "kind") ?? WantRules.Want,
+            NeedBy: Day(value, "needBy"));
     }
 
     private static string? Text(JsonElement value, string name) =>

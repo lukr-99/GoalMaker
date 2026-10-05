@@ -133,6 +133,22 @@ public sealed class JsonSettingsStoreTests : IDisposable
     }
 
     [Fact]
+    public void WantsShowUntilTheNeedsAreChosenAndThenRememberThem()
+    {
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(SettingsFile, """{ "Version": 1 }""");
+        var store = new JsonSettingsStore(SettingsFile);
+        Assert.Equal(WantsTab.Wants, store.WantsTab);
+
+        store.WantsTab = WantsTab.Needs;
+
+        Assert.Equal(WantsTab.Needs, new JsonSettingsStore(SettingsFile).WantsTab);
+
+        File.WriteAllText(SettingsFile, """{ "Version": 1, "WantsTab": 7 }""");
+        Assert.Equal(WantsTab.Wants, new JsonSettingsStore(SettingsFile).WantsTab);
+    }
+
+    [Fact]
     public void TallyIsOffUntilTurnedOn()
     {
         Directory.CreateDirectory(folder);

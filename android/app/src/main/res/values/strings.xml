@@ -1164,6 +1164,21 @@
 
     <!-- Wants (docs/wants.md, M8-04) -->
     <string name="wants_title">Wants</string>
+    <string name="wants_tab_wants">Wants</string>
+    <string name="wants_tab_needs">Needs</string>
+    <string name="needs_add">Add a need</string>
+    <string name="needs_edit">Edit need</string>
+    <string name="needs_note_field">Note (optional)</string>
+    <string name="needs_by_field">Needed by</string>
+    <string name="needs_by_none">No day</string>
+    <string name="needs_by_pick">Pick a day</string>
+    <string name="needs_by_clear">Clear</string>
+    <string name="needs_cancel">Cancel</string>
+    <string name="needs_by">By %1$s</string>
+    <string name="needs_late">Late, by %1$s</string>
+    <string name="needs_empty">Nothing you need to buy. Add what you have to get, with the day you need it by.</string>
+    <string name="needs_closed">Bought and dropped %1$d</string>
+    <string name="needs_placeholder">Something you need: Winter tyres 4000 Kč</string>
     <string name="wants_add">Add a want</string>
     <string name="wants_edit">Edit</string>
     <string name="wants_ready">Ready</string>

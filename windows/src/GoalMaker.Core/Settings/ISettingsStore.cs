@@ -61,6 +61,9 @@ public interface ISettingsStore
     /// <summary>How the Goals page shows the goals on this PC (docs/goals.md); the ladder unless changed.</summary>
     GoalsView GoalsView { get; set; }
 
+    /// <summary>The tab the Wants page last showed on this PC (docs/wants.md); the wants unless changed.</summary>
+    WantsTab WantsTab { get; set; }
+
     /// <summary>The year the January nudge was last put away with Not now on this PC (docs/reviews.md); null for never.</summary>
     int? NewYearDismissed { get; set; }
 

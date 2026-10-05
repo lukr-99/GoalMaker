@@ -1096,6 +1096,16 @@
           "required": true
         },
         {
+          "name": "kind",
+          "kind": "text",
+          "required": true
+        },
+        {
+          "name": "need_by",
+          "kind": "date",
+          "required": false
+        },
+        {
           "name": "created_at",
           "kind": "timestamp",
           "required": true

@@ -1000,6 +1000,81 @@ Deno.test({
         assert(stranger.isError, stranger.text);
       });
 
+      await t.step("needs skip the cooldown, keep their order and are bought like wants", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const wantOf = (text: string) => /\(want id ([0-9a-f-]{36})\)/.exec(text)![1];
+        const rowOf = async (id: string) =>
+          (await sql`
+            select kind, reason, cooldown_days, (cools_until - added_on) as waits, need_by::text
+            from public.wants where id = ${id}`)[0];
+
+        // A need may leave the reason out, and its price never gives it a cooldown.
+        const tyres = await client.tool("add_want", { title: "Winter tyres", price: 12900, kind: "need" });
+        assert(!tyres.isError, tyres.text);
+        assertStringIncludes(tyres.text, "Added a need, ready to buy:");
+        assertStringIncludes(tyres.text, "Winter tyres · need · 12900 CZK · by Claude");
+        assert(!tyres.text.includes("Why:"), tyres.text);
+        const tyresId = wantOf(tyres.text);
+        assertEquals(await rowOf(tyresId), { kind: "need", reason: "", cooldown_days: 0, waits: 0, need_by: null });
+
+        const coat = await client.tool("add_want", {
+          line: "Coat 2 500 Kč",
+          kind: "need",
+          need_by: "2026-01-15",
+          reason: "The old one tore",
+        });
+        assert(!coat.isError, coat.text);
+        const coatId = wantOf(coat.text);
+        assertEquals((await rowOf(coatId)).need_by, "2026-01-15");
+        const ink = await client.tool("add_want", { title: "Printer ink", kind: "need", need_by: "2099-03-01" });
+        const inkId = wantOf(ink.text);
+
+        // Open needs come first, by the day they are needed by and the ones without a day last; a past day is late.
+        const open = await client.tool("get_wants");
+        assert(!open.isError, open.text);
+        assert(open.text.startsWith("Needs:\n"), open.text);
+        const needs = open.text.split("\n").filter((line) => line.includes(" · need · "));
+        assertEquals(needs.map(wantOf), [coatId, inkId, tyresId]);
+        assertStringIncludes(needs[0], "Coat · need · 2500 CZK · needed by 2026-01-15 · late");
+        assert(!needs[1].includes("late"), needs[1]);
+        assertStringIncludes(open.text, "Cooling:");
+        const onlyNeeds = await client.tool("get_wants", { kind: "need" });
+        assert(!onlyNeeds.text.includes("Cooling:"), onlyNeeds.text);
+        assertStringIncludes(
+          (await client.tool("get_wants", { kind: "want", state: "ready" })).text,
+          "No ready wants.",
+        );
+
+        const moved = await client.tool("update_want", { id: coatId, need_by: "2099-01-01", reason: "" });
+        assert(!moved.isError, moved.text);
+        assertEquals((await rowOf(coatId)).need_by, "2099-01-01");
+        assertEquals((await rowOf(coatId)).reason, "", "a need's reason may be emptied");
+        assert(!moved.text.includes("late"), moved.text);
+
+        const bought = await client.tool("decide_want", { id: tyresId, decision: "bought", note: "At the garage" });
+        assert(!bought.isError, bought.text);
+        assertStringIncludes(bought.text, "Winter tyres · need · 12900 CZK · bought");
+        const dropped = await client.tool("decide_want", { id: inkId, decision: "dropped" });
+        assert(!dropped.isError, dropped.text);
+        const decided = await client.tool("get_wants", { state: "decided", kind: "need" });
+        assertStringIncludes(decided.text, "Winter tyres · need · 12900 CZK · bought");
+        assertStringIncludes(decided.text, "Note: At the garage");
+
+        // Needs stay out of the digest's wants, which are what bought against dropped is about.
+        const digest = JSON.parse((await client.tool("get_review_digest", { kind: "weekly" })).text);
+        const listed = [...digest.wants.became_ready, ...digest.wants.decided, ...digest.wants.ready_next];
+        assertEquals(listed.filter((want: Json) => [tyresId, coatId, inkId].includes(want.id)), []);
+
+        // A want still needs its reason, and only a need has a day.
+        const unreasoned = await client.tool("add_want", { title: "Drone", price: 9000, kind: "want" });
+        assert(unreasoned.isError, unreasoned.text);
+        assertStringIncludes(unreasoned.text, "A want needs a reason");
+        const dated = await client.tool("add_want", { title: "Drone", reason: "Fun", need_by: "2099-01-01" });
+        assert(dated.isError, dated.text);
+        const badDay = await client.tool("add_want", { title: "Bulbs", kind: "need", need_by: "2026-02-30" });
+        assert(badDay.isError, badDay.text);
+      });
+
       await t.step("done items leave the board by age or by hand, and come back when reopened", async () => {
         await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
         const made = await client.tool("create_project", { name: "Archive test" });
@@ -1344,6 +1419,14 @@ async function seedAugust(sql: postgres.Sql, owner: string) {
            (${id(41)}, ${owner}, 'Kettle', 'Ours leaks', 800, 7, '2026-08-05', '2026-08-12', 'bought',
             '2026-08-20T10:00:00Z', 'owner'),
            (${id(42)}, ${owner}, 'Tent', 'Summer trips', null, 30, '2026-07-26', '2026-08-25', null, null, 'claude')`;
+  // Needs never cool and stay out of the digest's wants: one added and dropped this week, one open.
+  await sql`
+    insert into public.wants (id, owner_id, title, reason, price, cooldown_days, added_on, cools_until, decision,
+                              decided_at, made_by, kind, need_by)
+    values (${id(43)}, ${owner}, 'Batteries', '', 300, 0, '2026-08-18', '2026-08-18', 'dropped',
+            '2026-08-19T10:00:00Z', 'owner', 'need', null),
+           (${id(44)}, ${owner}, 'Winter tyres', '', 12900, 0, '2026-08-25', '2026-08-25', null, null, 'owner', 'need',
+            '2026-08-27')`;
 
   // A fortnight of Tally: a PC coding in the Garden project and a phone watching video, an own category,
   // and a rule whose pattern names an app, which must never come back through the connector.

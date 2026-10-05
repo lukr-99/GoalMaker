@@ -94,7 +94,8 @@ round sends the whole thread and every tool's declaration again. So the chat kee
   with the first sentence of its description. The connector's longer notes are written for Claude.
 - A tool with a long input offers the chat only some of it (`CHAT_INPUTS`): `add_life_goal` takes the
   title, the why and the by date, without `in_years` or the area, which keeps the tools under the
-  16,000-character cap; `add_habit` and
+  16,000-character cap; `add_want` takes the owner's `line` ("Kindle 3290 Kč"), the reason, whether it
+  is a want or a need with the day a need is needed by, the area and the link; `add_habit` and
   `add_goal` take the owner's `line` ("Swim 2 times a week 40 min", "Read 3 books this month") with
   an emoji, a limit or Show on Today, and the goal fed, and the line, read with the bottom bar's
   rules ([composer](composer.md#adding-on-wants-habits-and-goals)), says the rest. `add_want` takes a

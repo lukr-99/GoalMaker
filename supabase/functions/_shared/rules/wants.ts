@@ -8,6 +8,11 @@ import { nameBasedUuid } from "./nameBasedUuid.ts";
  */
 export type Decision = "bought" | "dropped";
 export type WantState = "cooling" | "ready" | "decided";
+/** What a row is (supabase/migrations/0025_wants_needs.sql): a want to wait out, or a need to buy. */
+export type WantKind = "want" | "need";
+
+export const WANT: WantKind = "want";
+export const NEED: WantKind = "need";
 
 /** The most days a picked cooldown can be. */
 export const MAX_DAYS = 365;
@@ -44,6 +49,9 @@ export interface WantItem {
   coolsUntil: Day;
   decision: Decision | null;
   deleted: boolean;
+  /** A want, or a need: something to buy, with no cooldown and maybe a day it is needed by. */
+  kind: WantKind;
+  needBy: Day | null;
 }
 
 /** The id of an owner's one row of thresholds, the same on every device. */
@@ -51,13 +59,15 @@ export function cooldownsId(owner: string): Promise<string> {
   return nameBasedUuid(NAMESPACE, `want-cooldowns/${owner.toLowerCase()}`);
 }
 
-/** The days a new want waits: `picked` when the owner chose, otherwise by its price. */
+/** The days a new want waits: none for a need, `picked` when the owner chose, otherwise by its price. */
 export function cooldownDays(
   price: number | null,
   currency: string,
   cooldowns: WantCooldowns = DEFAULT_COOLDOWNS,
   picked: number | null = null,
+  kind: WantKind = WANT,
 ): number {
+  if (kind === NEED) return 0;
   if (picked !== null) return Math.min(Math.max(picked, 0), MAX_DAYS);
   if (price === null || currency !== cooldowns.currency) return cooldowns.unpricedDays;
   if (price < cooldowns.smallUnder) return cooldowns.smallDays;
@@ -91,7 +101,7 @@ export function progress(want: WantItem, today: Day): number {
 export function readyWants(wants: WantItem[], lastNotified: Day | null, today: Day): WantItem[] {
   return wants
     .filter((want) =>
-      !want.deleted && want.decision === null && want.coolsUntil <= today &&
+      !want.deleted && want.kind !== NEED && want.decision === null && want.coolsUntil <= today &&
       (lastNotified === null ? want.coolsUntil === today : want.coolsUntil > lastNotified)
     )
     .sort((a, b) => {
@@ -102,13 +112,35 @@ export function readyWants(wants: WantItem[], lastNotified: Day | null, today: D
     });
 }
 
-/** Bought and dropped, and the dropped prices in `currency` added up; deleted wants never count. */
+/** Bought and dropped, and the dropped prices in `currency` added up; deleted wants and needs never count. */
 export function wantStats(wants: WantItem[], currency: string): { bought: number; dropped: number; notSpent: number } {
-  const kept = wants.filter((want) => !want.deleted);
+  const kept = wants.filter((want) => !want.deleted && want.kind !== NEED);
   const dropped = kept.filter((want) => want.decision === "dropped");
   return {
     bought: kept.filter((want) => want.decision === "bought").length,
     dropped: dropped.length,
     notSpent: dropped.filter((want) => want.currency === currency).reduce((sum, want) => sum + (want.price ?? 0), 0),
   };
+}
+
+/** The open needs: by the day they are needed by (none last), then when they were added, then title. */
+export function openNeeds<T extends WantItem>(wants: T[]): T[] {
+  return wants
+    .filter((want) => !want.deleted && want.kind === NEED && want.decision === null)
+    .sort((a, b) => {
+      if (a.needBy !== b.needBy) {
+        if (a.needBy === null) return 1;
+        if (b.needBy === null) return -1;
+        return a.needBy < b.needBy ? -1 : 1;
+      }
+      if (a.addedOn !== b.addedOn) return a.addedOn < b.addedOn ? -1 : 1;
+      const left = a.title.toLowerCase();
+      const right = b.title.toLowerCase();
+      return left < right ? -1 : left > right ? 1 : 0;
+    });
+}
+
+/** Whether an open need's day passed before the planning day `today`. */
+export function needLate(want: WantItem, today: Day): boolean {
+  return want.kind === NEED && want.decision === null && want.needBy !== null && want.needBy < today;
 }

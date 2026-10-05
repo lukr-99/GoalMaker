@@ -59,6 +59,21 @@ public sealed class WantsReminderServiceTests : IDisposable
         Assert.Null(reminders.CatchUp().Wants);
     }
 
+    [Fact]
+    public void ANeedNeverArmsTheTimerNorRingsWithTheWants()
+    {
+        // Early on the day it is added, before the wants' time, so a want ready today would arm it.
+        planner.Time.SetUtcNow(new DateTimeOffset(2026, 9, 29, 7, 0, 0, TimeSpan.Zero));
+        planner.Settings.RemindedUntil = new DateTimeOffset(2026, 9, 29, 7, 0, 0, TimeSpan.Zero);
+        planner.Wants.Add(new WantDraft("Winter tyres", string.Empty, Price: 12900, Kind: WantRules.Need));
+
+        reminders.Rearm();
+        Assert.Null(scheduler.ArmedAt);
+
+        planner.Time.SetUtcNow(new DateTimeOffset(2026, 9, 29, 10, 0, 1, TimeSpan.Zero));
+        Assert.Null(reminders.CatchUp().Wants);
+    }
+
     private sealed class Scheduler : IReminderScheduler
     {
         public DateTime? ArmedAt { get; private set; }

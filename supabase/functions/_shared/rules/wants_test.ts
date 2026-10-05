@@ -7,6 +7,8 @@ import {
   cooldownsId,
   coolsUntil,
   DEFAULT_COOLDOWNS,
+  needLate,
+  openNeeds,
   progress,
   readyWants,
   type WantCooldowns,
@@ -33,6 +35,8 @@ function want(value: Json): WantItem {
     coolsUntil: until,
     decision: value.decision ?? null,
     deleted: value.deleted ?? false,
+    kind: value.kind ?? "want",
+    needBy: value.needBy ?? null,
   };
 }
 
@@ -43,7 +47,7 @@ Deno.test("wants.json: the defaults", () => {
 Deno.test("wants.json: every cooldown", () => {
   for (const c of file.cooldown) {
     assertEquals(
-      cooldownDays(c.price, c.currency, c.cooldowns ?? DEFAULT_COOLDOWNS, c.picked ?? null),
+      cooldownDays(c.price, c.currency, c.cooldowns ?? DEFAULT_COOLDOWNS, c.picked ?? null, c.kind ?? "want"),
       c.expect,
       c.name,
     );
@@ -85,4 +89,12 @@ Deno.test("wants.json: every stats block", () => {
 
 Deno.test("wants.json: every thresholds id", async () => {
   for (const c of file.cooldownsId) assertEquals(await cooldownsId(c.owner), c.expect, c.name);
+});
+
+Deno.test("wants.json: every needs list", () => {
+  for (const c of file.needs) assertEquals(openNeeds(c.wants.map(want)).map((w) => w.id), c.expect, c.name);
+});
+
+Deno.test("wants.json: every late need", () => {
+  for (const c of file.needLate) assertEquals(needLate(want(c.want), c.today), c.expect, c.name);
 });

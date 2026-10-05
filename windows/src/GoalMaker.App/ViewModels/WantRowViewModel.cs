@@ -7,7 +7,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// One want on the Wants page: its ring, where it stands, and when opened the reason, the last price
-/// Claude found and the buttons that decide it (docs/wants.md).
+/// Claude found and the buttons that decide it (docs/wants.md). A need's row has no ring: its line
+/// has the day it is needed by, in the danger colour once that day has passed.
 /// </summary>
 public sealed partial class WantRowViewModel : ObservableObject
 {
@@ -19,7 +20,7 @@ public sealed partial class WantRowViewModel : ObservableObject
     [ObservableProperty]
     private string note = string.Empty;
 
-    public WantRowViewModel(WantsViewModel page, WantItem want, WantState state, double fraction, int daysLeft, string subtitle, string? checkedText)
+    public WantRowViewModel(WantsViewModel page, WantItem want, WantState state, double fraction, int daysLeft, string subtitle, string? checkedText, NeedLine? need = null)
     {
         this.page = page;
         Want = want;
@@ -28,6 +29,7 @@ public sealed partial class WantRowViewModel : ObservableObject
         Subtitle = subtitle;
         CheckedText = checkedText;
         RingText = state == WantState.Cooling ? daysLeft.ToString(CultureInfo.CurrentCulture) : string.Empty;
+        Need = need ?? new NeedLine(subtitle, string.Empty, string.Empty, false);
     }
 
     public WantItem Want { get; }
@@ -64,6 +66,13 @@ public sealed partial class WantRowViewModel : ObservableObject
     public bool IsDecided => State == WantState.Decided;
 
     public bool IsUndecided => !IsDecided;
+
+    /// <summary>A need's line in three parts, so only the day it is needed by takes the danger colour.</summary>
+    public NeedLine Need { get; }
+
+    public bool IsLate => Need.Late;
+
+    public bool HasReason => Want.Reason.Length > 0;
 
     [RelayCommand]
     private void Toggle() => IsOpen = !IsOpen;
