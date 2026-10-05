@@ -51,6 +51,31 @@ A want can have its own number of days. Changing the thresholds never moves want
 The states, the cooldown and its edges (the day rollover, a price of exactly 1,000) are pinned by
 `contracts/vectors/wants.json`.
 
+## Needs
+
+A **need** is something the owner has to buy rather than would like to: winter tyres, printer ink. It
+is a row of `wants` with `kind` set to `need` (Supabase migration 0025, replica migration 0018), so
+it syncs, backs up and goes through the connector like a want. It differs in four ways:
+
+- it skips the cooldown: its days are 0 whatever its price, so it is ready the day it is added;
+- it need not say why (the reason may be empty), and it may have a day it is **needed by**;
+- it stays out of the ready notification and out of the stats (bought against dropped, money not
+  spent), which are about impulse buys;
+- it shows in its own tab.
+
+The open needs are ordered by the day they are needed by (needs without one last), then when they
+were added, then by title. A need whose day has passed is **late**, and says so in the danger colour.
+A need is bought or dropped like a want, and reopened the same way. Pinned by the `needs`, `needLate`
+and need cases of `cooldown`, `ready` and `stats` in `wants.json`.
+
+The Wants place has a **Wants** and **Needs** switch at the top (the owner's pick, 2026-10-05). The
+Needs tab lists the open needs with Bought and Drop, the bought and dropped ones folded below, and
+its bottom bar adds a need from a line like `Winter tyres 4000 Kč`: a title is enough. The cooldown
+thresholds and the Cooling, Ready and Decided filters belong to the Wants tab, and the Places tile
+counts wants only. On Windows the switch sits next to the page title, the PC remembers the last tab
+(a device setting), `/want` opens the Wants tab, and the add panel on Needs has a "Needed by" date
+instead of the cooldown.
+
 ## The ready notification
 
 One notification a day, at a time the owner picks (10:00 by default, Settings, Planning, "Wants
