@@ -73,6 +73,24 @@ it is planned for that day, moves counted like any other move ([plan tomorrow](p
 The cell lights up while a task hangs over it. Deadlines and projected repeats are not dragged: a
 deadline belongs to its task and a repeat has no row of its own yet.
 
+## Adding from the calendar
+
+The calendar has the bottom bar ([composer](composer.md)), which adds to the picked day: a **task**,
+read by the task rules and planned for that day, or an **event**, by the bar's Task or Event switch.
+An event's line is its title; its days are the picked ones. On one day a task line that names its own
+day keeps it, as on Tomorrow, and with nothing picked the bar adds to today. In Event mode the empty
+bar's plus opens the event editor on the picked days.
+
+**Several days** can be picked at once: on Android a long-press on a cell starts picking and taps add
+or take away days; on Windows Ctrl+click (Ctrl+Space on a focused cell) adds or takes away a day and Shift+click
+(Shift+Space) adds the run from the last picked day. The picked days are
+outlined and the bar counts them ("3 days"). With several picked, the bar asks which to make: **one
+event** from the first picked day to the last, gaps included, or **a task on each day**, a copy of
+the same task planned on each. The copies don't repeat, even when the line names a repeat. It starts at the choice used last on that device. Undo takes back the
+whole batch. Pinned by the `picked` group of
+[`contracts/vectors/calendar.json`](../contracts/vectors/calendar.json). Leaving picking (Back, Esc,
+or a plain tap on one day) goes back to one day.
+
 ## Putting a day right
 
 The open day is also where a day gone by is put right (the owner's board item "able to finish

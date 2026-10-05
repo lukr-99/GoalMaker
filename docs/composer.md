@@ -83,7 +83,7 @@ the line), in order, so the composer can highlight them and a chip can remove it
 
 ## The bottom bar on every list
 
-The composer is the bottom bar of Today, Tomorrow and the Inbox, and of Wants, Habits and Goals
+The composer is the bottom bar of Today, Tomorrow and the Inbox, of the calendar, and of Wants, Habits and Goals
 (the owner's pick from the add prototype, v2, 2026-10-01). There is no add button in their top bars
 or headers any more. On Goals the "Add a goal" rows under each period and the List view's per-group
 add button stay as second ways in.
