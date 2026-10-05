@@ -40,6 +40,23 @@ links time to a project, not even through a rule. An editor's title gives the fo
 so a project is found when exactly one project's local folder has that name. Matching, the project
 from a title, idle and the daily totals are pinned by `contracts/vectors/tally.json`.
 
+## Sorting
+
+What landed in **Other** is listed at the top of the place's apps as **To sort**, most minutes first:
+the apps (and on the PC the sites and editor folders) of this device's own record, for the day shown
+or the week. Each has the categories one tap away. A tap saves a rule and counts today again, so the
+item leaves the list. Every app, site and folder in the apps also has **Move to**, the same thing
+from any category, beside **Make a rule**, which opens the full rule sheet.
+A browser or editor that lands in Other is listed by its sites or folders, never as the app: an app
+rule for a browser would come before the shipped site rules and pull every site with it. The same
+site in two browsers is one line.
+
+Sorting the same thing again changes the owner's rule for exactly that match, pattern (ignoring
+case) and platform, rather than adding a second one: an app is an app rule, a site a title rule and
+a folder a folder rule, for the device it is on. One of the owner's own categories can be **merged**
+into another, after a question: its rules sort into the other one from then on, and it is deleted.
+Days already counted keep the category they were counted in (the owner's pick, 2026-10-05).
+
 ## On each device
 
 Off until the owner turns it on in the Tally place.
@@ -77,7 +94,11 @@ Off until the owner turns it on in the Tally place.
   deleting a rule in the place counts today again at once. The place says that only this device's
   apps show, since the record never leaves it; with the other device's chip picked, it says where to
   look instead. The category chip narrows the hours and apps too. Then the week as stacked bars per
-  day, time per project this week, and the owner's own rules and categories to add, edit and delete.
+  day, **this week on each device** (a stacked bar for the phone and one for the PC, with their
+  totals, from the synced days; it follows the category chip but not the device chips, since it
+  compares the two), the **last 8 weeks** as stacked columns under the filter (`weeks` in
+  the vectors, as in Stats), time per project this week, and the owner's own rules and categories to
+  add, edit, merge and delete.
   The hours and the apps are pinned by `hours` and `apps` in `contracts/vectors/tally.json`: time two
   stretches share counts once, an hour keeps seconds, and the apps round each level to the nearest
   minute, leave out what rounds to none, and go most first, then by name. It is a place like any
