@@ -323,6 +323,17 @@ Story numbers continue from 99 (the list above repeats 88 once; those numbers st
 119. As the owner, I want Claude to read and add life goals, so that a review or a chat can tie a
      week to them.
 
+### Calendar events (M10, after v1)
+
+120. As the owner, I want to put a trip or a holiday on the calendar as one event from its first day
+     to its last, so that I see which days are taken.
+121. As the owner, I want to add a task or an event from the calendar's bottom bar on the day I
+     picked, so that planning ahead doesn't need another screen.
+122. As the owner, I want to pick several days at once and add one event across them or the same
+     task on each, so that a trip or a run of chores takes one line.
+123. As the owner, I want Today to show the events going on and Claude to read and add events, so
+     that a day and a review know where I am.
+
 ## Implementation Decisions
 
 ### Architecture
