@@ -17,6 +17,7 @@ import com.goalmaker.app.domain.settings.Appearance
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.domain.settings.ComposerMode
 import com.goalmaker.app.domain.settings.GoalsView
+import com.goalmaker.app.domain.settings.PickedDaysAdd
 import com.goalmaker.app.domain.update.UpdatePostponement
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -152,6 +153,14 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
     override fun setGoalsView(view: GoalsView) {
         preferences.edit { putString(GOALS_VIEW, view.name) }
         goals.value = view
+    }
+
+    private val pickedAdd = MutableStateFlow(enumOrDefault(preferences.getString(PICKED_DAYS_ADD, null), PickedDaysAdd.ONE_EVENT))
+    override val pickedDaysAdd: StateFlow<PickedDaysAdd> = pickedAdd.asStateFlow()
+
+    override fun setPickedDaysAdd(choice: PickedDaysAdd) {
+        preferences.edit { putString(PICKED_DAYS_ADD, choice.name) }
+        pickedAdd.value = choice
     }
 
     private val newYear = MutableStateFlow(preferences.getInt(NEW_YEAR_DISMISSED, 0).takeIf { it > 0 })
@@ -323,6 +332,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val BOARD_VIEW = "board_view"
         const val COLLAPSED_COLUMNS = "board_collapsed_columns"
         const val GOALS_VIEW = "goals_view"
+        const val PICKED_DAYS_ADD = "calendar_picked_days_add"
         const val COMPOSER_MODE = "composer_mode"
         const val NEW_YEAR_DISMISSED = "new_year_dismissed"
         const val PLAN_TOMORROW_AT = "plan_tomorrow_reminder"

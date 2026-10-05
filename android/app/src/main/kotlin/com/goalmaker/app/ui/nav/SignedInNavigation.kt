@@ -295,6 +295,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 )
                                 PlaceRules.CALENDAR -> CalendarScreen(
                                     viewModel = calendarViewModel,
+                                    chat = chatViewModel,
                                     onOpenTask = { id -> backStack.add(TaskKey(id)) },
                                     actions = actions,
                                     onBack = backToHub,

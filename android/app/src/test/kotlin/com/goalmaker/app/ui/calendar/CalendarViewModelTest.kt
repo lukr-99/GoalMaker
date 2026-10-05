@@ -23,9 +23,13 @@ import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.data.settings.SharedPreferencesSettingsStore
 import com.goalmaker.app.domain.composer.ComposerParser
+import com.goalmaker.app.domain.composer.SpanKind
+import com.goalmaker.app.domain.settings.PickedDaysAdd
+import com.goalmaker.app.ui.lists.UndoEvent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -59,6 +63,7 @@ class CalendarViewModelTest {
     private lateinit var projects: ProjectList
     private lateinit var habits: HabitList
     private lateinit var events: EventList
+    private lateinit var settings: SharedPreferencesSettingsStore
     private lateinit var viewModel: CalendarViewModel
     private val now = LocalDateTime.parse("2026-09-18T12:00")
     private val today = LocalDate.parse("2026-09-18")
@@ -75,6 +80,7 @@ class CalendarViewModelTest {
         tasks = TaskList(test.replica, rows, areas, tags, projects, {}) { today }
         val preferences = RuntimeEnvironment.getApplication().getSharedPreferences("calendar-test", Context.MODE_PRIVATE)
         preferences.edit(commit = true) { clear() }
+        settings = SharedPreferencesSettingsStore(preferences)
         viewModel = CalendarViewModel(
             tasks,
             ReminderList(test.replica, rows, {}),
@@ -83,7 +89,7 @@ class CalendarViewModelTest {
             projects,
             habits,
             events,
-            SharedPreferencesSettingsStore(preferences),
+            settings,
             Dispatchers.Unconfined,
         ) { now }
     }
@@ -251,5 +257,164 @@ class CalendarViewModelTest {
         settle()
         assertEquals("Train", events.get(prague.id)!!.notes)
         scope.cancel()
+    }
+
+    private fun day(text: String) = LocalDate.parse(text)
+
+    private fun plannedOn(title: String) = tasks.all().filter { it.title == title }.mapNotNull(TaskItem::plannedDate).sorted()
+
+    @Test
+    fun `the bar adds a task to the open day, at the time the line names, unless the line names a day`() = runTest {
+        viewModel.open(day("2026-09-22"))
+
+        assertTrue(viewModel.add("Dentist 17:00"))
+        assertTrue(viewModel.add("Call mom tomorrow"))
+        assertFalse(viewModel.add("   "))
+
+        val dentist = tasks.all().single { it.title == "Dentist" }
+        assertEquals(day("2026-09-22"), dentist.plannedDate)
+        assertEquals(LocalTime.of(17, 0), dentist.plannedTime)
+        assertEquals(listOf(today.plusDays(1)), plannedOn("Call mom"))
+    }
+
+    @Test
+    fun `with no day open the bar adds to today`() = runTest {
+        assertTrue(viewModel.add("Buy milk"))
+
+        assertEquals(listOf(today), plannedOn("Buy milk"))
+    }
+
+    @Test
+    fun `the bar adds an event on the open day, its line only a title`() = runTest {
+        viewModel.open(day("2026-09-22"))
+        viewModel.chooseEvent(true)
+        settle()
+        assertTrue(viewModel.uiState.first { it.loaded && it.addsEvent }.addsEvent)
+
+        assertTrue(viewModel.add("Grandma's birthday tomorrow #family"))
+
+        val event = events.all().single()
+        assertEquals("Grandma's birthday tomorrow #family", event.title)
+        assertEquals(day("2026-09-22"), event.startsOn)
+        assertEquals(day("2026-09-22"), event.endsOn)
+        assertTrue(tasks.all().isEmpty())
+    }
+
+    @Test
+    fun `picked days add one event from the first to the last`() = runTest {
+        viewModel.startPicking(day("2026-10-14"))
+        viewModel.open(day("2026-10-12"))
+        viewModel.open(day("2026-10-13"))
+
+        settle()
+        val state = viewModel.uiState.first { it.picked.size == 3 }
+        assertEquals(listOf(day("2026-10-12"), day("2026-10-13"), day("2026-10-14")), state.addDays)
+        // One event is where a pick starts on a new device.
+        assertTrue(state.addsEvent)
+        assertTrue(viewModel.add("Prague"))
+
+        val prague = events.all().single()
+        assertEquals(day("2026-10-12") to day("2026-10-14"), prague.startsOn to prague.endsOn)
+        assertEquals(PickedDaysAdd.ONE_EVENT, settings.pickedDaysAdd.value)
+    }
+
+    @Test
+    fun `picked days add a copy of a task on each, gaps kept, and the next pick starts at that choice`() = runTest {
+        viewModel.startPicking(day("2026-10-09"))
+        viewModel.open(day("2026-10-05"))
+        viewModel.open(day("2026-10-07"))
+        viewModel.chooseEvent(false)
+        settle()
+        assertFalse(viewModel.uiState.first { it.picked.size == 3 }.addsEvent)
+
+        assertTrue(viewModel.add("Pack @Home"))
+
+        assertEquals(listOf(day("2026-10-05"), day("2026-10-07"), day("2026-10-09")), plannedOn("Pack"))
+        assertEquals(setOf("Home"), tasks.all().map { task -> areas.all().single { it.id == task.areaId }.name }.toSet())
+        assertTrue(events.all().isEmpty())
+        assertEquals(PickedDaysAdd.TASK_ON_EACH, settings.pickedDaysAdd.value)
+
+        // Back to one day, then a new pick: it starts at a task on each day, the choice used last time.
+        viewModel.stopPicking()
+        settle()
+        assertFalse(viewModel.uiState.first { it.loaded && !it.picking }.several)
+        viewModel.startPicking(day("2026-10-20"))
+        viewModel.open(day("2026-10-21"))
+        settle()
+        val again = viewModel.uiState.first { it.picked.size == 2 }
+        assertFalse(again.addsEvent)
+    }
+
+    @Test
+    fun `a drag after the long-press picks a run, and unpicking every day leaves picking`() = runTest {
+        viewModel.open(day("2026-10-01"))
+        viewModel.startPicking(day("2026-10-12"))
+        viewModel.pickRun(day("2026-10-12"), day("2026-10-15"))
+        viewModel.pickRun(day("2026-10-12"), day("2026-10-13"))
+
+        settle()
+        assertEquals(setOf(day("2026-10-12"), day("2026-10-13")), viewModel.uiState.first { it.picked.size == 2 }.picked)
+
+        viewModel.open(day("2026-10-12"))
+        viewModel.open(day("2026-10-13"))
+        settle()
+        val state = viewModel.uiState.first { it.loaded && !it.picking }
+        assertEquals(listOf(day("2026-10-13")), state.addDays)
+    }
+
+    @Test
+    fun `undo takes back the whole batch`() = runTest {
+        val scope = CoroutineScope(Dispatchers.Unconfined)
+        val undone = mutableListOf<UndoEvent>()
+        scope.launch { viewModel.undo.collect { undone += it } }
+        viewModel.startPicking(day("2026-10-12"))
+        viewModel.pickRun(day("2026-10-12"), day("2026-10-14"))
+        viewModel.chooseEvent(false)
+
+        assertTrue(viewModel.add("Pack"))
+        settle()
+        assertEquals(3, tasks.all().size)
+        assertEquals(UndoEvent.Kind.ADDED, undone.single().kind)
+        undone.single().undo()
+        settle()
+        assertTrue(tasks.all().isEmpty())
+
+        viewModel.chooseEvent(true)
+        assertTrue(viewModel.add("Prague"))
+        settle()
+        assertEquals(1, events.all().size)
+        undone.last().undo()
+        settle()
+        assertTrue(events.all().isEmpty())
+        scope.cancel()
+    }
+
+    @Test
+    fun `across picked days each copy is a plain task, the line's own day and repeat left out`() = runTest {
+        // On one day the line's repeat counts, as on Tomorrow's bar.
+        assertEquals("FREQ=WEEKLY;BYDAY=MO", viewModel.preview("Water the plants every monday").repeat)
+
+        viewModel.startPicking(day("2026-10-12"))
+        viewModel.open(day("2026-10-13"))
+        viewModel.chooseEvent(false)
+        val draft = viewModel.preview("Water the plants every monday friday")
+        assertNull(draft.repeat)
+        assertNull(draft.plannedDate)
+        assertTrue(draft.spans.none { it.kind == SpanKind.REPEAT || it.kind == SpanKind.DATE })
+
+        assertTrue(viewModel.add("Water the plants every monday friday"))
+        assertEquals(listOf(day("2026-10-12"), day("2026-10-13")), plannedOn("Water the plants"))
+        assertTrue(tasks.all().all { it.recurrence == null })
+    }
+
+    @Test
+    fun `a pick wider than an event may be adds no event`() = runTest {
+        viewModel.startPicking(day("2026-01-01"))
+        viewModel.open(day("2027-01-03"))
+
+        settle()
+        assertNull(viewModel.uiState.first { it.picked.size == 2 }.eventSpan)
+        assertFalse(viewModel.add("Year abroad"))
+        assertTrue(events.all().isEmpty())
     }
 }

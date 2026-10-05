@@ -59,7 +59,7 @@ import kotlinx.coroutines.launch
  * Adds a calendar event or edits one (docs/calendar.md, Events): the title, the first and last day
  * from a range picker, the area and the notes. [onSave] says whether the event was kept, so the sheet
  * stays open when it was not; [onDelete] is there for an event that already exists, and the place
- * that opened the sheet offers the undo.
+ * that opened the sheet offers the undo. A new event starts from [firstDay] to [lastDay].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,12 +70,13 @@ fun EventSheet(
     onSave: suspend (EventDraft) -> Boolean,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
+    lastDay: LocalDate = firstDay,
 ) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var title by rememberSaveable { mutableStateOf(initial?.title.orEmpty()) }
     var startsOn by rememberSaveable { mutableStateOf((initial?.startsOn ?: firstDay).toString()) }
-    var endsOn by rememberSaveable { mutableStateOf((initial?.endsOn ?: firstDay).toString()) }
+    var endsOn by rememberSaveable { mutableStateOf((initial?.endsOn ?: lastDay).toString()) }
     var notes by rememberSaveable { mutableStateOf(initial?.notes.orEmpty()) }
     var areaId by rememberSaveable { mutableStateOf(initial?.areaId) }
     var picking by remember { mutableStateOf(false) }

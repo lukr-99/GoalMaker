@@ -1,11 +1,16 @@
 package com.goalmaker.app.ui.calendar
 
 import android.content.ClipData
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,11 +22,16 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -44,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,8 +63,16 @@ import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
@@ -67,18 +86,23 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
-import com.goalmaker.app.application.planning.CalendarDay
 import com.goalmaker.app.application.planning.AreaItem
+import com.goalmaker.app.application.planning.CalendarDay
 import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.EventItem
+import com.goalmaker.app.application.planning.EventRules
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
+import com.goalmaker.app.ui.chat.ChatViewModel
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ChoiceChip
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.composer.BottomComposer
+import com.goalmaker.app.ui.composer.composerChips
+import com.goalmaker.app.ui.composer.removeParts
 import com.goalmaker.app.ui.habits.AmountDialog
 import com.goalmaker.app.ui.habits.HabitCard
 import com.goalmaker.app.ui.habits.HabitRow
@@ -94,16 +118,20 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
  * A week or a month of planned tasks, deadlines and reminders, with events drawn as bars across their
- * days (docs/calendar.md). An event on the open day opens the event sheet.
+ * days (docs/calendar.md). An event on the open day opens the event sheet. The bottom bar adds a task
+ * or an event to the open day; a long-press on a day starts picking several, which taps and a drag
+ * add to, and Back or Done leaves. The bar's switch to the quick chat is [chat]'s.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel,
+    chat: ChatViewModel,
     onOpenTask: (String) -> Unit,
     actions: @Composable () -> Unit,
     onBack: (() -> Unit)? = null,
@@ -116,13 +144,23 @@ fun CalendarScreen(
     var logging by remember { mutableStateOf<HabitRow?>(null) }
     var habitMenu by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<EventItem?>(null) }
+    var newEvent by remember { mutableStateOf(false) }
+    val composer = rememberTextFieldState()
+    val chatState by chat.uiState.collectAsStateWithLifecycle()
+    // Where each day's cell sits on the screen, so a drag that starts on one cell can pick the ones it crosses.
+    val cells = remember { mutableMapOf<LocalDate, Rect>() }
     val snackbars = remember { SnackbarHostState() }
     val resources = LocalResources.current
 
+    // A newer undo takes the place of the one showing, so the snackbar always takes back the last add.
     LaunchedEffect(viewModel) {
-        viewModel.undo.collect { event ->
+        viewModel.undo.collectLatest { event ->
             val message = resources.getString(
-                if (event.kind == UndoEvent.Kind.DONE) R.string.lists_done_message else R.string.lists_deleted_message,
+                when (event.kind) {
+                    UndoEvent.Kind.DONE -> R.string.lists_done_message
+                    UndoEvent.Kind.ADDED -> R.string.calendar_added_message
+                    else -> R.string.lists_deleted_message
+                },
                 event.title,
             )
             val result = snackbars.showSnackbar(message, actionLabel = resources.getString(R.string.lists_undo), duration = SnackbarDuration.Short)
@@ -139,9 +177,50 @@ fun CalendarScreen(
         }
     }
 
+    // Back leaves picking first, going back to one day.
+    BackHandler(enabled = state.picking) { viewModel.stopPicking() }
+
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { AppSnackbarHost(snackbars) },
+        bottomBar = {
+            if (state.loaded) {
+                val line = composer.text.toString()
+                val draft = remember(line, state.several) { viewModel.preview(line) }
+                val event = state.addsEvent
+                // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
+                Column(Modifier.navigationBarsPadding().imePadding()) {
+                    if (!chatState.chatting) {
+                        AddKindRow(
+                            picking = state.picking,
+                            days = state.addDays.size,
+                            event = event,
+                            tooWide = event && state.eventSpan == null,
+                            onChoose = viewModel::chooseEvent,
+                            onDone = viewModel::stopPicking,
+                        )
+                    }
+                    BottomComposer(
+                        state = composer,
+                        chat = chat,
+                        // An event's line is only its title, so nothing in it is read as a shortcut.
+                        chips = if (event) emptyList() else composerChips(line, draft, viewModel.today(), state.areas, state.filter.tags.map { it.name }, state.projects),
+                        canAdd = if (event) {
+                            line.isNotBlank() && line.trim().length <= EventRules.MAX_TITLE && state.eventSpan != null
+                        } else {
+                            draft.title.isNotBlank() && draft.command == null
+                        },
+                        onAdd = { if (viewModel.add(line)) composer.clearText() },
+                        onRemove = if (event) null else { chip -> composer.setTextAndPlaceCursorAtEnd(removeParts(line, chip.spans)) },
+                        placeholder = stringResource(if (event) R.string.calendar_event_placeholder else R.string.today_composer_placeholder),
+                        addLabel = stringResource(if (event) R.string.calendar_add_event_send else R.string.today_add),
+                        formLabel = stringResource(R.string.event_add),
+                        // The plus opens the new event sheet over the picked days; a task has no form of its own here.
+                        onOpenForm = if (event) ({ newEvent = true }) else null,
+                    )
+                }
+            }
+        },
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.calendar_title)) },
@@ -205,7 +284,13 @@ fun CalendarScreen(
                                     today = day.day == state.today,
                                     inPeriod = state.kind == CalendarRules.WEEK || day.day.month == state.anchor.month,
                                     selected = day.day == state.selected,
+                                    picked = day.day in state.picked,
                                     onClick = { viewModel.open(day.day) },
+                                    onLongClick = { viewModel.startPicking(day.day) },
+                                    onDragTo = { point ->
+                        cells.entries.firstOrNull { it.value.contains(point) }?.let { viewModel.pickRun(day.day, it.key) }
+                                    },
+                                    onPlaced = { bounds -> cells[day.day] = bounds },
                                     onDropTask = { id -> viewModel.plan(id, day.day) },
                                     modifier = Modifier.weight(1f),
                                     eventSpace = space,
@@ -306,6 +391,20 @@ fun CalendarScreen(
         }
     }
 
+    if (newEvent) {
+        val span = state.eventSpan
+        val first = span?.start ?: state.addDays.firstOrNull() ?: state.today
+        EventSheet(
+            initial = null,
+            firstDay = first,
+            lastDay = span?.endInclusive ?: first,
+            areas = state.areas,
+            onSave = { draft -> viewModel.saveEvent(null, draft) },
+            onDelete = null,
+            onDismiss = { newEvent = false },
+        )
+    }
+
     editing?.let { event ->
         EventSheet(
             initial = event,
@@ -356,8 +455,10 @@ private fun WeekdayRow(locale: java.util.Locale) {
 /**
  * One day of the grid: what it holds as a number, with today outlined and the day open filled. A task
  * dragged from the day's list below lands on it, which plans it for that day (docs/calendar.md).
- * A screen reader hears the whole date and what is on it. The cell keeps the grid's shape and grows
- * taller when large text needs the room.
+ * A long-press ([onLongClick]) starts picking several days, and a drag that follows it reports where
+ * the finger is on the screen ([onDragTo]), for the days it crosses; a picked day is outlined.
+ * [onPlaced] tells where the cell is on the screen. A screen reader hears the whole date and what is
+ * on it. The cell keeps the grid's shape and grows taller when large text needs the room.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -370,8 +471,16 @@ internal fun DayCell(
     onDropTask: (String) -> Unit,
     modifier: Modifier = Modifier,
     eventSpace: Dp = 0.dp,
+    picked: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
+    onDragTo: ((Offset) -> Unit)? = null,
+    onPlaced: ((Rect) -> Unit)? = null,
 ) {
     var hovered by remember { mutableStateOf(false) }
+    // Set by the long-press, so the moves after it in the same gesture pick days rather than scroll.
+    var holding by remember { mutableStateOf(false) }
+    var placed by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val dragTo by rememberUpdatedState(onDragTo)
     val target = remember(day.day) {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
@@ -401,7 +510,8 @@ internal fun DayCell(
         day.empty -> AppTheme.colors.surface.copy(alpha = if (inPeriod) 1f else 0.4f)
         else -> AppTheme.colors.surface
     }
-    val description = dayDescription(day, today, selected)
+    val description = dayDescription(day, today, selected, picked)
+    val shape = RoundedCornerShape(10.dp)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -413,9 +523,45 @@ internal fun DayCell(
                 val placeable = measurable.measure(constraints.copy(minWidth = constraints.maxWidth, minHeight = least))
                 layout(placeable.width, placeable.height) { placeable.place(0, 0) }
             }
-            .clip(RoundedCornerShape(10.dp))
+            .clip(shape)
             .background(background)
-            .clickable(onClick = onClick)
+            // Always there, so picking a day keeps the gesture going on it rather than starting the chain anew.
+            .border(2.dp, if (picked) AppTheme.colors.accent else Color.Transparent, shape)
+            .onGloballyPositioned { coordinates ->
+                placed = coordinates
+                onPlaced?.invoke(coordinates.boundsInRoot())
+            }
+            .pointerInput(day.day) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    holding = false
+                    while (true) {
+                        val change = awaitPointerEvent().changes.firstOrNull() ?: break
+                        if (!change.pressed) break
+                        val coordinates = placed
+                        // The click handler has already consumed the move after its long-press, so the move is read regardless.
+                        if (holding && coordinates != null && change.positionChangeIgnoreConsumed() != Offset.Zero) {
+                            dragTo?.invoke(coordinates.localToRoot(change.position))
+                            change.consume()
+                        }
+                    }
+                    holding = false
+                }
+            }
+            .then(
+                if (onLongClick == null) {
+                    Modifier.clickable(onClick = onClick)
+                } else {
+                    Modifier.combinedClickable(
+                        onClick = onClick,
+                        onLongClickLabel = stringResource(R.string.calendar_pick_several),
+                        onLongClick = {
+                            holding = true
+                            onLongClick()
+                        },
+                    )
+                },
+            )
             .semantics { contentDescription = description }
             .dragAndDropTarget(shouldStartDragAndDrop = { true }, target = target)
             .padding(2.dp),
@@ -450,11 +596,12 @@ internal fun DayCell(
 
 /** "Saturday 3 October, today, 2 planned, 1 due" for a cell, said where a sighted owner sees the bar. */
 @Composable
-private fun dayDescription(day: CalendarDay, today: Boolean, selected: Boolean): String {
+private fun dayDescription(day: CalendarDay, today: Boolean, selected: Boolean, picked: Boolean): String {
     val locale = LocalConfiguration.current.locales[0]
     val parts = mutableListOf(DateTimeFormatter.ofPattern("EEEE d MMMM", locale).format(day.day))
     if (today) parts += stringResource(R.string.calendar_cell_today)
     if (selected) parts += stringResource(R.string.calendar_cell_open)
+    if (picked) parts += stringResource(R.string.calendar_cell_picked)
     if (day.empty) parts += stringResource(R.string.calendar_cell_empty)
     if (day.planned.isNotEmpty()) parts += pluralStringResource(R.plurals.calendar_cell_planned, day.planned.size, day.planned.size)
     if (day.deadlines.isNotEmpty()) parts += pluralStringResource(R.plurals.calendar_cell_due, day.deadlines.size, day.deadlines.size)

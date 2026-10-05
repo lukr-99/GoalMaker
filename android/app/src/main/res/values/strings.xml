@@ -970,7 +970,7 @@
     <string name="calendar_back">Earlier</string>
     <string name="calendar_forward">Later</string>
     <string name="calendar_today">Today</string>
-    <string name="calendar_pick_a_day">Pick a day to see what is on it.</string>
+    <string name="calendar_pick_a_day">Pick a day to see what is on it. Hold a day to pick several.</string>
     <string name="calendar_day_empty">Nothing on this day.</string>
     <string name="calendar_planned">Planned</string>
     <string name="calendar_deadline">Due</string>
@@ -1024,6 +1024,24 @@
     <string name="event_cancel">Cancel</string>
     <string name="event_ok">OK</string>
     <string name="event_too_long">An event can last at most 367 days.</string>
+    <!-- Adding from the calendar's bottom bar, and picking several days (docs/calendar.md). -->
+    <string name="calendar_add_kind">What to add</string>
+    <string name="calendar_add_across">What to add on the picked days</string>
+    <string name="calendar_add_task">Task</string>
+    <string name="calendar_add_event">Event</string>
+    <string name="calendar_add_one_event">One event</string>
+    <string name="calendar_add_task_each">A task on each day</string>
+    <string name="calendar_event_placeholder">Add an event…</string>
+    <string name="calendar_add_event_send">Add event</string>
+    <string name="calendar_added_message">Added: %1$s</string>
+    <plurals name="calendar_picked_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="calendar_pick_done">Done</string>
+    <!-- A day cell's long-press, as a screen reader offers it. -->
+    <string name="calendar_pick_several">Pick several days</string>
+    <string name="calendar_cell_picked">picked</string>
 
     <!-- Projects (docs/projects.md) -->
     <string name="projects_title">Projects</string>

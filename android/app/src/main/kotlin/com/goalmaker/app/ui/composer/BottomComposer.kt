@@ -20,7 +20,7 @@ import com.goalmaker.app.ui.chat.ComposerModeSwitch
  * bottom bar on every list"): the composer with its switch to the quick chat, the chat's short thread
  * above it, and why chat can't run when it can't. In the chat the line goes to [chat]; otherwise
  * [onAdd] adds what it says, with [chips] previewing it, and the plus opens the page's form
- * ([onOpenForm], named [formLabel]). The caller keeps it clear of the navigation bar and the keyboard
+ * ([onOpenForm], named [formLabel]; without one it only adds). The caller keeps it clear of the navigation bar and the keyboard
  * through [modifier].
  */
 @Composable
@@ -33,7 +33,7 @@ fun BottomComposer(
     placeholder: String,
     addLabel: String,
     formLabel: String,
-    onOpenForm: () -> Unit,
+    onOpenForm: (() -> Unit)?,
     modifier: Modifier = Modifier,
     onRemove: ((ComposerChip) -> Unit)? = null,
 ) {
