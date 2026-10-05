@@ -1294,6 +1294,17 @@
     <string name="tally_apps_close">Hide its apps</string>
     <string name="tally_apps_shown">Apps shown</string>
     <string name="tally_apps_hidden">Apps hidden</string>
+    <string name="tally_to_sort">To sort</string>
+    <string name="tally_to_sort_none">Nothing left to sort.</string>
+    <string name="tally_move_to">Move to</string>
+    <string name="tally_devices">This week on each device</string>
+    <string name="tally_trend">Last 8 weeks</string>
+    <string name="tally_trend_hint">Each column is a week, from its Monday.</string>
+    <string name="tally_merge_into">Merge into</string>
+    <string name="tally_merge_question">Merge %1$s into %2$s?</string>
+    <string name="tally_merge_detail">Its rules sort into %1$s from now on, and %2$s goes. Days already counted keep their category.</string>
+    <string name="tally_merge">Merge</string>
+    <string name="tally_cancel">Cancel</string>
     <string name="tally_make_rule">Make a rule</string>
     <string name="tally_make_rule_for">Make a rule for %1$s</string>
     <string name="stats_tally">Where the time went</string>

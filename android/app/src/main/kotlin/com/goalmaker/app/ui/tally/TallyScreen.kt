@@ -82,6 +82,7 @@ fun TallyScreen(viewModel: TallyViewModel, onBack: (() -> Unit)?, actions: @Comp
         TallyCategorySheet(
             viewModel = viewModel,
             initial = editingCategory,
+            categories = state.categories,
             taken = state.categories.map(TallyCategory::color).toSet(),
             onDismiss = {
                 addingCategory = false
@@ -161,6 +162,7 @@ fun TallyScreen(viewModel: TallyViewModel, onBack: (() -> Unit)?, actions: @Comp
                             dayLabel = dayName,
                             onScope = viewModel::showApps,
                             onMakeRule = { group, app -> editingRule = viewModel.ruleFor(app.app, group.category) },
+                            onMove = viewModel::moveApp,
                         )
                     }
                 } else if (state.counting) {
@@ -178,6 +180,33 @@ fun TallyScreen(viewModel: TallyViewModel, onBack: (() -> Unit)?, actions: @Comp
                         )
                         Text(stringResource(R.string.tally_week_hint), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
                         if (state.weekSlices.isNotEmpty()) TallyLegend(state.weekSlices)
+                    }
+                }
+                item("h-devices") { SectionHeader(stringResource(R.string.tally_devices)) }
+                item("devices") {
+                    Panel {
+                        state.devices.forEach { device ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResource(if (device.kind == TallyRules.PHONE) R.string.tally_phone else R.string.tally_pc),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(durationText(device.bar.minutes), style = tabular(MaterialTheme.typography.bodyMedium), color = AppTheme.colors.accent)
+                            }
+                            TallyStackedBar(device.bar.slices)
+                        }
+                    }
+                }
+                item("h-trend") { SectionHeader(stringResource(R.string.tally_trend)) }
+                item("trend") {
+                    Panel {
+                        TallyColumns(
+                            state.trend,
+                            labels = state.trend.map { it.day.format(java.time.format.DateTimeFormatter.ofPattern("d MMM", locale)) },
+                            height = 84.dp,
+                        )
+                        Text(stringResource(R.string.tally_trend_hint), style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
                     }
                 }
                 item("h-projects") { SectionHeader(stringResource(R.string.tally_projects)) }

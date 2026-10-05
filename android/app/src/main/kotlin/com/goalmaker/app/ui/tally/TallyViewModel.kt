@@ -72,7 +72,10 @@ class TallyViewModel(
         val counting = access.on && access.granted
         val local = if (counting) tracker.stretches(monday, today) else emptyList()
         val names = local.map(TallyStretch::app).distinct().mapNotNull { app -> tracker.appName(app)?.let { app.lowercase(Locale.ROOT) to it } }.toMap()
-        Week(today, startHour, tally.totals(monday, today), tally.categories(), tally.rules(), projectData.projects, counting, local, names)
+        Week(
+            today, startHour, tally.totals(monday, today), tally.categories(), tally.rules(), projectData.projects, counting, local, names,
+            history = tally.totals(monday.minusWeeks(TREND_WEEKS - 1L), today),
+        )
     }.flowOn(io)
 
     val uiState: StateFlow<TallyUiState> = combine(week, filter, view) { data, shown, look ->
@@ -107,6 +110,10 @@ class TallyViewModel(
             hours = TallyBoard.hours(TallyBreakdown.hours(local, day, data.startHour), categories),
             appScope = look.scope,
             apps = TallyBoard.apps(apps, categories, data.names),
+            trend = TallyBoard.weeks(TallyRules.weeks(data.history, data.today, TREND_WEEKS, shown), categories),
+            devices = listOf(TallyRules.PHONE, TallyRules.PC).map { kind ->
+                TallyDeviceTime(kind, TallyBoard.bar(data.today, data.rows.filter { TallyRules.keeps(it, shown.copy(kind = kind)) }, categories))
+            },
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), TallyUiState())
 
@@ -142,6 +149,19 @@ class TallyViewModel(
 
     /** Shows this phone's apps for the day shown or for the whole week. */
     fun showApps(scope: TallyAppScope) = view.update { it.copy(scope = scope) }
+
+    /**
+     * Sorts one of this phone's apps into [category] in one step (docs/tally.md, "Sorting"): the owner's
+     * rule for that app changes, or one is added, and today is counted again.
+     */
+    fun moveApp(app: String, category: String) {
+        viewModelScope.launch(io) { if (tally.sortInto(TallyRules.APP, app, TallyRules.ANDROID, category)) tracker.track() }
+    }
+
+    /** Merges one of the owner's own categories into another: its rules move over, and it goes. */
+    fun mergeCategory(from: String, into: String) {
+        viewModelScope.launch(io) { if (tally.mergeCategory(from, into)) tracker.track() }
+    }
 
     /** A new rule that puts one of this phone's apps into a category, for the rule sheet to start from. */
     fun ruleFor(app: String, category: String): TallyRule = TallyRule(TallyRules.APP, app, TallyRules.ANDROID, category)
@@ -181,12 +201,17 @@ class TallyViewModel(
         val local: List<TallyStretch>,
         /** The apps' names this phone knows, by package in lower case. */
         val names: Map<String, String>,
+        /** The synced rows of the last [TREND_WEEKS] weeks, for the trend. */
+        val history: List<TallyDay>,
     )
 
     /** What the owner picked to look at closer: a day of the week (null for today) and the apps' scope. */
     private data class View(val day: LocalDate? = null, val scope: TallyAppScope = TallyAppScope.DAY)
 
     private companion object {
+        /** How many weeks the trend shows. */
+        const val TREND_WEEKS = 8
+
         const val MINUTE = 60_000L
     }
 }

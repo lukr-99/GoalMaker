@@ -46,6 +46,10 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.remember
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.TallyCategory
 import com.goalmaker.app.ui.components.EmojiField
@@ -56,16 +60,24 @@ import kotlinx.coroutines.launch
 /**
  * Adds a Tally category of the owner's own, or edits or deletes [initial] (docs/tally.md): a name, an
  * optional emoji and a color from the area palette, a new one starting at the first color no category
- * wears yet.
+ * wears yet. [categories] are the ones it can merge into.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-internal fun TallyCategorySheet(viewModel: TallyViewModel, initial: TallyCategory?, taken: Set<String>, onDismiss: () -> Unit) {
+internal fun TallyCategorySheet(
+    viewModel: TallyViewModel,
+    initial: TallyCategory?,
+    categories: List<TallyCategory>,
+    taken: Set<String>,
+    onDismiss: () -> Unit,
+) {
     val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val palette = AppTheme.areaColors.map { it.id }
     var name by rememberSaveable { mutableStateOf(initial?.name.orEmpty()) }
     var emoji by rememberSaveable { mutableStateOf(initial?.emoji.orEmpty()) }
+    var choosingMerge by remember { mutableStateOf(false) }
+    var merging by remember { mutableStateOf<TallyCategory?>(null) }
     var color by rememberSaveable {
         mutableStateOf(initial?.color ?: palette.firstOrNull { it !in taken } ?: palette.firstOrNull().orEmpty())
     }
@@ -131,10 +143,41 @@ internal fun TallyCategorySheet(viewModel: TallyViewModel, initial: TallyCategor
                         viewModel.deleteCategory(category.id)
                         onDismiss()
                     }) { Text(stringResource(R.string.tally_delete), color = AppTheme.colors.danger) }
+                    // Merge into another category: its rules move over, and it goes (docs/tally.md, "Sorting").
+                    Box {
+                        TextButton(onClick = { choosingMerge = true }) { Text(stringResource(R.string.tally_merge_into)) }
+                        DropdownMenu(expanded = choosingMerge, onDismissRequest = { choosingMerge = false }) {
+                            categories.filter { it.id != category.id }.forEach { other ->
+                                DropdownMenuItem(
+                                    text = { Text(listOfNotNull(other.emoji, other.name).joinToString(" ")) },
+                                    onClick = {
+                                        choosingMerge = false
+                                        merging = other
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 Button(onClick = ::save, enabled = canSave) { Text(stringResource(R.string.tally_save)) }
             }
         }
+    }
+    val into = merging
+    if (initial != null && into != null) {
+        AlertDialog(
+            onDismissRequest = { merging = null },
+            title = { Text(stringResource(R.string.tally_merge_question, initial.name, into.name)) },
+            text = { Text(stringResource(R.string.tally_merge_detail, into.name, initial.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.mergeCategory(initial.id, into.id)
+                    merging = null
+                    onDismiss()
+                }) { Text(stringResource(R.string.tally_merge)) }
+            },
+            dismissButton = { TextButton(onClick = { merging = null }) { Text(stringResource(R.string.tally_cancel)) } },
+        )
     }
 }
