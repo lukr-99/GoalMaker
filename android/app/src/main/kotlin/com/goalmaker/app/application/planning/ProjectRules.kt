@@ -16,6 +16,9 @@ object ProjectRules {
     const val DOING = "doing"
     const val DONE = "done"
 
+    /** The board's last column: every dropped item, whatever column it is stored in (docs/projects.md). */
+    const val DROPPED = "dropped"
+
     const val TASK = "task"
     const val IDEA = "idea"
     const val BUG = "bug"
@@ -33,8 +36,11 @@ object ProjectRules {
     const val CLAUDE = "claude"
     const val EVERYONE = "all"
 
-    /** The four columns, left to right. */
+    /** The four columns an item is stored in, left to right. */
     val COLUMNS = listOf(BACKLOG, TODO, DOING, DONE)
+
+    /** The columns a board shows: the four, then [DROPPED]. */
+    val BOARD_COLUMNS = COLUMNS + DROPPED
 
     /** The priorities, most important first. */
     val PRIORITIES = listOf(URGENT, HIGH, NORMAL, LOW)
@@ -62,11 +68,14 @@ object ProjectRules {
         else -> 1
     }
 
-    /** What moving an item to [column] does to a task in [state]: done finishes it, anything else reopens it. */
+    /**
+     * What moving an item to the board [column] does to a task in [state]: dropped drops it, done
+     * finishes it, and any other column reopens a done or dropped one.
+     */
     fun moved(column: String, state: TaskState): TaskState = when {
-        state == TaskState.DROPPED -> state
+        column == DROPPED -> TaskState.DROPPED
         column == DONE -> TaskState.DONE
-        state == TaskState.DONE -> TaskState.OPEN
+        state == TaskState.DONE || state == TaskState.DROPPED -> TaskState.OPEN
         else -> state
     }
 
@@ -128,8 +137,15 @@ object ProjectRules {
         return PlanningDay.of(instant.atZone(zone).toLocalDateTime(), startHour)
     }
 
-    /** The four columns of a project with their items in order; a column with nothing in it stays. */
-    fun board(items: List<TaskItem>): List<ProjectColumn> = COLUMNS.map { column ->
-        ProjectColumn(column, order(items.filter { !it.deleted && it.boardColumn == column }))
+    /**
+     * The board columns of a project with their items in order; a column with nothing in it stays. A
+     * dropped item is in [DROPPED], never in the column it is stored in.
+     */
+    fun board(items: List<TaskItem>): List<ProjectColumn> = BOARD_COLUMNS.map { column ->
+        val dropped = column == DROPPED
+        ProjectColumn(
+            column,
+            order(items.filter { !it.deleted && (it.state == TaskState.DROPPED) == dropped && (dropped || it.boardColumn == column) }),
+        )
     }
 }

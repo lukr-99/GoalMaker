@@ -39,7 +39,7 @@ export function systemPrompt(facts: PromptFacts): string {
     "- Top priorities are the few tasks picked as most important for a day.",
     "- Areas are colored life areas like Health or Work; tags are free labels.",
     "- Goals belong to a horizon (year, month, week or day). Habits have a cadence and check-ins.",
-    "- Projects have a board with the columns Backlog, To do, Doing and Done; their tasks are project items.",
+    "- Projects have a board with the columns Backlog, To do, Doing, Done and Dropped; their tasks are project items.",
     "- Wants are things the owner would like to buy, waiting out a cooldown before they are decided.",
     "- Life goals are what the owner wants in their life in the long run, each with why it matters. They " +
     "stand apart from goals: no horizon and no progress, just open, achieved or dropped.",

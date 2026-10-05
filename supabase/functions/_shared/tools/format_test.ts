@@ -1,10 +1,24 @@
-// How the connector reads habits and goals out: the standings, groups and paces of the shared rules
-// (contracts/vectors/habits.json and goals.json) in the words the apps use (docs/habits.md, docs/goals.md).
-import { assertEquals } from "jsr:@std/assert@1.0.13";
+// How the connector reads habits, goals and boards out: the standings, groups, paces and columns of the
+// shared rules (contracts/vectors/habits.json, goals.json and projects.json) in the words the apps use
+// (docs/habits.md, docs/goals.md, docs/projects.md).
+import { assert, assertEquals } from "jsr:@std/assert@1.0.13";
 import type { Habit } from "../planner/planner.ts";
 import type { GoalItem } from "../rules/goals.ts";
 import { lists } from "../rules/listRules.ts";
-import { cadenceText, goalLine, habitLine, names, newYearLine, paceText, standingText, today } from "./format.ts";
+import { board as projectBoard, type ProjectItem } from "../rules/projects.ts";
+import type { TaskItem, TaskState } from "../rules/task.ts";
+import {
+  board,
+  cadenceText,
+  goalLine,
+  habitLine,
+  names,
+  newYearLine,
+  paceText,
+  standingText,
+  taskDetail,
+  today,
+} from "./format.ts";
 import { periodOf } from "../rules/digest.ts";
 
 const ID = "00000000-0000-4000-8000-000000000001";
@@ -197,4 +211,48 @@ Deno.test("the January nudge and a yearly digest's period read like the apps", (
 Deno.test("a habit that reminds says when", () => {
   const line = habitLine(habit({ remindAt: "20:30" }), { standing: "left", value: 0, met: 0, streak: 0 });
   assertEquals(line.includes("reminds at 20:30"), true, line);
+});
+
+Deno.test("a board shows Dropped after Done, with every dropped item in it", () => {
+  const project: ProjectItem = {
+    id: ID,
+    name: "GoalMaker",
+    description: "",
+    areaId: null,
+    status: "active",
+    repositoryUrl: null,
+    localFolder: null,
+    notes: "",
+    position: 0,
+    deleted: false,
+  };
+  const item = (id: string, title: string, column: string, state: TaskState): TaskItem => ({
+    id,
+    title,
+    state,
+    topPriority: false,
+    createdAt: "2026-09-18T08:00:00Z",
+    plannedDate: null,
+    plannedTime: null,
+    areaId: null,
+    recurrence: null,
+    deleted: false,
+    seriesId: null,
+    notes: "",
+    deadline: null,
+    completedAt: null,
+    projectId: ID,
+    boardColumn: column,
+    priority: "normal",
+  });
+  const open = item("a", "Fix the widget", "doing", "open");
+  const dropped = item("b", "Old idea", "doing", "dropped");
+  const plain = names([], [], new Map());
+  const lines = board(project, projectBoard([open, dropped]), plain, []).split("\n");
+  const headings = lines.filter((line) => !line.startsWith("- ") && !line.startsWith("GoalMaker"));
+  assertEquals(headings, ["Backlog: nothing.", "To do: nothing.", "Doing (1):", "Done: nothing.", "Dropped (1):"]);
+  assert(lines[lines.indexOf("Dropped (1):") + 1].includes("Old idea"), "the dropped item sits under Dropped");
+  assert(lines[lines.indexOf("Doing (1):") + 1].includes("Fix the widget"), "not under the column it is stored in");
+  assert(taskDetail(dropped, plain, [], []).includes("On the board in Dropped."), "its detail says Dropped too");
+  assert(taskDetail(open, plain, [], []).includes("On the board in Doing."));
 });

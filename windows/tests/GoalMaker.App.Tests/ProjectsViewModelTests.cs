@@ -25,7 +25,7 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.True(page.IsEmpty);
         Assert.False(page.HasProject);
         Assert.False(page.ShowsProject);
-        Assert.Equal(["backlog", "todo", "doing", "done"], page.Columns.Select(column => column.Column));
+        Assert.Equal(["backlog", "todo", "doing", "done", "dropped"], page.Columns.Select(column => column.Column));
     }
 
     [Fact]
@@ -320,7 +320,7 @@ public sealed class ProjectsViewModelTests : IDisposable
     public void AFoldedColumnIsRememberedOnEveryBoard()
     {
         var page = WithProject();
-        Assert.Equal(840, page.BoardMinWidth);
+        Assert.Equal(1050, page.BoardMinWidth);
         var done = Column(page, "done");
         Assert.True(done.IsUnfolded);
 
@@ -329,7 +329,7 @@ public sealed class ProjectsViewModelTests : IDisposable
         Assert.True(done.IsFolded);
         Assert.False(done.IsUnfolded);
         Assert.Equal(["done"], planner.Settings.FoldedBoardColumns);
-        Assert.Equal(678, page.BoardMinWidth);
+        Assert.Equal(888, page.BoardMinWidth);
         Assert.Equal("Projects.Unfold(Projects.Done)", done.UnfoldText);
 
         var again = Page();
@@ -350,6 +350,83 @@ public sealed class ProjectsViewModelTests : IDisposable
         Column(page, "todo").FoldCommand.Execute(null);
 
         Assert.Equal(1, Column(page, "todo").Count);
+    }
+
+    [Fact]
+    public void ADroppedItemShowsOnlyInDropped()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+        page.NewItemTitle = "Cache the release feed";
+        page.AddItemCommand.Execute(null);
+        planner.Tasks.SetBoardColumn(planner.Task("Cache the release feed").Id, ProjectRules.Doing);
+
+        planner.Tasks.Drop(planner.Task("Cache the release feed").Id);
+        page.Refresh();
+
+        Assert.Equal(["Ship the board"], Column(page, "todo").Items.Select(item => item.Title));
+        Assert.True(Column(page, "doing").IsEmpty);
+        var card = Assert.Single(Column(page, "dropped").Items);
+        Assert.Equal("Cache the release feed", card.Title);
+        Assert.True(card.Dropped);
+        Assert.Equal(1, Column(page, "dropped").Count);
+        Assert.Equal("Projects.Dropped", Column(page, "dropped").Title);
+        Assert.False(Column(page, "dropped").CanAdd);
+        Assert.Equal(0, page.Projects[0].Doing);
+        Assert.Equal(ProjectRules.Doing, planner.Task("Cache the release feed").BoardColumn);
+    }
+
+    [Fact]
+    public void MovingACardToDroppedDropsItAndOutOfDroppedOpensIt()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+
+        Column(page, "todo").Items[0].MoveCommand.Execute("dropped");
+
+        Assert.True(Column(page, "todo").IsEmpty);
+        Assert.Single(Column(page, "dropped").Items);
+        Assert.Equal(TaskState.Dropped, planner.Task("Ship the board").State);
+        Assert.Equal(ProjectRules.Todo, planner.Task("Ship the board").BoardColumn);
+
+        Column(page, "dropped").Items[0].MoveCommand.Execute("doing");
+
+        Assert.True(Column(page, "dropped").IsEmpty);
+        Assert.Single(Column(page, "doing").Items);
+        Assert.Equal(TaskState.Open, planner.Task("Ship the board").State);
+    }
+
+    [Fact]
+    public void UndoingAMoveFromDroppedToDonePutsTheCardBackInDropped()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+        Column(page, "todo").Items[0].MoveCommand.Execute("dropped");
+
+        Column(page, "dropped").Items[0].MoveCommand.Execute("done");
+        Assert.Equal(TaskState.Done, planner.Task("Ship the board").State);
+        page.UndoCommand.Execute(null);
+
+        Assert.Single(Column(page, "dropped").Items);
+        Assert.Equal(TaskState.Dropped, planner.Task("Ship the board").State);
+    }
+
+    [Fact]
+    public void UndoingTakingADroppedItemOutKeepsItDropped()
+    {
+        var page = WithProject();
+        page.NewItemTitle = "Ship the board";
+        page.AddItemCommand.Execute(null);
+        Column(page, "todo").Items[0].MoveCommand.Execute("dropped");
+
+        Column(page, "dropped").Items[0].RemoveCommand.Execute(null);
+        page.UndoCommand.Execute(null);
+
+        Assert.Single(Column(page, "dropped").Items);
+        Assert.Equal(TaskState.Dropped, planner.Task("Ship the board").State);
     }
 
     // As the server stamps it: when the item was finished.

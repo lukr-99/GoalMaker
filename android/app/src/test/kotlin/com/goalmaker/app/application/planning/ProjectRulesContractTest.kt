@@ -43,6 +43,7 @@ class ProjectRulesContractTest {
     @Test
     fun `the columns and priorities are the ones the contract names`() {
         assertEquals(vectors.getValue("columns").jsonArray.map { it.jsonPrimitive.content }, ProjectRules.COLUMNS)
+        assertEquals(vectors.getValue("boardColumns").jsonArray.map { it.jsonPrimitive.content }, ProjectRules.BOARD_COLUMNS)
         assertEquals(vectors.getValue("priorities").jsonArray.map { it.jsonPrimitive.content }, ProjectRules.PRIORITIES)
     }
 
@@ -90,7 +91,7 @@ class ProjectRulesContractTest {
         vectors.cases("board").forEach { case ->
             val expect = case.getValue("expect").jsonObject
             val board = ProjectRules.board(items(case))
-            assertEquals(case.text("name"), ProjectRules.COLUMNS, board.map(ProjectColumn::column))
+            assertEquals(case.text("name"), ProjectRules.BOARD_COLUMNS, board.map(ProjectColumn::column))
             board.forEach { column ->
                 assertEquals(
                     "${case.text("name")} ${column.column}",

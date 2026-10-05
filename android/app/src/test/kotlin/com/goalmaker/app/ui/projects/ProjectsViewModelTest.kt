@@ -226,6 +226,37 @@ class ProjectsViewModelTest {
     }
 
     @Test
+    fun `undoing a dropped item's move to Done drops it again`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val added = tasks.add("Rewrite the sync")!!
+        tasks.setProject(added.id, project.id, ProjectRules.TASK)
+        tasks.setBoardColumn(added.id, ProjectRules.DROPPED)
+        val event = async(start = CoroutineStart.UNDISPATCHED) { viewModel.undo.first() }
+
+        viewModel.move(tasks.find(added.id)!!, ProjectRules.DONE)
+        assertEquals(TaskState.DONE, tasks.find(added.id)!!.state)
+        event.await().undo()
+
+        assertEquals(TaskState.DROPPED, tasks.find(added.id)!!.state)
+    }
+
+    @Test
+    fun `undoing taking a dropped item out brings it back still dropped`() = runTest {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        val added = tasks.add("Rewrite the sync")!!
+        tasks.setProject(added.id, project.id, ProjectRules.TASK)
+        tasks.setBoardColumn(added.id, ProjectRules.DROPPED)
+        val event = async(start = CoroutineStart.UNDISPATCHED) { viewModel.undo.first() }
+
+        viewModel.removeFromProject(tasks.find(added.id)!!)
+        event.await().undo()
+
+        val item = tasks.find(added.id)!!
+        assertEquals(project.id, item.projectId)
+        assertEquals(TaskState.DROPPED, item.state)
+    }
+
+    @Test
     fun `undoing taking an item out puts it back in the project where it was`() = runTest {
         val project = projects.add(ProjectDraft("GoalMaker"))!!
         val milestone = projects.addMilestone(project.id, "M1")!!
@@ -361,13 +392,13 @@ class ProjectsViewModelTest {
     }
 
     @Test
-    fun `the board shows one column at a time, and the list folds Done away, at first`() = runTest {
+    fun `the board shows one column at a time, and the list folds Done and Dropped away, at first`() = runTest {
         projects.add(ProjectDraft("GoalMaker"))
 
         val state = viewModel.uiState.first { it.loaded }
 
         assertEquals(BoardView.COLUMNS, state.view)
-        assertEquals(setOf(ProjectRules.DONE), state.collapsed)
+        assertEquals(setOf(ProjectRules.DONE, ProjectRules.DROPPED), state.collapsed)
     }
 
     @Test
@@ -376,6 +407,7 @@ class ProjectsViewModelTest {
 
         viewModel.showView(BoardView.LIST)
         viewModel.toggleColumn(ProjectRules.DONE)
+        viewModel.toggleColumn(ProjectRules.DROPPED)
         viewModel.toggleColumn(ProjectRules.BACKLOG)
         settle()
 

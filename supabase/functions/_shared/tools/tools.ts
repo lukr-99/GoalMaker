@@ -43,12 +43,14 @@ import { readGoalLine, readHabitLine } from "../rules/quickAdd.ts";
 import { lists } from "../rules/listRules.ts";
 import {
   board,
+  BOARD_COLUMNS,
   COLUMNS,
   MAKER_FILTERS,
   MAKERS,
   onBoard,
   PRIORITIES,
   type ProjectItem,
+  shownColumn,
   shows,
 } from "../rules/projects.ts";
 import { seriesOf } from "../rules/occurrences.ts";
@@ -120,6 +122,7 @@ const priority = z.enum(PRIORITIES as [string, ...string[]]).describe(
   "How important it is: urgent, high, normal or low. Items sit in a column in this order.",
 );
 const column = z.enum(COLUMNS as [string, ...string[]]).describe("A board column: backlog, todo, doing or done.");
+const shownColumnInput = z.enum(BOARD_COLUMNS as [string, ...string[]]).describe("The column to move it to.");
 const madeBy = z.enum(MAKERS as [string, ...string[]]).describe(
   "Who it comes from: owner when the owner asked for this item, claude when you are adding it on your own " +
     "(something you found or suggest). claude by default. The boards can show the owner's items apart from " +
@@ -1358,11 +1361,11 @@ export const tools: Tool[] = [
     name: "get_project_board",
     title: "A project's board",
     description:
-      "One project's board as the apps show it: Backlog, To do, Doing and Done, each with its items in the order " +
-      "the board puts them (priority first, then where they were dragged), plus the project's milestones and notes. " +
-      "An item Claude made says so. Done items leave the board a number of days after they were finished (14 unless " +
-      "the project says otherwise) or when archived by hand; the board says how many, and search_tasks and get_task " +
-      "still find them.",
+      "One project's board as the apps show it: Backlog, To do, Doing, Done and Dropped, each with its items in the " +
+      "order the board puts them (priority first, then where they were dragged), plus the project's milestones and " +
+      "notes. Dropped holds every dropped item, whatever column it is stored in. An item Claude made says so. Done " +
+      "items leave the board a number of days after they were finished (14 unless the project says otherwise) or " +
+      "when archived by hand; the board says how many, and search_tasks and get_task still find them.",
     input: {
       project: projectRef,
       made_by: z.enum(MAKER_FILTERS as [string, ...string[]]).optional().describe(
@@ -1526,7 +1529,7 @@ export const tools: Tool[] = [
       }
       const placed = (await planner.task(item.id))!;
       return [
-        `Added to ${project.name}, ${columnName(placed.boardColumn)}:`,
+        `Added to ${project.name}, ${columnName(shownColumn(placed))}:`,
         format.itemLine(placed, await namesOf(planner), await milestonesOf(planner, project)),
       ].join("\n");
     },
@@ -1576,7 +1579,7 @@ export const tools: Tool[] = [
       const names = await namesOf(planner);
       if (project === null) return `Out of its project, a plain task again:\n${format.taskLine(item, names)}`;
       return [
-        `Updated in ${project.name}, ${columnName(item.boardColumn)}:`,
+        `Updated in ${project.name}, ${columnName(shownColumn(item))}:`,
         format.itemLine(item, names, await milestonesOf(planner, project)),
       ].join("\n");
     },
@@ -1586,8 +1589,8 @@ export const tools: Tool[] = [
     title: "Move an item on the board",
     description:
       "Moves an item to another column, the way dragging its card does: Done completes the task (a repeating one " +
-      "moves on), any other column reopens a done item, and a dropped item keeps its state wherever it sits.",
-    input: { id: itemId, column },
+      "moves on), Dropped drops it, and any other column reopens a done or dropped item.",
+    input: { id: itemId, column: shownColumnInput },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
@@ -1595,7 +1598,7 @@ export const tools: Tool[] = [
       const project = await planner.findProject(task.projectId ?? "");
       const names = await namesOf(planner);
       const lines = [
-        `Moved to ${columnName(task.boardColumn)} in ${project.name}:`,
+        `Moved to ${columnName(shownColumn(task))} in ${project.name}:`,
         format.itemLine(task, names, await milestonesOf(planner, project)),
       ];
       if (next !== null) lines.push("Next occurrence:", format.taskLine(next, names, { showDay: true }));

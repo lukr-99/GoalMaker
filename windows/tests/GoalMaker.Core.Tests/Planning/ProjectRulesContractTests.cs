@@ -12,6 +12,7 @@ public sealed class ProjectRulesContractTests
     public void TheColumnsAndPrioritiesAreTheOnesTheContractNames()
     {
         Assert.Equal(vectors.GetProperty("columns").EnumerateArray().Select(name => name.GetString()), ProjectRules.Columns);
+        Assert.Equal(vectors.GetProperty("boardColumns").EnumerateArray().Select(name => name.GetString()), ProjectRules.BoardColumns);
         Assert.Equal(vectors.GetProperty("priorities").EnumerateArray().Select(name => name.GetString()), ProjectRules.Priorities);
     }
 
@@ -69,7 +70,7 @@ public sealed class ProjectRulesContractTests
         foreach (var testCase in vectors.GetProperty("board").EnumerateArray())
         {
             var board = ProjectRules.Board(Items(testCase));
-            Assert.Equal(ProjectRules.Columns, board.Select(column => column.Column));
+            Assert.Equal(ProjectRules.BoardColumns, board.Select(column => column.Column));
             foreach (var column in board)
             {
                 Assert.Equal(

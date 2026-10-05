@@ -303,20 +303,30 @@ public sealed class TaskList
         row["board_column"] = (string?)row["board_column"] ?? ProjectRules.ColumnFor(itemType);
     });
 
-    /// <summary>Moves an item to a board column; the done column finishes the task and any other reopens it.</summary>
+    /// <summary>
+    /// Moves an item to a board column: dropped drops the task and keeps the column it is stored in,
+    /// done finishes it, and any other column reopens a done or dropped one.
+    /// </summary>
     public void SetBoardColumn(string id, string column)
     {
-        if (!ProjectRules.Columns.Contains(column) || Find(id) is not { ProjectId: not null } item)
+        if (!ProjectRules.BoardColumns.Contains(column) || Find(id) is not { ProjectId: not null } item)
         {
             return;
         }
 
         switch (ProjectRules.Moved(column, item.State))
         {
+            case TaskState.Dropped:
+                if (item.State != TaskState.Dropped)
+                {
+                    Drop(id);
+                }
+
+                return;
             case TaskState.Done when item.State != TaskState.Done:
                 SetDone(id, true);
                 break;
-            case TaskState.Open when item.State == TaskState.Done:
+            case TaskState.Open when item.State != TaskState.Open:
                 SetDone(id, false);
                 break;
         }

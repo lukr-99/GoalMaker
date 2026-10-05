@@ -54,7 +54,7 @@ public sealed class BoardItemViewModel
     /// <summary>Low, normal, high or urgent, in the owner's words.</summary>
     public string Priority { get; }
 
-    /// <summary>A dropped item stays on the board, greyed out.</summary>
+    /// <summary>A dropped item stays on the board in Dropped, greyed out.</summary>
     public bool Dropped { get; }
 
     /// <summary>The day it is planned for, if any.</summary>

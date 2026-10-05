@@ -576,7 +576,7 @@ private fun ItemRow(
                 Icon(Icons.Outlined.MoreVert, contentDescription = stringResource(R.string.projects_item_menu))
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                ProjectRules.COLUMNS.filterNot { it == columns.column }.forEach { column ->
+                ProjectRules.BOARD_COLUMNS.filterNot { it == columns.column }.forEach { column ->
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.projects_move_to, columnName(column))) },
                         onClick = {
@@ -785,6 +785,7 @@ private fun columnName(column: String): String = stringResource(
         ProjectRules.BACKLOG -> R.string.projects_backlog
         ProjectRules.TODO -> R.string.projects_todo
         ProjectRules.DOING -> R.string.projects_doing
+        ProjectRules.DROPPED -> R.string.projects_dropped
         else -> R.string.projects_done
     },
 )

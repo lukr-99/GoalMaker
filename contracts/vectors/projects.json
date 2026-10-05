@@ -1,11 +1,18 @@
 {
   "schema": 1,
-  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'moves': what moving an item to a column does to the task itself: the done column completes it, any other column reopens a done one, and a dropped item keeps its state wherever it sits. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the four columns of a project with their items in that order. 2026-09-18 is a Friday. 'archive': whether an item is on its board (supabase/migrations/0018_board_archive.sql). An item that isn't done always is. A done item archived by hand ('archivedByHand') isn't. Otherwise a done item stays until 'archiveAfterDays' days after the planning day it was finished ('completedOn'), so it is gone from 'today' = completedOn + archiveAfterDays on; null days keep it until it is archived by hand, and a done item with no completion day stays.",
+  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'boardColumns': the columns a board shows, left to right: the four an item is stored in ('columns'), then dropped, which holds every dropped item whatever column it is stored in. 'moves': what moving an item to a board column does to the task itself: the dropped column drops it (its stored column stays as it was), the done column completes it, and any other column reopens a done or dropped one. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the board columns of a project with their items in that order: a dropped item is in the dropped column, never in the column it is stored in. 2026-09-18 is a Friday. 'archive': whether an item is on its board (supabase/migrations/0018_board_archive.sql). An item that isn't done always is. A done item archived by hand ('archivedByHand') isn't. Otherwise a done item stays until 'archiveAfterDays' days after the planning day it was finished ('completedOn'), so it is gone from 'today' = completedOn + archiveAfterDays on; null days keep it until it is archived by hand, and a done item with no completion day stays.",
   "columns": [
     "backlog",
     "todo",
     "doing",
     "done"
+  ],
+  "boardColumns": [
+    "backlog",
+    "todo",
+    "doing",
+    "done",
+    "dropped"
   ],
   "priorities": [
     "urgent",
@@ -59,12 +66,39 @@
       }
     },
     {
-      "name": "a dropped item keeps its state wherever it is put",
+      "name": "moving an item to dropped drops it",
+      "column": "dropped",
+      "state": "open",
+      "expect": {
+        "column": "dropped",
+        "state": "dropped"
+      }
+    },
+    {
+      "name": "a done item moved to dropped is dropped",
+      "column": "dropped",
+      "state": "done",
+      "expect": {
+        "column": "dropped",
+        "state": "dropped"
+      }
+    },
+    {
+      "name": "a dropped item moved to to do is open again",
+      "column": "todo",
+      "state": "dropped",
+      "expect": {
+        "column": "todo",
+        "state": "open"
+      }
+    },
+    {
+      "name": "a dropped item moved to done is done",
       "column": "done",
       "state": "dropped",
       "expect": {
         "column": "done",
-        "state": "dropped"
+        "state": "done"
       }
     }
   ],
@@ -249,7 +283,8 @@
         ],
         "done": [
           "i5"
-        ]
+        ],
+        "dropped": []
       }
     },
     {
@@ -259,7 +294,49 @@
         "backlog": [],
         "todo": [],
         "doing": [],
-        "done": []
+        "done": [],
+        "dropped": []
+      }
+    },
+    {
+      "name": "a dropped item leaves the column it is stored in for dropped",
+      "items": [
+        {
+          "id": "a",
+          "column": "doing",
+          "priority": "normal",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "open"
+        },
+        {
+          "id": "b",
+          "column": "doing",
+          "priority": "high",
+          "position": 0.0,
+          "createdAt": "2026-09-18T08:00:00Z",
+          "state": "dropped"
+        },
+        {
+          "id": "c",
+          "column": "backlog",
+          "priority": "low",
+          "position": 0.0,
+          "createdAt": "2026-09-17T08:00:00Z",
+          "state": "dropped"
+        }
+      ],
+      "expect": {
+        "backlog": [],
+        "todo": [],
+        "doing": [
+          "a"
+        ],
+        "done": [],
+        "dropped": [
+          "b",
+          "c"
+        ]
       }
     }
   ],

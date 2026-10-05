@@ -7,7 +7,7 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// One column of a project's board with the cards in it (docs/projects.md). A column can fold to a
 /// narrow strip with its name and count; Done also counts the items that left the board and lists
-/// them on request. Every column but Done has a plus that opens the new item window in it.
+/// them on request. Every column but Done and Dropped has a plus that opens the new item window in it.
 /// </summary>
 public sealed partial class BoardColumnViewModel : ObservableObject
 {
@@ -42,7 +42,7 @@ public sealed partial class BoardColumnViewModel : ObservableObject
         Archived.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasArchived));
     }
 
-    /// <summary>The column's id: backlog, todo, doing or done.</summary>
+    /// <summary>The column's id: backlog, todo, doing, done or dropped.</summary>
     public string Column { get; }
 
     /// <summary>What the column is called, in the owner's words.</summary>
@@ -53,7 +53,7 @@ public sealed partial class BoardColumnViewModel : ObservableObject
 
     public string UnfoldText { get; }
 
-    /// <summary>Whether a new item can start in this column: every column but Done.</summary>
+    /// <summary>Whether a new item can start in this column: every column but Done and Dropped.</summary>
     public bool CanAdd => add is not null;
 
     /// <summary>What the column's plus says to a screen reader and in its tooltip.</summary>
