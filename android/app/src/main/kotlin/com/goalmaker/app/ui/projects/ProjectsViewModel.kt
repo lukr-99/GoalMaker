@@ -8,6 +8,7 @@ import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.application.planning.TaskList
 import com.goalmaker.app.application.settings.SettingsStore
 import com.goalmaker.app.domain.composer.ComposerDraft
@@ -166,7 +167,8 @@ class ProjectsViewModel(
     /** Moves an item to [column]; moving it to Done can be undone, back to the column it came from. */
     fun move(item: TaskItem, column: String) {
         write { tasks.setBoardColumn(item.id, column) }
-        val from = item.boardColumn ?: return
+        // Undo goes back to the column the card was shown in, so a dropped item moved to Done is dropped again.
+        val from = if (item.state == TaskState.DROPPED) ProjectRules.DROPPED else item.boardColumn ?: return
         if (column == ProjectRules.DONE) {
             undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.DONE, item.title) { write { tasks.setBoardColumn(item.id, from) } })
         }
@@ -186,7 +188,8 @@ class ProjectsViewModel(
             UndoEvent(UndoEvent.Kind.OUT_OF_PROJECT, item.title) {
                 write {
                     tasks.setProject(item.id, projectId, item.itemType)
-                    item.boardColumn?.let { tasks.setBoardColumn(item.id, it) }
+                    // Moving a dropped item to its stored column would reopen it, so it comes back dropped.
+                    if (item.state != TaskState.DROPPED) item.boardColumn?.let { tasks.setBoardColumn(item.id, it) }
                     tasks.setMilestone(item.id, item.milestoneId)
                 }
             },

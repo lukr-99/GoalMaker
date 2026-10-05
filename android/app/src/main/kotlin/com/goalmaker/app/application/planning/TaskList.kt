@@ -333,15 +333,21 @@ class TaskList(
         }
     }
 
-    /** Moves an item to a board column; the done column finishes the task and any other reopens it. */
+    /**
+     * Moves an item to a board column: dropped drops the task and keeps the column it is stored in,
+     * done finishes it, and any other column reopens a done or dropped one.
+     */
     fun setBoardColumn(id: String, column: String) {
-        if (column !in ProjectRules.COLUMNS) return
+        if (column !in ProjectRules.BOARD_COLUMNS) return
         val current = find(id) ?: return
         if (current.projectId == null) return
         when (ProjectRules.moved(column, current.state)) {
+            TaskState.DROPPED -> {
+                if (current.state != TaskState.DROPPED) drop(id)
+                return
+            }
             TaskState.DONE -> if (current.state != TaskState.DONE) setDone(id, true)
-            TaskState.OPEN -> if (current.state == TaskState.DONE) setDone(id, false)
-            else -> Unit
+            TaskState.OPEN -> if (current.state != TaskState.OPEN) setDone(id, false)
         }
         change(id) { row ->
             row["board_column"] = JsonPrimitive(column)
