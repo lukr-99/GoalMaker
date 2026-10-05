@@ -64,6 +64,7 @@ export const CHAT_INPUTS: Record<string, Set<string>> = {
   add_habit: new Set(["line", "emoji", "direction", "show_on_today"]),
   add_goal: new Set(["line", "emoji", "parent"]),
   add_life_goal: new Set(["title", "why", "by"]),
+  add_want: new Set(["line", "reason", "kind", "need_by", "area", "link"]),
 };
 
 /** The connector's tools the chat offers; one that deletes never is, even if listed. */

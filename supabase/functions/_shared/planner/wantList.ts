@@ -1,13 +1,16 @@
 import type { Db } from "../owner.ts";
-import type { Day } from "../rules/day.ts";
+import { type Day, isDay } from "../rules/day.ts";
 import {
   cooldownDays,
   coolsUntil,
   type Decision,
   DEFAULT_COOLDOWNS,
   MAX_DAYS,
+  NEED,
+  WANT,
   type WantCooldowns,
   type WantItem,
+  type WantKind,
 } from "../rules/wants.ts";
 import { isUuid, PlannerError } from "./planner.ts";
 
@@ -35,6 +38,10 @@ export interface WantFields {
   areaId?: string | null;
   /** The days a new want waits when the owner picked them; its price decides otherwise. */
   days?: number | null;
+  /** A want or a need; only a new one takes it, and a want by default. */
+  kind?: WantKind;
+  /** For a need: the day it is needed by, as YYYY-MM-DD. */
+  needBy?: string | null;
 }
 
 const MAX_TITLE = 200;
@@ -45,11 +52,13 @@ const MAX_CHECKED_NOTE = 4_000;
 const MAX_PRICE = 100_000_000;
 const CURRENCY = /^[A-Z]{3}$/;
 const TIMESTAMP = `'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'`;
+const NO_REASON = "A want needs a reason: why it is wanted is the point.";
 
 /**
- * The owner's wants (docs/wants.md), read and changed through the owner's row security, the way the
- * apps' WantList does: a new want takes its cooldown from the owner's thresholds on the planning day
- * it is added, and keeps it.
+ * The owner's wants and needs (docs/wants.md), read and changed through the owner's row security, the
+ * way the apps' WantList does: a new want takes its cooldown from the owner's thresholds on the planning
+ * day it is added, and keeps it. A need has no cooldown, may leave the reason empty, and may have a day
+ * it is needed by.
  */
 export class WantList {
   constructor(private readonly db: Db, private readonly today: () => Promise<Day>) {}
@@ -90,36 +99,40 @@ export class WantList {
     };
   }
 
-  /** Adds a want with the cooldown its price or the owner's pick gives, from today. */
+  /** Adds a want with the cooldown its price or the owner's pick gives, from today; a need is ready today. */
   async add(fields: WantFields): Promise<Want> {
     const cooldowns = await this.cooldowns();
-    const title = required(fields.title, MAX_TITLE, "A want needs a title.");
-    const reason = required(fields.reason, MAX_REASON, "A want needs a reason: why it is wanted is the point.");
+    const kind = fields.kind ?? WANT;
+    const title = required(fields.title, MAX_TITLE, `A ${kind} needs a title.`);
+    const reason = reasonOf(fields.reason, kind);
+    const needBy = needByOf(fields.needBy ?? null, kind);
     const price = cleanPrice(fields.price ?? null);
     const currency = cleanCurrency(fields.currency, cooldowns.currency);
     const picked = fields.days ?? null;
     if (picked !== null && (!Number.isInteger(picked) || picked < 0 || picked > MAX_DAYS)) {
       throw new PlannerError(`A cooldown is a whole number of days from 0 to ${MAX_DAYS}.`);
     }
-    const days = cooldownDays(price, currency, cooldowns, picked);
+    const days = cooldownDays(price, currency, cooldowns, picked, kind);
     const addedOn = await this.today();
     const id = crypto.randomUUID();
     await this.db`
-      insert into public.wants (id, title, reason, link, price, currency, area_id, cooldown_days, added_on, cools_until)
+      insert into public.wants (id, title, reason, link, price, currency, area_id, cooldown_days, added_on, cools_until,
+                                kind, need_by)
       values (${id}, ${title}, ${reason}, ${cleanLink(fields.link ?? null)}, ${price}, ${currency},
-              ${fields.areaId ?? null}, ${days}, ${addedOn}, ${coolsUntil(addedOn, days)})`;
+              ${fields.areaId ?? null}, ${days}, ${addedOn}, ${coolsUntil(addedOn, days)}, ${kind}, ${needBy})`;
     return await this.want(id);
   }
 
-  /** Changes what the want is; its cooldown stays as it was set. */
+  /** Changes what the want or need is; its kind and cooldown stay as they were set. */
   async update(id: string, fields: WantFields): Promise<Want> {
     const want = await this.want(id);
-    const title = fields.title === undefined ? want.title : required(fields.title, MAX_TITLE, "A want needs a title.");
-    const reason = fields.reason === undefined
-      ? want.reason
-      : required(fields.reason, MAX_REASON, "A want needs a reason: why it is wanted is the point.");
+    const title = fields.title === undefined
+      ? want.title
+      : required(fields.title, MAX_TITLE, `A ${want.kind} needs a title.`);
+    const reason = fields.reason === undefined ? want.reason : reasonOf(fields.reason, want.kind);
+    const needBy = fields.needBy === undefined ? want.needBy : needByOf(fields.needBy, want.kind);
     await this.db`
-      update public.wants set title = ${title}, reason = ${reason},
+      update public.wants set title = ${title}, reason = ${reason}, need_by = ${needBy},
         link = ${fields.link === undefined ? want.link : cleanLink(fields.link)},
         price = ${fields.price === undefined ? want.price : cleanPrice(fields.price)},
         currency = ${fields.currency === undefined ? want.currency : cleanCurrency(fields.currency, want.currency)},
@@ -163,7 +176,8 @@ export class WantList {
   private columns() {
     return this.db`
       select id::text, title, reason, link, price, currency, area_id::text, cooldown_days, added_on::text,
-             cools_until::text, decision, decision_note, checked_price, checked_note, made_by,
+             cools_until::text, decision, decision_note, checked_price, checked_note, made_by, kind,
+             need_by::text,
              to_char(decided_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as decided_at,
              to_char(checked_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as checked_at
       from public.wants`;
@@ -174,6 +188,20 @@ function required(text: string | undefined, length: number, missing: string): st
   const trimmed = (text ?? "").trim().slice(0, length);
   if (trimmed.length === 0) throw new PlannerError(missing);
   return trimmed;
+}
+
+/** A want's reason is required; a need's may be empty. */
+function reasonOf(text: string | undefined, kind: WantKind): string {
+  return kind === NEED ? (text ?? "").trim().slice(0, MAX_REASON) : required(text, MAX_REASON, NO_REASON);
+}
+
+/** The day a need is needed by: a real day, only for a need; empty or null for none. */
+function needByOf(text: string | null, kind: WantKind): Day | null {
+  const day = text?.trim() ?? "";
+  if (day === "") return null;
+  if (kind !== NEED) throw new PlannerError("Only a need has a day it is needed by.");
+  if (!isDay(day)) throw new PlannerError(`"${text}" isn't a day: give the need by date as YYYY-MM-DD.`);
+  return day;
 }
 
 function cleanLink(text: string | null): string | null {
@@ -217,5 +245,7 @@ function toWant(row: any): Want {
     checkedNote: row.checked_note,
     madeBy: row.made_by,
     deleted: false,
+    kind: row.kind,
+    needBy: row.need_by,
   };
 }

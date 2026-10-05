@@ -4,7 +4,18 @@ import { assertEquals } from "jsr:@std/assert@1.0.13";
 import type { Habit } from "../planner/planner.ts";
 import type { GoalItem } from "../rules/goals.ts";
 import { lists } from "../rules/listRules.ts";
-import { cadenceText, goalLine, habitLine, names, newYearLine, paceText, standingText, today } from "./format.ts";
+import type { Want } from "../planner/wantList.ts";
+import {
+  cadenceText,
+  goalLine,
+  habitLine,
+  names,
+  newYearLine,
+  paceText,
+  standingText,
+  today,
+  wantLine,
+} from "./format.ts";
 import { periodOf } from "../rules/digest.ts";
 
 const ID = "00000000-0000-4000-8000-000000000001";
@@ -197,4 +208,52 @@ Deno.test("the January nudge and a yearly digest's period read like the apps", (
 Deno.test("a habit that reminds says when", () => {
   const line = habitLine(habit({ remindAt: "20:30" }), { standing: "left", value: 0, met: 0, streak: 0 });
   assertEquals(line.includes("reminds at 20:30"), true, line);
+});
+
+function want(fields: Partial<Want>): Want {
+  return {
+    id: ID,
+    title: "Coat",
+    reason: "",
+    link: null,
+    price: 2500,
+    currency: "CZK",
+    areaId: null,
+    cooldownDays: 0,
+    addedOn: "2026-10-02",
+    coolsUntil: "2026-10-02",
+    decision: null,
+    decidedAt: null,
+    decisionNote: "",
+    checkedPrice: null,
+    checkedAt: null,
+    checkedNote: "",
+    madeBy: "owner",
+    deleted: false,
+    kind: "need",
+    needBy: "2026-10-20",
+    ...fields,
+  };
+}
+
+Deno.test("a need's line says need, its day and late once the day passed", () => {
+  const none = names([], [], new Map());
+  assertEquals(
+    wantLine(want({}), "ready", "2026-10-20", none),
+    `- Coat · need · 2500 CZK · needed by 2026-10-20 (want id ${ID})`,
+  );
+  assertEquals(
+    wantLine(want({}), "ready", "2026-10-21", none),
+    `- Coat · need · 2500 CZK · needed by 2026-10-20 · late (want id ${ID})`,
+  );
+  assertEquals(
+    wantLine(want({ decision: "bought", reason: "Old one tore" }), "decided", "2026-10-21", none),
+    `- Coat · need · 2500 CZK · needed by 2026-10-20 · bought (want id ${ID})
+  Why: Old one tore`,
+  );
+  assertEquals(
+    wantLine(want({ kind: "want", needBy: null, reason: "Warm" }), "ready", "2026-10-21", none),
+    `- Coat · 2500 CZK · ready to decide since 2026-10-02 (want id ${ID})
+  Why: Warm`,
+  );
 });

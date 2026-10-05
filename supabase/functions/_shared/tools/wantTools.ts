@@ -2,11 +2,11 @@ import { z } from "../deps.ts";
 import { type Planner, PlannerError } from "../planner/planner.ts";
 import type { Want, WantFields } from "../planner/wantList.ts";
 import { readWantLine } from "../rules/quickAdd.ts";
-import { MAX_DAYS, type WantState, wantState } from "../rules/wants.ts";
+import { MAX_DAYS, NEED, openNeeds, type WantState, wantState } from "../rules/wants.ts";
 import * as format from "./format.ts";
 import type { Tool } from "./tools.ts";
 
-const wantId = z.string().describe("The want's id, from get_wants.");
+const wantId = z.string().describe("The want's or need's id, from get_wants.");
 const currency = z.string().describe("A three-letter currency code like CZK or EUR. The owner's currency by default.");
 
 /** A want's line as it stands today, with the names its area needs. */
@@ -24,44 +24,61 @@ async function areaOf(planner: Planner, name: string | undefined): Promise<strin
 }
 
 /**
- * The wants tools (spec, stories 104 to 108; docs/wants.md). Prices are looked up by Claude with its
- * own web search and only recorded here: GoalMaker never fetches from a shop.
+ * The wants tools (spec, stories 104 to 108; docs/wants.md), for needs too: a need is something to buy
+ * rather than wait out, with no cooldown and maybe a day it is needed by. Prices are looked up by Claude
+ * with its own web search and only recorded here: GoalMaker never fetches from a shop.
  */
 export const wantTools: Tool[] = [
   {
     name: "get_wants",
     title: "Wants",
     description:
-      "The owner's wants: things they would like to buy, each waiting out a cooldown before it is decided. " +
-      "Each one comes with why it is wanted, its price, where it stands (cooling, ready to decide, or bought or " +
-      "dropped), the last price check and the decision note. Ready and cooling ones by default.",
+      "The owner's wants and needs. A want is something they would like to buy, waiting out a cooldown before " +
+      "it is decided; a need is something to buy, with no cooldown and maybe a day it is needed by. Each one " +
+      "comes with why, its price, where it stands (cooling, ready to decide, or bought or dropped; a need is late " +
+      "once its day passed), the last price check and the decision note. Open needs come first, by the day they " +
+      "are needed by, then the ready and cooling wants.",
     input: {
       state: z.enum(["ready", "cooling", "decided", "open", "all"]).optional().describe(
         "Which wants: ready, cooling, decided, open (ready and cooling) or all. open by default.",
       ),
+      kind: z.enum(["want", "need", "all"]).optional().describe("Only wants, only needs, or all. all by default."),
     },
     readOnly: true,
     destructive: false,
     run: async (planner, args) => {
       const today = (await planner.now()).today;
       const wanted: string = args.state ?? "open";
-      const all = await planner.wants().all();
-      if (all.length === 0) return "There are no wants yet. add_want writes one down with its reason.";
+      const kind: string = args.kind ?? "all";
+      const all = (await planner.wants().all()).filter((want) => kind === "all" || want.kind === kind);
+      if (all.length === 0) {
+        return kind === "need"
+          ? "There are no needs yet. add_want with kind need writes one down."
+          : "There are no wants yet. add_want writes one down with its reason.";
+      }
       const names = format.names(await planner.areas(), [], new Map());
+      const shows = (state: WantState) =>
+        wanted === state || wanted === "all" || (wanted === "open" && state !== "decided");
+      const lines: string[] = [];
+      const needs = openNeeds(all);
+      if (shows("ready") && needs.length > 0) {
+        lines.push("Needs:", ...needs.map((need) => format.wantLine(need, "ready", today, names)));
+      }
       const groups: [WantState, string][] = [
         ["ready", "Ready to decide"],
         ["cooling", "Cooling"],
         ["decided", "Decided"],
       ];
-      const lines: string[] = [];
       for (const [state, heading] of groups) {
-        if (!(wanted === state || wanted === "all" || (wanted === "open" && state !== "decided"))) continue;
-        const rows = all.filter((want) => wantState(want, today) === state);
+        if (!shows(state)) continue;
+        const rows = all.filter((want) =>
+          wantState(want, today) === state && (state === "decided" || want.kind !== NEED)
+        );
         if (state === "decided") rows.sort((a, b) => (b.decidedAt ?? "").localeCompare(a.decidedAt ?? ""));
         if (rows.length === 0) continue;
         lines.push(`${heading}:`, ...rows.map((want) => format.wantLine(want, state, today, names)));
       }
-      return lines.length === 0 ? `No ${wanted} wants.` : lines.join("\n");
+      return lines.length === 0 ? `No ${wanted} ${kind === "need" ? "needs" : "wants"}.` : lines.join("\n");
     },
   },
   {
@@ -72,7 +89,8 @@ export const wantTools: Tool[] = [
       "it is decided: the owner's thresholds give it days from its price (by default 7 under 1,000, 30 under " +
       "10,000, 90 from there, and 30 with no price), unless the owner picked a number of days. The cooldown is " +
       'fixed once it is added. A short line like "Kindle 3290 Kč wait 2 weeks because I read on the train" can ' +
-      "go in line instead of title, price, currency, cooldown_days and reason.",
+      "go in line instead of title, price, currency, cooldown_days and reason. With kind need it is something " +
+      "the owner has to buy: no cooldown, the reason may be left out, and need_by is the day it is needed by.",
     input: {
       line: z.string().optional().describe(
         'The want as the owner said it, like "Kindle 3290 Kč wait 2 weeks because I read on the train": the ' +
@@ -81,8 +99,10 @@ export const wantTools: Tool[] = [
       title: z.string().optional().describe("What it is. Needed without a line."),
       reason: z.string().optional().describe(
         "Why the owner wants it, in their words. Required, here or after because in the line: it is the point of " +
-          "a want. Ask the owner when it is missing.",
+          "a want. Ask the owner when it is missing. A need may leave it out.",
       ),
+      kind: z.enum(["want", "need"]).optional().describe("need: something to buy, no cooldown."),
+      need_by: z.string().optional().describe("The day a need is needed by, YYYY-MM-DD."),
       price: z.number().optional().describe("What it costs, if known."),
       currency: currency.optional(),
       link: z.string().optional().describe("Where it is sold or described."),
@@ -104,21 +124,27 @@ export const wantTools: Tool[] = [
         link: args.link,
         areaId: await areaOf(planner, args.area),
         days: args.cooldown_days ?? read?.waitDays ?? undefined,
+        kind: args.kind,
+        needBy: args.need_by,
       });
-      return [`Added, cooling for ${want.cooldownDays} days:`, await wantText(planner, want)].join("\n");
+      const added = want.kind === NEED
+        ? "Added a need, ready to buy:"
+        : `Added, cooling for ${want.cooldownDays} days:`;
+      return [added, await wantText(planner, want)].join("\n");
     },
   },
   {
     name: "update_want",
     title: "Edit a want",
     description:
-      "Changes a want's title, reason, price, currency, link or area. What is left out stays as it was, and so " +
-      "does its cooldown. An empty link or area clears it. A price found by a check goes through " +
-      "record_price_check instead.",
+      "Changes a want's or need's title, reason, price, currency, link or area, or a need's need_by. What is " +
+      "left out stays as it was, and so does its cooldown. An empty link, area or need_by clears it, and so " +
+      "does an empty reason on a need. A price found by a check goes through record_price_check instead.",
     input: {
       id: wantId,
       title: z.string().optional(),
       reason: z.string().optional(),
+      need_by: z.string().optional().describe("A need's day it is needed by, YYYY-MM-DD; empty for none."),
       price: z.number().nullable().optional().describe("The price the owner gives it; null for none."),
       currency: currency.optional(),
       link: z.string().optional(),
@@ -134,6 +160,7 @@ export const wantTools: Tool[] = [
         currency: args.currency,
         link: args.link === undefined ? undefined : args.link.trim() === "" ? null : args.link,
         areaId: await areaOf(planner, args.area),
+        needBy: args.need_by,
       };
       const want = await planner.wants().update(args.id, fields);
       return ["Updated:", await wantText(planner, want)].join("\n");
@@ -143,9 +170,9 @@ export const wantTools: Tool[] = [
     name: "decide_want",
     title: "Decide a want",
     description:
-      "Records the owner's decision on a want: bought or dropped, with an optional note on why, or reopen to take " +
-      "a decision back. Only record what the owner decided in this conversation: ask them about each want first " +
-      "and never decide one for them. A want can be decided before it is ready if the owner wants to.",
+      "Records the owner's decision on a want or need: bought or dropped, with an optional note on why, or reopen " +
+      "to take a decision back. Only record what the owner decided in this conversation: ask them about each " +
+      "want first and never decide one for them. A want can be decided before it is ready if the owner wants to.",
     input: {
       id: wantId,
       decision: z.enum(["bought", "dropped", "reopen"]).describe("bought, dropped, or reopen to undecide it."),
