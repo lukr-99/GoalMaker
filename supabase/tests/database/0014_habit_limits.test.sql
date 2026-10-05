@@ -29,12 +29,12 @@ select lives_ok(
      values ('dddddddd-0000-0000-0000-000000000003', 'No beer on work nights', 'weekdays', 31, 'check',
              '2026-09-01', 'at_most') $$,
   'so can one on chosen weekdays');
-select throws_ok(
+-- 0014 kept limits to days; 0024 lets a week or a month have one too (0024_habit_limits_any_period.test.sql).
+select lives_ok(
   $$ insert into public.habits (id, name, cadence, times, measure, target, starts_on, direction)
      values ('dddddddd-0000-0000-0000-000000000004', 'Takeaway', 'per_week', 2, 'count', 1,
              '2026-09-01', 'at_most') $$,
-  '23514', null,
-  'a weekly habit cannot be a limit');
+  'since 0024, a weekly habit can be a limit too');
 select throws_ok(
   $$ insert into public.habits (id, name, cadence, measure, starts_on, direction)
      values ('dddddddd-0000-0000-0000-000000000005', 'Odd', 'daily', 'check', '2026-09-01', 'sideways') $$,
