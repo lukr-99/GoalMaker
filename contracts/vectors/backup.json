@@ -27,7 +27,8 @@
     "tally_rules",
     "tally_days",
     "life_goals",
-    "life_goal_pictures"
+    "life_goal_pictures",
+    "events"
   ],
   "checks": [
     {
