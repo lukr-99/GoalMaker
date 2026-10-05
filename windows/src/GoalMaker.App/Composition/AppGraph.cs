@@ -175,6 +175,7 @@ public sealed class AppGraph : IDisposable
         Habits = new HabitList(replica, newRows, Sync.Request);
         ReminderRows = new ReminderList(replica, newRows, Sync.Request);
         LifeGoals = new LifeGoalList(replica, newRows, Sync.Request);
+        Events = new EventList(replica, newRows, Sync.Request);
         Reminders = new ReminderService(
             ReminderRows,
             Tasks,
@@ -301,7 +302,17 @@ public sealed class AppGraph : IDisposable
             Reviews,
             OpenReview,
             Projects,
-            OpenProject);
+            OpenProject,
+            kind == ListKind.Today ? Events : null,
+            OpenEvent);
+
+        // An event on Today's line opens its editor over the calendar (docs/calendar.md).
+        void OpenEvent(string id)
+        {
+            CalendarPage.OpenEvent(id);
+            PageRequested?.Invoke(this, AppPage.Calendar);
+        }
+
         Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
         AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
         Steps = new StepList(replica, newRows, Sync.Request);
@@ -367,7 +378,7 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach));
         CalendarPage = new CalendarViewModel(
-            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject, HabitsPage, Habits);
+            Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject, HabitsPage, Habits, Events);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
         PlacesHub = new PlacesHubViewModel(
             Places, Tasks, HabitsPage, Habits, Goals, LifeGoals, Reviews, Wants, Tally, NameTally, Settings, strings, TimeProvider.System, runOnUi);
@@ -571,6 +582,9 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The owner's life goals and their pictures' rows (docs/life-goals.md).</summary>
     public LifeGoalList LifeGoals { get; private set; } = null!;
+
+    /// <summary>The owner's calendar events (docs/calendar.md, ADR 0019).</summary>
+    public EventList Events { get; private set; } = null!;
 
     /// <summary>The life goal picture files: this PC's cache and the bucket (ADR 0018).</summary>
     public LifeGoalPictures LifeGoalPictures { get; private set; } = null!;

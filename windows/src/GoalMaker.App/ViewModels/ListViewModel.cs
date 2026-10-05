@@ -41,6 +41,8 @@ public sealed partial class ListViewModel : ObservableObject
     private readonly HabitList? habitList;
     private readonly Action? openHabits;
     private readonly Action<string>? openProject;
+    private readonly EventList? events;
+    private readonly Action<string>? openEvent;
     private Action? undo;
     private ITimer? undoTimer;
     private bool overdueExpanded;
@@ -110,6 +112,11 @@ public sealed partial class ListViewModel : ObservableObject
 
     [ObservableProperty]
     private bool hasFilter;
+
+    /// <summary>The events the planning day falls inside, on Today's slim line above the tasks (docs/calendar.md).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOngoingEvents))]
+    private IReadOnlyList<OngoingEventViewModel> ongoingEvents = [];
     private readonly Action? openMini;
 
     public ListViewModel(
@@ -140,8 +147,17 @@ public sealed partial class ListViewModel : ObservableObject
         ReviewList? reviews = null,
         Action<string, DateOnly>? openReview = null,
         ProjectList? projects = null,
-        Action<string>? openProject = null)
+        Action<string>? openProject = null,
+        EventList? events = null,
+        Action<string>? openEvent = null)
     {
+        this.events = events;
+        this.openEvent = openEvent;
+        if (events is not null && kind == ListKind.Today)
+        {
+            events.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         this.reviews = reviews;
         this.openReview = openReview;
         this.projects = projects;
@@ -358,6 +374,7 @@ public sealed partial class ListViewModel : ObservableObject
                 }
 
                 ShowHabits();
+                ShowOngoing(today, narrowed, areaById);
                 if (goals is not null)
                 {
                     WeekGoals = GoalsViewModel.ThisWeek(goals, tasks, today, strings, habitList);
@@ -385,11 +402,38 @@ public sealed partial class ListViewModel : ObservableObject
         }
     }
 
+    public bool HasOngoingEvents => OngoingEvents.Count > 0;
+
     /// <summary>Only Today has a mini window, so only Today offers the button.</summary>
     public bool HasMini => openMini is not null;
 
     [RelayCommand]
     private void OpenPlan() => openPlan?.Invoke();
+
+    // "Prague · day 2 of 4" for each event going on, narrowed by the filter like the calendar: an area keeps
+    // its own, a tag none.
+    private void ShowOngoing(DateOnly today, ListFilter narrowed, IReadOnlyDictionary<string, AreaItem> areaById)
+    {
+        if (events is null)
+        {
+            return;
+        }
+
+        OngoingEvents =
+        [
+            .. EventRules.Ongoing(events.All().Where(item => EventRules.Keeps(narrowed, item)), today).Select(ongoing =>
+            {
+                var item = ongoing.Event;
+                var area = item.AreaId is { } id ? areaById.GetValueOrDefault(id) : null;
+                return new OngoingEventViewModel(
+                    item.Id,
+                    EventText.Ongoing(ongoing, strings),
+                    area is null ? null : areaBrush(area.ColorId),
+                    ongoing.Days > 1 ? strings.Get("Lists.EventDayName", item.Title, ongoing.DayOf, ongoing.Days) : EventText.Name(item, strings),
+                    () => openEvent?.Invoke(item.Id));
+            }),
+        ];
+    }
 
     /// <summary>Today on its own, small and out of the way (docs/mini-windows.md).</summary>
     [RelayCommand]

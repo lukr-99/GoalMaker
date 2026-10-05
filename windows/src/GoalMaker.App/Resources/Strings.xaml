@@ -170,6 +170,7 @@
     <sys:String x:Key="Activity.Want">the want “{0}”</sys:String>
     <sys:String x:Key="Activity.LifeGoal">the life goal “{0}”</sys:String>
     <sys:String x:Key="Activity.LifeGoalPicture">a life goal picture</sys:String>
+    <sys:String x:Key="Activity.Event">the event “{0}”</sys:String>
     <sys:String x:Key="Activity.WantCooldowns">the want cooldowns</sys:String>
     <sys:String x:Key="Activity.TallyCategory">the Tally category “{0}”</sys:String>
     <sys:String x:Key="Activity.TallyRule">a Tally rule</sys:String>
@@ -273,6 +274,8 @@
     <sys:String x:Key="Lists.Done">Done: {0}</sys:String>
     <sys:String x:Key="Lists.Deleted">Deleted: {0}</sys:String>
     <sys:String x:Key="Lists.Undo">Undo</sys:String>
+    <sys:String x:Key="Lists.EventDay">{0} · day {1} of {2}</sys:String>
+    <sys:String x:Key="Lists.EventDayName">{0}, day {1} of {2}</sys:String>
 
     <sys:String x:Key="Composer.Placeholder">Add a task…</sys:String>
     <sys:String x:Key="Composer.Add">Add task</sys:String>
@@ -807,6 +810,27 @@
     <sys:String x:Key="Calendar.CellRepeats">{0} repeating</sys:String>
     <sys:String x:Key="Calendar.CellRemindersOne">1 reminder</sys:String>
     <sys:String x:Key="Calendar.CellReminders">{0} reminders</sys:String>
+    <sys:String x:Key="Calendar.CellEventsOne">1 event</sys:String>
+    <sys:String x:Key="Calendar.CellEvents">{0} events</sys:String>
+    <!-- Calendar events (docs/calendar.md, ADR 0019) -->
+    <sys:String x:Key="Calendar.Events">Events</sys:String>
+    <sys:String x:Key="Calendar.EventSpan">{0} to {1}</sys:String>
+    <sys:String x:Key="Calendar.EventName">{0}, {1}</sys:String>
+    <sys:String x:Key="Calendar.EventsMore">+{0}</sys:String>
+    <sys:String x:Key="Calendar.EventsMoreName">{0} more events</sys:String>
+    <sys:String x:Key="Event.Add">New event</sys:String>
+    <sys:String x:Key="Event.Edit">Edit event</sys:String>
+    <sys:String x:Key="Event.What">What</sys:String>
+    <sys:String x:Key="Event.FirstDay">First day</sys:String>
+    <sys:String x:Key="Event.LastDay">Last day</sys:String>
+    <sys:String x:Key="Event.Area">Area</sys:String>
+    <sys:String x:Key="Event.Notes">Notes</sys:String>
+    <sys:String x:Key="Event.Save">Save</sys:String>
+    <sys:String x:Key="Event.Cancel">Cancel</sys:String>
+    <sys:String x:Key="Event.Delete">Delete</sys:String>
+    <sys:String x:Key="Event.Deleted">Deleted: {0}</sys:String>
+    <sys:String x:Key="Event.EndBeforeStart">The last day can't be before the first.</sys:String>
+    <sys:String x:Key="Event.TooLong">The last day can be at most {0} days after the first.</sys:String>
 
     <!-- Projects (docs/projects.md) -->
     <sys:String x:Key="Nav.Projects">Projects</sys:String>

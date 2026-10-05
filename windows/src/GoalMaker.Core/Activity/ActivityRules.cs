@@ -10,7 +10,7 @@ public static class ActivityRules
     {
         var subject = entity switch
         {
-            "tasks" or "task_steps" or "goals" or "wants" or "life_goals" => Text(after, "title"),
+            "tasks" or "task_steps" or "goals" or "wants" or "life_goals" or "events" => Text(after, "title"),
             "areas" or "tags" or "habits" or "tally_categories" => Text(after, "name"),
             "tally_rules" => Text(after, "pattern"),
             _ => null,
@@ -24,7 +24,7 @@ public static class ActivityRules
             ("restore", _) => "restored",
             _ => Updated(entity, before, after),
         };
-        return new ActivityChange(change, subject, change == "moved" ? Text(after, "planned_date") : null);
+        return new ActivityChange(change, subject, change == "moved" ? Text(after, entity == "events" ? "starts_on" : "planned_date") : null);
     }
 
     private static string Updated(string entity, JsonObject? before, JsonObject after)
@@ -60,6 +60,8 @@ public static class ActivityRules
             "life_goals" when Changed("status") && Text(after, "status") == "dropped" => "dropped",
             "life_goals" when Changed("status") && Text(after, "status") == "open" => "reopened",
             "life_goals" when Changed("title") => "renamed",
+            "events" when Changed("starts_on") || Changed("ends_on") => "moved",
+            "events" when Changed("title") => "renamed",
             _ => "edited",
         };
     }

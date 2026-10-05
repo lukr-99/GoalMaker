@@ -188,6 +188,28 @@ public sealed class KeyboardReachTests : IDisposable
         Assert.Equal("Run a marathon", lifeGoals.Editor.Title);
     });
 
+    [Fact]
+    public void TheCalendarsEventBarsAreReachedRowByRowAndEnterOpensOne() => WpfApp.Run(() =>
+    {
+        // Friday to Tuesday, across the week break, and a dinner on the Saturday under it.
+        planner.Events.Add(new EventDraft("Trip", Today, Today.AddDays(4)));
+        planner.Events.Add(new EventDraft("Dinner", Today.AddDays(1), Today.AddDays(1)));
+        planner.Events.Add(new EventDraft("Early", Today.AddDays(-17), Today.AddDays(-17)));
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, planner.Strings, _ => null, planner.Time,
+            _ => { }, action => action(), events: planner.Events);
+        var page = new Views.CalendarPage(calendar);
+        using var host = TabOrder.Host(page, 1000, 900);
+
+        var bars = TabOrder.Stops(page).Where(stop => TabOrder.Name(stop).StartsWith("Calendar.EventName(", StringComparison.Ordinal)).ToList();
+
+        // Each row's bars after its days, by lane: the trip's two pieces, the dinner between them.
+        Assert.Equal(["Early", "Trip", "Dinner", "Trip"], bars.Select(bar => ((CalendarBarViewModel)((FrameworkElement)bar).DataContext).Title));
+        Assert.True(Press(bars[2], Key.Enter));
+        Assert.True(calendar.Editor!.IsOpen);
+        Assert.Equal("Dinner", calendar.Editor.Title);
+    });
+
     private static ContentControl Bar(ComposerViewModel composer)
     {
         var bar = new ContentControl { Content = composer, Focusable = false };

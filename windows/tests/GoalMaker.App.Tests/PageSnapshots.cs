@@ -786,6 +786,63 @@ public sealed class PageSnapshots
         Save(new CalendarPage(calendar), folder, "calendar", new Size(1000, 620));
     });
 
+    /// <summary>Calendar events (M10-03): a month with overlapping events, wide and narrow, the editor, and Today's line.</summary>
+    [Fact(Explicit = true)]
+    public void CalendarEvents() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var travel = planner.Areas.Create("Travel")!;
+        var work = planner.Areas.Create("Work")!;
+        foreach (var (title, first, last, area) in new[]
+        {
+            ("Prague", Today, Today.AddDays(3), travel.Id),
+            ("Conference", Today.AddDays(-2), Today, work.Id),
+            ("Dentist", Today.AddDays(1), Today.AddDays(1), (string?)null),
+            ("Sabbatical planning week", Today.AddDays(-11), Today.AddDays(-5), null),
+            ("Grandma's birthday", Today.AddDays(2), Today.AddDays(2), null),
+            ("Book club", Today.AddDays(2), Today.AddDays(2), null),
+            ("Picnic", Today.AddDays(2), Today.AddDays(2), null),
+            ("Moving out", Today.AddDays(13), Today.AddDays(17), travel.Id),
+        })
+        {
+            planner.Events.Add(new EventDraft(title, first, last, AreaId: area));
+        }
+
+        foreach (var (line, day) in new[] { ("Call the bank 9:00", Today), ("Pack the bag", Today), ("Water the plants", Today.AddDays(2)) })
+        {
+            var task = planner.Tasks.Add(ComposerParser.Parse(line, planner.Time.GetLocalNow().DateTime))!;
+            planner.Tasks.Plan(task.Id, day);
+        }
+
+        var calendar = new CalendarViewModel(
+            planner.Tasks, planner.Reminders, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time,
+            _ => { }, action => action(), events: planner.Events);
+        calendar.Open(Today.AddDays(2));
+        Save(new CalendarPage(calendar), folder, "calendar-events-wide", new Size(1100, 760));
+        Save(new CalendarPage(calendar), folder, "calendar-events-narrow", new Size(720, 760));
+        calendar.ShowCommand.Execute("week");
+        Save(new CalendarPage(calendar), folder, "calendar-events-week", new Size(1100, 420));
+        calendar.ShowCommand.Execute("month");
+
+        calendar.OpenEvent(planner.Events.All().Single(item => item.Title == "Prague").Id);
+        Save(new CalendarPage(calendar), folder, "calendar-events-editor", new Size(1100, 760));
+        calendar.Editor!.DeleteCommand.Execute(null);
+        Save(new CalendarPage(calendar), folder, "calendar-events-undo", new Size(1100, 760));
+        calendar.UndoCommand.Execute(null);
+
+        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Light });
+        Save(new CalendarPage(calendar), folder, "calendar-events-light", new Size(1100, 760));
+
+        var composer = new ComposerViewModel(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, planner.Time, theme.AreaBrush, day => day, action => action(), () => { });
+        var today = new ListViewModel(
+            ListKind.Today, planner.Tasks, planner.Areas, composer, planner.Sync, planner.Settings, strings, planner.Time,
+            theme.AreaBrush, () => true, planner.Tick, action => action(), events: planner.Events, openEvent: _ => { });
+        Save(new TodayPage(today), folder, "calendar-events-today", new Size(900, 520));
+    });
+
     [Fact(Explicit = true)]
     public void ProjectsPage_() => OnUiThread(folder =>
     {
