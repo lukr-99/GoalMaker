@@ -25,4 +25,7 @@ data class WantItem(
     val checkedNote: String = "",
     val madeBy: String = ProjectRules.OWNER,
     val deleted: Boolean = false,
+    /** A want, or a need: something to buy, with no cooldown and maybe a day it is [needBy]. */
+    val kind: String = WantRules.WANT,
+    val needBy: LocalDate? = null,
 )

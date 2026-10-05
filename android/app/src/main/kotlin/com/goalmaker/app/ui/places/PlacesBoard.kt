@@ -54,8 +54,9 @@ object PlacesBoard {
             letterWaiting = letterWaiting(reviews, today),
             doneThisWeek = StatsRules.weeks(tasks, today, count = 1).lastOrNull()?.done ?: 0,
             archived = tasks.count { it.state == TaskState.DONE },
-            wantsReady = wants.count { WantRules.state(it, today) == WantState.READY },
-            wantsCooling = wants.count { WantRules.state(it, today) == WantState.COOLING },
+            // A need is ready the day it is added, so the tile counts wants only.
+            wantsReady = wants.count { it.kind != WantRules.NEED && WantRules.state(it, today) == WantState.READY },
+            wantsCooling = wants.count { it.kind != WantRules.NEED && WantRules.state(it, today) == WantState.COOLING },
         )
     }
 

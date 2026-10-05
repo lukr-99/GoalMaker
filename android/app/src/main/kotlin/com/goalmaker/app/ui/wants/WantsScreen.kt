@@ -119,6 +119,7 @@ fun WantsScreen(
     val scope = rememberCoroutineScope()
     var editingCooldowns by remember { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
+    var showClosedNeeds by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(addTitle) {
         if (addTitle != null) {
@@ -174,14 +175,15 @@ fun WantsScreen(
             // Under MainScreen's bar the navigation bar is already taken, so this adds nothing there.
             val line = composer.text.toString()
             val draft = remember(line, state.cooldowns) { viewModel.preview(line) }
+            val needs = state.kind == WantRules.NEED
             BottomComposer(
                 state = composer,
                 chat = chat,
-                chips = wantLineChips(line, draft, viewModel.cooldownFor(draft.price, draft.currency, draft.pickedDays)),
+                chips = if (needs) emptyList() else wantLineChips(line, draft, viewModel.cooldownFor(draft.price, draft.currency, draft.pickedDays)),
                 canAdd = line.isNotBlank(),
                 onAdd = {
                     if (line.isNotBlank()) scope.launch {
-                        when (val outcome = viewModel.addLine(line)) {
+                        when (val outcome = if (needs) viewModel.addNeedLine(line) else viewModel.addLine(line)) {
                             LineOutcome.Added -> composer.clearText()
                             is LineOutcome.OpenForm -> {
                                 fromLine = true
@@ -190,12 +192,12 @@ fun WantsScreen(
                         }
                     }
                 },
-                placeholder = stringResource(R.string.bar_want_placeholder),
-                addLabel = stringResource(R.string.bar_add_want),
-                formLabel = stringResource(R.string.bar_new_want),
+                placeholder = stringResource(if (needs) R.string.needs_placeholder else R.string.bar_want_placeholder),
+                addLabel = stringResource(if (needs) R.string.needs_add else R.string.bar_add_want),
+                formLabel = stringResource(if (needs) R.string.needs_add else R.string.bar_new_want),
                 onOpenForm = {
                     fromLine = false
-                    adding = WantDraft(title = "", reason = "")
+                    adding = WantDraft(title = "", reason = "", kind = state.kind)
                 },
                 modifier = Modifier.navigationBarsPadding().imePadding(),
             )
@@ -207,6 +209,64 @@ fun WantsScreen(
             verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
             modifier = Modifier.fillMaxSize().padding(padding),
         ) {
+            item("kind") {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                    ChoiceChip(
+                        selected = state.kind == WantRules.WANT,
+                        onClick = { viewModel.showKind(WantRules.WANT) },
+                        label = stringResource(R.string.wants_tab_wants),
+                    )
+                    ChoiceChip(
+                        selected = state.kind == WantRules.NEED,
+                        onClick = { viewModel.showKind(WantRules.NEED) },
+                        label = if (state.needs.isEmpty()) stringResource(R.string.wants_tab_needs) else "${stringResource(R.string.wants_tab_needs)} ${state.needs.size}",
+                    )
+                }
+            }
+            if (state.kind == WantRules.NEED) {
+                if (state.needs.isEmpty() && state.closedNeeds.isEmpty()) {
+                    item("needs-empty") {
+                        Text(
+                            stringResource(R.string.needs_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = AppTheme.colors.textMuted,
+                            modifier = Modifier.padding(8.dp),
+                        )
+                    }
+                }
+                items(state.needs, key = { "need-" + it.want.id }) { row ->
+                    NeedCard(
+                        row = row,
+                        onBought = { viewModel.decide(row.want, WantRules.BOUGHT, "") },
+                        onDrop = { viewModel.decide(row.want, WantRules.DROPPED, "") },
+                        onReopen = {},
+                        onEdit = { editing = row.want },
+                        onDelete = { viewModel.delete(row.want) },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+                if (state.closedNeeds.isNotEmpty()) {
+                    item("needs-closed") {
+                        TextButton(onClick = { showClosedNeeds = !showClosedNeeds }) {
+                            Text(stringResource(R.string.needs_closed, state.closedNeeds.size), color = AppTheme.colors.textMuted)
+                        }
+                    }
+                    if (showClosedNeeds) {
+                        items(state.closedNeeds, key = { "need-" + it.want.id }) { row ->
+                            NeedCard(
+                                row = row,
+                                onBought = {},
+                                onDrop = {},
+                                onReopen = { viewModel.reopen(row.want) },
+                                onEdit = { editing = row.want },
+                                onDelete = { viewModel.delete(row.want) },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    }
+                }
+                return@LazyColumn
+            }
             item("cooldowns") { CooldownsLine(state, onEdit = { editingCooldowns = true }) }
             item("filters") {
                 Row(
@@ -424,5 +484,59 @@ private fun Labeled(label: String, text: String) {
     Column {
         Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.accent, fontWeight = FontWeight.Bold)
         Text(text, style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.text)
+    }
+}
+
+/** A need: its title, its price and the day it is needed by (in the danger colour once late). */
+@Composable
+private fun NeedCard(
+    row: NeedRow,
+    onBought: () -> Unit,
+    onDrop: () -> Unit,
+    onReopen: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val want = row.want
+    val colors = AppTheme.colors
+    val locale = LocalConfiguration.current.locales[0]
+    val day = want.needBy?.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", locale))
+    val status = when {
+        want.decision == WantRules.BOUGHT -> stringResource(R.string.wants_status_bought)
+        want.decision == WantRules.DROPPED -> stringResource(R.string.wants_status_dropped)
+        day != null && row.late -> stringResource(R.string.needs_late, day)
+        day != null -> stringResource(R.string.needs_by, day)
+        else -> null
+    }
+    val price = want.price?.let { WantMoney.format(it, want.currency, locale) }
+    val maker = if (want.madeBy == ProjectRules.CLAUDE) stringResource(R.string.wants_by_claude) else null
+    Surface(shape = AppTheme.shapes.row, color = colors.surface, modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.clickable(onClick = onEdit).padding(AppTheme.density.cardPadding.dp)) {
+            Text(want.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            listOfNotNull(price, status, maker).takeIf { it.isNotEmpty() }?.let { parts ->
+                Text(
+                    parts.joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (row.late) colors.danger else colors.textMuted,
+                )
+            }
+            if (want.reason.isNotBlank()) {
+                Text(want.reason, style = MaterialTheme.typography.bodyMedium, color = colors.text, modifier = Modifier.padding(top = 4.dp))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+                if (want.decision == null) {
+                    FilledTonalButton(onClick = onBought) {
+                        Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.wants_buy))
+                    }
+                    OutlinedButton(onClick = onDrop) { Text(stringResource(R.string.wants_drop)) }
+                } else {
+                    OutlinedButton(onClick = onReopen) { Text(stringResource(R.string.wants_reopen)) }
+                    TextButton(onClick = onDelete) { Text(stringResource(R.string.wants_delete), color = colors.danger) }
+                }
+            }
+        }
     }
 }

@@ -166,6 +166,29 @@ class WantsViewModelTest {
         assertTrue(wants.all().isEmpty())
     }
 
+    @Test
+    fun `needs sit in their own tab, in the order they are needed, and never with the wants`() = runTest {
+        wants.add(WantDraft("Lamp", "Dark desk", price = 450.0))!!
+        wants.add(WantDraft("Ink", "", kind = WantRules.NEED))!!
+        val tyres = wants.add(WantDraft("Winter tyres", "", price = 4000.0, kind = WantRules.NEED, needBy = LocalDate.parse("2026-10-01")))!!
+        assertEquals(0, tyres.cooldownDays)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        var state = viewModel.uiState.first { it.loaded && it.needs.size == 2 }
+        // The wants' counts leave the needs out, and a need whose day passed is late.
+        assertEquals(1, state.counts.values.sum())
+        assertEquals(listOf("Winter tyres", "Ink"), state.needs.map { it.want.title })
+        assertTrue(state.needs.first().late)
+
+        viewModel.showKind(WantRules.NEED)
+        assertTrue(viewModel.addNeedLine("Batteries 120 Kč") is LineOutcome.Added)
+        shadowOf(Looper.getMainLooper()).idle()
+        state = viewModel.uiState.first { it.kind == WantRules.NEED && it.needs.size == 3 }
+        // Added the same day with no day needed, Batteries comes before Ink by title.
+        assertEquals(listOf("Winter tyres", "Batteries", "Ink"), state.needs.map { it.want.title })
+        assertEquals(WantRules.NEED, state.needs[1].want.kind)
+    }
+
     private fun kotlinx.coroutines.CoroutineScope.launchCollect(model: WantsViewModel, into: MutableList<WantUndo>) =
         launch { model.undo.collect { into += it } }
 }

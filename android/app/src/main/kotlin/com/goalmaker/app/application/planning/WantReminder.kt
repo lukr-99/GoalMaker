@@ -30,7 +30,7 @@ object WantReminder {
         if (time == null) return null
         val today = PlanningDay.of(now, dayStartHour)
         return wants
-            .filter { !it.deleted && it.decision == null && !it.coolsUntil.isBefore(today) }
+            .filter { !it.deleted && it.kind != WantRules.NEED && it.decision == null && !it.coolsUntil.isBefore(today) }
             .map { RitualReminder.momentOf(it.coolsUntil, time, dayStartHour) }
             .filter { it.isAfter(now) }
             .minOrNull()
