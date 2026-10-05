@@ -13,12 +13,17 @@ namespace GoalMaker.App.ViewModels;
 /// The Tally page (docs/tally.md, M8-13, stories 109 to 113): the switch on top with what is recorded
 /// and what syncs, filter chips (Phone, PC, a category), the day (today, or the day picked in the week)
 /// as one stacked bar by category, then that day by hour and the apps, sites and folders on this PC
-/// (from its own log, which never syncs), the week as stacked bars per day, time per project, and the
-/// owner's rules and categories with a panel each to add and edit them. Every device's time counts in
-/// the bars; the chips narrow everything. Make a rule under an app or a site fills the rule panel in.
+/// (from its own log, which never syncs) with what landed in Other to sort first, the week as stacked
+/// bars per day, the week on each device, the last eight weeks, time per project, and the owner's rules
+/// and categories with a panel each to add, edit and merge them. Every device's time counts in the
+/// bars; the chips narrow everything. Move to under an app, a site or a folder sorts it in one step;
+/// Make a rule fills the rule panel in.
 /// </summary>
 public sealed partial class TallyViewModel : ObservableObject
 {
+    /// <summary>How many weeks the Last 8 weeks card shows, the one holding today last.</summary>
+    public const int RecentWeeks = 8;
+
     private readonly TallyList tally;
     private readonly TallyDefaults defaults;
     private readonly ProjectList projects;
@@ -86,6 +91,24 @@ public sealed partial class TallyViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasNoApps))]
     private bool hasApps;
 
+    // What landed in Other on this PC, to sort in one step.
+    [ObservableProperty]
+    private bool showToSort;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNothingToSort))]
+    private bool hasToSort;
+
+    // The last eight weeks, and this week on each device.
+    [ObservableProperty]
+    private bool hasRecentWeeks;
+
+    [ObservableProperty]
+    private string recentTotal = string.Empty;
+
+    [ObservableProperty]
+    private string recentFirstWeek = string.Empty;
+
     [ObservableProperty]
     private string weekTotal = string.Empty;
 
@@ -151,6 +174,26 @@ public sealed partial class TallyViewModel : ObservableObject
     [ObservableProperty]
     private string draftEmoji = string.Empty;
 
+    // Merging the category being edited into another one, after asking.
+    [ObservableProperty]
+    private bool canMerge;
+
+    [ObservableProperty]
+    private IReadOnlyList<FilterChoiceViewModel> mergeChoices = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AskMergeCommand))]
+    private FilterChoiceViewModel? mergeTarget;
+
+    [ObservableProperty]
+    private bool isAskingMerge;
+
+    [ObservableProperty]
+    private string mergeQuestion = string.Empty;
+
+    // The categories to sort into: the owner's own first, then the shipped ones.
+    private IReadOnlyList<FilterChoiceViewModel> sortChoices = [];
+
     public TallyViewModel(
         TallyList tally,
         TallyDefaults defaults,
@@ -207,8 +250,20 @@ public sealed partial class TallyViewModel : ObservableObject
     /// <summary>This PC's apps by category, for the shown day or the week.</summary>
     public ObservableCollection<TallyAppGroupViewModel> Apps { get; } = [];
 
+    /// <summary>What landed in Other on this PC (apps, sites and folders), most first, to sort in one step.</summary>
+    public ObservableCollection<TallySortRowViewModel> ToSort { get; } = [];
+
     /// <summary>Monday to Sunday of this planning week.</summary>
     public ObservableCollection<TallyBarViewModel> WeekDays { get; } = [];
+
+    /// <summary>The phone and the PC this week, each one bar by category, from the synced days.</summary>
+    public ObservableCollection<TallyBarViewModel> Devices { get; } = [];
+
+    /// <summary>The last eight weeks, oldest first, each stacked by category.</summary>
+    public ObservableCollection<TallyBarViewModel> RecentWeekBars { get; } = [];
+
+    /// <summary>The categories over the last eight weeks, most first.</summary>
+    public ObservableCollection<TallySegmentViewModel> RecentLegend { get; } = [];
 
     public ObservableCollection<TallyProjectViewModel> Projects { get; } = [];
 
@@ -227,6 +282,8 @@ public sealed partial class TallyViewModel : ObservableObject
     public bool HasNoDay => !HasDay;
 
     public bool HasNoApps => !HasApps;
+
+    public bool HasNothingToSort => !HasToSort;
 
     public bool IsNotToday => !IsToday;
 
@@ -281,7 +338,9 @@ public sealed partial class TallyViewModel : ObservableObject
         var weekStart = GoalRules.PeriodStart(GoalHorizon.Week, today);
         var own = tally.Categories();
         labels = new TallyLabels(defaults, own, strings, areaBrush);
-        var week = tally.Days(weekStart, weekStart.AddDays(6));
+        var firstWeek = weekStart.AddDays(-7 * (RecentWeeks - 1));
+        var recent = tally.Days(firstWeek, weekStart.AddDays(6));
+        var week = recent.Where(day => day.Day >= weekStart).ToList();
         HasTime = week.Any(day => day.Minutes > 0);
         ShowChips(week);
 
@@ -324,6 +383,8 @@ public sealed partial class TallyViewModel : ObservableObject
         }
 
         WeekTotal = strings.Get("Tally.WeekTotal", labels.Duration(kept.Sum(day => day.Minutes)));
+        ShowDevices(week);
+        ShowRecentWeeks(recent, today);
 
         var names = projects.All().ToDictionary(project => project.Id, project => project.Name, StringComparer.Ordinal);
         var byProject = TallyRules.ByProject(kept).Where(group => group.Key is not null).ToList();
@@ -369,6 +430,21 @@ public sealed partial class TallyViewModel : ObservableObject
     /// <summary>Starts a new rule from a site (a title rule) or an editor's folder (a folder rule) under an app.</summary>
     public void MakeWindowRule(string forCategory, string app, string label) => StartNewRule(TallyBreakdown.WindowMatch(app), label, forCategory);
 
+    /// <summary>
+    /// Sorts one of this PC's apps, sites or folders into <paramref name="into"/> in one step: a rule for
+    /// the PC, or the owner's rule for exactly it changed. Today is counted again at once.
+    /// </summary>
+    public void SortInto(string match, string pattern, string into)
+    {
+        if (tally.SortInto(match, pattern, TallyRules.Windows, into))
+        {
+            recount?.Invoke();
+        }
+    }
+
+    /// <summary>The categories to move something into from <paramref name="from"/>: every other one, the owner's own first.</summary>
+    public IReadOnlyList<FilterChoiceViewModel> MoveChoices(string from) => [.. sortChoices.Where(choice => choice.Id != from)];
+
     public void StartEditRule(TallyRuleRowViewModel row)
     {
         editingRuleId = row.Rule.Id;
@@ -398,6 +474,10 @@ public sealed partial class TallyViewModel : ObservableObject
         DraftName = row.Category.Name;
         DraftColor = Colors.FirstOrDefault(color => color.Id == row.Category.Color) ?? Colors.FirstOrDefault();
         DraftEmoji = row.Category.Emoji ?? string.Empty;
+        CanMerge = true;
+        MergeChoices = MoveChoices(row.Category.Id);
+        MergeTarget = null;
+        IsAskingMerge = false;
         OnPropertyChanged(nameof(CategoryPanelTitle));
         IsEditingCategory = true;
     }
@@ -466,6 +546,9 @@ public sealed partial class TallyViewModel : ObservableObject
         DraftName = string.Empty;
         DraftColor = Colors.FirstOrDefault();
         DraftEmoji = string.Empty;
+        CanMerge = false;
+        MergeTarget = null;
+        IsAskingMerge = false;
         OnPropertyChanged(nameof(CategoryPanelTitle));
         IsEditingCategory = true;
     }
@@ -486,7 +569,41 @@ public sealed partial class TallyViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void CancelCategory() => IsEditingCategory = false;
+    private void CancelCategory()
+    {
+        IsAskingMerge = false;
+        IsEditingCategory = false;
+    }
+
+    private bool CanAskMerge() => MergeTarget?.Id is not null;
+
+    /// <summary>Asks on the page before the category being edited merges into the one picked.</summary>
+    [RelayCommand(CanExecute = nameof(CanAskMerge))]
+    private void AskMerge()
+    {
+        if (editingCategoryId is not { } from || MergeTarget?.Id is null)
+        {
+            return;
+        }
+
+        MergeQuestion = strings.Get("Tally.MergeQuestion", labels.Name(from), MergeTarget.Label);
+        IsAskingMerge = true;
+    }
+
+    [RelayCommand]
+    private void ConfirmMerge()
+    {
+        IsAskingMerge = false;
+        if (editingCategoryId is { } from && MergeTarget?.Id is { } into && tally.MergeCategory(from, into))
+        {
+            IsEditingCategory = false;
+            // Its rules now sort into the other category, so today is counted again.
+            recount?.Invoke();
+        }
+    }
+
+    [RelayCommand]
+    private void CancelMerge() => IsAskingMerge = false;
 
     private void StartNewRule(string match, string pattern, string forCategory)
     {
@@ -547,8 +664,15 @@ public sealed partial class TallyViewModel : ObservableObject
                     strings.Get("Tally.MakeRuleFor", app.App),
                     [
                         .. app.Windows.Select(window => new TallyWindowRowViewModel(
-                            this, group.Category, app.App, window.Label, labels.Duration(window.Minutes), strings.Get("Tally.MakeRuleFor", window.Label))),
-                    ])),
+                            this,
+                            group.Category,
+                            app.App,
+                            window.Label,
+                            labels.Duration(window.Minutes),
+                            strings.Get("Tally.MakeRuleFor", window.Label),
+                            strings.Get("Tally.MoveToFor", window.Label))),
+                    ],
+                    strings.Get("Tally.MoveToFor", app.App))),
             ];
             Apps.Add(new TallyAppGroupViewModel(
                 group.Category,
@@ -562,6 +686,92 @@ public sealed partial class TallyViewModel : ObservableObject
         }
 
         HasApps = Apps.Count > 0;
+        ShowToSortList(groups);
+    }
+
+    // What landed in Other, while the page isn't narrowed to another category: each app, but for a
+    // browser or an editor its sites or folders instead, since a rule for the whole browser would
+    // come before the shipped site rules. The same site in two browsers is one line.
+    private void ShowToSortList(IReadOnlyList<TallyCategoryApps> groups)
+    {
+        ShowToSort = category is null or TallyRules.Other;
+        ToSort.Clear();
+        var other = groups.FirstOrDefault(group => group.Category == TallyRules.Other);
+        var items = new List<(string Match, string Pattern, string Detail, int Minutes)>();
+        foreach (var app in other?.Apps ?? [])
+        {
+            if (app.Windows.Count == 0)
+            {
+                items.Add((TallyRules.App, app.App, strings.Get("Tally.SortApp"), app.Minutes));
+                continue;
+            }
+
+            var match = TallyBreakdown.WindowMatch(app.App);
+            var detail = strings.Get(match == TallyRules.Folder ? "Tally.SortFolder" : "Tally.SortSite", app.App);
+            items.AddRange(app.Windows.Select(window => (match, window.Label, detail, window.Minutes)));
+        }
+
+        var lines = items
+            .GroupBy(item => (item.Match, Pattern: item.Pattern.ToLowerInvariant()))
+            .Select(same => (same.First().Match, same.First().Pattern, same.First().Detail, Minutes: same.Sum(item => item.Minutes)))
+            .OrderByDescending(item => item.Minutes)
+            .ThenBy(item => item.Pattern, StringComparer.OrdinalIgnoreCase);
+        foreach (var line in lines)
+        {
+            ToSort.Add(new TallySortRowViewModel(
+                this, line.Match, line.Pattern, line.Detail, labels.Duration(line.Minutes), strings.Get("Tally.MoveToFor", line.Pattern)));
+        }
+
+        HasToSort = ToSort.Count > 0;
+    }
+
+    // This week's minutes on the phone and on the PC, each a bar by category against the bigger one.
+    // The category chip narrows them; the device chips don't, since the card compares the two.
+    private void ShowDevices(IReadOnlyList<TallyDay> week)
+    {
+        var kept = week.Where(day => category is null || day.Category == category).ToList();
+        (string Kind, string Name)[] kinds = [(TallyRules.Phone, strings.Get("Tally.Phone")), (TallyRules.Pc, strings.Get("Tally.Pc"))];
+        var byKind = kinds.Select(one => TallyRules.ByCategory(kept.Where(day => day.DeviceKind == one.Kind))).ToList();
+        var most = Math.Max(1, byKind.Max(groups => groups.Sum(group => group.Minutes)));
+        Devices.Clear();
+        for (var index = 0; index < kinds.Length; index++)
+        {
+            var minutes = byKind[index].Sum(group => group.Minutes);
+            var name = kinds[index].Name;
+            Devices.Add(new TallyBarViewModel(
+                name, labels.Duration(minutes), (double)minutes / most, Parts(byKind[index]), strings.Get("Tally.BarTip", name, labels.Duration(minutes))));
+        }
+    }
+
+    // The last eight weeks under the chips, as Stats shows twelve.
+    private void ShowRecentWeeks(IReadOnlyList<TallyDay> recent, DateOnly today)
+    {
+        var weeks = TallyRules.Weeks(recent, today, RecentWeeks, kind, category);
+        var most = Math.Max(1, weeks.Max(week => week.Minutes));
+        RecentWeekBars.Clear();
+        foreach (var week in weeks)
+        {
+            var label = week.Start.ToString("d MMM", CultureInfo.CurrentCulture);
+            RecentWeekBars.Add(new TallyBarViewModel(
+                label,
+                week.Minutes > 0 ? labels.Duration(week.Minutes) : string.Empty,
+                (double)week.Minutes / most,
+                Parts(week.Categories),
+                strings.Get("Tally.BarTip", label, labels.Duration(week.Minutes)),
+                week == weeks[^1]));
+        }
+
+        RecentLegend.Clear();
+        var kept = recent.Where(day => (kind is null || day.DeviceKind == kind) && (category is null || day.Category == category));
+        foreach (var group in TallyRules.ByCategory(kept))
+        {
+            RecentLegend.Add(new TallySegmentViewModel(labels.Name(group.Key!), labels.Emoji(group.Key!), labels.Duration(group.Minutes), labels.Brush(group.Key!)));
+        }
+
+        var minutes = weeks.Sum(week => week.Minutes);
+        RecentTotal = strings.Get("Tally.RecentTotal", labels.Duration(minutes));
+        RecentFirstWeek = weeks[0].Start.ToString("d MMM", CultureInfo.CurrentCulture);
+        HasRecentWeeks = minutes > 0;
     }
 
     // Keeps which categories are open across a refresh.
@@ -605,6 +815,8 @@ public sealed partial class TallyViewModel : ObservableObject
         {
             CategoryChoices = choices;
         }
+
+        sortChoices = [.. own.Concat(defaults.Categories).Select(one => new FilterChoiceViewModel(one.Id, labels.Name(one.Id), labels.Brush(one.Id)))];
 
         List<ChoiceViewModel> projectChoices = [new(null, strings.Get("Tally.NoProject")), .. projects.All().Select(project => new ChoiceViewModel(project.Id, project.Name))];
         if (!projectChoices.SequenceEqual(ProjectChoices))

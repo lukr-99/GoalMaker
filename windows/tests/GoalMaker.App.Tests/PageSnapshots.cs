@@ -983,7 +983,7 @@ public sealed class PageSnapshots
             planner.TallyDay(week.AddDays(-7 * back), TallyRules.Phone, "video", 60 + (back * 53 % 120));
         }
 
-        var chess = planner.Tally.AddCategory("Chess", "teal", "â™Ÿ")!;
+        var chess = planner.Tally.AddCategory("Chess", "teal", "♟")!;
         planner.Tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Any, chess.Id));
         planner.Tally.AddRule(new TallyRule(TallyRules.Folder, "GoalMaker", TallyRules.Windows, "coding", project.Id));
         using var theme = Theme(planner);
@@ -998,6 +998,9 @@ public sealed class PageSnapshots
             new(friday.ToDateTime(new TimeOnly(11, 0)), friday.ToDateTime(new TimeOnly(12, 30)), "code.exe", "main.py - Thesis - Visual Studio Code", "study"),
             new(friday.ToDateTime(new TimeOnly(13, 0)), friday.ToDateTime(new TimeOnly(13, 40)), "slack.exe", "general - Slack", "chat"),
             new(friday.ToDateTime(new TimeOnly(13, 40)), friday.ToDateTime(new TimeOnly(14, 0)), "spotify.exe", "Spotify Premium", "music"),
+            new(friday.ToDateTime(new TimeOnly(14, 0)), friday.ToDateTime(new TimeOnly(14, 35)), "chrome.exe", "Fall semester - IS MUNI - Google Chrome", TallyRules.Other),
+            new(friday.ToDateTime(new TimeOnly(14, 35)), friday.ToDateTime(new TimeOnly(14, 55)), "notepad.exe", "groceries.txt - Notepad", TallyRules.Other),
+            new(friday.ToDateTime(new TimeOnly(15, 0)), friday.ToDateTime(new TimeOnly(15, 12)), "chrome.exe", "Rooms - Booking.com - Google Chrome", TallyRules.Other),
         ];
         var tally = new TallyViewModel(
             planner.Tally, defaults, planner.Projects, planner.Settings, strings, planner.Time, theme.SwatchBrush,
@@ -1005,12 +1008,19 @@ public sealed class PageSnapshots
         tally.Apps[0].IsExpanded = true;
         tally.Apps[1].IsExpanded = true;
         var page = new TallyPage(tally);
-        Save(page, folder, "tally-wide", new Size(1100, 2300));
-        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 2600));
+        Save(page, folder, "tally-wide", new Size(1100, 2600));
+        Save(new TallyPage(tally), folder, "tally-narrow", new Size(520, 3100));
 
         tally.ShowDay(week.AddDays(2));
         Save(new TallyPage(tally), folder, "tally-a-day-picked", new Size(1100, 1200));
         tally.ShowDay(week.AddDays(2));
+
+        // Merging the owner's own category into a shipped one asks on the page first.
+        tally.StartEditCategory(tally.Categories[0]);
+        tally.MergeTarget = tally.MergeChoices.First(choice => choice.Id == "games");
+        tally.AskMergeCommand.Execute(null);
+        Save(new TallyPage(tally), folder, "tally-merge", new Size(852, 2700));
+        tally.CancelCategoryCommand.Execute(null);
 
         tally.Choose(TallyRules.Phone);
         tally.AddRuleCommand.Execute(null);

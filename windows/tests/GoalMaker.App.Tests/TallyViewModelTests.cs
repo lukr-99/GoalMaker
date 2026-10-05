@@ -306,6 +306,160 @@ public sealed class TallyViewModelTests : IDisposable
         Assert.Equal(2, recounts);
     }
 
+    [Fact]
+    public void ToSortListsWhatLandedInOtherMostFirstAndAPickSortsItWithOneRule()
+    {
+        var recounts = 0;
+        var page = Page(Sorted, () => recounts++);
+        page.TallyOn = true;
+
+        Assert.True(page.ShowToSort);
+        Assert.Equal(
+            [("notepad.exe", "Tally.SortApp", "Tally.Minutes(40)"), ("Zebrafy", "Tally.SortSite(chrome.exe)", "Tally.Minutes(25)")],
+            page.ToSort.Select(row => (row.Pattern, row.Detail, row.Value)));
+        // The owner's own categories come first, then the shipped ones, never Other itself.
+        var chess = planner.Tally.AddCategory("Chess", "teal")!;
+        Assert.Equal(chess.Id, page.ToSort[0].Choices[0].Id);
+        Assert.DoesNotContain(page.ToSort[0].Choices, choice => choice.Id == TallyRules.Other);
+
+        page.ToSort[0].MoveToCommand.Execute("work");
+
+        Assert.Equal(1, recounts);
+        Assert.Equal(["Zebrafy"], page.ToSort.Select(row => row.Pattern));
+        var rule = Assert.Single(planner.Tally.Rules());
+        Assert.Equal((TallyRules.App, "notepad.exe", TallyRules.Windows, "work"), (rule.Match, rule.Pattern, rule.Platform, rule.Category));
+
+        page.ToSort[0].MoveToCommand.Execute("reading");
+
+        Assert.False(page.HasToSort);
+        Assert.True(page.HasNothingToSort);
+        Assert.Equal(
+            [(TallyRules.App, "notepad.exe", "work"), (TallyRules.Title, "Zebrafy", "reading")],
+            planner.Tally.Rules().Select(one => (one.Match, one.Pattern, one.Category)));
+
+        page.Choose("coding");
+        Assert.False(page.ShowToSort);
+    }
+
+    [Fact]
+    public void MoveToUnderAnAppOrASiteSortsItInOneStepAndAgainChangesThatRule()
+    {
+        var recounts = 0;
+        var page = Page(Sorted, () => recounts++);
+        page.TallyOn = true;
+        var code = page.Apps.Single(group => group.Category == "coding").Apps.Single();
+        Assert.DoesNotContain(code.Choices, choice => choice.Id == "coding");
+        Assert.Equal("Tally.MoveToFor(code.exe)", code.MoveName);
+
+        code.MoveToCommand.Execute("study");
+
+        Assert.Equal(["study"], page.Apps.Where(group => group.Apps.Any(app => app.App == "code.exe")).Select(group => group.Category));
+        var youtube = page.Apps.Single(group => group.Category == "video").Apps.Single().Windows.Single();
+        youtube.MoveToCommand.Execute("music");
+        page.Apps.Single(group => group.Category == "music").Apps.Single().Windows.Single(window => window.Label == "YouTube").MoveToCommand.Execute("video");
+
+        Assert.Equal(3, recounts);
+        Assert.Equal(
+            [(TallyRules.App, "code.exe", TallyRules.Windows, "study"), (TallyRules.Title, "YouTube", TallyRules.Windows, "video")],
+            planner.Tally.Rules().Select(rule => (rule.Match, rule.Pattern, rule.Platform, rule.Category)));
+    }
+
+    [Fact]
+    public void ACategoryMergesIntoAnotherAfterAskingAndItsRulesMoveThere()
+    {
+        var recounts = 0;
+        var chess = planner.Tally.AddCategory("Chess", "teal")!;
+        planner.Tally.AddRule(new TallyRule(TallyRules.Title, "lichess", TallyRules.Windows, chess.Id));
+        planner.TallyDay(Today, TallyRules.Pc, chess.Id, 20);
+        var page = Page(recount: () => recounts++);
+
+        page.AddCategoryCommand.Execute(null);
+        Assert.False(page.CanMerge);
+        page.StartEditCategory(page.Categories.Single());
+        Assert.True(page.CanMerge);
+        Assert.DoesNotContain(page.MergeChoices, choice => choice.Id == chess.Id);
+        Assert.False(page.AskMergeCommand.CanExecute(null));
+
+        page.MergeTarget = page.MergeChoices.Single(choice => choice.Id == "games");
+        page.AskMergeCommand.Execute(null);
+        Assert.True(page.IsAskingMerge);
+        Assert.Equal("Tally.MergeQuestion(Chess,Games)", page.MergeQuestion);
+        page.CancelMergeCommand.Execute(null);
+        Assert.False(page.IsAskingMerge);
+        Assert.Single(page.Categories);
+
+        page.AskMergeCommand.Execute(null);
+        page.ConfirmMergeCommand.Execute(null);
+
+        Assert.False(page.IsEditingCategory);
+        Assert.False(page.HasCategories);
+        Assert.Equal(1, recounts);
+        Assert.Equal("games", Assert.Single(planner.Tally.Rules()).Category);
+        // Days already counted keep the category they were counted in.
+        Assert.Equal("Tally.GoneCategory", Assert.Single(page.DayLegend).Name);
+    }
+
+    [Fact]
+    public void TheLastEightWeeksStackByCategoryUnderTheChips()
+    {
+        planner.TallyDay(Today, TallyRules.Pc, "coding", 90);
+        planner.TallyDay(Today, TallyRules.Phone, "video", 30);
+        planner.TallyDay(Today.AddDays(-14), TallyRules.Phone, "video", 60);
+        planner.TallyDay(Today.AddDays(-49), TallyRules.Pc, "coding", 240);
+        planner.TallyDay(Today.AddDays(-56), TallyRules.Pc, "coding", 500);
+
+        var page = Page();
+
+        Assert.True(page.HasRecentWeeks);
+        Assert.Equal(TallyViewModel.RecentWeeks, page.RecentWeekBars.Count);
+        Assert.Equal([1d, 0d, 0d, 0d, 0d, 0.25, 0d, 0.5], page.RecentWeekBars.Select(bar => bar.Fraction));
+        Assert.True(page.RecentWeekBars[^1].IsCurrent);
+        Assert.Equal([90d, 30d], page.RecentWeekBars[^1].Parts.Select(part => part.Amount));
+        Assert.Equal("Tally.RecentTotal(Tally.Hours(7))", page.RecentTotal);
+        Assert.Equal([("Coding", "Tally.HoursMinutes(5,30)"), ("Video", "Tally.HoursMinutes(1,30)")], page.RecentLegend.Select(segment => (segment.Name, segment.Value)));
+
+        page.Choose(TallyRules.Phone);
+        Assert.Equal([0d, 0d, 0d, 0d, 0d, 1d, 0d, 0.5], page.RecentWeekBars.Select(bar => bar.Fraction));
+        Assert.Equal("Tally.RecentTotal(Tally.HoursMinutes(1,30))", page.RecentTotal);
+    }
+
+    [Fact]
+    public void ThisWeekOnEachDeviceIsABarByCategoryWithItsTotal()
+    {
+        planner.TallyDay(Today, TallyRules.Pc, "coding", 90);
+        planner.TallyDay(Today, TallyRules.Phone, "video", 30);
+        planner.TallyDay(Today.AddDays(-1), TallyRules.Pc, "video", 15);
+        planner.TallyDay(Today.AddDays(-7), TallyRules.Phone, "video", 300);
+
+        var page = Page();
+
+        Assert.Equal(
+            [("Tally.Phone", "Tally.Minutes(30)", 30d / 105d), ("Tally.Pc", "Tally.HoursMinutes(1,45)", 1d)],
+            page.Devices.Select(bar => (bar.Label, bar.Value, bar.Fraction)));
+        Assert.Equal([90d, 15d], page.Devices[1].Parts.Select(part => part.Amount));
+
+        // The category chip narrows both; a device chip doesn't, since the card compares the two.
+        page.Choose("video");
+        page.Choose(TallyRules.Phone);
+        Assert.Equal([("Tally.Phone", 30d), ("Tally.Pc", 15d)], page.Devices.Select(bar => (bar.Label, bar.Parts.Sum(part => part.Amount))));
+    }
+
+    // This PC's log as the tracker gives it: each stretch sorted with the rules as they are now.
+    private IReadOnlyList<TallyStretch> Sorted(DateOnly from, DateOnly to) =>
+    [
+        .. Local(from, to)
+            .Concat(
+            [
+                new(At(Today, 12, 0), At(Today, 12, 40), "notepad.exe", "list.txt - Notepad", TallyRules.Other),
+                new(At(Today, 13, 0), At(Today, 13, 15), "chrome.exe", "Stripes - Zebrafy - Google Chrome", TallyRules.Other),
+                new(At(Today, 13, 15), At(Today, 13, 25), "firefox.exe", "Spots - Zebrafy - Mozilla Firefox", TallyRules.Other),
+            ])
+            .Select(stretch => stretch with
+            {
+                Category = TallyRules.SortSample(new TallySample(TallyRules.Windows, stretch.App, stretch.Title), planner.Tally.Rules(), defaults.Rules).Category,
+            }),
+    ];
+
     // This PC's own log for the page: today's morning, and an evening earlier in the week.
     private static IReadOnlyList<TallyStretch> Local(DateOnly from, DateOnly to) =>
     [
