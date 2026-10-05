@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Habits (docs/habits.md, supabase/migrations/0010_habits.sql). A habit has a cadence (daily; weekdays, with 'weekdays' a bitmask Monday 1, Tuesday 2, Wednesday 4 ... Sunday 64; per_week or per_month, with 'times' N), a measure (check: a day is met by a check-in of value 1 or more; count and amount: by a day's value reaching 'target') a 'direction' (at_least: the target is something to reach, the default a habit without the field has; at_most: the target is a limit, which only a daily or weekday habit can be) and 'startsOn'. Under a limit, a day is kept unless a check-in goes over the number or is failed (a check habit's limit is none at all, so any check-in goes over), a day nobody logged is kept, a pause or a skip is read before the day is judged, and going over misses the day at once, today included. 'over': whether the day went over the limit, which is what turns the ring and the day red. 'due': whether the habit is due on 'day' (weekly and monthly habits are due any day). 'periods': the first and last day of the habit's period holding 'day' (the day; the week from its Monday; the month). 'states': the state of the period starting on 'period', the first that applies of: none (it ends before startsOn, or a day that isn't due), met (days met in it, not skipped, reach 1, or N for a week or month), paused (a pause overlaps it; 'until' null is open-ended), skipped (a check-in in it is skipped), missed at once when a check-in in it is failed (the owner said the period failed, today included), open (it ends on or after 'today'), missed. A check-in's 'failed' is false when the field is left out. 'streaks': met periods counted back from the one holding 'today'; open, paused, skipped and none periods are passed over, the first missed one ends it, and it stops before startsOn. 'heat': a day's heatmap value: null before startsOn or when not due, 'paused' in a pause, 'skipped' for a skipped check-in, 'over' for a limit's failed day and 0 for any other failed day, else the day's value against its target from 0 to 1 (a check is 0 or 1). 'rings': today's ring: the day's value against the target for daily and weekday habits (null when today isn't due), days met so far against N for weekly and monthly ones, at most 1. 'checkinIds': the name-based UUID of 'checkin/<habit id, lowercase>/<day>' in namespace b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91 (a day's one check-in). 'goalAmounts': the check-in values that count toward a numeric goal: habits serving the goal, measured by count or amount, whose unit is the goal's once both are lowercased without spaces, check-ins not skipped, on a day in the goal's period, in input order. 2026-09-18 is a Friday. 'onToday': whether the habit is due on 'today' ('due': not archived, started on or before today, due that day, and not in a pause) and whether Today shows it ('onToday': due, and 'showOnToday' is not false; a habit without the field shows). A habit kept off Today is still due: the Habits page, the Places hub, stats, reviews and goals count it as before. 'groups': which group of the Habits page a habit sits in: 'limits' for a limit (at_most), 'weekly' for a weekly or monthly habit, 'days' for the rest (every day, or chosen weekdays). 'standings': where a habit stands on 'today', the first that applies of: none (archived, not started, or not due that day), paused (a pause covers today), skipped (a check-in in the period holding today is skipped), failed (a check-in in that period is failed; neither done nor left, so it holds nothing up), limit (a limit is never done or left, so it never reads as not done), done (today's ring is full, or a weekly or monthly habit's check-in today meets its day), left. Hide done hides the done ones, and Today's 'left' count counts the left ones. 'dots': a day of the week's dots on a habit card: none (before startsOn, or a day that isn't due), paused, skipped, a failed day (over for a limit, missed for the rest, today included), then for a limit over (a check-in over the number), open (today) or met; for the rest met (the day is met), open (today), none (a weekly or monthly habit's day without one, which misses nothing) or missed. 'allDone': whether Today shows its 'all done' card for the habits on it, from their standings: none is left and at least one is done.",
+  "description": "Habits (docs/habits.md, supabase/migrations/0010_habits.sql). A habit has a cadence (daily; weekdays, with 'weekdays' a bitmask Monday 1, Tuesday 2, Wednesday 4 ... Sunday 64; per_week or per_month, with 'times' N), a measure (check: a day is met by a check-in of value 1 or more; count and amount: by a day's value reaching 'target') a 'direction' (at_least: the target is something to reach, the default a habit without the field has; at_most: a limit) and 'startsOn'. A limit's number is for the day on a daily or weekday habit (the target, or none at all for a check, so any check-in goes over) and for the whole period on a weekly or monthly one (a check habit's 'times', how many days it may have; a count's or an amount's target, the most its days may add up to). It may be 0. What a limit has had by a day is the sum of the values of its check-ins in the period up to and including that day, skipped and failed ones left out. Under a limit, a period is kept unless what it had goes over the number or a check-in in it is failed, a period nobody logged is kept, a pause or a skip is read before it is judged, and going over misses it at once, today included. 'over': whether what the limit had by 'day' goes over its number, which is what turns the ring and the day red. 'due': whether the habit is due on 'day' (weekly and monthly habits are due any day). 'periods': the first and last day of the habit's period holding 'day' (the day; the week from its Monday; the month). 'states': the state of the period starting on 'period', the first that applies of: none (it ends before startsOn, or a day that isn't due), met (days met in it, not skipped, reach 1, or N for a week or month), paused (a pause overlaps it; 'until' null is open-ended), skipped (a check-in in it is skipped), missed at once when a check-in in it is failed (the owner said the period failed, today included), open (it ends on or after 'today'), missed. A check-in's 'failed' is false when the field is left out. 'streaks': met periods counted back from the one holding 'today'; open, paused, skipped and none periods are passed over, the first missed one ends it, and it stops before startsOn. 'heat': a day's heatmap value: null before startsOn or when not due, 'paused' in a pause, 'skipped' for a skipped check-in, 'over' for a limit's failed day and 0 for any other failed day; for a limit, 'over' when what it had by the day goes over, else 1 less the share of its number used (with a number of 0, anything uses it all); else the day's value against its target from 0 to 1 (a check is 0 or 1). 'rings': today's ring: for a limit, the share of its number used by today (null when a daily or weekday limit isn't due; a number of 0 is 0 untouched and 1 once anything is had); else the day's value against the target for daily and weekday habits (null when today isn't due), days met so far against N for weekly and monthly ones, at most 1. 'checkinIds': the name-based UUID of 'checkin/<habit id, lowercase>/<day>' in namespace b8c61b22-5e0c-4f0a-9d1e-6f4a2c7e3b91 (a day's one check-in). 'goalAmounts': the check-in values that count toward a numeric goal: habits serving the goal, measured by count or amount, whose unit is the goal's once both are lowercased without spaces, check-ins not skipped, on a day in the goal's period, in input order. 2026-09-18 is a Friday. 'onToday': whether the habit is due on 'today' ('due': not archived, started on or before today, due that day, and not in a pause) and whether Today shows it ('onToday': due, and 'showOnToday' is not false; a habit without the field shows). A habit kept off Today is still due: the Habits page, the Places hub, stats, reviews and goals count it as before. 'groups': which group of the Habits page a habit sits in: 'limits' for a limit (at_most), 'weekly' for a weekly or monthly habit, 'days' for the rest (every day, or chosen weekdays). 'standings': where a habit stands on 'today', the first that applies of: none (archived, not started, or not due that day), paused (a pause covers today), skipped (a check-in in the period holding today is skipped), failed (a check-in in that period is failed; neither done nor left, so it holds nothing up), limit (a limit is never done or left, so it never reads as not done), done (today's ring is full, or a weekly or monthly habit's check-in today meets its day), left. Hide done hides the done ones, and Today's 'left' count counts the left ones. 'dots': a day of the week's dots on a habit card: none (before startsOn, or a day that isn't due), paused, skipped, a failed day (over for a limit, missed for the rest, today included), then for a limit over (a check-in on the day, and what the limit had by then goes over the number), open (today) or met; for the rest met (the day is met), open (today), none (a weekly or monthly habit's day without one, which misses nothing) or missed. 'allDone': whether Today shows its 'all done' card for the habits on it, from their standings: none is left and at least one is done.",
   "due": [
     {
       "name": "a daily habit is due every day",
@@ -883,6 +883,174 @@
       ],
       "pauses": [],
       "expect": "met"
+    },
+    {
+      "name": "a weekly limit under its number is met once the week is over",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-07",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-08",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-10",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "met"
+    },
+    {
+      "name": "a weekly limit over its number is missed",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-07",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-08",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-10",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-12",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
+    },
+    {
+      "name": "a weekly limit is open while its week runs",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-14",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "open"
+    },
+    {
+      "name": "a weekly limit is missed at once when the week goes over, mid-week",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-14",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
+    },
+    {
+      "name": "a weekly limit of no days is missed by one check-in",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 0,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-14",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
+    },
+    {
+      "name": "a monthly count over its total is missed",
+      "habit": {
+        "cadence": "per_month",
+        "weekdays": null,
+        "times": 1,
+        "measure": "count",
+        "target": 5,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "period": "2026-09-01",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-02",
+          "value": 3,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-10",
+          "value": 3,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "missed"
     }
   ],
   "streaks": [
@@ -1296,6 +1464,38 @@
       ],
       "pauses": [],
       "expect": 1
+    },
+    {
+      "name": "weeks kept under a weekly limit count, and the week still running passes",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-08-31"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-02",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-09",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 2
     }
   ],
   "heat": [
@@ -1574,6 +1774,82 @@
       ],
       "pauses": [],
       "expect": "over"
+    },
+    {
+      "name": "a weekly limit's day fades with what the week had by then",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 4,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 0.5
+    },
+    {
+      "name": "a weekly limit's day past its number is over",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "over"
+    },
+    {
+      "name": "a weekly limit's day before anything was had is full",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-15",
+      "checkins": [
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": 1
     }
   ],
   "rings": [
@@ -1778,6 +2054,94 @@
         }
       ],
       "expect": 0
+    },
+    {
+      "name": "a weekly limit's ring fills with the week so far",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 4,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": 0.5
+    },
+    {
+      "name": "a monthly amount limit's ring fills with the month so far",
+      "habit": {
+        "cadence": "per_month",
+        "weekdays": null,
+        "times": 1,
+        "measure": "amount",
+        "target": 10,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-02",
+          "value": 3,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": 0.4
+    },
+    {
+      "name": "a limit of 0 untouched is empty",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 0,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [],
+      "expect": 0
+    },
+    {
+      "name": "a limit of 0 used is full",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 0,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": 1
     }
   ],
   "over": [
@@ -1905,6 +2269,192 @@
           "skipped": false
         }
       ],
+      "expect": false
+    },
+    {
+      "name": "a weekly limit goes over on the day the week passes its number",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": true
+    },
+    {
+      "name": "the day before, the week was still at its number",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-17",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": false
+    },
+    {
+      "name": "a monthly count right on its total is not over",
+      "habit": {
+        "cadence": "per_month",
+        "weekdays": null,
+        "times": 1,
+        "measure": "count",
+        "target": 5,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-10",
+      "checkins": [
+        {
+          "day": "2026-09-02",
+          "value": 3,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-10",
+          "value": 2,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": false
+    },
+    {
+      "name": "a monthly count goes over once its days add up past the total",
+      "habit": {
+        "cadence": "per_month",
+        "weekdays": null,
+        "times": 1,
+        "measure": "count",
+        "target": 5,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-02",
+          "value": 3,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-10",
+          "value": 2,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": true
+    },
+    {
+      "name": "last week's check-ins don't count this week",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-15",
+      "checkins": [
+        {
+          "day": "2026-09-13",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": false
+    },
+    {
+      "name": "a limit of 0 goes over with anything",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 0,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-18",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "expect": true
+    },
+    {
+      "name": "a limit of 0 with nothing had is kept",
+      "habit": {
+        "cadence": "daily",
+        "weekdays": null,
+        "times": null,
+        "measure": "count",
+        "target": 0,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-18",
+      "checkins": [],
       "expect": false
     }
   ],
@@ -2369,6 +2919,19 @@
         "target": null,
         "startsOn": "2026-09-01",
         "direction": "at_most"
+      },
+      "expect": "limits"
+    },
+    {
+      "name": "a weekly limit is with the limits",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
       },
       "expect": "limits"
     }
@@ -2880,6 +3443,28 @@
       ],
       "pauses": [],
       "expect": "skipped"
+    },
+    {
+      "name": "a weekly limit is a limit",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 2,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-15",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "limit"
     }
   ],
   "dots": [
@@ -3271,6 +3856,90 @@
       ],
       "pauses": [],
       "expect": "over"
+    },
+    {
+      "name": "a weekly limit's day that took it over is over",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-16",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "over"
+    },
+    {
+      "name": "a weekly limit's day still within its number is met",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-14",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "met"
+    },
+    {
+      "name": "a weekly limit's clean day after it went over is met",
+      "habit": {
+        "cadence": "per_week",
+        "weekdays": null,
+        "times": 1,
+        "measure": "check",
+        "target": null,
+        "direction": "at_most",
+        "startsOn": "2026-09-01"
+      },
+      "day": "2026-09-17",
+      "today": "2026-09-18",
+      "checkins": [
+        {
+          "day": "2026-09-14",
+          "value": 1,
+          "skipped": false
+        },
+        {
+          "day": "2026-09-16",
+          "value": 1,
+          "skipped": false
+        }
+      ],
+      "pauses": [],
+      "expect": "met"
     }
   ],
   "allDone": [
