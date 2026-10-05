@@ -1310,6 +1310,81 @@ Deno.test({
         assert(nothing.isError, nothing.text);
       });
 
+      await t.step("events are added, shown, moved, deleted and undone through the connector", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const eventOf = (text: string) => /\(event id ([0-9a-f-]{36})\)/.exec(text)![1];
+        const rowOf = async (id: string) =>
+          (await sql`
+            select title, starts_on::text, ends_on::text, area_id is not null as filed, notes, made_by,
+                   deleted_at is not null as deleted
+            from public.events where id = ${id}`)[0];
+        const today = planningDay(localNow("Europe/Prague", new Date()), 4);
+
+        const trip = await client.tool("add_event", {
+          title: "Prague",
+          from: addDays(today, -1),
+          to: addDays(today, 2),
+          area: "Travel",
+          notes: "Hotel by the river",
+        });
+        assert(!trip.isError, trip.text);
+        const tripId = eventOf(trip.text);
+        assertEquals(await rowOf(tripId), {
+          title: "Prague",
+          starts_on: addDays(today, -1),
+          ends_on: addDays(today, 2),
+          filed: true,
+          notes: "Hotel by the river",
+          made_by: "claude",
+          deleted: false,
+        });
+
+        for (
+          const bad of [
+            { title: "Backwards", from: today, to: addDays(today, -1) },
+            { title: "Too long", from: today, to: addDays(today, 367) },
+            { title: " ", from: today },
+            { title: "Not a day", from: "next week" },
+          ]
+        ) {
+          const refused = await client.tool("add_event", bad);
+          assert(refused.isError, `${bad.title}: ${refused.text}`);
+        }
+
+        // A stranger's event never shows.
+        await sql`
+          insert into public.events (id, owner_id, title, starts_on, ends_on, made_by)
+          values (${crypto.randomUUID()}, ${STRANGER}, ${"The stranger's trip"}, ${today}, ${today}, ${"owner"})`;
+
+        const onToday = await client.tool("get_today");
+        assertStringIncludes(
+          onToday.text,
+          `Going on:\n- Prague · day 2 of 4 · @Travel · by Claude (event id ${tripId})`,
+        );
+        assert(!onToday.text.includes("stranger"), onToday.text);
+        const calendar = await client.tool("get_calendar", { from: addDays(today, -1), to: addDays(today, 3) });
+        assertStringIncludes(calendar.text, "- Event: Prague · day 1 of 4");
+        assertStringIncludes(calendar.text, "- Event: Prague · day 4 of 4");
+        assert(!calendar.text.includes("stranger"), calendar.text);
+
+        const moved = await client.tool("update_event", { id: tripId, from: addDays(today, 7), area: "" });
+        assert(!moved.isError, moved.text);
+        const row = await rowOf(tripId);
+        assertEquals([row.starts_on, row.ends_on, row.filed], [addDays(today, 7), addDays(today, 10), false]);
+        assert(!(await client.tool("get_today")).text.includes("Going on"), "a moved event is no longer on");
+
+        const deleted = await client.tool("delete_event", { id: tripId });
+        assert(!deleted.isError, deleted.text);
+        assertStringIncludes(deleted.text, 'Deleted the event "Prague"');
+        assertEquals((await rowOf(tripId)).deleted, true);
+        const history = await client.tool("get_activity", { limit: 10 });
+        const change = history.text.split("\n").find((line) => line.startsWith("- delete") && line.includes(tripId));
+        assert(change !== undefined, history.text);
+        const undone = await client.tool("undo_change", { id: /\(change id ([0-9]+)/.exec(change)![1] });
+        assert(!undone.isError, undone.text);
+        assertEquals((await rowOf(tripId)).deleted, false, "undo brings the event back");
+      });
+
       await t.step("the 121st call in a minute is refused", async () => {
         await sql`
           update public.connector_links set window_started_at = now(), window_calls = 120
