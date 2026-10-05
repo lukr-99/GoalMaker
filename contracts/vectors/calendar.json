@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday. A case with 'area' or 'tag' is narrowed by the lists' filter (contracts/vectors/lists.json, 'filter', a task without an area taking its project's from 'projects'): the planned tasks, deadlines, repeats and reminders of the tasks it leaves out don't show, but an occurrence it leaves out still keeps its day from being a repeat. 'eventDays': the events each day from 'from' to 'to' holds: every event whose first day is on or before it and whose last day on or after it, deleted ones left out, earliest first day first, then the longest, then by title, then by id; an 'area' keeps that area's events, and a 'tag' keeps none, since events have no tags. 'bars': for a grid from 'start' (a Monday) to 'end' (a Sunday), the bars each week row draws, one per event that touches the row: its first and last column in the row (0 is Monday), whether it goes on before the row or after it, and its lane. Lanes are given over the whole grid in the day order above, each event taking the lowest lane whose last event ended before its first day in the grid, so an event keeps its lane from row to row; a row lists its bars by lane. 'ongoing': the events 'day' falls inside, in the same order, with which day of the event it is and how many days it has (Today says 'day 2 of 4' when it has more than one).",
+  "description": "The calendar (docs/calendar.md, spec story 68). 'grids': the days a week or a month view covers: a week runs from its Monday to its Sunday; a month runs from the Monday on or before its first day to the Sunday on or after its last, so the grid is whole weeks. 'days': what each day from 'from' to 'to' holds. 'planned': the tasks planned for that day, deleted and dropped ones left out, earliest time first, tasks without a time after them, then oldest first and by id. 'deadlines': the tasks whose deadline is that day and that are not done, dropped or deleted, in the same order. 'reminders': how many reminders ring that day. 'repeats': the days a repeating task would come round to inside the range, worked out from its rule (docs/repeating.md), only for a task that is still open, never on the day it is already planned for, and never on a day another occurrence of the same series is planned for. 2026-09-18 is a Friday. A case with 'area' or 'tag' is narrowed by the lists' filter (contracts/vectors/lists.json, 'filter', a task without an area taking its project's from 'projects'): the planned tasks, deadlines, repeats and reminders of the tasks it leaves out don't show, but an occurrence it leaves out still keeps its day from being a repeat. 'eventDays': the events each day from 'from' to 'to' holds: every event whose first day is on or before it and whose last day on or after it, deleted ones left out, earliest first day first, then the longest, then by title, then by id; an 'area' keeps that area's events, and a 'tag' keeps none, since events have no tags. 'bars': for a grid from 'start' (a Monday) to 'end' (a Sunday), the bars each week row draws, one per event that touches the row: its first and last column in the row (0 is Monday), whether it goes on before the row or after it, and its lane. Lanes are given over the whole grid in the day order above, each event taking the lowest lane whose last event ended before its first day in the grid, so an event keeps its lane from row to row; a row lists its bars by lane. 'ongoing': the events 'day' falls inside, in the same order, with which day of the event it is and how many days it has (Today says 'day 2 of 4' when it has more than one). 'picked': what the calendar's bottom bar makes from the days picked (in the order they were picked, maybe with gaps and repeats): 'event' is one event from the earliest picked day to the latest, gaps included; 'tasks' is the picked days without repeats, earliest first, one copy of the task planned on each. A pick wider than an event may be (more than 366 days between the first and last day) gives no event.",
   "grids": [
     {
       "kind": "week",
@@ -1019,6 +1019,115 @@
         }
       ],
       "expect": []
+    }
+  ],
+  "picked": [
+    {
+      "name": "one day",
+      "days": [
+        "2026-10-12"
+      ],
+      "event": {
+        "startsOn": "2026-10-12",
+        "endsOn": "2026-10-12"
+      },
+      "tasks": [
+        "2026-10-12"
+      ]
+    },
+    {
+      "name": "a run of days",
+      "days": [
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-14"
+      ],
+      "event": {
+        "startsOn": "2026-10-12",
+        "endsOn": "2026-10-14"
+      },
+      "tasks": [
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-14"
+      ]
+    },
+    {
+      "name": "picked out of order",
+      "days": [
+        "2026-10-14",
+        "2026-10-12",
+        "2026-10-13"
+      ],
+      "event": {
+        "startsOn": "2026-10-12",
+        "endsOn": "2026-10-14"
+      },
+      "tasks": [
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-14"
+      ]
+    },
+    {
+      "name": "gaps: the event covers them, the tasks skip them",
+      "days": [
+        "2026-10-05",
+        "2026-10-07",
+        "2026-10-09"
+      ],
+      "event": {
+        "startsOn": "2026-10-05",
+        "endsOn": "2026-10-09"
+      },
+      "tasks": [
+        "2026-10-05",
+        "2026-10-07",
+        "2026-10-09"
+      ]
+    },
+    {
+      "name": "a day picked twice counts once",
+      "days": [
+        "2026-10-12",
+        "2026-10-13",
+        "2026-10-12"
+      ],
+      "event": {
+        "startsOn": "2026-10-12",
+        "endsOn": "2026-10-13"
+      },
+      "tasks": [
+        "2026-10-12",
+        "2026-10-13"
+      ]
+    },
+    {
+      "name": "across a month end",
+      "days": [
+        "2026-09-30",
+        "2026-10-01"
+      ],
+      "event": {
+        "startsOn": "2026-09-30",
+        "endsOn": "2026-10-01"
+      },
+      "tasks": [
+        "2026-09-30",
+        "2026-10-01"
+      ]
+    },
+    {
+      "name": "too wide for an event",
+      "days": [
+        "2026-01-01",
+        "2027-01-03"
+      ],
+      "event": null,
+      "tasks": [
+        "2026-01-01",
+        "2027-01-03"
+      ]
     }
   ]
 }
