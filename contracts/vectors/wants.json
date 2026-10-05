@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 'notify': the one notification a day for wants (M8-05): at the owner's time on a planning day, the wants that became ready since the day of the last notification's moment at or before 'since' (the device's last look), up to today; nothing before the time, nothing once shown, nothing when switched off (time null). Quiet hours don't move it: the owner picked the time, like the review reminders. 'notifyNext': the moment the alarm waits for, the time on the first day an undecided want cools that is still to come. 'notifyStale': a notification on screen goes once none of the wants it named is still waiting (decided, deleted or gone). 2026-09-28 is a Monday.",
+  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 'notify': the one notification a day for wants (M8-05): at the owner's time on a planning day, the wants that became ready since the day of the last notification's moment at or before 'since' (the device's last look), up to today; nothing before the time, nothing once shown, nothing when switched off (time null). Quiet hours don't move it: the owner picked the time, like the review reminders. 'notifyNext': the moment the alarm waits for, the time on the first day an undecided want cools that is still to come. 'notifyStale': a notification on screen goes once none of the wants it named is still waiting (decided, deleted or gone). 2026-09-28 is a Monday. Needs (supabase/migrations/0025_wants_needs.sql): a want's 'kind' is 'want' (the default when the field is left out) or 'need', something to buy rather than wait out. 'cooldown' with 'kind' need is 0 whatever the price. A need is ready the day it is added and stays out of 'ready' (the notification) and 'stats'. 'needs': the open needs of a list (not decided, not deleted, wants left out), by 'needBy' (none last), then 'addedOn', then title ignoring case. 'needLate': whether an open need's 'needBy' is before the planning day 'today'; a need without one, or a decided one, is never late.",
   "defaults": {
     "smallUnder": 1000,
     "smallDays": 7,
@@ -115,6 +115,20 @@
         "currency": "EUR"
       },
       "expect": 5
+    },
+    {
+      "name": "a need skips the cooldown, whatever its price",
+      "price": 12900,
+      "currency": "CZK",
+      "kind": "need",
+      "expect": 0
+    },
+    {
+      "name": "a need without a price skips it too",
+      "price": null,
+      "currency": "CZK",
+      "kind": "need",
+      "expect": 0
     }
   ],
   "coolsUntil": [
@@ -406,6 +420,31 @@
       "lastNotified": "2026-10-05",
       "today": "2026-10-05",
       "expect": []
+    },
+    {
+      "name": "a need never rings with the wants",
+      "wants": [
+        {
+          "id": "a",
+          "title": "Trail shoes",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false
+        },
+        {
+          "id": "n",
+          "title": "Winter tyres",
+          "coolsUntil": "2026-10-05",
+          "decision": null,
+          "deleted": false,
+          "kind": "need"
+        }
+      ],
+      "lastNotified": "2026-10-04",
+      "today": "2026-10-05",
+      "expect": [
+        "a"
+      ]
     }
   ],
   "stats": [
@@ -500,6 +539,43 @@
         "bought": 0,
         "dropped": 2,
         "notSpent": 20
+      }
+    },
+    {
+      "name": "needs stay out of bought against dropped and the money not spent",
+      "currency": "CZK",
+      "wants": [
+        {
+          "price": 2890,
+          "currency": "CZK",
+          "decision": "bought",
+          "deleted": false
+        },
+        {
+          "price": 450,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false
+        },
+        {
+          "price": 5000,
+          "currency": "CZK",
+          "decision": "bought",
+          "deleted": false,
+          "kind": "need"
+        },
+        {
+          "price": 800,
+          "currency": "CZK",
+          "decision": "dropped",
+          "deleted": false,
+          "kind": "need"
+        }
+      ],
+      "expect": {
+        "bought": 1,
+        "dropped": 1,
+        "notSpent": 450
       }
     }
   ],
@@ -801,6 +877,158 @@
         }
       ],
       "expect": true
+    }
+  ],
+  "needs": [
+    {
+      "name": "by the day needed, the ones without a day last by when they were added, then by title",
+      "wants": [
+        {
+          "id": "t",
+          "title": "Winter tyres",
+          "coolsUntil": "2026-10-01",
+          "decision": null,
+          "deleted": false,
+          "kind": "need",
+          "addedOn": "2026-10-01",
+          "needBy": "2026-11-01"
+        },
+        {
+          "id": "i",
+          "title": "printer ink",
+          "coolsUntil": "2026-10-03",
+          "decision": null,
+          "deleted": false,
+          "kind": "need",
+          "addedOn": "2026-10-03"
+        },
+        {
+          "id": "b",
+          "title": "Batteries",
+          "coolsUntil": "2026-10-03",
+          "decision": null,
+          "deleted": false,
+          "kind": "need",
+          "addedOn": "2026-10-03"
+        },
+        {
+          "id": "c",
+          "title": "Coat",
+          "coolsUntil": "2026-10-02",
+          "decision": null,
+          "deleted": false,
+          "kind": "need",
+          "addedOn": "2026-10-02",
+          "needBy": "2026-10-20"
+        },
+        {
+          "id": "w",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-30",
+          "decision": null,
+          "deleted": false,
+          "addedOn": "2026-10-01"
+        },
+        {
+          "id": "d",
+          "title": "Dish rack",
+          "coolsUntil": "2026-09-30",
+          "decision": "bought",
+          "deleted": false,
+          "kind": "need",
+          "addedOn": "2026-09-30"
+        },
+        {
+          "id": "x",
+          "title": "Old charger",
+          "coolsUntil": "2026-09-30",
+          "decision": null,
+          "deleted": true,
+          "kind": "need",
+          "addedOn": "2026-09-30"
+        }
+      ],
+      "expect": [
+        "c",
+        "t",
+        "b",
+        "i"
+      ]
+    },
+    {
+      "name": "no needs",
+      "wants": [
+        {
+          "id": "w",
+          "title": "Kindle",
+          "coolsUntil": "2026-10-30",
+          "decision": null,
+          "deleted": false,
+          "addedOn": "2026-10-01"
+        }
+      ],
+      "expect": []
+    }
+  ],
+  "needLate": [
+    {
+      "name": "a need past its day is late",
+      "want": {
+        "id": "c",
+        "title": "Coat",
+        "coolsUntil": "2026-10-02",
+        "decision": null,
+        "deleted": false,
+        "kind": "need",
+        "addedOn": "2026-10-02",
+        "needBy": "2026-10-20"
+      },
+      "today": "2026-10-21",
+      "expect": true
+    },
+    {
+      "name": "on its day it is not late yet",
+      "want": {
+        "id": "c",
+        "title": "Coat",
+        "coolsUntil": "2026-10-02",
+        "decision": null,
+        "deleted": false,
+        "kind": "need",
+        "addedOn": "2026-10-02",
+        "needBy": "2026-10-20"
+      },
+      "today": "2026-10-20",
+      "expect": false
+    },
+    {
+      "name": "a need without a day is never late",
+      "want": {
+        "id": "i",
+        "title": "Ink",
+        "coolsUntil": "2026-10-03",
+        "decision": null,
+        "deleted": false,
+        "kind": "need",
+        "addedOn": "2026-10-03"
+      },
+      "today": "2027-01-01",
+      "expect": false
+    },
+    {
+      "name": "a bought need is not late",
+      "want": {
+        "id": "c",
+        "title": "Coat",
+        "coolsUntil": "2026-10-02",
+        "decision": "bought",
+        "deleted": false,
+        "kind": "need",
+        "addedOn": "2026-10-02",
+        "needBy": "2026-10-20"
+      },
+      "today": "2026-10-21",
+      "expect": false
     }
   ]
 }

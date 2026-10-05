@@ -12,6 +12,10 @@ public static class WantRules
     public const string Bought = "bought";
     public const string Dropped = "dropped";
 
+    /// <summary>What a row is (supabase/migrations/0025_wants_needs.sql): a want to wait out, or a need to buy.</summary>
+    public const string Want = "want";
+    public const string Need = "need";
+
     /// <summary>The composer command that opens the Wants page with a new want (<c>/want Trail shoes</c>).</summary>
     public const string Command = "want";
 
@@ -24,9 +28,14 @@ public static class WantRules
     public static string CooldownsId(string owner) =>
         NameBasedUuid.Of(Namespace, "want-cooldowns/" + owner.ToLowerInvariant());
 
-    /// <summary>The days a new want waits: <paramref name="picked"/> when the owner chose, otherwise by its price.</summary>
-    public static int CooldownDays(double? price, string currency, WantCooldowns cooldowns, int? picked = null)
+    /// <summary>The days a new want waits: none for a need, <paramref name="picked"/> when the owner chose, otherwise by its price.</summary>
+    public static int CooldownDays(double? price, string currency, WantCooldowns cooldowns, int? picked = null, string kind = Want)
     {
+        if (kind == Need)
+        {
+            return 0;
+        }
+
         if (picked is { } days)
         {
             return Math.Clamp(days, 0, MaxDays);
@@ -75,7 +84,7 @@ public static class WantRules
     public static IReadOnlyList<WantItem> Ready(IEnumerable<WantItem> wants, DateOnly? lastNotified, DateOnly today) =>
     [
         .. wants
-            .Where(want => !want.Deleted && want.Decision is null && want.CoolsUntil <= today
+            .Where(want => !want.Deleted && want.Kind != Need && want.Decision is null && want.CoolsUntil <= today
                 && (lastNotified is { } last ? want.CoolsUntil > last : want.CoolsUntil == today))
             .OrderBy(want => want.CoolsUntil)
             .ThenBy(want => want.Title.ToLower(CultureInfo.InvariantCulture), StringComparer.Ordinal),
@@ -84,11 +93,26 @@ public static class WantRules
     /// <summary>Bought and dropped, and the dropped prices in <paramref name="currency"/> added up; deleted wants never count.</summary>
     public static WantStats Stats(IEnumerable<WantItem> wants, string currency)
     {
-        var kept = wants.Where(want => !want.Deleted).ToList();
+        var kept = wants.Where(want => !want.Deleted && want.Kind != Need).ToList();
         var dropped = kept.Where(want => want.Decision == Dropped).ToList();
         return new WantStats(
             kept.Count(want => want.Decision == Bought),
             dropped.Count,
             dropped.Where(want => want.Currency == currency).Sum(want => want.Price ?? 0));
     }
+
+    /// <summary>The open needs: by the day they are needed by (none last), then when they were added, then by title.</summary>
+    public static IReadOnlyList<WantItem> Needs(IEnumerable<WantItem> wants) =>
+    [
+        .. wants
+            .Where(want => !want.Deleted && want.Kind == Need && want.Decision is null)
+            .OrderBy(want => want.NeedBy is null)
+            .ThenBy(want => want.NeedBy)
+            .ThenBy(want => want.AddedOn)
+            .ThenBy(want => want.Title.ToLower(CultureInfo.InvariantCulture), StringComparer.Ordinal),
+    ];
+
+    /// <summary>Whether an open need's day passed before the planning day <paramref name="today"/>.</summary>
+    public static bool NeedLate(WantItem want, DateOnly today) =>
+        want.Kind == Need && want.Decision is null && want.NeedBy is { } day && day < today;
 }
