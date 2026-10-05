@@ -124,6 +124,32 @@ public sealed class BottomBarTests : IDisposable
     }
 
     [Fact]
+    public async Task ALimitLineAddsAnAtMostHabit()
+    {
+        var habits = Habits();
+        habits.Bar.Line = "Coffee at most 3 cups a day";
+
+        Assert.Equal(["Habits.BarLimit", "Habits.CadenceDaily", "Habits.BarMostUnit(3,cups)"], habits.Bar.Chips.Select(chip => chip.Label));
+        await habits.Bar.PressCommand.ExecuteAsync(null);
+
+        var habit = Assert.Single(planner.Habits.All());
+        Assert.Equal(("Coffee", HabitRules.Daily, HabitRules.Count, 3.0, HabitRules.AtMost), (habit.Name, habit.Cadence, habit.Measure, habit.Target, habit.Direction));
+    }
+
+    [Fact]
+    public async Task ANoLineAddsALimitOfNotOnce()
+    {
+        var habits = Habits();
+        habits.Bar.Line = "No casino this month";
+
+        Assert.Equal(["Habits.BarLimit", "Habits.NotOnceMonth", "Habits.BarCheck"], habits.Bar.Chips.Select(chip => chip.Label));
+        await habits.Bar.PressCommand.ExecuteAsync(null);
+
+        var habit = Assert.Single(planner.Habits.All());
+        Assert.Equal(("casino", HabitRules.PerMonth, 0, HabitRules.Check, HabitRules.AtMost), (habit.Name, habit.Cadence, habit.Times, habit.Measure, habit.Direction));
+    }
+
+    [Fact]
     public async Task AHabitLineWithNoNameOpensTheEditorFilledIn()
     {
         var habits = Habits();

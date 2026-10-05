@@ -48,6 +48,11 @@ A limit's number may be 0, which is "not once". What it covers depends on the ca
 | per_week, per_month, check | how many days in the period it may happen (`times`, from 0) | takeaway at most 2 days a week |
 | per_week, per_month, count or amount | the most the period's check-ins may add up to (the target; `times` is not read) | at most 5 drinks a month |
 
+A limit can be typed in the bottom bar too: "Coffee at most 3 cups a day", "Takeaway at most 2 days a
+week", "At most 2 takeaways a week", "No casino this month" ([composer](composer.md)). A weekly or
+monthly check limit reads "at most 2 days a week" (or "not once a month" for 0) where other habits
+read "2 times a week".
+
 What a limit **had** by a day is the sum of its check-ins in the period up to and including that day,
 skipped and failed ones left out. On a daily habit that is just the day's value (Supabase migration
 0024 let a week or a month be a limit, and a limit be 0).

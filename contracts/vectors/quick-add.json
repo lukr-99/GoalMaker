@@ -35,7 +35,7 @@
     ]
   },
   "habits": {
-    "defaults": { "name": "", "cadence": "daily", "weekdays": null, "times": null, "measure": "check", "target": null, "unit": null },
+    "defaults": { "name": "", "cadence": "daily", "weekdays": null, "times": null, "measure": "check", "target": null, "unit": null, "direction": "at_least" },
     "cases": [
       { "name": "a plain line is a daily check", "line": "Floss", "expect": { "name": "Floss" } },
       { "name": "an empty line", "line": "", "expect": {} },
@@ -71,7 +71,27 @@
       { "name": "thousands split by a space", "line": "Walk 10 000 steps a day", "expect": { "name": "Walk", "measure": "amount", "target": 10000, "unit": "steps" } },
       { "name": "a number before a small word is no amount", "line": "Visit 2 of my friends", "expect": { "name": "Visit 2 of my friends" } },
       { "name": "a zero is no amount", "line": "Smoke 0 cigarettes", "expect": { "name": "Smoke 0 cigarettes" } },
-      { "name": "only the cadence leaves no name", "line": "every day", "expect": {} }
+      { "name": "only the cadence leaves no name", "line": "every day", "expect": {} },
+      {"name": "at most with a count a day is a daily limit", "line": "Coffee at most 3 cups a day", "expect": {"name": "Coffee", "direction": "at_most", "measure": "count", "target": 3, "unit": "cups"}},
+      {"name": "max is at most", "line": "Max 2 snacks a day", "expect": {"name": "", "direction": "at_most", "measure": "count", "target": 2, "unit": "snacks"}},
+      {"name": "a count limit for the week adds up the week", "line": "At most 2 takeaways a week", "expect": {"name": "", "direction": "at_most", "cadence": "per_week", "times": 1, "measure": "count", "target": 2, "unit": "takeaways"}},
+      {"name": "the name around a weekly count limit", "line": "Takeaway food at most 2 orders a week", "expect": {"name": "Takeaway food", "direction": "at_most", "cadence": "per_week", "times": 1, "measure": "count", "target": 2, "unit": "orders"}},
+      {"name": "an amount limit for the month", "line": "Gaming no more than 20 hours a month", "expect": {"name": "Gaming", "direction": "at_most", "cadence": "per_month", "times": 1, "measure": "amount", "target": 20, "unit": "hours"}},
+      {"name": "days a week under a limit is a check", "line": "Takeaway at most 2 days a week", "expect": {"name": "Takeaway", "direction": "at_most", "cadence": "per_week", "times": 2}},
+      {"name": "times a week under a limit", "line": "Fast food max 1 time a month", "expect": {"name": "Fast food", "direction": "at_most", "cadence": "per_month", "times": 1}},
+      {"name": "a plain number a week under a limit", "line": "Sweets at most 3 a week", "expect": {"name": "Sweets", "direction": "at_most", "cadence": "per_week", "times": 3}},
+      {"name": "once a week under a limit", "line": "Cheat meal at most once a week", "expect": {"name": "Cheat meal", "direction": "at_most", "cadence": "per_week", "times": 1}},
+      {"name": "a limit may be zero", "line": "Energy drinks at most 0 cans a week", "expect": {"name": "Energy drinks", "direction": "at_most", "cadence": "per_week", "times": 1, "measure": "count", "target": 0, "unit": "cans"}},
+      {"name": "no at the start is not once a day", "line": "No sugar", "expect": {"name": "sugar", "direction": "at_most"}},
+      {"name": "never at the start", "line": "Never skip breakfast", "expect": {"name": "skip breakfast", "direction": "at_most"}},
+      {"name": "no with this month is not once that month", "line": "No casino this month", "expect": {"name": "casino", "direction": "at_most", "cadence": "per_month", "times": 0}},
+      {"name": "no with a week", "line": "No alcohol a week", "expect": {"name": "alcohol", "direction": "at_most", "cadence": "per_week", "times": 0}},
+      {"name": "no keeps an every-day cadence", "line": "No phone in bed every day", "expect": {"name": "phone in bed", "direction": "at_most"}},
+      {"name": "no inside the line is a word", "line": "Say no to dessert", "expect": {"name": "Say no to dessert"}},
+      {"name": "a plain number a week without a limit stays text", "line": "Swim 3 a week", "expect": {"name": "Swim 3 a week"}},
+      {"name": "a count a week without a limit stays a daily count", "line": "Run 20 km a week", "expect": {"name": "Run a week", "measure": "amount", "target": 20, "unit": "km"}},
+      {"name": "at most with nothing to limit is still a limit", "line": "Doomscroll at most", "expect": {"name": "Doomscroll", "direction": "at_most"}},
+      {"name": "more than seven days a week under a limit stays text", "line": "Snack at most 9 days a week", "expect": {"name": "Snack 9 days a week", "direction": "at_most"}}
     ]
   },
   "goals": {

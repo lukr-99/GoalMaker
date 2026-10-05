@@ -1214,12 +1214,13 @@ export const tools: Tool[] = [
       "per_month, count, target 5). A limit's number may be 0; a habit to build needs a target above 0 and times " +
       "of at least 1. A habit may serve a numeric goal, " +
       'and its check-ins then count toward that goal. A short line like "Swim 2 times a week 40 min" can go in ' +
-      "line instead of name, cadence, measure, target and unit.",
+      "line instead of name, cadence, measure, target, unit and direction.",
     input: {
       line: z.string().optional().describe(
         'The habit as the owner said it, like "Swim 2 times a week 40 min", "Read 20 pages every day" or "Piano ' +
           'every mon and thu": how often (every day by default) and how much (a plain check by default) are read ' +
-          "from it. Fields given apart win.",
+          'from it, and a limit too ("Coffee at most 3 cups a day", "At most 2 takeaways a week", "No casino this ' +
+          'month"). Fields given apart win.',
       ),
       name: z.string().optional().describe("What the habit is, in the owner's words. Needed without a line."),
       emoji: z.string().optional().describe("One emoji for the habit."),
@@ -1255,6 +1256,7 @@ export const tools: Tool[] = [
           fields.target = read.target;
           fields.unit ??= read.unit;
         }
+        fields.direction ??= read.direction;
       }
       const habit = await planner.addHabit(fields);
       return ["Habit added.", await habitLineFor(planner, habit)].join("\n");

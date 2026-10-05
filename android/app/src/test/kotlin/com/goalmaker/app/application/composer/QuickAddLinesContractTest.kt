@@ -40,6 +40,7 @@ class QuickAddLinesContractTest {
             "measure" to habit.measure,
             "target" to habit.target,
             "unit" to habit.unit,
+            "direction" to habit.direction,
         )
     }
 

@@ -42,6 +42,7 @@ public sealed class HabitBarViewModel : BarViewModel
         Measure = line.Measure,
         Target = line.Target,
         Unit = line.Unit,
+        Direction = line.Direction,
     };
 
     protected override void OnLineEdited() => read = QuickAddLines.ReadHabit(Line);
@@ -65,6 +66,7 @@ public sealed class HabitBarViewModel : BarViewModel
             Measure = habit.Measure,
             Target = habit.Target,
             Unit = habit.Unit,
+            Direction = habit.Direction,
         }) is not null;
     }
 
@@ -78,10 +80,17 @@ public sealed class HabitBarViewModel : BarViewModel
             yield break;
         }
 
+        var limit = read.Direction == HabitRules.AtMost;
+        if (limit)
+        {
+            yield return ComposerChipViewModel.Shown(Strings.Get("Habits.BarLimit"), SymbolRegular.Prohibited24);
+        }
+
         yield return ComposerChipViewModel.Shown(HabitRowViewModel.Cadence(Item(read, today()), Strings), SymbolRegular.ArrowRepeatAll24);
+        var key = limit ? "Habits.BarMost" : "Habits.BarTarget";
         yield return read.Target is { } target
             ? ComposerChipViewModel.Shown(
-                read.Unit is { } unit ? Strings.Get("Habits.BarTargetUnit", HabitRowViewModel.Amount(target), unit) : Strings.Get("Habits.BarTarget", HabitRowViewModel.Amount(target)),
+                read.Unit is { } unit ? Strings.Get(key + "Unit", HabitRowViewModel.Amount(target), unit) : Strings.Get(key, HabitRowViewModel.Amount(target)),
                 SymbolRegular.Ruler24)
             : ComposerChipViewModel.Shown(Strings.Get("Habits.BarCheck"), SymbolRegular.CheckmarkCircle24);
     }

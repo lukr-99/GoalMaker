@@ -1,6 +1,7 @@
 package com.goalmaker.app.ui.habits
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.TrackChanges
@@ -18,8 +19,8 @@ import com.goalmaker.app.ui.composer.ComposerChip
 
 /**
  * The bottom bar's preview on Habits (docs/composer.md): how often ("Every day", "2 times a week",
- * "Mon, Wed, Fri") and how much ("8 glasses a day", "40 min", "A simple check"). Nothing while the
- * line is empty.
+ * "Mon, Wed, Fri"), how much ("8 glasses a day", "40 min", "A simple check"), and whether it is a
+ * limit to stay under ("At most 3 cups a day", "No sugar"). Nothing while the line is empty.
  */
 @Composable
 internal fun habitLineChips(line: String, draft: HabitDraft): List<ComposerChip> {
@@ -36,9 +37,10 @@ internal fun habitLineChips(line: String, draft: HabitDraft): List<ComposerChip>
         onDays -> stringResource(R.string.bar_habit_amount_day, amountText(target, locale), unit)
         else -> stringResource(R.string.bar_habit_amount, amountText(target, locale), unit)
     }
-    return listOf(
+    return listOfNotNull(
         chip(cadenceText(draft.asNewHabit()), Icons.Outlined.Repeat),
         chip(measure, if (draft.measure == HabitRules.CHECK) Icons.Outlined.CheckCircle else Icons.Outlined.TrackChanges),
+        if (draft.direction == HabitRules.AT_MOST) chip(stringResource(R.string.habits_at_most), Icons.Outlined.Block) else null,
     )
 }
 
