@@ -1162,7 +1162,7 @@ export const tools: Tool[] = [
       id: habitId,
       day: z.string().optional().describe("The day to check in on. Today by default."),
       amount: z.number().optional().describe("How much, for a habit that counts or measures something."),
-      fill: z.boolean().optional().describe("Log the rest of an amount habit's target instead of an amount."),
+      fill: z.boolean().optional().describe("Fill an amount habit up to its target."),
     },
     readOnly: false,
     destructive: false,

@@ -103,7 +103,7 @@ round sends the whole thread and every tool's declaration again. So the chat kee
   rules ([composer](composer.md#adding-on-wants-habits-and-goals)), says the rest. `add_want` takes a
   line too. The system prompt says to pass the owner's words as the line, and to ask for a want's
   reason when it has none.
-- `assistant_test.ts` keeps every round's declarations under 16,000 characters (about 15,800 now).
+- `assistant_test.ts` keeps every round's declarations under 16,000 characters (about 15,990 now).
 - The system prompt names the owner's areas, tags and active projects, so the model doesn't spend a
   round looking them up.
 - Thinking is set to minimal: choosing a planner tool needs little of it, and it was most of a
