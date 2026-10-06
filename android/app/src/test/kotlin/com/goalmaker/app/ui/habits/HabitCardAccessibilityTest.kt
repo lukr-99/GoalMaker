@@ -1,6 +1,9 @@
 package com.goalmaker.app.ui.habits
 
 import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -73,6 +76,21 @@ class HabitCardAccessibilityTest {
             .performClick()
 
         assertEquals(1, taps)
+    }
+
+    @Test
+    fun `an amount's button says it fills to the target, and asks once the target is reached`() {
+        val water = HabitItem(id = "h2", name = "Water", startsOn = LocalDate.of(2026, 1, 1), measure = HabitRules.AMOUNT, target = 2.5, unit = "L")
+        var value by mutableDoubleStateOf(1.0)
+        rule.setContent {
+            TestTheme {
+                HabitCheckInButton(row.copy(habit = water, value = value), onClick = {})
+            }
+        }
+
+        rule.onNodeWithContentDescription("Fill Water to 2.5 L").assertHasClickAction()
+        value = 2.5
+        rule.onNodeWithContentDescription("Log an amount on Water").assertHasClickAction()
     }
 
     @Test

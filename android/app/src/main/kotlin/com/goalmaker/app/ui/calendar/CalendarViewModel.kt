@@ -279,8 +279,18 @@ class CalendarViewModel(
         }
     }
 
-    /** A tap on a habit's button for [day]: a check toggles, a count adds one. False for an amount, which asks for the value. */
-    suspend fun tapHabit(id: String, day: LocalDate): Boolean = withContext(io) { habits.tap(id, day) }
+    /**
+     * A tap on a habit's button for [day]: a check toggles, a count adds one, an amount fills to its target
+     * with an undo on the snackbar (docs/habits.md, "One tap"). False when it asks for the value instead: a
+     * limit's amount, or an amount with nothing left to fill.
+     */
+    suspend fun tapHabit(id: String, day: LocalDate): Boolean = withContext(io) {
+        if (habits.tap(id, day)) return@withContext true
+        val before = habits.fill(id, day) ?: return@withContext false
+        val name = habits.find(id)?.name.orEmpty()
+        undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.FILLED, name) { viewModelScope.launch(io) { habits.setValue(id, day, before) } })
+        true
+    }
 
     /** Adds [amount] to [day]'s value of a habit. */
     fun checkInHabit(id: String, day: LocalDate, amount: Double) = write { habits.checkIn(id, day, amount) }

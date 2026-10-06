@@ -411,6 +411,38 @@ public static class HabitRules
             .ToList();
     }
 
+    /// <summary>
+    /// What one click on an amount habit's check-in button logs (docs/habits.md, "One tap"): the rest of the
+    /// target for the day, or null when nothing is left, when the habit isn't an amount or when it is a limit.
+    /// </summary>
+    public static double? Fill(HabitItem habit, double value)
+    {
+        if (habit.Measure != Amount || IsLimit(habit) || habit.Target is not { } target)
+        {
+            return null;
+        }
+
+        var rest = TwoPlaces(Math.Max(target - value, 0));
+        return rest > 0 ? rest : null;
+    }
+
+    /// <summary>The log-an-amount ready taps: a quarter and a half of the target, then the rest when it is another.</summary>
+    public static IReadOnlyList<double> FillPresets(HabitItem habit, double value)
+    {
+        if (habit.Measure != Amount || IsLimit(habit) || habit.Target is not { } target)
+        {
+            return [];
+        }
+
+        List<double> presets = [TwoPlaces(target / 4), TwoPlaces(target / 2)];
+        if (Fill(habit, value) is { } rest && !presets.Contains(rest))
+        {
+            presets.Add(rest);
+        }
+
+        return presets;
+    }
+
     private static bool Covers(HabitPause pause, DateOnly start, DateOnly end) =>
         !pause.Deleted && pause.From <= end && (pause.Until is null || pause.Until >= start);
 
@@ -423,6 +455,9 @@ public static class HabitRules
 
     private static double Share(HabitItem habit, double value) =>
         habit.Measure == Check ? (value >= 1 ? 1 : 0) : Math.Clamp(value / (habit.Target ?? 1), 0, 1);
+
+    // Two decimals with halves rounded up (0.625 is 0.63); the nudge keeps 0.625 * 100 from landing just below 62.5.
+    private static double TwoPlaces(double value) => Math.Round((value * 100) + 1e-9, MidpointRounding.AwayFromZero) / 100;
 
     private static string UnitKey(string unit) => string.Concat(unit.Where(character => !char.IsWhiteSpace(character))).ToLowerInvariant();
 }

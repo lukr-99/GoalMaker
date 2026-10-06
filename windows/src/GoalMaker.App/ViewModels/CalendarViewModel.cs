@@ -305,7 +305,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         }
 
         // A day gone by, or today, can still be checked in; a day to come can't (docs/calendar.md).
-        DayHabits = open is not null && open.Day <= today && habitsPage is not null ? habitsPage.DayRows(open.Day) : [];
+        DayHabits = open is not null && open.Day <= today && habitsPage is not null ? habitsPage.DayRows(open.Day, ShowUndo) : [];
 
         DayTitle = open is null ? string.Empty : open.Day.ToString("D", CultureInfo.CurrentCulture);
         HasDay = open is not null;

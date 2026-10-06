@@ -179,6 +179,26 @@ class HabitRulesContractTest {
     }
 
     @Test
+    fun `every fill and its ready taps`() {
+        vectors.cases("fill").forEach { case ->
+            val habit = HabitItem(
+                id = "h",
+                name = "Habit",
+                startsOn = LocalDate.parse("2026-01-01"),
+                measure = case.text("measure")!!,
+                target = case.number("target"),
+                direction = case.text("direction") ?: HabitRules.AT_LEAST,
+            )
+            val value = case.number("value")!!
+            val name = case.text("name")
+            val fill = case.number("fill")
+            if (fill == null) assertNull(name, HabitRules.fill(habit, value)) else assertEquals(name, fill, HabitRules.fill(habit, value)!!, 1e-9)
+            val presets = case.getValue("presets").jsonArray.map { it.jsonPrimitive.double }
+            assertEquals("$name: presets", presets, HabitRules.fillPresets(habit, value))
+        }
+    }
+
+    @Test
     fun `every goal amount`() {
         vectors.cases("goalAmounts").forEach { case ->
             val goalJson = case.getValue("goal").jsonObject
