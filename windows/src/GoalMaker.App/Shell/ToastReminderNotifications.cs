@@ -325,7 +325,10 @@ public sealed class ToastReminderNotifications
         }
     }
 
-    /// <summary>A habit reminder's toast: Check in for a check, +1 for a count, Log for an amount, then the skip of its period.</summary>
+    /// <summary>
+    /// A habit reminder's toast: Check in for a check, +1 for a count, Log for an amount (with Fill before
+    /// it while an amount that is not a limit has some of its target left), then the skip of its period.
+    /// </summary>
     internal static XElement HabitContent(DueHabit due, IReadOnlyList<HabitCheckin> checkins, IStrings strings)
     {
         var habit = due.Habit;
@@ -348,6 +351,8 @@ public sealed class ToastReminderNotifications
             HabitRules.PerMonth => "Habits.SkipMonth",
             _ => "Habits.SkipDay",
         };
+        var value = checkins.FirstOrDefault(checkin => checkin.Day == due.Day && !checkin.Skipped && !checkin.Failed)?.Value ?? 0;
+        XElement[] fill = HabitRules.Fill(habit, value) is null ? [] : [Button("HabitReminder.Fill", ToastAction.HabitFill)];
         return new XElement(
             "toast",
             new XAttribute("launch", new ToastActivation(ToastAction.Habit, tag).Arguments),
@@ -358,7 +363,7 @@ public sealed class ToastReminderNotifications
                     new XAttribute("template", "ToastGeneric"),
                     new XElement("text", string.IsNullOrWhiteSpace(habit.Emoji) ? habit.Name : habit.Emoji + " " + habit.Name),
                     new XElement("text", HabitText(habit, due.Day, checkins, strings)))),
-            new XElement("actions", first, Button(skip, ToastAction.HabitSkip)));
+            new XElement("actions", fill, first, Button(skip, ToastAction.HabitSkip)));
     }
 
     /// <summary>

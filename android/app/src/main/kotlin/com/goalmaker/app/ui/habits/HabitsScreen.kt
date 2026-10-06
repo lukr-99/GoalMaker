@@ -16,6 +16,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -34,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -48,11 +52,13 @@ import com.goalmaker.app.ui.composer.BottomComposer
 import com.goalmaker.app.ui.composer.LineOutcome
 import com.goalmaker.app.application.planning.HabitGroup
 import com.goalmaker.app.application.planning.HabitItem
+import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ConfettiBurst
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.SectionHeader
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
@@ -82,7 +88,8 @@ fun HabitsScreen(
     val haptics = LocalHapticFeedback.current
     // null: no dialog; a habit with an empty id: a new one.
     var editing by remember { mutableStateOf<HabitItem?>(null) }
-    var logging by remember { mutableStateOf<HabitItem?>(null) }
+    // The habit whose log sheet is open, by id, so the sheet reads the day's value as it is now.
+    var logging by remember { mutableStateOf<String?>(null) }
     var menuFor by remember { mutableStateOf<String?>(null) }
     var archivedOpen by rememberSaveable { mutableStateOf(false) }
     // The bottom bar's line, and whether the open form came from it (it empties once the form saves).
@@ -96,7 +103,7 @@ fun HabitsScreen(
 
     LaunchedEffect(logRequest, state.loaded) {
         if (logRequest == null || !state.loaded) return@LaunchedEffect
-        state.active.firstOrNull { it.habit.id == logRequest }?.let { logging = it.habit }
+        state.active.firstOrNull { it.habit.id == logRequest }?.let { logging = it.habit.id }
         onLogRequestSeen()
     }
 
@@ -110,19 +117,32 @@ fun HabitsScreen(
         if (before != null && !reduceMotion && !before.containsAll(state.milestones)) bursts++
     }
 
-    // The card's button: undo a skip or a fail, ask an amount for its value, or check in or add one.
+    // A one-tap fill offers its undo; a newer one takes the place of the one showing.
+    val snackbars = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+    LaunchedEffect(viewModel) {
+        viewModel.undo.collectLatest { event ->
+            val message = resources.getString(R.string.habits_filled_message, event.title)
+            val result = snackbars.showSnackbar(message, actionLabel = resources.getString(R.string.lists_undo), duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) event.undo()
+        }
+    }
+
+    // The card's button: undo a skip or a fail, check in, add one or fill an amount; a limit's amount, or
+    // an amount already at its target, opens the log sheet.
     fun checkIn(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
         when {
             row.skipped -> viewModel.skip(row.habit.id, false)
             row.failed -> viewModel.fail(row.habit.id, false)
-            else -> scope.launch { if (!viewModel.tap(row.habit.id)) logging = row.habit }
+            else -> scope.launch { if (!viewModel.tap(row.habit.id)) logging = row.habit.id }
         }
     }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            snackbarHost = { AppSnackbarHost(snackbars) },
             topBar = {
                 MediumFlexibleTopAppBar(
                     title = { ScreenTitle(stringResource(R.string.habits_title)) },
@@ -246,7 +266,7 @@ fun HabitsScreen(
                 row = row,
                 onDismiss = { menuFor = null },
                 onCheckIn = { checkIn(row) },
-                onLog = { logging = row.habit },
+                onLog = { logging = row.habit.id },
                 onSkip = { skipped -> viewModel.skip(id, skipped) },
                 onFail = { failed -> viewModel.fail(id, failed) },
                 onClear = { viewModel.clearToday(id) },
@@ -272,8 +292,10 @@ fun HabitsScreen(
             },
         )
     }
-    logging?.let { habit ->
-        AmountDialog(habit, onLog = { amount -> viewModel.checkIn(habit.id, amount) }, onDismiss = { logging = null })
+    logging?.let { id ->
+        state.active.firstOrNull { it.habit.id == id }?.let { row ->
+            AmountDialog(row.habit, row.value, onLog = { amount -> viewModel.checkIn(id, amount) }, onDismiss = { logging = null })
+        }
     }
 }
 

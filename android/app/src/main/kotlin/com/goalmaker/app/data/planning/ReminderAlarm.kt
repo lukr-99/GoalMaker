@@ -15,8 +15,9 @@ object ReminderAlarm {
     const val ACTION_SKIP_PLAN = "com.goalmaker.app.action.PLAN_TOMORROW_SKIP"
     const val ACTION_SKIP_REVIEW = "com.goalmaker.app.action.REVIEW_SKIP"
 
-    /** A habit reminder's buttons: check in (or add one), and skip the period. */
+    /** A habit reminder's buttons: check in (or add one), fill an amount to its target, and skip the period. */
     const val ACTION_HABIT_CHECK_IN = "com.goalmaker.app.action.HABIT_CHECK_IN"
+    const val ACTION_HABIT_FILL = "com.goalmaker.app.action.HABIT_FILL"
     const val ACTION_HABIT_SKIP = "com.goalmaker.app.action.HABIT_SKIP"
 
     /** A habit reminder's Log: it opens the app on the habit's log dialog rather than reaching the receiver. */

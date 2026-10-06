@@ -136,7 +136,7 @@ or monthly habit. Its buttons, the same words on both apps:
 |---|---|
 | a check | **Check in**, which checks it in for the day |
 | a count | **+1**, which adds one to the day's value |
-| an amount | **Log**, which opens the app on the Habits page with the habit's log asking for the value |
+| an amount | **Fill**, which logs the rest of the day's target at once (not on a limit, and only while some of it is left; see [habits](habits.md), "One tap"), and **Log**, which opens the app on the Habits page with the habit's log asking for the value |
 | any | **Skip today**, **Skip this week** or **Skip this month**, which skips the period holding the day |
 
 Clicking the notification itself opens the Habits page. A button writes the day's one check-in like

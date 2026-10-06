@@ -718,6 +718,7 @@
     <sys:String x:Key="HabitReminder.CheckIn">Check in</sys:String>
     <sys:String x:Key="HabitReminder.AddOne">+1</sys:String>
     <sys:String x:Key="HabitReminder.Log">Log</sys:String>
+    <sys:String x:Key="HabitReminder.Fill">Fill</sys:String>
     <sys:String x:Key="Habits.FailDay">Fail today</sys:String>
     <sys:String x:Key="Habits.FailWeek">Fail this week</sys:String>
     <sys:String x:Key="Habits.FailMonth">Fail this month</sys:String>
@@ -784,6 +785,14 @@
     <sys:String x:Key="Habits.More">More for {0}</sys:String>
     <sys:String x:Key="Habits.AddOne">Add one to {0}</sys:String>
     <sys:String x:Key="Habits.LogOn">Log an amount on {0}</sys:String>
+    <sys:String x:Key="Habits.FillOn">Fill {0} to {1}</sys:String>
+    <sys:String x:Key="Habits.FillOnUnit">Fill {0} to {1} {2}</sys:String>
+    <sys:String x:Key="Habits.Filled">{0} filled to {1}</sys:String>
+    <sys:String x:Key="Habits.FilledUnit">{0} filled to {1} {2}</sys:String>
+    <sys:String x:Key="Habits.Presets">Ready amounts</sys:String>
+    <sys:String x:Key="Habits.PresetUnit">{0} {1}</sys:String>
+    <sys:String x:Key="Habits.Rest">Rest: {0}</sys:String>
+    <sys:String x:Key="Habits.RestUnit">Rest: {0} {1}</sys:String>
     <sys:String x:Key="Habits.TakeBack">Take back {0}</sys:String>
     <sys:String x:Key="Habits.UnskipOn">Undo the skip on {0}</sys:String>
     <sys:String x:Key="Habits.UnfailOn">Undo the fail on {0}</sys:String>

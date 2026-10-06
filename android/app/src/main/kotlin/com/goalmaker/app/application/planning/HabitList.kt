@@ -97,6 +97,19 @@ class HabitList(
         }
     }
 
+    /**
+     * One tap on an amount habit's button for [day] (docs/habits.md, "One tap"): logs the rest of the
+     * day's target. Returns the day's value before, for the undo, or null when there is nothing to fill:
+     * the target is reached, the habit isn't an amount, it is a limit, or it is gone.
+     */
+    fun fill(habitId: String, day: LocalDate): Double? {
+        val habit = find(habitId) ?: return null
+        val before = checkinOn(habitId, day)?.takeUnless { it.skipped || it.failed }?.value ?: 0.0
+        val rest = HabitRules.fill(habit, before) ?: return null
+        write(habitId, day, before + rest, skipped = false)
+        return before
+    }
+
     /** Sets [day]'s value exactly: 0 takes a check back, and an undo puts the old value back. */
     fun setValue(habitId: String, day: LocalDate, value: Double): Boolean {
         if (find(habitId) == null || value < 0.0 || !value.isFinite()) return false

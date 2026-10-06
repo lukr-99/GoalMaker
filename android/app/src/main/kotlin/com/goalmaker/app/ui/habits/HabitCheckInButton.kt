@@ -28,6 +28,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -42,7 +43,8 @@ import com.goalmaker.app.ui.theme.AppTheme
 
 /**
  * A habit card's check-in button (the habits prototype, option B). A check toggles, a count adds one
- * ("+1"), an amount asks for its value. Done, it fills with the accent and turns round; skipped, it is a
+ * ("+1"), an amount fills to its target in one tap (docs/habits.md, "One tap"), and a limit's amount, or
+ * an amount already at its target, asks for its value. Done, it fills with the accent and turns round; skipped, it is a
  * dashed outline whose tap undoes the skip; failed, a danger outline with a cross whose tap undoes the
  * fail. It rests while the habit is paused or not due today.
  */
@@ -74,6 +76,11 @@ fun HabitCheckInButton(row: HabitRow, onClick: () -> Unit, modifier: Modifier = 
         checkMeasure && row.value >= 1.0 -> stringResource(R.string.habits_take_back, habit.name)
         checkMeasure -> stringResource(R.string.habits_check_in, habit.name)
         habit.measure == HabitRules.COUNT -> stringResource(R.string.habits_add_one, habit.name)
+        HabitRules.fill(habit, row.value) != null -> {
+            val target = amountText(habit.target ?: 0.0, LocalConfiguration.current.locales[0])
+            habit.unit?.let { stringResource(R.string.habits_fill_to_unit, habit.name, target, it) }
+                ?: stringResource(R.string.habits_fill_to, habit.name, target)
+        }
         else -> stringResource(R.string.habits_log_on, habit.name)
     }
     val status = statusText(row)

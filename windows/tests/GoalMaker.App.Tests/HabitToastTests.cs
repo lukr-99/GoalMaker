@@ -48,14 +48,23 @@ public sealed class HabitToastTests : IDisposable
     }
 
     [Fact]
-    public void AnAmountLogsInTheApp()
+    public void AnAmountFillsOrLogsInTheApp()
     {
         var run = new HabitItem(Id, "Run", Day.AddDays(-10)) { Measure = HabitRules.Amount, Target = 5 };
-        var toast = Toast(run);
+        var toast = Toast(run, new HabitCheckin("c", Id, Day, 2));
 
-        Assert.Equal("Habits.Value(0,5)", Texts(toast)[1]);
-        Assert.Equal(ToastAction.HabitLog, Buttons(toast)[0].Activation!.Action);
-        Assert.Equal("HabitReminder.Log", Buttons(toast)[0].Label);
+        Assert.Equal("Habits.Value(2,5)", Texts(toast)[1]);
+        Assert.Equal(["HabitReminder.Fill", "HabitReminder.Log", "Habits.SkipDay"], Buttons(toast).Select(button => button.Label));
+        Assert.Equal(new ToastActivation(ToastAction.HabitFill, Id + "/2026-09-18"), Buttons(toast)[0].Activation);
+        Assert.Equal(ToastAction.HabitLog, Buttons(toast)[1].Activation!.Action);
+    }
+
+    [Fact]
+    public void AnAmountLimitOnlyLogs()
+    {
+        var coffee = new HabitItem(Id, "Coffee", Day.AddDays(-10)) { Measure = HabitRules.Amount, Target = 0.5, Direction = HabitRules.AtMost };
+
+        Assert.Equal(["HabitReminder.Log", "Habits.SkipDay"], Buttons(Toast(coffee)).Select(button => button.Label));
     }
 
     [Fact]

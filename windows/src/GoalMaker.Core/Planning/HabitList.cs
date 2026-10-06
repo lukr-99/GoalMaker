@@ -108,6 +108,21 @@ public sealed class HabitList
     }
 
     /// <summary>
+    /// Logs the rest of an amount habit's target for <paramref name="day"/> (docs/habits.md, "One tap") and
+    /// returns what it logged. Null when nothing is left, for a limit or another measure, and when the habit is gone.
+    /// </summary>
+    public double? Fill(string habitId, DateOnly day)
+    {
+        if (Find(habitId) is not { } habit)
+        {
+            return null;
+        }
+
+        var before = CheckinOn(habitId, day) is { Skipped: false, Failed: false } checkin ? checkin.Value : 0;
+        return HabitRules.Fill(habit, before) is { } rest && CheckIn(habitId, day, rest) is not null ? rest : null;
+    }
+
+    /// <summary>
     /// One tap on a habit's ring for <paramref name="day"/>: a check toggles, a count adds one. False for
     /// an amount, which asks for its value, and when the habit is gone.
     /// </summary>

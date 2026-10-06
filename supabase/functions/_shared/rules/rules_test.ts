@@ -20,6 +20,8 @@ import {
   checkinId,
   dot,
   dueToday,
+  fill,
+  fillPresets,
   goalAmounts,
   habitGroup,
   type HabitItem,
@@ -395,6 +397,11 @@ Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids, go
     } else {
       assert(value !== null && Math.abs(value - vector.expect) < 1e-9, `${vector.name}: ${value}`);
     }
+  }
+  for (const vector of file.fill) {
+    const item = { measure: vector.measure, target: vector.target, direction: vector.direction };
+    assertEquals(fill(item, vector.value), vector.fill, `${vector.name}: fill`);
+    assertEquals(fillPresets(item, vector.value), vector.presets, `${vector.name}: presets`);
   }
   for (const vector of file.over) {
     assertEquals(wentOver(habit(vector.habit), vector.day, checkins(vector)), vector.expect, vector.name);

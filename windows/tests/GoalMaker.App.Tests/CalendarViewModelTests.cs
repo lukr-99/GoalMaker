@@ -196,6 +196,22 @@ public sealed class CalendarViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AFillOnADayGoneByLandsOnThatDayAndTheCalendarOffersTheUndo()
+    {
+        planner.Habits.Add(new HabitDraft("Water", new DateOnly(2026, 9, 1)) { Measure = HabitRules.Amount, Target = 2, Unit = "L" });
+        var monday = new DateOnly(2026, 9, 14);
+        var page = Page(habits: true);
+        page.Open(monday);
+
+        page.DayHabits.Single().ButtonCommand.Execute(null);
+
+        Assert.Equal((monday, 2.0), (planner.Habits.Checkins().Single().Day, planner.Habits.Checkins().Single().Value));
+        Assert.Equal((true, "Habits.FilledUnit(Water,2,L)"), (page.HasUndo, page.UndoText));
+        page.UndoCommand.Execute(null);
+        Assert.Equal(0, planner.Habits.Checkins().Single().Value);
+    }
+
+    [Fact]
     public void ADayToComeHasNoHabitsToCheckIn()
     {
         planner.Habits.Add(new HabitDraft("Read", new DateOnly(2026, 9, 1)));

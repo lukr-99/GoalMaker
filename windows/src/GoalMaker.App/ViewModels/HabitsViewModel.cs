@@ -27,6 +27,8 @@ public sealed partial class HabitsViewModel : ObservableObject
     // Days in the week's dots on a card: today and the six before it.
     private const int WeekDays = 7;
 
+    private static readonly TimeSpan UndoFor = TimeSpan.FromSeconds(5);
+
     private readonly HabitList habits;
     private readonly GoalList goals;
     private readonly ISettingsStore settings;
@@ -34,7 +36,10 @@ public sealed partial class HabitsViewModel : ObservableObject
     private readonly TimeProvider time;
     private readonly Func<bool> motionReduced;
     private readonly Action? openMini;
+    private readonly Action<Action> runOnUi;
     private HashSet<string>? milestones;
+    private Action? undo;
+    private ITimer? undoTimer;
     private string? loggingId;
 
     // The day a typed amount lands on: today, or the calendar's open day.
@@ -54,6 +59,17 @@ public sealed partial class HabitsViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddAmountCommand))]
     private string logText = string.Empty;
+
+    /// <summary>The log panel's ready taps: a quarter and a half of the target, then the rest (docs/habits.md, "One tap").</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLogPresets))]
+    private IReadOnlyList<HabitPresetViewModel> logPresets = [];
+
+    [ObservableProperty]
+    private string undoText = string.Empty;
+
+    [ObservableProperty]
+    private bool hasUndo;
 
     [ObservableProperty]
     private bool isEmpty;
@@ -105,6 +121,7 @@ public sealed partial class HabitsViewModel : ObservableObject
         ChatViewModel? chat = null)
     {
         this.openMini = openMini;
+        this.runOnUi = runOnUi;
         this.habits = habits;
         this.goals = goals;
         this.settings = settings;
@@ -160,34 +177,39 @@ public sealed partial class HabitsViewModel : ObservableObject
 
     public bool HasLogUnit => LogUnit.Length > 0;
 
-    /// <summary>Today's habits for the panel on Today: due today and not kept off Today (contracts/vectors/habits.json, onToday).</summary>
-    public IReadOnlyList<HabitRowViewModel> TodayRows() => RowsWhere(HabitRules.OnToday);
+    public bool HasLogPresets => LogPresets.Count > 0;
+
+    /// <summary>
+    /// Today's habits for the panel on Today: due today and not kept off Today (contracts/vectors/habits.json,
+    /// onToday). A fill from one of them offers its undo through <paramref name="showUndo"/>, Today's own bar.
+    /// </summary>
+    public IReadOnlyList<HabitRowViewModel> TodayRows(Action<string, Action>? showUndo = null) => RowsWhere(HabitRules.OnToday, showUndo);
 
     /// <summary>Every habit due today, the ones kept off Today too: what the Places page counts.</summary>
-    public IReadOnlyList<HabitRowViewModel> DueRows() => RowsWhere(HabitRules.DueToday);
+    public IReadOnlyList<HabitRowViewModel> DueRows() => RowsWhere(HabitRules.DueToday, null);
 
     /// <summary>
     /// Every habit due on <paramref name="day"/>, as cards that check in, skip and fail on that day: the
     /// calendar's open day (docs/calendar.md).
     /// </summary>
-    public IReadOnlyList<HabitRowViewModel> DayRows(DateOnly day)
+    public IReadOnlyList<HabitRowViewModel> DayRows(DateOnly day, Action<string, Action>? showUndo = null)
     {
         var checkins = habits.Checkins();
         var pauses = habits.Pauses();
         return [.. habits.All()
             .Where(habit => HabitRules.DueToday(habit, day, [.. pauses.Where(pause => pause.HabitId == habit.Id)]))
             // Today's own cards say "today"; another day's leave it out.
-            .Select(habit => Row(habit, checkins, pauses, day, null, strings, full: false, owner: this, day: day == Today() ? null : day))];
+            .Select(habit => Row(habit, checkins, pauses, day, null, strings, full: false, owner: this, day: day == Today() ? null : day, showUndo: showUndo))];
     }
 
-    private List<HabitRowViewModel> RowsWhere(Func<HabitItem, DateOnly, IReadOnlyList<HabitPause>, bool> rule)
+    private List<HabitRowViewModel> RowsWhere(Func<HabitItem, DateOnly, IReadOnlyList<HabitPause>, bool> rule, Action<string, Action>? showUndo)
     {
         var today = Today();
         var checkins = habits.Checkins();
         var pauses = habits.Pauses();
         return [.. habits.All()
             .Where(habit => rule(habit, today, [.. pauses.Where(pause => pause.HabitId == habit.Id)]))
-            .Select(habit => Row(habit, checkins, pauses, today, null, strings, full: false, owner: this))];
+            .Select(habit => Row(habit, checkins, pauses, today, null, strings, full: false, owner: this, showUndo: showUndo))];
     }
 
     public void Refresh()
@@ -272,10 +294,32 @@ public sealed partial class HabitsViewModel : ObservableObject
     /// <summary>The Habits page itself, asked for from a card on Today.</summary>
     internal void OpenPage() => PageWanted?.Invoke(this, EventArgs.Empty);
 
-    /// <summary>A tap on a habit's ring: a check toggles, a count adds one, an amount asks for its value.</summary>
-    internal void Tap(HabitItem habit, DateOnly? day = null)
+    /// <summary>
+    /// A tap on a habit's ring: a check toggles, a count adds one, and an amount that is not a limit fills
+    /// to its target with an Undo, on <paramref name="showUndo"/> or the page's own bar (docs/habits.md,
+    /// "One tap"). An amount with nothing left to fill, and a limit's amount, ask for the value.
+    /// </summary>
+    internal void Tap(HabitItem habit, DateOnly? day = null, Action<string, Action>? showUndo = null)
     {
-        if (!habits.Tap(habit.Id, day ?? Today()))
+        var on = day ?? Today();
+        if (habit.Measure == HabitRules.Amount && !HabitRules.IsLimit(habit))
+        {
+            var before = DayValue(habit.Id, on);
+            if (habits.Fill(habit.Id, on) is null)
+            {
+                StartLog(habit, day);
+                return;
+            }
+
+            var target = HabitRowViewModel.Amount(habit.Target ?? 0);
+            var text = habit.Unit is { } unit && !string.IsNullOrWhiteSpace(unit)
+                ? strings.Get("Habits.FilledUnit", habit.Name, target, unit)
+                : strings.Get("Habits.Filled", habit.Name, target);
+            (showUndo ?? ShowUndo)(text, () => habits.SetValue(habit.Id, on, before));
+            return;
+        }
+
+        if (!habits.Tap(habit.Id, on))
         {
             StartLog(habit, day);
         }
@@ -329,6 +373,7 @@ public sealed partial class HabitsViewModel : ObservableObject
             : strings.Get("Habits.LogTitle", habit.Name);
         LogUnit = habit.Unit ?? string.Empty;
         LogText = string.Empty;
+        LogPresets = Presets(habit, DayValue(habit.Id, day ?? Today()));
         IsLogging = true;
         LogRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -342,7 +387,8 @@ public sealed partial class HabitsViewModel : ObservableObject
         IStrings strings,
         bool full,
         HabitsViewModel? owner,
-        DateOnly? day = null)
+        DateOnly? day = null,
+        Action<string, Action>? showUndo = null)
     {
         var checkins = allCheckins.Where(checkin => checkin.HabitId == habit.Id).ToList();
         var pauses = allPauses.Where(pause => pause.HabitId == habit.Id).ToList();
@@ -377,7 +423,8 @@ public sealed partial class HabitsViewModel : ObservableObject
                 day == today))],
             full,
             day,
-            HabitRules.IsLimit(habit) ? HabitRules.Used(habit, today, checkins) : null);
+            HabitRules.IsLimit(habit) ? HabitRules.Used(habit, today, checkins) : null,
+            showUndo);
     }
 
     private static DateOnly Monday(DateOnly day) => day.AddDays(-(((int)day.DayOfWeek + 6) % 7));
@@ -408,6 +455,61 @@ public sealed partial class HabitsViewModel : ObservableObject
 
     [RelayCommand]
     private void CancelLog() => IsLogging = false;
+
+    [RelayCommand]
+    private void Undo()
+    {
+        var action = undo;
+        HideUndo();
+        action?.Invoke();
+    }
+
+    private void ShowUndo(string text, Action action)
+    {
+        undoTimer?.Dispose();
+        undo = action;
+        UndoText = text;
+        HasUndo = true;
+        undoTimer = time.CreateTimer(_ => runOnUi(HideUndo), null, UndoFor, Timeout.InfiniteTimeSpan);
+    }
+
+    private void HideUndo()
+    {
+        undoTimer?.Dispose();
+        undoTimer = null;
+        undo = null;
+        HasUndo = false;
+    }
+
+    // The ready taps, "0.63 L", "1.25 L" and "Rest: 1.5 L"; one click logs that much and closes the panel.
+    private List<HabitPresetViewModel> Presets(HabitItem habit, double value)
+    {
+        var unit = habit.Unit is { } named && !string.IsNullOrWhiteSpace(named) ? named : null;
+        var rest = HabitRules.Fill(habit, value);
+        return [.. HabitRules.FillPresets(habit, value).Select((amount, index) =>
+        {
+            var shown = HabitRowViewModel.Amount(amount);
+            // The rest comes third, unless it equals a quarter or a half and so isn't listed again.
+            var text = index == 2 && rest == amount
+                ? unit is null ? strings.Get("Habits.Rest", shown) : strings.Get("Habits.RestUnit", shown, unit)
+                : unit is null ? shown : strings.Get("Habits.PresetUnit", shown, unit);
+            return new HabitPresetViewModel(amount, text, new RelayCommand(() => LogPreset(amount)));
+        })];
+    }
+
+    private void LogPreset(double amount)
+    {
+        if (loggingId is { } id)
+        {
+            habits.CheckIn(id, loggingDay ?? Today(), amount);
+        }
+
+        IsLogging = false;
+    }
+
+    // The day's value as a check-in left it: nothing while it is skipped or failed.
+    private double DayValue(string habitId, DateOnly day) =>
+        habits.Checkins().FirstOrDefault(checkin => checkin.HabitId == habitId && checkin.Day == day && !checkin.Skipped && !checkin.Failed)?.Value ?? 0;
 
     [RelayCommand]
     private void ToggleArchived() => IsArchivedExpanded = !IsArchivedExpanded;

@@ -267,6 +267,29 @@ object HabitRules {
             .map(HabitCheckin::value)
     }
 
+    /**
+     * What one tap on an amount habit's check-in button logs (docs/habits.md, "One tap"): the rest of the
+     * day's target, or null when nothing is left, when the habit isn't an amount or when it is a limit.
+     */
+    fun fill(habit: HabitItem, value: Double): Double? {
+        val target = habit.target
+        if (habit.measure != AMOUNT || isLimit(habit) || target == null) return null
+        val rest = twoPlaces((target - value).coerceAtLeast(0.0))
+        return rest.takeIf { it > 0.0 }
+    }
+
+    /** The log sheet's ready taps: a quarter and a half of the target, then the rest when it is another. */
+    fun fillPresets(habit: HabitItem, value: Double): List<Double> {
+        val target = habit.target
+        if (habit.measure != AMOUNT || isLimit(habit) || target == null) return emptyList()
+        val presets = listOf(twoPlaces(target / 4), twoPlaces(target / 2))
+        val rest = fill(habit, value)
+        return if (rest == null || rest in presets) presets else presets + rest
+    }
+
+    // Two decimals with halves rounded up, the way every app rounds a fill (0.625 is 0.63).
+    private fun twoPlaces(value: Double): Double = Math.floor(value * 100 + 0.5 + 1e-9) / 100
+
     private fun covers(pause: HabitPause, start: LocalDate, end: LocalDate): Boolean =
         !pause.deleted && !pause.from.isAfter(end) && (pause.until == null || !pause.until.isBefore(start))
 

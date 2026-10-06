@@ -83,6 +83,12 @@ class ReminderService(
         rearm()
     }
 
+    /** Fill from an amount habit's notification: logs the rest of the day's target (docs/habits.md, "One tap"). */
+    fun fillHabit(habitId: String, day: LocalDate) {
+        habits?.fill(habitId, day)
+        rearm()
+    }
+
     /** Skip from a habit's notification: its period that holds [day] neither counts nor breaks the streak. */
     fun skipHabit(habitId: String, day: LocalDate) {
         habits?.skip(habitId, day)

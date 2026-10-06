@@ -21,8 +21,9 @@ The habits on Today: due today, not paused, and not kept off Today ([habits](hab
 counts the ones left the way Today does, so a limit or a skipped habit never holds it up.
 Each has a mark for whether its period is met, its emoji and, for a habit that counts something, how
 far it has got. One tap checks a habit in, exactly as tapping its ring in the
-app does. A habit measured by an amount asks for a value, so its row opens the app instead of
-guessing one.
+app does. A habit measured by an amount fills the rest of the day's target in that tap, as the app's
+button does ([habits](habits.md), "One tap"); once the target is reached, or for a limit, its row
+opens the app instead of guessing a value.
 
 ## Goals
 

@@ -110,6 +110,13 @@ public sealed class ReminderService
         Rearm();
     }
 
+    /// <summary>Fill from an amount habit's toast: logs the rest of the day's target (docs/habits.md, "One tap").</summary>
+    public void FillHabit(string habitId, DateOnly day)
+    {
+        habits?.Fill(habitId, day);
+        Rearm();
+    }
+
     /// <summary>Skip from a habit's toast: its period that holds <paramref name="day"/> neither counts nor breaks the streak.</summary>
     public void SkipHabit(string habitId, DateOnly day)
     {
