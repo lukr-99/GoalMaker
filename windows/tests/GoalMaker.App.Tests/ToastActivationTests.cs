@@ -27,6 +27,7 @@ public sealed class ToastActivationTests
     [InlineData(ToastAction.HabitCheckIn)]
     [InlineData(ToastAction.HabitSkip)]
     [InlineData(ToastAction.HabitLog)]
+    [InlineData(ToastAction.HabitFill)]
     public void AHabitReminderCarriesItsHabitAndDay(ToastAction action)
     {
         var activation = ToastActivation.Parse(new ToastActivation(action, Reminder + "/2026-09-18").Arguments);

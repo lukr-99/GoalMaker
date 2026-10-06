@@ -32,7 +32,8 @@ public sealed class HabitRowViewModel
         IReadOnlyList<HabitDotViewModel>? dots = null,
         bool full = false,
         DateOnly? day = null,
-        double? used = null)
+        double? used = null,
+        Action<string, Action>? showUndo = null)
     {
         this.owner = owner;
         Habit = habit;
@@ -86,14 +87,14 @@ public sealed class HabitRowViewModel
         {
             HabitRules.Check => strings.Get(takesBack ? "Habits.TakeBack" : "Habits.CheckIn", habit.Name),
             HabitRules.Count => strings.Get("Habits.AddOne", habit.Name),
-            _ => strings.Get("Habits.LogOn", habit.Name),
+            _ => FillText(habit, value, strings),
         };
         CheckInMenuText = strings.Get(habit.Measure == HabitRules.Count ? "Habits.MenuAddOne" : takesBack ? "Habits.MenuTakeBack" : "Habits.MenuCheckIn");
         LogOneText = strings.Get("Habits.LogOne", habit.Name);
         LogExactText = strings.Get("Habits.LogExact", habit.Name);
         AmountHint = habit.Unit ?? strings.Get("Habits.Amount");
         RingText = habit.Emoji ?? string.Empty;
-        CheckInCommand = new RelayCommand(() => owner?.Tap(habit, day));
+        CheckInCommand = new RelayCommand(() => owner?.Tap(habit, day, showUndo));
         OpenHabitsCommand = new RelayCommand(() => owner?.OpenPage());
         LogOneCommand = new RelayCommand(() => owner?.LogOne(habit, day));
         LogAmountCommand = new RelayCommand(() => owner?.LogTyped(habit, AmountText, day));
@@ -415,6 +416,21 @@ public sealed class HabitRowViewModel
         return habit.Measure != HabitRules.Check && habit.Unit is { } unit
             ? strings.Get("Habits.LimitUnit" + period, Amount(used), Amount(most), unit)
             : strings.Get("Habits.Limit" + period, Amount(used), Amount(most));
+    }
+
+    // An amount that is not a limit fills to its target in one click ("Fill Water to 2.5 L"); once it is
+    // reached, or for a limit, the button asks for the amount (docs/habits.md, "One tap").
+    private static string FillText(HabitItem habit, double value, IStrings strings)
+    {
+        if (HabitRules.Fill(habit, value) is null)
+        {
+            return strings.Get("Habits.LogOn", habit.Name);
+        }
+
+        var target = Amount(habit.Target ?? 0);
+        return habit.Unit is { } unit && !string.IsNullOrWhiteSpace(unit)
+            ? strings.Get("Habits.FillOnUnit", habit.Name, target, unit)
+            : strings.Get("Habits.FillOn", habit.Name, target);
     }
 
     /// <summary>An amount as people write it here: "12.5", no ".0" on whole numbers.</summary>

@@ -71,6 +71,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <ScrollViewer VerticalScrollBarVisibility="Auto" Visibility="{Binding ShowList, Converter={StaticResource BoolToVisibility}}">
             <!-- Stretched up to the wide measure, so the groups know when there is room for two columns. -->
@@ -158,8 +159,23 @@
             </StackPanel>
         </ScrollViewer>
 
+        <!-- Undo for the amount a click just filled, for five seconds (docs/habits.md, "One tap"). -->
+        <Border Grid.Row="1" Margin="24,0,24,8" Padding="16,6,6,6" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.HeroBrush}"
+                MaxWidth="{DynamicResource GM.PageWidth}"
+                Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center" Text="{Binding UndoText}" Foreground="{DynamicResource GM.OnHeroBrush}" TextTrimming="CharacterEllipsis" />
+                <ui:Button Grid.Column="1" Appearance="Transparent" Foreground="{DynamicResource GM.HeroAccentBrush}"
+                           Content="{DynamicResource Lists.Undo}" Command="{Binding UndoCommand}" />
+            </Grid>
+        </Border>
+
         <!-- The bottom bar (docs/composer.md): type a habit to add it; the plus opens the habit editor. -->
-        <ContentControl Grid.Row="1"
+        <ContentControl Grid.Row="2"
                         Margin="{DynamicResource GM.BarMargin}"
                         MaxWidth="{DynamicResource GM.PageWidth}"
                         Focusable="False"
@@ -167,7 +183,7 @@
                         ContentTemplate="{StaticResource ComposerTemplate}" />
 
         <!-- Adding or editing a habit. -->
-        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}" Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}}">
+        <Border Grid.RowSpan="3" Style="{StaticResource Overlay}" Visibility="{Binding Editor.IsOpen, Converter={StaticResource BoolToVisibility}}">
             <ui:Card Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center" DataContext="{Binding Editor}">
                 <ui:Card.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding SaveCommand}" />
@@ -292,7 +308,7 @@
         </Border>
 
         <!-- Logging an amount on a count or amount habit. -->
-        <Border Grid.RowSpan="2" Style="{StaticResource Overlay}" Visibility="{Binding IsLogging, Converter={StaticResource BoolToVisibility}}">
+        <Border Grid.RowSpan="3" Style="{StaticResource Overlay}" Visibility="{Binding IsLogging, Converter={StaticResource BoolToVisibility}}">
             <ui:Card Padding="24" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <ui:Card.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding AddAmountCommand}" />
@@ -306,6 +322,21 @@
                                    Visibility="{Binding HasLogUnit, Converter={StaticResource BoolToVisibility}}" />
                         <ui:TextBox x:Name="LogBox" Text="{Binding LogText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Habits.LogAmount}" />
                     </DockPanel>
+                    <!-- The ready taps (docs/habits.md, "One tap"): a quarter, a half and the rest; one click logs it. Tab reads them after the box. -->
+                    <ItemsControl Margin="0,8,0,0" Focusable="False" ItemsSource="{Binding LogPresets}"
+                                  AutomationProperties.Name="{DynamicResource Habits.Presets}"
+                                  Visibility="{Binding HasLogPresets, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:HabitPresetViewModel}">
+                                <ui:Button Margin="0,0,8,8" Content="{Binding Text}" Command="{Binding Command}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <StackPanel Margin="0,16,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                         <ui:Button Command="{Binding CancelLogCommand}" Content="{DynamicResource Habits.Cancel}" />
                         <ui:Button Margin="8,0,0,0" Appearance="Primary" Command="{Binding AddAmountCommand}" Content="{DynamicResource Habits.LogAdd}" />
@@ -314,6 +345,6 @@
             </ui:Card>
         </Border>
 
-        <controls:ConfettiBurst x:Name="Confetti" Grid.RowSpan="2" />
+        <controls:ConfettiBurst x:Name="Confetti" Grid.RowSpan="3" />
     </Grid>
 </Page>

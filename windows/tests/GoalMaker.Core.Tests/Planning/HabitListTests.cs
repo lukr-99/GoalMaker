@@ -110,6 +110,20 @@ public sealed class HabitListTests : IDisposable
     }
 
     [Fact]
+    public void AFillLogsTheRestOfAnAmountsTargetAndNothingOnceItIsReached()
+    {
+        var water = habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Amount, Target = 2.5, Unit = "L" })!;
+        var coffee = habits.Add(new HabitDraft("Coffee", Today) { Measure = HabitRules.Amount, Target = 1, Direction = HabitRules.AtMost })!;
+        habits.CheckIn(water.Id, Today, 0.333);
+
+        Assert.Equal(2.17, habits.Fill(water.Id, Today));
+        Assert.Equal(2.503, habits.Checkins().Single(checkin => checkin.HabitId == water.Id).Value, 9);
+        Assert.Null(habits.Fill(water.Id, Today));
+        Assert.Null(habits.Fill(coffee.Id, Today));
+        Assert.DoesNotContain(habits.Checkins(), checkin => checkin.HabitId == coffee.Id);
+    }
+
+    [Fact]
     public void ASkipClearsTheDaysValueAndCanBeTakenBack()
     {
         var read = habits.Add(new HabitDraft("Read", Today))!;
