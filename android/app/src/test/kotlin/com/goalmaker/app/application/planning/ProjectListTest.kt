@@ -2,6 +2,7 @@ package com.goalmaker.app.application.planning
 
 import android.app.Application
 import com.goalmaker.app.data.replica.TestReplica
+import com.goalmaker.app.data.replica.with
 import java.time.Instant
 import java.time.LocalDate
 import kotlinx.serialization.json.JsonNull
@@ -281,5 +282,75 @@ class ProjectListTest {
 
         assertNull(tasks.find(id)!!.boardArchivedAt)
         assertNotNull(tasks.find(id))
+    }
+
+    @Test
+    fun `a project's key is kept upper-cased and blank clears it`() {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        assertNull(project.itemKey)
+
+        assertTrue(projects.setItemKey(project.id, " gm "))
+        assertEquals("GM", projects.get(project.id)!!.itemKey)
+
+        assertTrue(projects.setItemKey(project.id, "  "))
+        assertNull(projects.get(project.id)!!.itemKey)
+    }
+
+    @Test
+    fun `a key that is not one is refused`() {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        projects.setItemKey(project.id, "GM")
+
+        listOf("G", "1GM", "ABCDEFG", "G-M").forEach { key -> assertFalse(key, projects.setItemKey(project.id, key)) }
+
+        assertEquals("GM", projects.get(project.id)!!.itemKey)
+    }
+
+    @Test
+    fun `a key another project uses is refused, in any case`() {
+        val first = projects.add(ProjectDraft("GoalMaker"))!!
+        val second = projects.add(ProjectDraft("Game Master"))!!
+        projects.setItemKey(first.id, "GM")
+
+        assertFalse(projects.setItemKey(second.id, "gm"))
+        assertTrue(projects.isKeyTaken("gm", second.id))
+        assertFalse(projects.isKeyTaken("GM", first.id))
+        // A project keeps its own key when it is saved again.
+        assertTrue(projects.setItemKey(first.id, "GM"))
+        assertEquals(listOf("GM"), projects.otherKeys(second.id))
+        assertNull(projects.get(second.id)!!.itemKey)
+    }
+
+    @Test
+    fun `a deleted project's key is free again`() {
+        val first = projects.add(ProjectDraft("GoalMaker"))!!
+        val second = projects.add(ProjectDraft("Game Master"))!!
+        projects.setItemKey(first.id, "GM")
+        projects.delete(first.id)
+
+        assertTrue(projects.setItemKey(second.id, "GM"))
+    }
+
+    @Test
+    fun `an item reads the number the server gave it and shows none after moving to another project`() {
+        val first = projects.add(ProjectDraft("GoalMaker"))!!
+        val second = projects.add(ProjectDraft("Thesis"))!!
+        projects.setItemKey(first.id, "GM")
+        val item = tasks.add("Give items ids")!!
+        tasks.setProject(item.id, first.id)
+        assertNull(tasks.find(item.id)!!.itemNumber)
+
+        // The synced row comes back with the number the server gave it.
+        test.replica.put("tasks", test.replica.get("tasks", item.id)!!.with("item_number" to 12))
+        val numbered = tasks.find(item.id)!!
+        assertEquals(12, numbered.itemNumber)
+        assertEquals("GM-12", ProjectRules.itemIdOf(numbered, projects.get(first.id)))
+
+        // A new key reads on the same number.
+        projects.setItemKey(first.id, "GOAL")
+        assertEquals("GOAL-12", ProjectRules.itemIdOf(tasks.find(item.id)!!, projects.get(first.id)))
+
+        tasks.setProject(item.id, second.id)
+        assertNull(tasks.find(item.id)!!.itemNumber)
     }
 }

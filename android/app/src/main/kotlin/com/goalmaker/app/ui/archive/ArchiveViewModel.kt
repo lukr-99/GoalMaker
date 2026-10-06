@@ -6,6 +6,7 @@ import com.goalmaker.app.application.planning.ArchiveRules
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.ProjectList
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
@@ -23,8 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * The archive of done tasks and its search (docs/archive.md), narrowed by the area and tag filter as
- * the lists are, with the [projects] a done project item's chip names (docs/lists.md). Disk work runs
+ * The archive of done tasks and its search (docs/archive.md), by words or by a project item's id
+ * (GM-12, docs/projects.md "Item ids"), narrowed by the area and tag filter as the lists are, with the [projects] a done project item's chip names (docs/lists.md). Disk work runs
  * on [io].
  */
 class ArchiveViewModel(
@@ -36,7 +37,7 @@ class ArchiveViewModel(
 ) : ViewModel() {
     private val search = MutableStateFlow("")
     private val filter = PlaceFilter(areas, tags, io)
-    private val projectAreas = projects.watch().flowOn(io).map { data -> data.projects.associate { it.id to it.areaId } }
+    private val projectData = projects.watch().flowOn(io)
 
     /** What is typed in the search box. */
     val query: StateFlow<String> = search.asStateFlow()
@@ -45,12 +46,16 @@ class ArchiveViewModel(
     val choices: StateFlow<FilterChoices> = filter.choices.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FilterChoices())
 
     /** The done tasks that match the search and the filter, newest first; null until the replica has been read. */
-    val results: StateFlow<List<TaskItem>?> = combine(tasks.watchAll().flowOn(io), search, filter.choices, projectAreas) { all, words, narrowing, areasOfProjects ->
-        narrowing.filter.apply(ArchiveRules.search(all, words), narrowing.links, areasOfProjects)
+    val results: StateFlow<List<TaskItem>?> = combine(tasks.watchAll().flowOn(io), search, filter.choices, projectData) { all, words, narrowing, data ->
+        // An id, GM-12 or #12, finds that item; anything else is words to find.
+        val found = ProjectRules.parseItemId(words)?.let { wanted ->
+            ProjectRules.named(wanted, ArchiveRules.search(all, ""), data.projects.associateBy(ProjectItem::id))
+        } ?: ArchiveRules.search(all, words)
+        narrowing.filter.apply(found, narrowing.links, data.projects.associate { it.id to it.areaId })
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** The projects that are still there, by id, for the chips. */
-    val projects: StateFlow<Map<String, ProjectItem>> = projects.watch().flowOn(io)
+    val projects: StateFlow<Map<String, ProjectItem>> = projectData
         .map { data -> data.projects.associateBy(ProjectItem::id) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 

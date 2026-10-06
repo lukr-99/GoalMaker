@@ -35,6 +35,11 @@ data class TaskItem(
     val madeBy: String = ProjectRules.OWNER,
     /** When the owner took this done item off its project's board by hand, or null (docs/projects.md). */
     val boardArchivedAt: String? = null,
+    /**
+     * Its number in its project, 12 in GM-12, or null until the server has given one; the app never
+     * makes one up (docs/projects.md, "Item ids").
+     */
+    val itemNumber: Int? = null,
 ) {
     /** The day it was finished, by the server's timestamp, or null while it is not done. */
     val completedDay: LocalDate? get() {

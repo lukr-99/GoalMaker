@@ -34,12 +34,14 @@ import com.goalmaker.app.ui.theme.AppTheme
 /**
  * The chip a project item wears in a task list, the calendar's day and the archive (docs/lists.md):
  * the project's name in a quiet outline, with an idea's or a bug's icon as on the board and the
- * board's own icon for a plain task. With [onOpen] it opens the project's board; a screen reader
- * hears "Project GoalMaker" (or "Idea for", "Bug in") and the open action.
+ * board's own icon for a plain task, and the item's [itemId] (GM-12) once the server has numbered it.
+ * With [onOpen] it opens the project's board; a screen reader hears "Project GoalMaker, GM-12" (or
+ * "Idea for", "Bug in") and the open action.
  */
 @Composable
-fun ProjectChip(project: ProjectItem, itemType: String, onOpen: (() -> Unit)?, modifier: Modifier = Modifier) {
-    val label = projectLabel(project, itemType)
+fun ProjectChip(project: ProjectItem, itemType: String, onOpen: (() -> Unit)?, modifier: Modifier = Modifier, itemId: String? = null) {
+    val kind = projectLabel(project, itemType)
+    val label = itemId?.let { stringResource(R.string.lists_project_with_id, kind, it) } ?: kind
     val openLabel = stringResource(R.string.lists_open_project, project.name)
     val shape = RoundedCornerShape(50)
     Row(
@@ -72,6 +74,9 @@ fun ProjectChip(project: ProjectItem, itemType: String, onOpen: (() -> Unit)?, m
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.widthIn(max = 160.dp),
         )
+        itemId?.let {
+            Text(it, style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted, maxLines = 1)
+        }
     }
 }
 

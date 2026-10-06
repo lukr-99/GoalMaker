@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -20,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
@@ -38,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -61,6 +64,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.goalmaker.app.ui.components.AppSnackbarHost
+import com.goalmaker.app.ui.components.CopiedIds
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.GoalHorizon
@@ -81,8 +86,9 @@ import java.time.format.FormatStyle
 
 /**
  * One task's detail view (spec stories 12 to 19, docs/archive.md): title and done box, notes in light
- * Markdown, day and time, deadline, area, tags, repeat and the checklist. Leaving a text field saves
- * it; a deleted task closes the view.
+ * Markdown, day and time, deadline, area, tags, repeat and the checklist. A project item shows its id
+ * (GM-12) once the server has numbered it, with a way to copy it. Leaving a text field saves it; a
+ * deleted task closes the view.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,12 +98,15 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
     LaunchedEffect(state.loaded, state.task == null) {
         if (state.loaded && state.task == null) onBack()
     }
+    val snackbars = remember { SnackbarHostState() }
+    CopiedIds(viewModel.copies, snackbars)
     val task = state.task ?: return
 
     Scaffold(
         modifier = Modifier
             .sharedTaskBounds(task.id, AppTheme.shapes.row, details = true)
             .nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { AppSnackbarHost(snackbars) },
         topBar = {
             MediumFlexibleTopAppBar(
                 title = { ScreenTitle(stringResource(R.string.task_title)) },
@@ -126,6 +135,7 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = AppTheme.density.pagePadding.dp, vertical = 8.dp),
         ) {
+            state.itemId?.let { id -> ItemIdLine(id, onCopy = viewModel::copyId) }
             TitleField(task, onDone = viewModel::setDone, onRename = viewModel::rename)
             Notes(task.notes, onSave = viewModel::setNotes)
             HorizontalDivider()
@@ -145,6 +155,23 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
                 onMove = viewModel::moveStep,
                 onDelete = viewModel::deleteStep,
             )
+        }
+    }
+}
+
+/** A project item's id, GM-12, as a small muted label, and the button that copies it. */
+@Composable
+private fun ItemIdLine(id: String, onCopy: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            id,
+            style = MaterialTheme.typography.labelLarge,
+            color = AppTheme.colors.textMuted,
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        )
+        TextButton(onClick = onCopy) {
+            Icon(Icons.Outlined.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.projects_copy_id), modifier = Modifier.padding(start = 8.dp))
         }
     }
 }

@@ -16,8 +16,11 @@ import com.goalmaker.app.application.planning.TaskList
 import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -25,8 +28,9 @@ import kotlinx.coroutines.launch
 
 /**
  * One task's detail view (docs/archive.md): every field, its tags, its checklist, the goal it
- * serves and the project it is an item of. Each change is written at once and syncs like any
- * other; disk work runs on [io], and [today] is the planning day the goal picker counts from.
+ * serves and the project it is an item of, with the item's id (GM-12) to copy. Each change is
+ * written at once and syncs like any other; disk work runs on [io], and [today] is the planning day
+ * the goal picker counts from.
  */
 class TaskViewModel(
     private val taskId: String,
@@ -42,6 +46,11 @@ class TaskViewModel(
     private val tagging = combine(tags.watch().flowOn(io), tags.watchLinks().flowOn(io)) { tagList, links -> tagList to links[taskId].orEmpty() }
     // Combine takes five flows, so the goals and the projects travel together.
     private val filing = combine(goals.watch().flowOn(io), projects.watch().flowOn(io)) { (goalList, _), data -> goalList to data.projects }
+
+    private val copyEvents = MutableSharedFlow<String>(extraBufferCapacity = 4)
+
+    /** The item's id to put on the clipboard, with the usual confirmation. */
+    val copies: SharedFlow<String> = copyEvents.asSharedFlow()
 
     val uiState: StateFlow<TaskUiState> = combine(
         tasks.watch(taskId).flowOn(io),
@@ -84,6 +93,11 @@ class TaskViewModel(
     fun setProject(projectId: String?) = write { tasks.setProject(taskId, projectId) }
 
     fun setDone(done: Boolean) = write { tasks.setDone(taskId, done) }
+
+    /** Puts the item's id on the clipboard; a task without one has nothing to copy. */
+    fun copyId() {
+        uiState.value.itemId?.let(copyEvents::tryEmit)
+    }
 
     fun delete() = write { tasks.delete(taskId) }
 

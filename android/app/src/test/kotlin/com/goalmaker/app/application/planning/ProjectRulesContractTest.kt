@@ -2,9 +2,11 @@ package com.goalmaker.app.application.planning
 
 import com.goalmaker.app.contracts.ContractFiles
 import java.time.LocalDate
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -133,6 +135,40 @@ class ProjectRulesContractTest {
                     LocalDate.parse(case.text("today")),
                 ),
             )
+        }
+    }
+
+    @Test
+    fun `every item key suggestion`() {
+        vectors.getValue("itemKeys").jsonObject.cases("suggest").forEach { case ->
+            assertEquals(
+                case.text("name"),
+                case.getValue("expect").takeUnless { it == JsonNull }?.jsonPrimitive?.content,
+                ProjectRules.suggestItemKey(case.text("project")!!, case.getValue("taken").jsonArray.map { it.jsonPrimitive.content }),
+            )
+        }
+    }
+
+    @Test
+    fun `every item key is kept or refused`() {
+        vectors.getValue("itemKeys").jsonObject.cases("valid").forEach { case ->
+            val key = case.text("key")!!
+            assertEquals(key, case.getValue("expect").jsonPrimitive.boolean, ProjectRules.isItemKey(key.uppercase()))
+        }
+    }
+
+    @Test
+    fun `every item id is written and read back`() {
+        val keys = vectors.getValue("itemKeys").jsonObject
+        keys.cases("format").forEach { case ->
+            val key = case.getValue("key").takeUnless { it == JsonNull }?.jsonPrimitive?.content
+            assertEquals(case.text("expect"), ProjectRules.formatItemId(key, case.getValue("number").jsonPrimitive.int))
+        }
+        keys.cases("parse").forEach { case ->
+            val expect = case.getValue("expect").takeUnless { it == JsonNull }?.jsonObject?.let { id ->
+                ItemId(id.getValue("key").takeUnless { it == JsonNull }?.jsonPrimitive?.content, id.getValue("number").jsonPrimitive.int)
+            }
+            assertEquals(case.text("text"), expect, ProjectRules.parseItemId(case.text("text")))
         }
     }
 }

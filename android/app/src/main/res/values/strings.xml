@@ -140,6 +140,7 @@
     <string name="lists_project_task">Project %1$s</string>
     <string name="lists_project_idea">Idea for %1$s</string>
     <string name="lists_project_bug">Bug in %1$s</string>
+    <string name="lists_project_with_id">%1$s, %2$s</string>
     <string name="lists_open_project">Open the %1$s board</string>
     <string name="lists_done_box">%1$s done</string>
     <string name="lists_reminded">Reminder set</string>
@@ -1053,6 +1054,18 @@
     <string name="projects_description">Description</string>
     <string name="projects_repository">Repository URL</string>
     <string name="projects_folder">Local folder</string>
+    <!-- A project's key and its items' short ids, like GM-12 (docs/projects.md, "Item ids"). -->
+    <string name="projects_key">Key</string>
+    <string name="projects_key_hint">Items read %1$s</string>
+    <string name="projects_key_none">Without a key, items read #12</string>
+    <string name="projects_key_not_valid">A key is 2 to 6 letters or digits, and starts with a letter.</string>
+    <string name="projects_key_taken">Another project already uses %1$s.</string>
+    <string name="projects_copy_id">Copy id</string>
+    <string name="projects_id_copied">Copied %1$s</string>
+    <string name="projects_find_item">Find an item</string>
+    <string name="projects_find_item_hint">Words from its title, or its id, like GM-12 or #12</string>
+    <string name="projects_find_clear">Clear the search</string>
+    <string name="projects_nothing_found">No item matches.</string>
     <string name="projects_active">Active</string>
     <string name="projects_paused">Paused</string>
     <string name="projects_finished">Done</string>

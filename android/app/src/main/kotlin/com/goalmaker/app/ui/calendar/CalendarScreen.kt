@@ -92,6 +92,7 @@ import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.EventItem
 import com.goalmaker.app.application.planning.EventRules
 import com.goalmaker.app.application.planning.ProjectItem
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.ui.chat.ChatViewModel
@@ -691,7 +692,7 @@ private fun DayRow(
                 style = MaterialTheme.typography.labelSmall,
                 color = AppTheme.colors.textMuted,
             )
-            project?.let { item -> ProjectChip(item, task.itemType, onOpenProject?.let { open -> { open(item.id) } }, Modifier.padding(top = 4.dp)) }
+            project?.let { item -> ProjectChip(item, task.itemType, onOpenProject?.let { open -> { open(item.id) } }, Modifier.padding(top = 4.dp), ProjectRules.itemIdOf(task, item)) }
         }
     }
 }

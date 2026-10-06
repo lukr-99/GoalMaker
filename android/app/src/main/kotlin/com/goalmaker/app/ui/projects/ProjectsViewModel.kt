@@ -2,7 +2,9 @@ package com.goalmaker.app.ui.projects
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.planning.ArchiveRules
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.ProjectDraft
 import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.ProjectRules
@@ -19,6 +21,7 @@ import com.goalmaker.app.ui.lists.PlaceFilter
 import com.goalmaker.app.ui.lists.UndoEvent
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,7 +43,10 @@ import kotlinx.coroutines.launch
  * the project's number of days after the planning day it was finished, by [clock] and the owner's day
  * start, or when it is archived by hand. Finishing an item, archiving it and taking one out of the
  * project can be undone, as on the lists. How the board shows, as columns or a list, and which list
- * sections are folded away, stay on the device in [settings].
+ * sections are folded away, stay on the device in [settings]. A project may have a key, so its items
+ * read GM-12 (docs/projects.md, "Item ids"): the form suggests one from a new project's name, a card
+ * shows its id once the server has numbered it, its menu copies it, and the board's search finds an
+ * item by its words, GM-12 or #12.
  */
 class ProjectsViewModel(
     private val projects: ProjectList,
@@ -56,6 +62,11 @@ class ProjectsViewModel(
     private val madeBy = MutableStateFlow(ProjectRules.EVERYONE)
     private val filter = PlaceFilter(areas, tags, io)
     private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
+    private val search = MutableStateFlow("")
+    private val copyEvents = MutableSharedFlow<String>(extraBufferCapacity = 4)
+
+    /** An item's id to put on the clipboard, with the usual confirmation. */
+    val copies: SharedFlow<String> = copyEvents.asSharedFlow()
 
     /** What the board offers to take back: an item moved to Done, archived, or taken out of the project. */
     val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
@@ -64,9 +75,9 @@ class ProjectsViewModel(
         projects.watch().flowOn(io),
         tasks.watchAll().flowOn(io),
         chosen,
-        combine(madeBy, filter.choices, ::Pair),
+        combine(madeBy, filter.choices, search, ::Triple),
         settings.dayStartHour,
-    ) { data, taskList, selectedId, (maker, choices), startHour ->
+    ) { data, taskList, selectedId, (maker, choices, query), startHour ->
         val narrowed = choices.filter
         val items = taskList.filterNot { it.deleted }.groupBy { it.projectId }
         val listed = data.projects.filter { narrowed.keepsProject(it.areaId, items[it.id].orEmpty(), choices.links) }
@@ -75,8 +86,10 @@ class ProjectsViewModel(
         val (onBoard, offBoard) = if (selected == null) {
             emptyList<TaskItem>() to emptyList()
         } else {
+            val found = finder(query, selected)
             items[selected.id].orEmpty()
                 .filter { ProjectRules.shows(maker, it.madeBy) && narrowed.matches(it, choices.links[it.id].orEmpty(), selected.areaId) }
+                .filter(found)
                 .partition { ProjectRules.onBoard(it, selected, today, zone(), startHour) }
         }
         ProjectsUiState(
@@ -95,6 +108,8 @@ class ProjectsViewModel(
                 .filter { it.projectId != null && it.boardColumn != ProjectRules.DONE }
                 .groupingBy { it.projectId!! }
                 .eachCount(),
+            keys = data.projects.mapNotNull { project -> project.itemKey?.let { project.id to it } }.toMap(),
+            query = query,
         )
     }
 
@@ -127,18 +142,55 @@ class ProjectsViewModel(
         settings.setCollapsedColumns(if (column in collapsed) collapsed - column else collapsed + column)
     }
 
-    /** Adds a project; [archiveAfterDays] is how long its done items stay on the board, null for until archived by hand. */
-    fun addProject(draft: ProjectDraft, archiveAfterDays: Int? = ProjectRules.ARCHIVE_AFTER_DAYS) = write {
+    /**
+     * Adds a project; [archiveAfterDays] is how long its done items stay on the board, null for until
+     * archived by hand, and [itemKey] what its items' ids start with (blank for none).
+     */
+    fun addProject(draft: ProjectDraft, archiveAfterDays: Int? = ProjectRules.ARCHIVE_AFTER_DAYS, itemKey: String = "") = write {
         projects.add(draft)?.let { project ->
             if (archiveAfterDays != project.archiveAfterDays) projects.setArchiveAfterDays(project.id, archiveAfterDays)
+            if (itemKey.isNotBlank()) projects.setItemKey(project.id, itemKey)
             chosen.value = project.id
         }
     }
 
-    /** Changes a project to what [draft] says, and how long its done items stay on the board. */
-    fun updateProject(id: String, draft: ProjectDraft, archiveAfterDays: Int?) = write {
+    /**
+     * Changes a project to what [draft] says, how long its done items stay on the board, and, unless
+     * [itemKey] is null, the key its items read by; the items keep their numbers.
+     */
+    fun updateProject(id: String, draft: ProjectDraft, archiveAfterDays: Int?, itemKey: String? = null) = write {
         projects.update(id, draft)
         if (archiveAfterDays != projects.get(id)?.archiveAfterDays) projects.setArchiveAfterDays(id, archiveAfterDays)
+        if (itemKey != null && itemKey.trim().uppercase(Locale.ROOT) != projects.get(id)?.itemKey.orEmpty()) {
+            projects.setItemKey(id, itemKey)
+        }
+    }
+
+    /**
+     * The key the form suggests for a project called [name]: one none of the other projects reads by
+     * (docs/projects.md, "Item ids"), or null when the name has too little to make one from.
+     */
+    fun suggestKey(name: String, exceptId: String? = null): String? = ProjectRules.suggestItemKey(name, uiState.value.otherKeys(exceptId))
+
+    /** Why [key] can't be the key of the project [exceptId] (null for a new one), or null when it can; blank is none. */
+    fun keyProblem(key: String, exceptId: String? = null): KeyProblem? {
+        val clean = key.trim().uppercase(Locale.ROOT)
+        return when {
+            clean.isEmpty() -> null
+            !ProjectRules.isItemKey(clean) -> KeyProblem.NOT_VALID
+            uiState.value.otherKeys(exceptId).any { it.equals(clean, ignoreCase = true) } -> KeyProblem.TAKEN
+            else -> null
+        }
+    }
+
+    /** What the board's search holds: words from an item's title or notes, or its id, GM-12 or #12. */
+    fun setQuery(text: String) {
+        search.value = text
+    }
+
+    /** Puts an item's id on the clipboard; an item the server hasn't numbered yet has none to copy. */
+    fun copyId(item: TaskItem) {
+        uiState.value.itemIdOf(item)?.let(copyEvents::tryEmit)
     }
 
     fun setStatus(id: String, status: String) = write { projects.setStatus(id, status) }
@@ -207,5 +259,17 @@ class ProjectsViewModel(
 
     private fun write(work: () -> Unit) {
         viewModelScope.launch(io) { work() }
+    }
+
+    // What the board's search keeps: an item by its id (GM-12, or #12 in the project on show), or by
+    // every word of the query in its title or notes, ignoring case and accents.
+    private fun finder(query: String, shown: ProjectItem): (TaskItem) -> Boolean {
+        val wanted = ProjectRules.parseItemId(query)
+        if (wanted != null) return { task -> ProjectRules.isItem(wanted, shown.itemKey, task.itemNumber, inProject = true) }
+        val words = query.split(' ').map(ArchiveRules::fold).filter(String::isNotEmpty)
+        return { task ->
+            val text = ArchiveRules.fold(task.title) + "\n" + ArchiveRules.fold(task.notes)
+            words.all { it in text }
+        }
     }
 }

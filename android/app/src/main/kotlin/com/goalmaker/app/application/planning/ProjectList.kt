@@ -89,6 +89,24 @@ class ProjectList(
         return change(TABLE, id) { values -> values[ARCHIVE_AFTER_DAYS] = days?.let(::JsonPrimitive) ?: JsonNull }
     }
 
+    /**
+     * The key a project's items read by (docs/projects.md, "Item ids"), upper-cased; blank clears it.
+     * False for a key that is not 2 to 6 letters or digits starting with a letter, one another of the
+     * owner's projects uses, or a project that is gone. The items keep their numbers.
+     */
+    fun setItemKey(id: String, key: String?): Boolean {
+        val clean = key?.trim()?.uppercase(Locale.ROOT).orEmpty()
+        if (clean.isNotEmpty() && (!ProjectRules.isItemKey(clean) || isKeyTaken(clean, id))) return false
+        return change(TABLE, id) { values -> values[ITEM_KEY] = if (clean.isEmpty()) JsonNull else JsonPrimitive(clean) }
+    }
+
+    /** Whether another of the owner's projects than [exceptId] reads by [key], in any case. */
+    fun isKeyTaken(key: String, exceptId: String? = null): Boolean =
+        otherKeys(exceptId).any { it.equals(key.trim(), ignoreCase = true) }
+
+    /** The keys of the owner's projects other than [exceptId], for a suggestion to steer clear of. */
+    fun otherKeys(exceptId: String? = null): List<String> = all().filter { it.id != exceptId }.mapNotNull(ProjectItem::itemKey)
+
     /** Deletes a project softly; its items stay as plain tasks. */
     fun delete(id: String): Boolean = change(TABLE, id) { values ->
         values[SyncedTable.DELETED_AT] = JsonPrimitive(rows.timestamp())
@@ -176,6 +194,7 @@ class ProjectList(
         } else {
             ProjectRules.ARCHIVE_AFTER_DAYS
         },
+        itemKey = row.text(ITEM_KEY)?.takeIf(String::isNotEmpty),
     )
 
     private fun toMilestone(row: JsonObject) = ProjectMilestone(
@@ -190,6 +209,7 @@ class ProjectList(
         const val TABLE = "projects"
         const val MILESTONES = "project_milestones"
         const val ARCHIVE_AFTER_DAYS = "archive_after_days"
+        const val ITEM_KEY = "item_key"
         const val MAX_NAME = 120
         const val MAX_DESCRIPTION = 2000
         const val MAX_LINK = 500

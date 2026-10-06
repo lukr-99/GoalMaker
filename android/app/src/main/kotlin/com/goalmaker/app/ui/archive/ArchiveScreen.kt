@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.ui.components.ProjectChip
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.domain.sync.SyncRules
 import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
@@ -124,6 +125,7 @@ fun ArchiveScreen(
                                 task.itemType,
                                 onOpenProject?.let { open -> { open(project.id) } },
                                 Modifier.padding(top = 4.dp),
+                                ProjectRules.itemIdOf(task, project),
                             )
                         }
                     }
