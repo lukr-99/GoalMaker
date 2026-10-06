@@ -55,12 +55,19 @@
 
                 <ui:Card Margin="0,0,0,12" Padding="20">
                     <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Task.Notes}" />
+                        <!-- The notes save on their own (after a pause, on leaving the box or the page); a quiet "Saved" says so. -->
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Margin="8,0,0,12" VerticalAlignment="Bottom" FontSize="12"
+                                       Text="{DynamicResource Task.NotesSaved}" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                       AutomationProperties.LiveSetting="Polite"
+                                       Visibility="{Binding NotesSaved, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="{DynamicResource Task.Notes}" />
+                        </DockPanel>
                         <StackPanel Visibility="{Binding IsEditingNotes, Converter={StaticResource BoolToVisibility}}">
-                            <TextBox MinHeight="120" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="20000" VerticalScrollBarVisibility="Auto"
-                                     Text="{Binding NotesDraft, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Task.Notes}" />
+                            <TextBox x:Name="NotesBox" MinHeight="120" AcceptsReturn="True" TextWrapping="Wrap" MaxLength="20000" VerticalScrollBarVisibility="Auto"
+                                     Text="{Binding NotesDraft, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{DynamicResource Task.Notes}"
+                                     LostFocus="OnNotesLostFocus" />
                             <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Task.NotesHint}" />
-                            <ui:Button Margin="0,8,0,0" Appearance="Primary" Content="{DynamicResource Task.NotesSave}" Command="{Binding SaveNotesCommand}" />
                         </StackPanel>
                         <StackPanel x:Name="NotesView">
                             <controls:MarkdownView Markdown="{Binding Notes}" />

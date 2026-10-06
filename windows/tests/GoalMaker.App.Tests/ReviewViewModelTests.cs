@@ -137,6 +137,38 @@ public sealed class ReviewViewModelTests : IDisposable
     }
 
     [Fact]
+    public void AWrittenReviewOpenedAgainClosesWithDoneAndKeepsTheEdits()
+    {
+        WriteLetter("## What went well\nThe dentist, finally.");
+        var first = Page();
+        first.QuestionRows[0].Answer = "First answer.";
+        while (!first.IsDone)
+        {
+            first.NextCommand.Execute(null);
+        }
+
+        var closed = 0;
+        var again = Page(close: () => closed++);
+        Assert.True(again.IsLetter);
+        while (!again.IsDone)
+        {
+            if (again.IsReflect)
+            {
+                again.QuestionRows[0].Answer = "Changed answer.";
+            }
+
+            again.NextCommand.Execute(null);
+        }
+
+        Assert.Equal("Reviews.Close", again.NextLabel);
+        Assert.True(again.NextCommand.CanExecute(null));
+        again.NextCommand.Execute(null);
+
+        Assert.Equal(1, closed);
+        Assert.Equal("Changed answer.", planner.Reviews.Find(ReviewRules.Weekly, WeekStart)!.Reflections[0].Answer);
+    }
+
+    [Fact]
     public void AReviewOpenedAgainShowsThePromptsItAskedBefore()
     {
         var first = Page();
@@ -264,7 +296,7 @@ public sealed class ReviewViewModelTests : IDisposable
         return Path.Combine(directory!.FullName, "contracts", "content", "prompts.json");
     }
 
-    private ReviewViewModel Page(string kind = ReviewRules.Weekly, DateOnly? start = null) => new(
+    private ReviewViewModel Page(string kind = ReviewRules.Weekly, DateOnly? start = null, Action? close = null) => new(
         kind,
         start ?? WeekStart,
         planner.Reviews,
@@ -279,7 +311,8 @@ public sealed class ReviewViewModelTests : IDisposable
         planner.Time,
         action => action(),
         planner.Tally,
-        own => new TallyLabels(ContractResources.TallyDefaults(), own, planner.Strings, _ => null));
+        own => new TallyLabels(ContractResources.TallyDefaults(), own, planner.Strings, _ => null),
+        close);
 
     private TaskItem Add(string line)
     {

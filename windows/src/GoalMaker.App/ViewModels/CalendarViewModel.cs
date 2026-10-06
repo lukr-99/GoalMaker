@@ -188,14 +188,19 @@ public sealed partial class CalendarViewModel : ObservableObject
 
     /// <summary>
     /// What a reader says for a day's cell: "Saturday, 3 October 2026, today, 2 planned, 1 due", or that
-    /// nothing is on it. The same parts, in the same order, as the phone's cell.
+    /// nothing is on it. The same parts, in the same order, as the phone's cell; tomorrow is named as today is.
     /// </summary>
-    private string CellName(CalendarDay day, int eventCount, bool isToday, bool isOpen, bool isPicked)
+    private string CellName(CalendarDay day, int eventCount, bool isToday, bool isTomorrow, bool isOpen, bool isPicked)
     {
         var parts = new List<string> { day.Day.ToString("D", CultureInfo.CurrentCulture) };
         if (isToday)
         {
             parts.Add(strings.Get("Calendar.CellToday"));
+        }
+
+        if (isTomorrow)
+        {
+            parts.Add(strings.Get("Calendar.CellTomorrow"));
         }
 
         if (isPicked)
@@ -252,18 +257,22 @@ public sealed partial class CalendarViewModel : ObservableObject
         {
             var date = day.Day;
             var picked = picks.Contains(date);
+            var isToday = date == today;
+            var isTomorrow = date == today.AddDays(1);
             Cells.Add(new CalendarCellViewModel(
                 date,
                 date.Day.ToString(CultureInfo.CurrentCulture),
                 day.Count,
-                date == today,
+                isToday,
                 Kind == CalendarRules.Week || date.Month == shown.Month,
                 date == selected,
                 () => Open(date),
-                CellName(day, eventDays[date].Count, date == today, date == selected, picked),
+                CellName(day, eventDays[date].Count, isToday, isTomorrow, date == selected, picked),
                 picked,
                 () => Pick(date),
-                () => PickRun(date)));
+                () => PickRun(date),
+                isTomorrow,
+                isToday ? strings.Get("Calendar.TagToday") : isTomorrow ? strings.Get("Calendar.TagTomorrow") : null));
         }
 
         ShowWeeks(shownEvents, start, end);
