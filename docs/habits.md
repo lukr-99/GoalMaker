@@ -141,16 +141,25 @@ nothing; a limit's clean day is met.
   with its streak as a flame and a number, where today stands, pips for a small count or the days a
   weekly habit needs (a limit's pips past the line turn to the danger colour) or a bar for an amount,
   and the week's dots. Its **check-in button** checks a check habit (and takes it back), adds one to
-  a count ("+1"), and asks for the value of an amount; once today's part is done it fills with the
+  a count ("+1"), and fills an amount to its target in one tap (see "One tap" below; a limit's amount
+  still asks for the value); once today's part is done it fills with the
   accent and turns round, while the habit is skipped it is a dashed outline whose click undoes
   the skip, and while it is failed it is a danger outline with a cross whose click undoes the fail. Every check-in writes the day's one check-in, so three then five is eight. A streak
   reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods gets confetti, skipped under reduce
   motion.
-- **The menu** holds the rest: check in or add one, log an amount, skip today (this week, this
+- **The menu** holds the rest: check in or add one, log an amount (with ready taps), skip today (this week, this
   month) or undo the skip, fail today (this week, this month) or undo the fail, clear today, pause or resume, edit, archive and delete; on Today also
   Open Habits. On the phone a long press on the card or its menu button opens it as a sheet, and a
   screen reader gets Skip and More as actions, so nothing needs the long press. On Windows the
   card's menu button, a right click or the menu key open it.
+- **One tap** (the owner's board item "Able to finish amount tasks in one click"): on an amount
+  habit that is not a limit, the check-in button logs the rest of the day's target at once, so
+  drinking the day's 2.5 L is one tap, and an Undo follows. Once the target is reached the button
+  opens the log sheet instead, so a stray tap never wipes the day. Logging a part is in the menu's **Log an
+  amount**, which offers ready taps of a quarter and a half of the target and the rest, beside the
+  number field. Pinned by the `fill` group of
+  [`contracts/vectors/habits.json`](../contracts/vectors/habits.json); the connector's
+  `check_in_habit` takes `fill` for the same.
 - **The heatmap** gives each day a value: nothing before the start or on a day that isn't due,
   paused, skipped, over a limit, or the day's value against its target from 0 to 1 (a check is 0 or
   1; a limit's day is what is left of the allowance). It runs by
