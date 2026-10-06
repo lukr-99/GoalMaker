@@ -3,7 +3,10 @@ package com.goalmaker.app.ui.calendar
 import android.app.Application
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -29,6 +32,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
+import com.goalmaker.app.application.planning.CalendarRules
 import com.goalmaker.app.application.planning.EventDraft
 import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.TaskState
@@ -103,6 +107,31 @@ class CalendarScreenTest {
         compose.onNode(doneBox("File the receipts")).assertIsOn()
         assertEquals(TaskState.DONE, planner.tasks.find(receipts.id)!!.state)
     }
+
+    @Test
+    fun `today and tomorrow say so in the month and in the week`() {
+        val calendar = planner.calendar()
+        compose.setContent {
+            ScreenTheme { CalendarScreen(viewModel = calendar, chat = planner.chat(), onOpenTask = {}, actions = {}) }
+        }
+
+        fun check() {
+            // Friday 18 September 2026 is today.
+            day(18).assertContentDescriptionContains(", today")
+            day(19).assertContentDescriptionContains(", tomorrow")
+            day(20).assert(SemanticsMatcher("says neither") { node -> node.description().let { "today" !in it && "tomorrow" !in it } })
+            day(17).assert(SemanticsMatcher("says neither") { node -> node.description().let { "today" !in it && "tomorrow" !in it } })
+        }
+        check()
+        calendar.show(CalendarRules.WEEK)
+        compose.waitForIdle()
+        check()
+    }
+
+    private fun SemanticsNodeInteraction.assertContentDescriptionContains(part: String) =
+        assert(SemanticsMatcher("says \"$part\"") { node -> part in node.description() })
+
+    private fun SemanticsNode.description() = config.getOrElse(SemanticsProperties.ContentDescription) { emptyList() }.joinToString()
 
     // A day of September's grid, by the date its cell says to a screen reader ("Tuesday 15 September, ...").
     private fun day(number: Int) = compose.onNode(

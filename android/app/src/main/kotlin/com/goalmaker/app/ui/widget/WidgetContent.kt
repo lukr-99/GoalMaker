@@ -26,6 +26,19 @@ object WidgetContent {
     const val ROWS = 8
 
     /**
+     * The Habits widget scrolls, so it takes every habit on Today up to this many: a cap only so a
+     * launcher is never handed an endless list.
+     */
+    const val HABIT_ROWS = 60
+
+    /** Below this width (dp) two compact habit tiles side by side would cut their names too short. */
+    const val HABIT_GRID_MIN_WIDTH = 220f
+
+    /** The room the Habits widget's padding and header take (dp), and the height of one habit row. */
+    const val HABIT_CHROME = 52f
+    const val HABIT_ROW = 28f
+
+    /**
      * What is still open today, in the order Today shows it: top priorities, then by time, then the
      * rest, a project item with its project's name from [projects] (the ones that are not deleted).
      */
@@ -50,7 +63,7 @@ object WidgetContent {
     }
 
     /** Today's habits, the ones on Today's ring row, with how far each has got. */
-    fun habits(data: HabitData, today: LocalDate, rows: Int = ROWS): List<WidgetHabit> =
+    fun habits(data: HabitData, today: LocalDate, rows: Int = HABIT_ROWS): List<WidgetHabit> =
         data.habits.filter { !it.deleted && HabitRules.onToday(it, today, data.pausesOf(it.id)) }
             .take(rows)
             .map { habit ->
@@ -71,6 +84,17 @@ object WidgetContent {
                     tappable = habit.measure != HabitRules.AMOUNT,
                 )
             }
+
+    /**
+     * How many columns the Habits widget lays [count] habits out in, at [width] by [height] dp: two
+     * compact tiles side by side once the widget is wide enough for them and the habits would not all
+     * fit one under another; otherwise one. Either way the list scrolls when there are more than fit.
+     */
+    fun habitColumns(count: Int, width: Float, height: Float): Int {
+        if (width < HABIT_GRID_MIN_WIDTH) return 1
+        val fit = maxOf(1, ((height - HABIT_CHROME) / HABIT_ROW).toInt())
+        return if (count > fit) 2 else 1
+    }
 
     /** How many of today's habits are still open, for the header. */
     fun habitsLeft(habits: List<WidgetHabit>): Int = habits.count(WidgetHabit::left)

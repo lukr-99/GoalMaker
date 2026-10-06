@@ -15,9 +15,16 @@ import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskList
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -26,7 +33,8 @@ import kotlinx.coroutines.launch
 /**
  * One task's detail view (docs/archive.md): every field, its tags, its checklist, the goal it
  * serves and the project it is an item of. Each change is written at once and syncs like any
- * other; disk work runs on [io], and [today] is the planning day the goal picker counts from.
+ * other; disk work runs on [io], and [today] is the planning day the goal picker counts from. Notes
+ * are written once typing pauses for [notesPause], or at once when the field or the view is left.
  */
 class TaskViewModel(
     private val taskId: String,
@@ -37,8 +45,17 @@ class TaskViewModel(
     goals: GoalList,
     projects: ProjectList,
     private val io: CoroutineDispatcher,
+    private val notesPause: Duration = NOTES_PAUSE,
     private val today: () -> LocalDate,
 ) : ViewModel() {
+    // The notes typed and not yet written, null when there is nothing waiting.
+    @Volatile private var notesDraft: String? = null
+    private var notesTimer: Job? = null
+    private val notesState = MutableStateFlow(NotesSave.IDLE)
+
+    /** Whether the notes typed are written yet, for the quiet mark under the field. */
+    val notesSave: StateFlow<NotesSave> = notesState.asStateFlow()
+
     private val tagging = combine(tags.watch().flowOn(io), tags.watchLinks().flowOn(io)) { tagList, links -> tagList to links[taskId].orEmpty() }
     // Combine takes five flows, so the goals and the projects travel together.
     private val filing = combine(goals.watch().flowOn(io), projects.watch().flowOn(io)) { (goalList, _), data -> goalList to data.projects }
@@ -64,7 +81,39 @@ class TaskViewModel(
 
     fun rename(title: String) = write { tasks.rename(taskId, title) }
 
-    fun setNotes(notes: String) = write { tasks.setNotes(taskId, notes) }
+    /**
+     * Takes the notes as they are typed and writes them after a short pause in typing, so an edit
+     * is never lost to a forgotten button.
+     */
+    fun editNotes(notes: String) {
+        notesDraft = notes
+        notesState.value = NotesSave.PENDING
+        notesTimer?.cancel()
+        notesTimer = viewModelScope.launch {
+            delay(notesPause)
+            saveNotes()
+        }
+    }
+
+    /**
+     * Writes the notes typed so far at once: when the field loses focus, the view closes or Back is
+     * pressed. Nothing is written when they are what the task already holds. The write finishes even
+     * when the view is on its way out.
+     */
+    fun saveNotes() {
+        notesTimer?.cancel()
+        notesTimer = null
+        val notes = notesDraft ?: return
+        notesDraft = null
+        viewModelScope.launch(io + NonCancellable) {
+            val stored = tasks.find(taskId)?.notes ?: return@launch
+            if (stored != notes) tasks.setNotes(taskId, notes)
+            // Typing again while this was written leaves it waiting.
+            if (notesDraft == null) notesState.value = NotesSave.SAVED
+        }
+    }
+
+    override fun onCleared() = saveNotes()
 
     fun schedule(day: LocalDate?, time: LocalTime?) = write { tasks.schedule(taskId, day, time) }
 
@@ -123,5 +172,10 @@ class TaskViewModel(
             goal.id == task?.goalId ||
                 (goal.status == GoalRules.OPEN && !GoalRules.periodEnd(goal.horizon, goal.periodStart).isBefore(day))
         }
+    }
+
+    private companion object {
+        /** How long typing has to pause before the notes are written. */
+        val NOTES_PAUSE = 800.milliseconds
     }
 }

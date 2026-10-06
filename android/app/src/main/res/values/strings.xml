@@ -289,7 +289,8 @@
     <string name="task_notes">Notes</string>
     <string name="task_notes_add">Add notes</string>
     <string name="task_notes_hint">**bold**, *italic*, a dash for a list, and links</string>
-    <string name="task_notes_save">Save the notes</string>
+    <string name="task_notes_saving">Saving</string>
+    <string name="task_notes_saved">Saved</string>
     <string name="task_day">Day</string>
     <string name="task_time">Time</string>
     <string name="task_deadline">Deadline</string>
@@ -418,7 +419,7 @@
     <string name="settings_quiet_hours_end">Quiet hours end</string>
     <string name="settings_quiet_hours_clear">Switch off</string>
     <string name="settings_plan_reminder">Evening reminder to plan tomorrow</string>
-    <string name="settings_plan_reminder_on">At %1$s, unless you already planned or said not today.</string>
+    <string name="settings_plan_reminder_on">At %1$s, unless you already planned it or said not today.</string>
     <string name="settings_plan_reminder_off">Off.</string>
     <string name="plan_reminder_channel">Plan tomorrow</string>
     <string name="plan_reminder_channel_description">The evening reminder to plan tomorrow.</string>
@@ -933,10 +934,13 @@
     <string name="widget_habits_title">Habits</string>
     <string name="widget_habits_header">Habits · %1$d left</string>
     <string name="widget_habits_empty">No habits due today.</string>
-    <string name="widget_habits_preview_header">Habits · 2 left</string>
+    <string name="widget_habits_preview_header">Habits · 4 left</string>
     <string name="widget_habits_preview_first">●  🧘 Meditate</string>
-    <string name="widget_habits_preview_second">○  💧 Drink water  3 of 8 glasses</string>
-    <string name="widget_habits_preview_third">○  📖 Read  0 of 20 pages</string>
+    <string name="widget_habits_preview_second">○  💧 Water  3 of 8</string>
+    <string name="widget_habits_preview_third">○  📖 Read  0 of 20</string>
+    <string name="widget_habits_preview_fourth">●  🏃 Run</string>
+    <string name="widget_habits_preview_fifth">○  🦷 Floss</string>
+    <string name="widget_habits_preview_sixth">○  🌱 Water the plants</string>
     <string name="widget_habits_description">The habits for today, one tap to check one in.</string>
     <string name="widget_motivation_description">Your own words, or your goals for this week, month or year.</string>
     <string name="widget_motivation_week">This week\'s goals</string>
@@ -980,6 +984,9 @@
     <string name="calendar_drag_hint">Hold a task and drag it onto another day to move it.</string>
     <!-- A day cell as a screen reader says it, after the date. -->
     <string name="calendar_cell_today">today</string>
+    <string name="calendar_cell_tomorrow">tomorrow</string>
+    <string name="calendar_cell_today_label">Today</string>
+    <string name="calendar_cell_tomorrow_label">Tomorrow</string>
     <string name="calendar_cell_open">open</string>
     <string name="calendar_cell_empty">nothing on it</string>
     <plurals name="calendar_cell_planned">
