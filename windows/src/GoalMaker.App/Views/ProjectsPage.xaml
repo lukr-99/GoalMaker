@@ -127,6 +127,8 @@
                                     <MenuItem Header="{DynamicResource Projects.Dropped}" Command="{Binding MoveCommand}" CommandParameter="dropped" />
                                     <Separator />
                                     <MenuItem Header="{DynamicResource Projects.OpenItem}" Command="{Binding OpenCommand}" />
+                                    <MenuItem Header="{DynamicResource Projects.CopyId}" Command="{Binding CopyIdCommand}"
+                                              Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}" />
                                     <MenuItem Header="{DynamicResource Projects.Archive}" Command="{Binding ArchiveCommand}"
                                               Visibility="{Binding CanArchive, Converter={StaticResource BoolToVisibility}}" />
                                     <MenuItem Header="{DynamicResource Projects.RemoveItem}" Command="{Binding RemoveCommand}" />
@@ -134,8 +136,11 @@
                             </ui:Button.ContextMenu>
                             <ui:SymbolIcon Symbol="MoreVertical24" />
                         </ui:Button>
-                        <!-- A dropped item, in Dropped, steps back in the muted colour. -->
-                        <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center">
+                        <!--
+                          A dropped item, in Dropped, steps back in the muted colour. The id (GM-12) leads the
+                          title in the same text, small and muted, so a screen reader reads them together.
+                        -->
+                        <TextBlock FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
@@ -146,6 +151,8 @@
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
+                            <Run Text="{Binding IdLead, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas, Courier New" FontSize="11"
+                                 Foreground="{DynamicResource GM.TextMutedBrush}" /><Run Text="{Binding Title, Mode=OneWay}" />
                         </TextBlock>
                     </DockPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
@@ -175,7 +182,9 @@
                     <ui:Button DockPanel.Dock="Right" Padding="6,2" VerticalAlignment="Center" Appearance="Transparent"
                                FontSize="12" Command="{Binding PutBackCommand}" Content="{Binding ActionText}" />
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Title}" FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <TextBlock FontSize="13" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}">
+                            <Run Text="{Binding IdLead, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas, Courier New" FontSize="11" /><Run Text="{Binding Title, Mode=OneWay}" />
+                        </TextBlock>
                         <TextBlock Text="{Binding DoneText}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
                     </StackPanel>
                 </DockPanel>
@@ -316,6 +325,20 @@
                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
                         <ui:TextBox PlaceholderText="{DynamicResource Projects.Name}" Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" />
+                        <!-- The key its items read by (docs/projects.md, "Item ids"): a new project's name suggests one. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.Key}" />
+                            <ui:TextBox MinWidth="110" MaxLength="6" CharacterCasing="Upper"
+                                        Text="{Binding ProjectKey, UpdateSourceTrigger=PropertyChanged}"
+                                        AutomationProperties.Name="{DynamicResource Projects.Key}"
+                                        AutomationProperties.HelpText="{Binding KeyHint}" />
+                            <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding KeyHint}" />
+                        </StackPanel>
+                        <TextBlock Margin="0,4,0,0" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource GM.DangerBrush}"
+                                   Text="{Binding KeyProblem}"
+                                   Visibility="{Binding HasKeyProblem, Converter={StaticResource BoolToVisibility}}" />
                         <ui:TextBox Margin="0,8,0,0" PlaceholderText="{DynamicResource Projects.Description}"
                                     Text="{Binding ProjectDescription, UpdateSourceTrigger=PropertyChanged}" />
                         <ui:TextBox Margin="0,8,0,0" PlaceholderText="{DynamicResource Projects.Repository}"
@@ -389,14 +412,26 @@
                         </ui:Button>
                     </Grid>
 
-                    <!-- Who made the items on show: everyone, the owner, or Claude (docs/projects.md). -->
-                    <StackPanel Margin="0,0,0,8" Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.MadeBy}" />
-                        <ComboBox MinWidth="120" ItemsSource="{Binding MakerFilters}"
-                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding MadeByFilter}"
-                                  AutomationProperties.Name="{DynamicResource Projects.MadeBy}" />
-                    </StackPanel>
+                    <!--
+                      The board's search: words from an item's title or notes, or its id, GM-12 or #12. Then who
+                      made the items on show: everyone, the owner, or Claude (docs/projects.md).
+                    -->
+                    <DockPanel Margin="0,0,0,8">
+                        <ui:TextBox DockPanel.Dock="Left" Width="260"
+                                    PlaceholderText="{DynamicResource Projects.FindItem}"
+                                    Icon="{ui:SymbolIcon Search24}"
+                                    ToolTip="{DynamicResource Projects.FindItemHelp}"
+                                    AutomationProperties.Name="{DynamicResource Projects.FindItem}"
+                                    AutomationProperties.HelpText="{DynamicResource Projects.FindItemHelp}"
+                                    Text="{Binding BoardQuery, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.MadeBy}" />
+                            <ComboBox MinWidth="120" ItemsSource="{Binding MakerFilters}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding MadeByFilter}"
+                                      AutomationProperties.Name="{DynamicResource Projects.MadeBy}" />
+                        </StackPanel>
+                    </DockPanel>
 
                     <!--
                       The open columns share the width when there is room, and a folded one keeps only

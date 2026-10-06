@@ -2,7 +2,10 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace GoalMaker.App.ViewModels;
 
-/// <summary>One card on a project's board: what it is, how important it is, and where it can go.</summary>
+/// <summary>
+/// One card on a project's board: its id (GM-12) once the server has given it a number, what it is, how
+/// important it is, and where it can go.
+/// </summary>
 public sealed class BoardItemViewModel
 {
     public BoardItemViewModel(
@@ -18,10 +21,16 @@ public sealed class BoardItemViewModel
         Action open,
         Action remove,
         bool canArchive,
-        Action archive)
+        Action archive,
+        string? itemId = null,
+        string? name = null,
+        Action<string>? copyText = null)
     {
         Id = id;
         Title = title;
+        ItemId = itemId ?? string.Empty;
+        Name = name ?? title;
+        CopyIdCommand = new RelayCommand(() => copyText?.Invoke(ItemId), () => HasItemId && copyText is not null);
         Type = type;
         ItemType = itemType;
         Priority = priority;
@@ -44,6 +53,20 @@ public sealed class BoardItemViewModel
     public string Id { get; }
 
     public string Title { get; }
+
+    /// <summary>GM-12, or #12 in a project without a key; empty until the server has numbered it.</summary>
+    public string ItemId { get; }
+
+    public bool HasItemId => ItemId.Length > 0;
+
+    /// <summary>The id and a space, written before the title in the same line of text; empty without an id.</summary>
+    public string IdLead => HasItemId ? ItemId + " " : string.Empty;
+
+    /// <summary>What a screen reader says for the card: its id, then its title.</summary>
+    public string Name { get; }
+
+    /// <summary>Puts the id on the clipboard, for a commit message or a chat.</summary>
+    public IRelayCommand CopyIdCommand { get; }
 
     /// <summary>Task, idea or bug, in the owner's words.</summary>
     public string Type { get; }

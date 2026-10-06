@@ -22,6 +22,9 @@ public sealed record ProjectItem(string Id, string Name)
 
     public bool Deleted { get; init; }
 
+    /// <summary>The key its items read by, GM in GM-12; null when it has none (docs/projects.md, "Item ids").</summary>
+    public string? ItemKey { get; init; }
+
     /// <summary>Days a done item stays on the board after it was finished; null keeps it until archived by hand.</summary>
     public int? ArchiveAfterDays { get; init; } = ProjectRules.DefaultArchiveAfterDays;
 }

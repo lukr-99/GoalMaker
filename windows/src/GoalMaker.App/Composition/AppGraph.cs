@@ -243,7 +243,8 @@ public sealed class AppGraph : IDisposable
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
         SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode, ReadClipboardText);
         Shell = new ShellViewModel(Auth, SignIn, Problems, Updates, runOnUi);
-        Places = new PlacesViewModel(Settings, strings);
+        // Go to finds a project item by its id too, GM-12 (docs/projects.md, "Item ids").
+        Places = new PlacesViewModel(Settings, strings, FindItems, id => OpenTask(id, AppPage.Projects));
 
         // The quick chat every composer shares (M7): the assistant function as the signed-in owner. An
         // answer asks for a sync at once, so what the chat changed shows in the lists.
@@ -376,7 +377,8 @@ public sealed class AppGraph : IDisposable
             id => OpenTask(id, AppPage.Projects),
             runOnUi,
             TimeProvider.System,
-            form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach));
+            form => ProjectItemWindow.Open(form, System.Windows.Application.Current?.MainWindow, Theme.Attach),
+            CopyText);
         CalendarPage = new CalendarViewModel(
             Tasks, ReminderRows, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, id => OpenTask(id, AppPage.Calendar), runOnUi, OpenProject, HabitsPage, Habits, Events, Chat);
         // The Places page that All places opens: a live tile for every place (ADR 0014).
@@ -386,7 +388,7 @@ public sealed class AppGraph : IDisposable
         HabitsPage.LogRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         HabitsPage.PageWanted += (_, _) => PageRequested?.Invoke(this, AppPage.Habits);
         TaskDetail = new TaskDetailViewModel(
-            Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings);
+            Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings, Projects, CopyText);
         Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive), OpenProject);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
@@ -696,6 +698,22 @@ public sealed class AppGraph : IDisposable
     public SettingsViewModel SettingsPage { get; }
 
     /// <summary>Shows a task's detail page; Back returns to <paramref name="from"/>.</summary>
+    // Copy id on a board card and an item's page (docs/projects.md, "Item ids").
+    private static void CopyText(string text) => System.Windows.Clipboard.SetText(text);
+
+    // The project items a Go to query names by id, with the id before the title.
+    private IReadOnlyList<PlaceEntry> FindItems(string query)
+    {
+        if (ProjectRules.ParseItemId(query) is not { } wanted)
+        {
+            return [];
+        }
+
+        var projects = Projects.All().ToDictionary(project => project.Id, StringComparer.Ordinal);
+        return [.. ProjectRules.Named(wanted, Tasks.All(), projects)
+            .Select(task => new PlaceEntry(task.Id, strings.Get("Places.Item", ProjectRules.ItemIdOf(task, projects[task.ProjectId!])!, task.Title)))];
+    }
+
     public void OpenTask(string id, AppPage from)
     {
         TaskDetail.Load(id, from);

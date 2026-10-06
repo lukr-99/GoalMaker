@@ -46,11 +46,26 @@
             <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Task.Gone}" x:Name="GoneText" />
 
             <StackPanel Visibility="{Binding HasTask, Converter={StaticResource BoolToVisibility}}">
+                <!-- The done box and the title, with a project item's id (GM-12) before it and a way to copy the id. -->
                 <ui:Card Margin="0,0,0,12" Padding="20">
-                    <DockPanel>
-                        <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" IsChecked="{Binding IsDone}" AutomationProperties.Name="{DynamicResource Task.Done}" />
-                        <TextBox FontSize="18" MaxLength="500" Text="{Binding Title}" AutomationProperties.Name="{DynamicResource Task.TitleLabel}" />
-                    </DockPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox Grid.Column="0" VerticalAlignment="Center" IsChecked="{Binding IsDone}" AutomationProperties.Name="{DynamicResource Task.Done}" />
+                        <TextBlock Grid.Column="1" Margin="0,0,10,0" FontSize="13" Style="{StaticResource GM.ItemId}" Text="{Binding ItemId}"
+                                   Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBox Grid.Column="2" FontSize="18" MaxLength="500" Text="{Binding Title}" AutomationProperties.Name="{Binding TitleName}" />
+                        <ui:Button Grid.Column="3" Margin="8,0,0,0" Padding="8" VerticalAlignment="Center" Appearance="Transparent"
+                                   Command="{Binding CopyIdCommand}"
+                                   ToolTip="{DynamicResource Projects.CopyId}" AutomationProperties.Name="{DynamicResource Projects.CopyId}"
+                                   Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Symbol="Copy24" />
+                        </ui:Button>
+                    </Grid>
                 </ui:Card>
 
                 <ui:Card Margin="0,0,0,12" Padding="20">

@@ -13,6 +13,7 @@ public sealed class ProjectList
     private const string Table = "projects";
     private const string MilestoneTable = "project_milestones";
     private const string ArchiveAfterDays = "archive_after_days";
+    private const string ItemKey = "item_key";
     private const int MaxName = 120;
     private const int MaxDescription = 2000;
     private const int MaxLink = 500;
@@ -114,6 +115,30 @@ public sealed class ProjectList
         days is null or (>= ProjectRules.FewestArchiveDays and <= ProjectRules.MostArchiveDays)
         && Change(Table, id, row => row[ArchiveAfterDays] = days);
 
+    /// <summary>
+    /// The key a project's items read by (docs/projects.md, "Item ids"), upper-cased; blank clears it. False
+    /// for a key that is not 2 to 6 letters or digits starting with a letter, one another of the owner's
+    /// projects uses, or a project that is gone.
+    /// </summary>
+    public bool SetItemKey(string id, string? key)
+    {
+        var clean = key?.Trim().ToUpperInvariant() ?? string.Empty;
+        if (clean.Length > 0 && (!ProjectRules.IsItemKey(clean) || IsKeyTaken(clean, id)))
+        {
+            return false;
+        }
+
+        return Change(Table, id, row => row[ItemKey] = clean.Length == 0 ? null : clean);
+    }
+
+    /// <summary>Whether another of the owner's projects than <paramref name="exceptId"/> reads by <paramref name="key"/>, in any case.</summary>
+    public bool IsKeyTaken(string key, string? exceptId = null) =>
+        OtherKeys(exceptId).Contains(key.Trim(), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The keys of the owner's projects other than <paramref name="exceptId"/>, for a suggestion to steer clear of.</summary>
+    public IReadOnlyList<string> OtherKeys(string? exceptId = null) =>
+        [.. All().Where(project => project.Id != exceptId).Select(project => project.ItemKey).OfType<string>()];
+
     /// <summary>Deletes a project softly; its items stay as plain tasks.</summary>
     public bool Delete(string id) => Change(Table, id, row => row[SyncedTable.DeletedAt] = rows.Timestamp());
 
@@ -199,6 +224,7 @@ public sealed class ProjectList
         Notes = (string?)row["notes"] ?? string.Empty,
         Position = row["position"] is JsonValue place && place.TryGetValue<double>(out var at) ? at : 0,
         Deleted = row[SyncedTable.DeletedAt] is not null,
+        ItemKey = (string?)row[ItemKey] is { Length: > 0 } key ? key : null,
         ArchiveAfterDays = row[ArchiveAfterDays] switch
         {
             JsonValue value when value.TryGetValue<long>(out var days) => (int)days,

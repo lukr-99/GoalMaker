@@ -193,6 +193,7 @@
     <sys:String x:Key="Task.Gone">This task was deleted.</sys:String>
     <sys:String x:Key="Task.Done">Done</sys:String>
     <sys:String x:Key="Task.TitleLabel">Title</sys:String>
+    <sys:String x:Key="Task.TitleWithId">Title of {0}</sys:String>
     <sys:String x:Key="Task.Notes">Notes</sys:String>
     <sys:String x:Key="Task.NotesEdit">Edit the notes</sys:String>
     <sys:String x:Key="Task.NotesSave">Save the notes</sys:String>
@@ -269,6 +270,7 @@
     <sys:String x:Key="Lists.ProjectTask">Project {0}</sys:String>
     <sys:String x:Key="Lists.ProjectIdea">Idea for {0}</sys:String>
     <sys:String x:Key="Lists.ProjectBug">Bug in {0}</sys:String>
+    <sys:String x:Key="Lists.ProjectWithId">{0}, {1}</sys:String>
     <sys:String x:Key="Lists.OpenProject">Open the {0} board</sys:String>
     <sys:String x:Key="Lists.TopPriority">Top priority</sys:String>
     <sys:String x:Key="Lists.Done">Done: {0}</sys:String>
@@ -917,6 +919,15 @@
     <sys:String x:Key="Projects.NewItem">New item</sys:String>
     <sys:String x:Key="Projects.NewItemHelp">Write a fuller item in its own window (Ctrl+N)</sys:String>
     <sys:String x:Key="Projects.AddTo">Add an item to {0}</sys:String>
+    <sys:String x:Key="Projects.Key">Key</sys:String>
+    <sys:String x:Key="Projects.KeyHint">Items read {0}</sys:String>
+    <sys:String x:Key="Projects.KeyNone">Without a key, items read #12</sys:String>
+    <sys:String x:Key="Projects.KeyNotValid">A key is 2 to 6 letters or digits, and starts with a letter.</sys:String>
+    <sys:String x:Key="Projects.KeyTaken">Another project already uses {0}.</sys:String>
+    <sys:String x:Key="Projects.CopyId">Copy id</sys:String>
+    <sys:String x:Key="Projects.ItemWithId">{0} {1}</sys:String>
+    <sys:String x:Key="Projects.FindItem">Find an item</sys:String>
+    <sys:String x:Key="Projects.FindItemHelp">Type words from its title, or its id, like GM-12 or #12</sys:String>
     <sys:String x:Key="ProjectItem.Heading">New item in {0}</sys:String>
     <sys:String x:Key="ProjectItem.TitleMissing">An item needs a title.</sys:String>
     <sys:String x:Key="ProjectItem.Milestone">Milestone</sys:String>
@@ -1279,8 +1290,9 @@
     <sys:String x:Key="Places.UnpinFromSidebar">Unpin from the sidebar</sys:String>
     <sys:String x:Key="Places.GoTo">Go to…</sys:String>
     <sys:String x:Key="Places.GoToShortcut">Ctrl K</sys:String>
-    <sys:String x:Key="Places.GoToHint">Go to a place…</sys:String>
+    <sys:String x:Key="Places.GoToHint">Go to a place, or an item like GM-12…</sys:String>
     <sys:String x:Key="Places.NothingFound">Nothing called that</sys:String>
+    <sys:String x:Key="Places.Item">{0}  {1}</sys:String>
     <sys:String x:Key="Places.AllHelp">Opens a page with every place. Right and Left fold the list.</sys:String>
     <!-- The Places page, which All places opens (ADR 0014) -->
     <sys:String x:Key="Places.InSidebar">In the sidebar: {0}</sys:String>
