@@ -116,9 +116,21 @@ class WidgetContentTest {
         assertEquals(listOf("Read", "Water", "Run"), rows.map(WidgetHabit::name))
         assertEquals("📖", rows.first().emoji)
         assertTrue(rows[1].tappable)
-        assertFalse("an amount asks for its value in the app", rows[2].tappable)
+        assertTrue("an amount fills to its target", rows[2].tappable)
         assertEquals("0 of 8 glasses", rows[1].count)
         assertEquals(3, WidgetContent.habitsLeft(rows))
+    }
+
+    @Test
+    fun `an amount at its target or under a limit opens the app`() {
+        val run = habits.add(HabitDraft("Run", today.minusDays(3), measure = HabitRules.AMOUNT, target = 5.0, unit = "km"))!!
+        habits.checkIn(run.id, today, 5.0)
+        habits.add(HabitDraft("Sugar", today.minusDays(3), measure = HabitRules.AMOUNT, target = 30.0, unit = "g", direction = HabitRules.AT_MOST))
+
+        val rows = WidgetContent.habits(habits.read(), today)
+
+        assertFalse("nothing left to fill", rows[0].tappable)
+        assertFalse("a limit asks for its value", rows[1].tappable)
     }
 
     @Test

@@ -1012,6 +1012,9 @@ public sealed class AppGraph : IDisposable
             case ToastAction.HabitSkip:
                 Reminders.SkipHabit(habitId, day);
                 break;
+            case ToastAction.HabitFill:
+                Reminders.FillHabit(habitId, day);
+                break;
             case ToastAction.HabitLog when Habits.Find(habitId) is { } habit:
                 HabitsPage.StartLog(habit);
                 WindowRequested?.Invoke(this, AppPage.Habits);

@@ -23,7 +23,7 @@ public sealed record ToastActivation(ToastAction Action, string ReminderId, Snoo
 
     /// <summary>A habit reminder's click: the habit's id and the planning day it rang on; an empty id when it isn't one.</summary>
     public (string HabitId, DateOnly Day) Habit() =>
-        Action is ToastAction.Habit or ToastAction.HabitCheckIn or ToastAction.HabitSkip or ToastAction.HabitLog
+        Action is ToastAction.Habit or ToastAction.HabitCheckIn or ToastAction.HabitSkip or ToastAction.HabitLog or ToastAction.HabitFill
             ? WithDay()
             : (string.Empty, DateOnly.MinValue);
 

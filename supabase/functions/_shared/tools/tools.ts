@@ -27,6 +27,7 @@ import {
   allDone,
   dayMet,
   dueToday,
+  fill,
   goalAmounts,
   type HabitCheckin,
   type HabitGroup,
@@ -1145,17 +1146,32 @@ export const tools: Tool[] = [
     title: "Check a habit in",
     description:
       "Checks a habit in on a day, the way tapping its ring does. A habit that counts or measures adds the amount " +
-      "to whatever the day already had; leave the amount out for a plain check.",
+      "to whatever the day already had; leave the amount out for a plain check. fill tops an amount habit up to " +
+      'its target for the day, the way one tap does ("I drank my water").',
     input: {
       id: habitId,
       day: z.string().optional().describe("The day to check in on. Today by default."),
       amount: z.number().optional().describe("How much, for a habit that counts or measures something."),
+      fill: z.boolean().optional().describe("Log the rest of an amount habit's target instead of an amount."),
     },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
       const day = (await dayFrom(planner, args.day)) ?? (await planner.now()).today;
-      const { habit, value } = await planner.checkIn(args.id, day, args.amount ?? 1);
+      let logged: number = args.amount ?? 1;
+      if (args.fill === true) {
+        if (args.amount !== undefined) throw new PlannerError("Give amount or fill, not both.");
+        const target = await planner.habit(args.id);
+        const had = (await planner.checkins()).find((one) => one.habitId === args.id && one.day === day);
+        const rest = fill(target, had === undefined || had.skipped || had.failed ? 0 : had.value);
+        if (rest === null) {
+          return target.measure !== "amount" || target.direction === "at_most"
+            ? `${target.name} isn't an amount to fill; check it in with an amount instead.`
+            : `${target.name} already reached its target for ${day}.`;
+        }
+        logged = rest;
+      }
+      const { habit, value } = await planner.checkIn(args.id, day, logged);
       const amount = habit.measure === "check" ? "" : ` at ${format.round(value)}${habit.unit ? ` ${habit.unit}` : ""}`;
       return [`${habit.name} checked in for ${day}${amount}.`, await habitLineFor(planner, habit, day)].join("\n");
     },

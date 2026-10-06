@@ -152,18 +152,38 @@ class HabitReminderNotificationsTest {
     }
 
     @Test
-    fun `an amount's Log opens its log dialog in the app`() {
+    fun `an amount's Log opens its log dialog in the app, with Fill before it`() {
         val run = add(HabitDraft("Run", day.minusDays(10), measure = HabitRules.AMOUNT, target = 5.0, unit = "km"))
         show(run)
 
         val notification = shown(run)
         assertEquals("Run", notification.title())
         assertEquals("0 of 5 km today", notification.text())
-        assertEquals(listOf("Log", "Skip today"), notification.labels())
-        val log = notification.actions[0].actionIntent.intent()
+        assertEquals(listOf("Fill", "Log", "Skip today"), notification.labels())
+        assertEquals(ReminderAlarm.ACTION_HABIT_FILL, notification.actions[0].actionIntent.intent().action)
+        val log = notification.actions[1].actionIntent.intent()
         assertEquals(MainActivity::class.java.name, log.component?.className)
         assertTrue(log.getBooleanExtra(ReminderAlarm.EXTRA_LOG_HABIT, false))
         assertEquals(run.id, log.getStringExtra(ReminderAlarm.EXTRA_HABIT_ID))
+    }
+
+    @Test
+    fun `Fill through the receiver logs the rest of the target and takes the notification down`() {
+        val water = add(HabitDraft("Water", day.minusDays(10), measure = HabitRules.AMOUNT, target = 2.5, unit = "L"))
+        habits.checkIn(water.id, day, 1.0)
+        show(water)
+
+        assertTrue(HabitReminderButtons.settle(shown(water).actions[0].actionIntent.intent(), service, notifications))
+
+        assertEquals(2.5, habits.read().checkinsOf(water.id).single { it.day == day }.value, 1e-9)
+        assertTrue(notifications.shownHabits().isEmpty())
+    }
+
+    @Test
+    fun `a limit's amount gets no Fill`() {
+        val sugar = add(HabitDraft("Sugar", day.minusDays(10), measure = HabitRules.AMOUNT, target = 30.0, direction = HabitRules.AT_MOST))
+
+        assertEquals(listOf(ReminderAlarm.ACTION_HABIT_LOG, ReminderAlarm.ACTION_HABIT_SKIP), HabitReminderButtons.of(sugar).map { it.action })
     }
 
     @Test
@@ -241,6 +261,7 @@ class HabitReminderNotificationsTest {
         assertEquals(windows.getValue("HabitReminder.CheckIn"), context.getString(R.string.habit_reminder_check_in))
         assertEquals(windows.getValue("HabitReminder.AddOne"), context.getString(R.string.habit_reminder_add_one))
         assertEquals(windows.getValue("HabitReminder.Log"), context.getString(R.string.habit_reminder_log))
+        assertEquals(windows.getValue("HabitReminder.Fill"), context.getString(R.string.habit_reminder_fill))
         assertEquals(windows.getValue("HabitReminder.Left"), context.getString(R.string.habit_reminder_left))
         assertEquals(windows.getValue("Habits.SkipDay"), context.getString(R.string.habits_skip_day))
         assertEquals(windows.getValue("Habits.SkipWeek"), context.getString(R.string.habits_skip_week))

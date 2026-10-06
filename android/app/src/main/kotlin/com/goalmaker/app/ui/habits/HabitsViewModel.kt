@@ -8,12 +8,16 @@ import com.goalmaker.app.application.planning.HabitDraft
 import com.goalmaker.app.application.planning.HabitList
 import com.goalmaker.app.domain.planning.PlanningDay
 import com.goalmaker.app.ui.composer.LineOutcome
+import com.goalmaker.app.ui.lists.UndoEvent
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -35,6 +39,10 @@ class HabitsViewModel(
 ) : ViewModel() {
     // Hide done is the screen's own, kept while the app runs (docs/habits.md).
     private val hideDone = MutableStateFlow(false)
+    private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
+
+    /** One-tap fills the screen offers to undo. */
+    val undo: SharedFlow<UndoEvent> = undoEvents.asSharedFlow()
 
     val uiState: StateFlow<HabitsUiState> = combine(
         habits.watch().flowOn(io),
@@ -89,8 +97,19 @@ class HabitsViewModel(
         return if (save(null, draft)) LineOutcome.Added else LineOutcome.OpenForm(draft)
     }
 
-    /** A tap on the ring: a check toggles, a count adds one. False for an amount, which asks for the value. */
-    suspend fun tap(id: String): Boolean = withContext(io) { habits.tap(id, today()) }
+    /**
+     * A tap on the button: a check toggles, a count adds one, an amount fills to its target with an undo
+     * on the snackbar (docs/habits.md, "One tap"). False when it asks for the value instead: a limit's
+     * amount, or an amount with nothing left to fill.
+     */
+    suspend fun tap(id: String): Boolean = withContext(io) {
+        val day = today()
+        if (habits.tap(id, day)) return@withContext true
+        val before = habits.fill(id, day) ?: return@withContext false
+        val name = habits.find(id)?.name.orEmpty()
+        undoEvents.tryEmit(UndoEvent(UndoEvent.Kind.FILLED, name) { write { habits.setValue(id, day, before) } })
+        true
+    }
 
     /** Adds [amount] to today's value. */
     fun checkIn(id: String, amount: Double) = write { habits.checkIn(id, today(), amount) }

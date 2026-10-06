@@ -195,6 +195,26 @@ public sealed class HabitRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryFillAndItsPresets()
+    {
+        foreach (var testCase in vectors.GetProperty("fill").EnumerateArray())
+        {
+            var habit = new HabitItem("h", "Habit", new DateOnly(2026, 1, 1))
+            {
+                Measure = testCase.GetProperty("measure").GetString()!,
+                Target = testCase.GetProperty("target").GetDouble(),
+                Direction = testCase.GetProperty("direction").GetString()!,
+            };
+            var value = testCase.GetProperty("value").GetDouble();
+            var expect = testCase.GetProperty("fill");
+            double? expected = expect.ValueKind == JsonValueKind.Null ? null : expect.GetDouble();
+            Assert.True(expected == HabitRules.Fill(habit, value), $"{Name(testCase)}: {HabitRules.Fill(habit, value)}");
+            var presets = testCase.GetProperty("presets").EnumerateArray().Select(preset => preset.GetDouble());
+            Assert.Equal(presets, HabitRules.FillPresets(habit, value));
+        }
+    }
+
     private static HabitItem Habit(JsonElement testCase)
     {
         var habit = testCase.GetProperty("habit");

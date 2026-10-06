@@ -4,6 +4,7 @@ import com.goalmaker.app.application.planning.GoalEntryItem
 import com.goalmaker.app.application.planning.GoalHorizon
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.GoalRules
+import com.goalmaker.app.application.planning.HabitCheckin
 import com.goalmaker.app.application.planning.HabitData
 import com.goalmaker.app.application.planning.HabitRules
 import com.goalmaker.app.application.planning.HabitStanding
@@ -80,8 +81,9 @@ object WidgetContent {
                     done = standing == HabitStanding.DONE,
                     left = standing == HabitStanding.LEFT,
                     count = if (habit.measure == HabitRules.CHECK) "" else amount(ring * target, target, habit.unit),
-                    // A check or a count moves with one tap; an amount asks for its value in the app.
-                    tappable = habit.measure != HabitRules.AMOUNT,
+                    // A check or a count moves with one tap, and an amount fills to its target (docs/habits.md,
+                    // "One tap"); a limit's amount, or one already at its target, asks for its value in the app.
+                    tappable = habit.measure != HabitRules.AMOUNT || HabitRules.fill(habit, todays(checkins, today)) != null,
                 )
             }
 
@@ -95,6 +97,10 @@ object WidgetContent {
         val fit = maxOf(1, ((height - HABIT_CHROME) / HABIT_ROW).toInt())
         return if (count > fit) 2 else 1
     }
+
+    // Today's value of a habit, leaving out a skipped or failed day.
+    private fun todays(checkins: List<HabitCheckin>, today: LocalDate): Double =
+        checkins.firstOrNull { !it.deleted && it.day == today && !it.skipped && !it.failed }?.value ?: 0.0
 
     /** How many of today's habits are still open, for the header. */
     fun habitsLeft(habits: List<WidgetHabit>): Int = habits.count(WidgetHabit::left)

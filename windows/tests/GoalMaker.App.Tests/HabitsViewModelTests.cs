@@ -48,14 +48,14 @@ public sealed class HabitsViewModelTests : IDisposable
     }
 
     [Fact]
-    public void TappingAnAmountHabitOpensTheLogPanel()
+    public void TheLogPanelAddsATypedAmount()
     {
         planner.Habits.Add(new HabitDraft("Run", Today) { Measure = HabitRules.Amount, Target = 5, Unit = "km" });
         var page = Page();
         var asked = 0;
         page.LogRequested += (_, _) => asked++;
 
-        page.Rows.Single().CheckInCommand.Execute(null);
+        page.Rows.Single().LogCommand.Execute(null);
 
         Assert.True(page.IsLogging);
         Assert.Equal(("Habits.LogTitle(Run)", "km", 1), (page.LogTitle, page.LogUnit, asked));
@@ -64,6 +64,104 @@ public sealed class HabitsViewModelTests : IDisposable
 
         Assert.False(page.IsLogging);
         Assert.Equal(0.5, page.Rows.Single().Fraction, 9);
+    }
+
+    [Fact]
+    public void OneClickFillsAnAmountToItsTargetAndUndoPutsTheDayBack()
+    {
+        var water = planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Amount, Target = 2.5, Unit = "L" })!;
+        planner.Habits.CheckIn(water.Id, Today, 1);
+        var page = Page();
+        Assert.Equal("Habits.FillOnUnit(Water,2.5,L)", page.Rows.Single().ButtonText);
+
+        page.Rows.Single().ButtonCommand.Execute(null);
+
+        Assert.False(page.IsLogging);
+        Assert.Equal(2.5, planner.Habits.Checkins().Single().Value, 9);
+        Assert.True(page.Rows.Single().IsDone);
+        Assert.Equal((true, "Habits.FilledUnit(Water,2.5,L)"), (page.HasUndo, page.UndoText));
+
+        page.UndoCommand.Execute(null);
+
+        Assert.False(page.HasUndo);
+        Assert.Equal(1, planner.Habits.Checkins().Single().Value, 9);
+    }
+
+    [Fact]
+    public void TheFillsUndoGoesAfterFiveSeconds()
+    {
+        planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Amount, Target = 2, Unit = "L" });
+        var page = Page();
+
+        page.Rows.Single().ButtonCommand.Execute(null);
+        Assert.True(page.HasUndo);
+        planner.Time.Advance(TimeSpan.FromSeconds(6));
+
+        Assert.False(page.HasUndo);
+        Assert.Equal(2, planner.Habits.Checkins().Single().Value, 9);
+    }
+
+    [Fact]
+    public void OnceTheTargetIsReachedTheClickOpensTheLogPanel()
+    {
+        var water = planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Amount, Target = 2.5, Unit = "L" })!;
+        planner.Habits.CheckIn(water.Id, Today, 2.5);
+        var page = Page();
+        Assert.Equal("Habits.LogOn(Water)", page.Rows.Single().ButtonText);
+
+        page.Rows.Single().ButtonCommand.Execute(null);
+
+        Assert.True(page.IsLogging);
+        Assert.False(page.HasUndo);
+        Assert.Equal(2.5, planner.Habits.Checkins().Single().Value, 9);
+        // Nothing is left, so the ready taps are the quarter and the half.
+        Assert.Equal(["Habits.PresetUnit(0.63,L)", "Habits.PresetUnit(1.25,L)"], page.LogPresets.Select(preset => preset.Text));
+    }
+
+    [Fact]
+    public void ALimitsAmountStillAsksForTheValue()
+    {
+        planner.Habits.Add(new HabitDraft("Coffee", Today) { Measure = HabitRules.Amount, Target = 0.5, Unit = "L", Direction = HabitRules.AtMost });
+        var page = Page();
+        Assert.Equal("Habits.LogOn(Coffee)", page.Rows.Single().ButtonText);
+
+        page.Rows.Single().ButtonCommand.Execute(null);
+
+        Assert.True(page.IsLogging);
+        Assert.Empty(planner.Habits.Checkins());
+        Assert.False(page.HasLogPresets);
+    }
+
+    [Fact]
+    public void AReadyTapLogsItsAmountAndTheRestIsNamed()
+    {
+        var water = planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Amount, Target = 2.5, Unit = "L" })!;
+        planner.Habits.CheckIn(water.Id, Today, 1);
+        var page = Page();
+
+        page.Rows.Single().LogCommand.Execute(null);
+
+        Assert.Equal(
+            ["Habits.PresetUnit(0.63,L)", "Habits.PresetUnit(1.25,L)", "Habits.RestUnit(1.5,L)"],
+            page.LogPresets.Select(preset => preset.Text));
+        page.LogPresets[0].Command.Execute(null);
+
+        Assert.False(page.IsLogging);
+        Assert.Equal(1.63, planner.Habits.Checkins().Single().Value, 9);
+    }
+
+    [Fact]
+    public void AnAmountWithoutAUnitFillsAndNamesTheRestWithoutOne()
+    {
+        planner.Habits.Add(new HabitDraft("Pages", Today) { Measure = HabitRules.Amount, Target = 30 });
+        var page = Page();
+        Assert.Equal("Habits.FillOn(Pages,30)", page.Rows.Single().ButtonText);
+
+        page.Rows.Single().LogCommand.Execute(null);
+
+        Assert.Equal(["7.5", "15", "Habits.Rest(30)"], page.LogPresets.Select(preset => preset.Text));
+        page.LogPresets[2].Command.Execute(null);
+        Assert.Equal(30, planner.Habits.Checkins().Single().Value, 9);
     }
 
     [Fact]

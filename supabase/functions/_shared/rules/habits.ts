@@ -368,3 +368,32 @@ function share(habit: HabitItem, value: number): number {
 function unitKey(unit: string): string {
   return unit.replace(/\s/g, "").toLowerCase();
 }
+
+/** Two decimals with halves rounded up, the way every app rounds a fill (0.625 is 0.63). */
+function twoPlaces(value: number): number {
+  return Math.round(value * 100 + 1e-9) / 100;
+}
+
+/**
+ * What one tap on an amount habit's check-in button logs (docs/habits.md, "One tap"): the rest of the
+ * target for the day, or null when nothing is left, when the habit isn't an amount or when it is a limit.
+ */
+export function fill(
+  habit: Pick<HabitItem, "measure" | "target"> & { direction?: string },
+  value: number,
+): number | null {
+  if (habit.measure !== "amount" || habit.direction === "at_most" || habit.target === null) return null;
+  const rest = twoPlaces(Math.max(habit.target - value, 0));
+  return rest > 0 ? rest : null;
+}
+
+/** The log sheet's ready taps: a quarter and a half of the target, then the rest when it is another. */
+export function fillPresets(
+  habit: Pick<HabitItem, "measure" | "target"> & { direction?: string },
+  value: number,
+): number[] {
+  if (habit.measure !== "amount" || habit.direction === "at_most" || habit.target === null) return [];
+  const presets = [twoPlaces(habit.target / 4), twoPlaces(habit.target / 2)];
+  const rest = fill(habit, value);
+  return rest === null || presets.includes(rest) ? presets : [...presets, rest];
+}

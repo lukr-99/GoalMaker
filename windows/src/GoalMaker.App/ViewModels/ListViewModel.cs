@@ -497,7 +497,7 @@ public sealed partial class ListViewModel : ObservableObject
             return;
         }
 
-        Habits = habitsPage.TodayRows();
+        Habits = habitsPage.TodayRows(ShowUndo);
         HasHabits = Habits.Count > 0;
         ShownHabits = HideDoneHabits ? [.. Habits.Where(row => !row.IsDone)] : Habits;
         HabitsAllDone = HabitRules.AllDone(Habits.Select(row => row.Standing));

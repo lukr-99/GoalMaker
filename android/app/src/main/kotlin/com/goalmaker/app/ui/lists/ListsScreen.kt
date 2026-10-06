@@ -72,7 +72,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.EventItem
-import com.goalmaker.app.application.planning.HabitItem
 import com.goalmaker.app.application.planning.PlanRules
 import com.goalmaker.app.application.planning.WantRules
 import com.goalmaker.app.application.planning.PlanningLists
@@ -133,20 +132,22 @@ fun ListsScreen(
     val tick = rememberTickSound()
     var remindFor by remember { mutableStateOf<TaskItem?>(null) }
     var taskReminders by remember { mutableStateOf(emptyList<ReminderItem>()) }
-    var logging by remember { mutableStateOf<HabitItem?>(null) }
+    // The habit whose log sheet is open, by id, so the sheet reads the day's value as it is now.
+    var logging by remember { mutableStateOf<String?>(null) }
     var habitMenu by remember { mutableStateOf<String?>(null) }
     var newTask by rememberSaveable { mutableStateOf(false) }
     var editingEvent by remember { mutableStateOf<EventItem?>(null) }
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
-    // A habit card's button: undo a skip or a fail, or check in; an amount asks for its value first.
+    // A habit card's button: undo a skip or a fail, or check in (an amount fills to its target); a limit's
+    // amount, or an amount already at its target, opens the log sheet.
     fun checkInHabit(row: HabitRow) {
         haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
         when {
             row.skipped -> viewModel.skipHabit(row.habit.id, false)
             row.failed -> viewModel.failHabit(row.habit.id, false)
-            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit }
+            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id)) logging = row.habit.id }
         }
     }
 
@@ -164,8 +165,10 @@ fun ListsScreen(
         seenMilestones = state.habitMilestones
         if (before != null && !reduceMotion && !before.containsAll(state.habitMilestones)) bursts++
     }
-    logging?.let { habit ->
-        AmountDialog(habit, onLog = { amount -> viewModel.checkIn(habit.id, amount) }, onDismiss = { logging = null })
+    logging?.let { id ->
+        state.habits.firstOrNull { it.habit.id == id }?.let { row ->
+            AmountDialog(row.habit, row.value, onLog = { amount -> viewModel.checkIn(id, amount) }, onDismiss = { logging = null })
+        }
     }
     // A habit's menu, from its card's menu button or a long press: skipping lives here.
     habitMenu?.let { id ->
@@ -174,7 +177,7 @@ fun ListsScreen(
                 row = row,
                 onDismiss = { habitMenu = null },
                 onCheckIn = { checkInHabit(row) },
-                onLog = { logging = row.habit },
+                onLog = { logging = row.habit.id },
                 onSkip = { skipped -> viewModel.skipHabit(id, skipped) },
                 onFail = { failed -> viewModel.failHabit(id, failed) },
                 onClear = { viewModel.clearHabit(id) },
@@ -225,7 +228,11 @@ fun ListsScreen(
     LaunchedEffect(viewModel) {
         viewModel.undo.collect { event ->
             val message = resources.getString(
-                if (event.kind == UndoEvent.Kind.DONE) R.string.lists_done_message else R.string.lists_deleted_message,
+                when (event.kind) {
+                    UndoEvent.Kind.DONE -> R.string.lists_done_message
+                    UndoEvent.Kind.FILLED -> R.string.habits_filled_message
+                    else -> R.string.lists_deleted_message
+                },
                 event.title,
             )
             val result = snackbars.showSnackbar(message, actionLabel = resources.getString(R.string.lists_undo), duration = SnackbarDuration.Short)

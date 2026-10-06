@@ -40,6 +40,9 @@ public enum ToastAction
     /// <summary>An amount habit's Log: opens the Habits page on its log panel.</summary>
     HabitLog,
 
+    /// <summary>An amount habit's Fill: logs the rest of the day's target (docs/habits.md, "One tap").</summary>
+    HabitFill,
+
     /// <summary>The why reminder's body: opens the Life goals page on that life goal.</summary>
     Why,
 }

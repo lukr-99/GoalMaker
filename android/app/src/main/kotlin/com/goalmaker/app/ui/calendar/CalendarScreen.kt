@@ -143,7 +143,8 @@ fun CalendarScreen(
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val locale = LocalConfiguration.current.locales[0]
     val scope = rememberCoroutineScope()
-    var logging by remember { mutableStateOf<HabitRow?>(null) }
+    // The habit whose log sheet is open, by id, so the sheet reads the day's value as it is now.
+    var logging by remember { mutableStateOf<String?>(null) }
     var habitMenu by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<EventItem?>(null) }
     var newEvent by remember { mutableStateOf(false) }
@@ -161,6 +162,7 @@ fun CalendarScreen(
                 when (event.kind) {
                     UndoEvent.Kind.DONE -> R.string.lists_done_message
                     UndoEvent.Kind.ADDED -> R.string.calendar_added_message
+                    UndoEvent.Kind.FILLED -> R.string.habits_filled_message
                     else -> R.string.lists_deleted_message
                 },
                 event.title,
@@ -170,12 +172,13 @@ fun CalendarScreen(
         }
     }
 
-    // A habit's button on the open day: undo a skip or a fail, or check in; an amount asks for its value.
+    // A habit's button on the open day: undo a skip or a fail, or check in (an amount fills to its target);
+    // a limit's amount, or an amount already at its target, opens the log sheet.
     fun checkIn(row: HabitRow, day: LocalDate) {
         when {
             row.skipped -> viewModel.skipHabit(row.habit.id, day, false)
             row.failed -> viewModel.failHabit(row.habit.id, day, false)
-            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id, day)) logging = row }
+            else -> scope.launch { if (!viewModel.tapHabit(row.habit.id, day)) logging = row.habit.id }
         }
     }
 
@@ -420,8 +423,11 @@ fun CalendarScreen(
     }
 
     val day = state.openDay?.day
-    logging?.let { row ->
-        if (day != null) AmountDialog(row.habit, onLog = { amount -> viewModel.checkInHabit(row.habit.id, day, amount) }, onDismiss = { logging = null })
+    logging?.let { id ->
+        val row = state.dayHabits.firstOrNull { it.habit.id == id }
+        if (day != null && row != null) {
+            AmountDialog(row.habit, row.value, onLog = { amount -> viewModel.checkInHabit(id, day, amount) }, onDismiss = { logging = null })
+        }
     }
     // A habit's menu on the open day: check in, skip, fail or clear there; pausing and editing stay on Habits.
     habitMenu?.let { id ->
@@ -431,7 +437,7 @@ fun CalendarScreen(
                 row = row,
                 onDismiss = { habitMenu = null },
                 onCheckIn = { checkIn(row, day) },
-                onLog = { logging = row },
+                onLog = { logging = row.habit.id },
                 onSkip = { skipped -> viewModel.skipHabit(id, day, skipped) },
                 onFail = { failed -> viewModel.failHabit(id, day, failed) },
                 onClear = { viewModel.clearHabit(id, day) },

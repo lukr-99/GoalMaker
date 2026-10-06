@@ -106,6 +106,21 @@ public sealed class TodayHabitsTests : IDisposable
     }
 
     [Fact]
+    public void AFillOnTodayOffersItsUndoOnTodaysBar()
+    {
+        planner.Habits.Add(new HabitDraft("Water", Today) { Measure = HabitRules.Amount, Target = 2.5, Unit = "L" });
+        var (today, habits) = List();
+
+        today.Habits.Single().ButtonCommand.Execute(null);
+
+        Assert.Equal(2.5, planner.Habits.Checkins().Single().Value, 9);
+        Assert.Equal((true, "Habits.FilledUnit(Water,2.5,L)"), (today.HasUndo, today.UndoText));
+        Assert.False(habits.HasUndo);
+        today.UndoCommand.Execute(null);
+        Assert.Equal(0, planner.Habits.Checkins().Single().Value);
+    }
+
+    [Fact]
     public void ACardOnTodayAsksForTheHabitsPage()
     {
         planner.Habits.Add(new HabitDraft("Read", Today));

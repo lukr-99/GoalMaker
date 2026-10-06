@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -326,26 +327,56 @@ private fun GoalField(goal: GoalItem?, goals: List<GoalItem>, onPick: (String?) 
     }
 }
 
-/** Adds an amount to today's value of a count or amount habit. */
+/**
+ * Adds an amount to the day's value ([value] so far) of a count or amount habit. An amount to reach
+ * offers ready taps beside the field (docs/habits.md, "One tap"): a quarter and a half of the target and
+ * the rest, each logging at once.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun AmountDialog(habit: HabitItem, onLog: (Double) -> Unit, onDismiss: () -> Unit) {
+internal fun AmountDialog(habit: HabitItem, value: Double, onLog: (Double) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf("") }
     val amount = parseAmount(text)?.takeIf { it > 0.0 }
     val focus = remember { FocusRequester() }
+    val locale = LocalConfiguration.current.locales[0]
+    val presets = HabitRules.fillPresets(habit, value)
+    val rest = HabitRules.fill(habit, value)
     LaunchedEffect(Unit) { focus.requestFocus() }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.habits_log_title, habit.name)) },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text(stringResource(R.string.habits_log_amount)) },
-                suffix = habit.unit?.let { unit -> { Text(unit) } },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.focusRequester(focus).padding(top = 4.dp),
-            )
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text(stringResource(R.string.habits_log_amount)) },
+                    suffix = habit.unit?.let { unit -> { Text(unit) } },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.focusRequester(focus).padding(top = 4.dp),
+                )
+                if (presets.isNotEmpty()) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        presets.forEach { preset ->
+                            val shown = amountText(preset, locale)
+                            val label = when {
+                                preset == rest && habit.unit != null -> stringResource(R.string.habits_preset_rest_unit, shown, habit.unit)
+                                preset == rest -> stringResource(R.string.habits_preset_rest, shown)
+                                habit.unit != null -> stringResource(R.string.habits_preset_unit, shown, habit.unit)
+                                else -> shown
+                            }
+                            AssistChip(
+                                onClick = {
+                                    onLog(preset)
+                                    onDismiss()
+                                },
+                                label = { Text(label) },
+                            )
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(enabled = amount != null, onClick = {
