@@ -12,7 +12,7 @@ syncs like everything else ([sync](sync.md)):
 | Field | Rules |
 |---|---|
 | Title | 1 to 500 characters; a blank title is refused |
-| Notes | up to 20,000 characters of light Markdown: `**bold**`, `*italic*`, lines starting with `# `, `## ` or `### ` as a heading, lines starting with `- ` or `* ` as a list, and bare `http(s)` links, pinned by [`contracts/vectors/markdown.json`](../contracts/vectors/markdown.json); anything unmatched shows as typed |
+| Notes | up to 20,000 characters of light Markdown: `**bold**`, `*italic*`, lines starting with `# `, `## ` or `### ` as a heading, lines starting with `- ` or `* ` as a list, and bare `http(s)` links, pinned by [`contracts/vectors/markdown.json`](../contracts/vectors/markdown.json); anything unmatched shows as typed. On the task's page the notes save on their own: after a short pause in typing, when the field is left, and when the page closes, with a quiet "Saved" beside them instead of a save button |
 | Planned day and time | a time needs a day, so clearing the day clears the time; setting them doesn't reopen a finished task |
 | Deadline | a date of its own, independent of the planned day |
 | Area | one area or none |

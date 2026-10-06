@@ -355,7 +355,8 @@ public sealed class AppGraph : IDisposable
             TimeProvider.System,
             runOnUi,
             Tally,
-            NameTally);
+            NameTally,
+            () => PageRequested?.Invoke(this, AppPage.Reviews));
         ReviewsPage = new ReviewsViewModel(Reviews, Settings, strings, TimeProvider.System, OpenReview, runOnUi);
         WantsPage = new WantsViewModel(Wants, Settings, strings, TimeProvider.System, runOnUi, Chat);
         // A want added, decided or deleted moves the next alarm and may settle the wants toast.

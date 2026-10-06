@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.calendar
 
 import android.content.ClipData
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -82,6 +83,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -285,6 +287,7 @@ fun CalendarScreen(
                                 DayCell(
                                     day = day,
                                     today = day.day == state.today,
+                                    tomorrow = day.day == state.today.plusDays(1),
                                     inPeriod = state.kind == CalendarRules.WEEK || day.day.month == state.anchor.month,
                                     selected = day.day == state.selected,
                                     picked = day.day in state.picked,
@@ -459,10 +462,13 @@ private fun WeekdayRow(locale: java.util.Locale) {
 }
 
 /**
- * One day of the grid: what it holds as a number, with today outlined and the day open filled. A task
+ * One day of the grid: what it holds as a number, with the day open filled. Today stands out most, with
+ * an accent tint, a strong accent outline, its number in an accent pill and a "Today" label; tomorrow
+ * gets a softer outline and a "Tomorrow" label, so the eye finds where it is at once. A task
  * dragged from the day's list below lands on it, which plans it for that day (docs/calendar.md).
  * A long-press ([onLongClick]) starts picking several days, and a drag that follows it reports where
- * the finger is on the screen ([onDragTo]), for the days it crosses; a picked day is outlined.
+ * the finger is on the screen ([onDragTo]), for the days it crosses; a picked day gets a thick outline
+ * in the text colour, so it still reads as picked on today or tomorrow.
  * [onPlaced] tells where the cell is on the screen. A screen reader hears the whole date and what is
  * on it. The cell keeps the grid's shape and grows taller when large text needs the room.
  */
@@ -481,6 +487,7 @@ internal fun DayCell(
     onLongClick: (() -> Unit)? = null,
     onDragTo: ((Offset) -> Unit)? = null,
     onPlaced: ((Rect) -> Unit)? = null,
+    tomorrow: Boolean = false,
 ) {
     var hovered by remember { mutableStateOf(false) }
     // Set by the long-press, so the moves after it in the same gesture pick days rather than scroll.
@@ -513,10 +520,18 @@ internal fun DayCell(
     val background = when {
         hovered -> AppTheme.colors.accent.copy(alpha = 0.4f)
         selected -> AppTheme.colors.accent
+        today -> AppTheme.colors.accent.copy(alpha = TODAY_TINT)
         day.empty -> AppTheme.colors.surface.copy(alpha = if (inPeriod) 1f else 0.4f)
         else -> AppTheme.colors.surface
     }
-    val description = dayDescription(day, today, selected, picked)
+    val description = dayDescription(day, today, tomorrow, selected, picked)
+    // Picking wins the outline, in a colour of its own; then today's strong one, then tomorrow's soft one.
+    val outline = when {
+        picked -> BorderStroke(3.dp, AppTheme.colors.text)
+        today -> BorderStroke(2.dp, AppTheme.colors.accent)
+        tomorrow -> BorderStroke(1.5.dp, AppTheme.colors.accent.copy(alpha = TOMORROW_OUTLINE))
+        else -> BorderStroke(2.dp, Color.Transparent)
+    }
     val shape = RoundedCornerShape(10.dp)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -532,7 +547,7 @@ internal fun DayCell(
             .clip(shape)
             .background(background)
             // Always there, so picking a day keeps the gesture going on it rather than starting the chain anew.
-            .border(2.dp, if (picked) AppTheme.colors.accent else Color.Transparent, shape)
+            .border(outline, shape)
             .onGloballyPositioned { coordinates ->
                 placed = coordinates
                 onPlaced?.invoke(coordinates.boundsInRoot())
@@ -576,14 +591,27 @@ internal fun DayCell(
             day.day.dayOfMonth.toString(),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = if (today) FontWeight.Bold else FontWeight.Normal,
+            textAlign = TextAlign.Center,
             color = when {
-                selected -> AppTheme.colors.onAccent
-                today -> AppTheme.colors.accent
+                // Today's number sits in a pill: accent on a plain cell, turned round on the open one.
+                today && selected -> AppTheme.colors.accent
+                today || selected -> AppTheme.colors.onAccent
                 inPeriod -> AppTheme.colors.text
                 else -> AppTheme.colors.textMuted
             },
             // The description already says the date.
-            modifier = Modifier.clearAndSetSemantics {},
+            modifier = Modifier
+                .clearAndSetSemantics {}
+                .then(
+                    if (today) {
+                        Modifier
+                            .clip(CircleShape)
+                            .background(if (selected) AppTheme.colors.onAccent else AppTheme.colors.accent)
+                            .padding(horizontal = 8.dp)
+                    } else {
+                        Modifier
+                    },
+                ),
         )
         if (day.count > 0) {
             Box(
@@ -595,6 +623,19 @@ internal fun DayCell(
                     .background(if (selected) AppTheme.colors.onAccent else AppTheme.colors.accent),
             )
         }
+        if (today || tomorrow) {
+            Text(
+                stringResource(if (today) R.string.calendar_cell_today_label else R.string.calendar_cell_tomorrow_label),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (today) FontWeight.Bold else FontWeight.Normal,
+                color = if (selected) AppTheme.colors.onAccent else AppTheme.colors.accent,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis,
+                // The description says it.
+                modifier = Modifier.clearAndSetSemantics {}.padding(top = 1.dp),
+            )
+        }
         // The row's event bars are drawn over this room.
         if (eventSpace > 0.dp) Spacer(Modifier.height(eventSpace))
     }
@@ -602,10 +643,11 @@ internal fun DayCell(
 
 /** "Saturday 3 October, today, 2 planned, 1 due" for a cell, said where a sighted owner sees the bar. */
 @Composable
-private fun dayDescription(day: CalendarDay, today: Boolean, selected: Boolean, picked: Boolean): String {
+private fun dayDescription(day: CalendarDay, today: Boolean, tomorrow: Boolean, selected: Boolean, picked: Boolean): String {
     val locale = LocalConfiguration.current.locales[0]
     val parts = mutableListOf(DateTimeFormatter.ofPattern("EEEE d MMMM", locale).format(day.day))
     if (today) parts += stringResource(R.string.calendar_cell_today)
+    if (tomorrow) parts += stringResource(R.string.calendar_cell_tomorrow)
     if (selected) parts += stringResource(R.string.calendar_cell_open)
     if (picked) parts += stringResource(R.string.calendar_cell_picked)
     if (day.empty) parts += stringResource(R.string.calendar_cell_empty)
@@ -722,3 +764,7 @@ private fun period(state: CalendarUiState, locale: java.util.Locale): String {
 
 // A day cell's width to its height, unless large text needs it taller.
 private const val CELL_RATIO = 0.9f
+
+// How strongly today's cell is tinted with the accent, and how strong tomorrow's outline is.
+private const val TODAY_TINT = 0.16f
+private const val TOMORROW_OUTLINE = 0.55f

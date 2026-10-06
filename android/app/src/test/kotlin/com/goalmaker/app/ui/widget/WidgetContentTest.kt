@@ -205,4 +205,25 @@ class WidgetContentTest {
     }
 
     private fun plan(title: String, day: LocalDate = today) = tasks.add(title)!!.also { tasks.plan(it.id, day) }
+
+    @Test
+    fun `the Habits widget goes to two columns only when it is wide and the habits do not fit one`() {
+        // A 3 by 2 widget, about 250 by 180 dp, holds four rows one under another.
+        assertEquals(1, WidgetContent.habitColumns(4, width = 250f, height = 180f))
+        assertEquals(2, WidgetContent.habitColumns(5, width = 250f, height = 180f))
+        assertEquals(2, WidgetContent.habitColumns(13, width = 250f, height = 400f))
+        // Taller, the same habits fit one column again.
+        assertEquals(1, WidgetContent.habitColumns(8, width = 250f, height = 300f))
+        // Too narrow for two tiles: one column that scrolls.
+        assertEquals(1, WidgetContent.habitColumns(12, width = 180f, height = 180f))
+        // A widget too short for even one row still counts one, so two habits go side by side.
+        assertEquals(2, WidgetContent.habitColumns(2, width = 300f, height = 40f))
+    }
+
+    @Test
+    fun `the Habits widget takes every habit on Today, since it scrolls`() {
+        repeat(WidgetContent.ROWS + 4) { index -> habits.add(HabitDraft("Habit $index", today.minusDays(3))) }
+
+        assertEquals(WidgetContent.ROWS + 4, WidgetContent.habits(habits.read(), today).size)
+    }
 }

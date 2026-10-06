@@ -102,45 +102,93 @@
                        PreviewMouseLeftButtonDown="OnCellPressed" PreviewKeyDown="OnCellKey"
                        AutomationProperties.Name="{Binding AutomationName}"
                        AutomationProperties.HelpText="{DynamicResource Calendar.PickHint}">
-                <!-- A picked day of several is outlined. -->
-                <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}" BorderThickness="2"
-                        Height="{Binding DataContext.FaceHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="BorderBrush" Value="Transparent" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsPicked}" Value="True">
-                                    <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <StackPanel VerticalAlignment="Top" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding InPeriod}" Value="False">
-                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsToday}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
-                                            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
-                                            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
+                <!--
+                    Today and tomorrow stand out so the owner finds them at once: today is tinted, framed in the
+                    accent and has its number in a filled accent pill; tomorrow has a softer accent frame. Both
+                    carry a small word beside the number when the cell has room for it. A picked day of several gets a frame in the text
+                    colour over the top, so a pick never looks like today.
+                -->
+                <Grid x:Name="Face" Height="{Binding DataContext.FaceHeight, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                    <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}" />
+                    <Border CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.AccentBrush}" Opacity="0.14"
+                            Visibility="{Binding IsToday, Converter={StaticResource BoolToVisibility}}" />
+                    <Border CornerRadius="{DynamicResource GM.RowCorner}" BorderBrush="{DynamicResource GM.AccentBrush}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsTomorrow}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Setter Property="BorderThickness" Value="1.5" />
+                                        <Setter Property="Opacity" Value="0.6" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Setter Property="BorderThickness" Value="2.5" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <Border CornerRadius="{DynamicResource GM.RowCorner}" BorderThickness="2" BorderBrush="{DynamicResource GM.TextBrush}"
+                            Visibility="{Binding IsPicked, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel VerticalAlignment="Top" Margin="4,5,4,0">
+                        <DockPanel HorizontalAlignment="Center">
+                            <Border DockPanel.Dock="Left" MinWidth="22" Height="20" Padding="5,0" CornerRadius="10">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="Transparent" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding Label}" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding InPeriod}" Value="False">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                                                    <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource GM.OnAccentBrush}" />
+                                                    <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <TextBlock Margin="4,0,0,0" VerticalAlignment="Center" FontSize="11" Text="{Binding DayTag}"
+                                       FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.AccentBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding HasDayTag}" Value="True" />
+                                                    <Condition Binding="{Binding ActualWidth, ElementName=Face, Converter={StaticResource WidthAtLeast}, ConverterParameter=96}" Value="True" />
+                                                </MultiDataTrigger.Conditions>
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DockPanel>
                         <Border Height="4" Margin="0,4,0,0" CornerRadius="2" HorizontalAlignment="Center"
                                 Width="{Binding BarWidth}" Background="{DynamicResource GM.AccentBrush}"
                                 Visibility="{Binding HasAnything, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
-                </Border>
+                </Grid>
             </ui:Button>
         </DataTemplate>
 

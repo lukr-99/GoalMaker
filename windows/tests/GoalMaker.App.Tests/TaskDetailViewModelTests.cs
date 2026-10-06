@@ -69,7 +69,7 @@ public sealed class TaskDetailViewModelTests : IDisposable
     }
 
     [Fact]
-    public void NotesAreEditedAsTextAndSavedOnRequest()
+    public void NotesSaveWhenTheBoxIsLeft()
     {
         var task = Add("Book the trip");
         var detail = Detail(task.Id);
@@ -77,11 +77,75 @@ public sealed class TaskDetailViewModelTests : IDisposable
         detail.EditNotesCommand.Execute(null);
         detail.NotesDraft = "Check the **passport**";
         Assert.Equal(string.Empty, planner.Tasks.Find(task.Id)!.Notes);
-        detail.SaveNotesCommand.Execute(null);
+        detail.FinishNotes();
 
         Assert.Equal("Check the **passport**", planner.Tasks.Find(task.Id)!.Notes);
         Assert.False(detail.IsEditingNotes);
         Assert.True(detail.HasNotes);
+        Assert.True(detail.NotesSaved);
+    }
+
+    [Fact]
+    public void NotesSaveAfterAPauseInTyping()
+    {
+        var task = Add("Book the trip");
+        var detail = Detail(task.Id);
+
+        detail.EditNotesCommand.Execute(null);
+        detail.NotesDraft = "Check";
+        planner.Time.Advance(TimeSpan.FromMilliseconds(500));
+        detail.NotesDraft = "Check the passport";
+        planner.Time.Advance(TimeSpan.FromMilliseconds(500));
+        Assert.Equal(string.Empty, planner.Tasks.Find(task.Id)!.Notes);
+        Assert.False(detail.NotesSaved);
+
+        planner.Time.Advance(TimeSpan.FromMilliseconds(300));
+        Assert.Equal("Check the passport", planner.Tasks.Find(task.Id)!.Notes);
+        Assert.True(detail.NotesSaved);
+        Assert.True(detail.IsEditingNotes);
+    }
+
+    [Fact]
+    public void NotesSaveWhenThePageClosesOrAnotherTaskOpens()
+    {
+        var first = Add("Book the trip");
+        var second = Add("Pack");
+        var detail = Detail(first.Id);
+
+        detail.EditNotesCommand.Execute(null);
+        detail.NotesDraft = "Passport";
+        detail.Load(second.Id, AppPage.Today);
+        Assert.Equal("Passport", planner.Tasks.Find(first.Id)!.Notes);
+        Assert.False(detail.IsEditingNotes);
+
+        detail.EditNotesCommand.Execute(null);
+        detail.NotesDraft = "Socks";
+        detail.SaveNotes();
+        Assert.Equal("Socks", planner.Tasks.Find(second.Id)!.Notes);
+
+        detail.NotesDraft = "Socks and shoes";
+        detail.BackCommand.Execute(null);
+        Assert.Equal("Socks and shoes", planner.Tasks.Find(second.Id)!.Notes);
+    }
+
+    [Fact]
+    public void NotesLeftAsTheyWereAreNotWritten()
+    {
+        var task = Add("Book the trip");
+        planner.Tasks.SetNotes(task.Id, "Passport");
+        var detail = Detail(task.Id);
+        var writes = 0;
+        planner.Tasks.Changed += (_, _) => writes++;
+
+        detail.EditNotesCommand.Execute(null);
+        detail.NotesDraft = "Passport!";
+        detail.NotesDraft = "Passport";
+        planner.Time.Advance(TimeSpan.FromSeconds(1));
+        detail.FinishNotes();
+        detail.SaveNotes();
+
+        Assert.Equal(0, writes);
+        Assert.False(detail.NotesSaved);
     }
 
     [Fact]

@@ -88,6 +88,12 @@ import com.goalmaker.app.ui.theme.AppTheme
 @Composable
 fun SignedInNavigation(graph: AppGraph) {
     val backStack = rememberNavBackStack(TodayKey)
+    // A review goes on the stack once: a second tap while it slides in would stack it twice, and
+    // its last button would then seem to do nothing, showing the same review again.
+    val openReview: (String, LocalDate) -> Unit = { kind, start ->
+        val key = ReviewKey(kind, start.toString())
+        if (key !in backStack) backStack.add(key)
+    }
     // Every place is a tab of the start screen (ADR 0014): the pinned ones in the bottom bar, and the
     // rest reached from Places. Which one is on show, and the list the lists come back to.
     val pins by graph.settings.pins.collectAsStateWithLifecycle()
@@ -284,7 +290,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                         wantTitle = title
                                         select(PlaceRules.WANTS)
                                     },
-                                    onOpenReview = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                                    onOpenReview = openReview,
                                     onOpenProject = openProject,
                                 )
                                 PlaceRules.PROJECTS -> ProjectsScreen(
@@ -329,7 +335,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                     ReviewsScreen(
                                         viewModel = reviewsViewModel,
                                         onBack = backToHub,
-                                        onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                                        onOpen = openReview,
                                         actions = actions,
                                     )
                                 }
@@ -413,7 +419,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         ReviewsScreen(
                             viewModel = reviewsViewModel,
                             onBack = { backStack.removeLastOrNull() },
-                            onOpen = { kind, start -> backStack.add(ReviewKey(kind, start.toString())) },
+                            onOpen = openReview,
                         )
                     }
                     entry<StatsKey> {
@@ -523,7 +529,7 @@ fun SignedInNavigation(graph: AppGraph) {
                     }
                     entry<TaskKey>(metadata = transitions.task()) { key ->
                         val taskViewModel = viewModel(key = key.id) {
-                            TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.goals, graph.projects, graph.io, graph::today)
+                            TaskViewModel(key.id, graph.tasks, graph.areas, graph.tags, graph.steps, graph.goals, graph.projects, graph.io, today = graph::today)
                         }
                         TaskScreen(viewModel = taskViewModel, onBack = { backStack.removeLastOrNull() })
                     }
