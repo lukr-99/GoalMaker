@@ -14,12 +14,17 @@ namespace GoalMaker.App.ViewModels;
 /// light Markdown, day, time and deadline, area, the goal it serves, repeat, tags and the checklist. A
 /// project item shows its id (GM-12) once the server has numbered it, with a way to copy it. Each field saves when
 /// it changes; a refused value goes back to what was saved. Rebuilt in place when the replica
-/// changes, so editing one field doesn't take the keyboard from another.
+/// changes, so editing one field doesn't take the keyboard from another. The notes save on their
+/// own: after a short pause in typing, when the box loses focus, and when the page closes or another
+/// task opens, so no edit is lost and there is no button to remember.
 /// </summary>
 public sealed partial class TaskDetailViewModel : ObservableObject
 {
     // "%H", not "H": a lone letter is a standard format, and there is no standard "H".
     private static readonly string[] TimeFormats = ["H:mm", "HH:mm", "H.mm", "%H"];
+
+    // How long typing in the notes rests before the notes save.
+    private static readonly TimeSpan NotesPause = TimeSpan.FromMilliseconds(800);
     private readonly TaskList tasks;
     private readonly AreaList areas;
     private readonly TagList tags;
@@ -27,6 +32,7 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private readonly IStrings strings;
     private readonly TimeProvider time;
     private readonly Action<AppPage> openPage;
+    private readonly Action<Action> runOnUi;
     private readonly GoalList? goals;
     private readonly ISettingsStore? settings;
     private readonly ProjectList? projects;
@@ -42,6 +48,7 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private ChoiceViewModel? selectedArea;
     private ChoiceViewModel? selectedRepeat;
     private ChoiceViewModel? selectedGoal;
+    private ITimer? notesTimer;
 
     [ObservableProperty]
     private bool hasTask;
@@ -59,6 +66,10 @@ public sealed partial class TaskDetailViewModel : ObservableObject
 
     [ObservableProperty]
     private bool isEditingNotes;
+
+    /// <summary>Whether the notes were just saved on their own, for the quiet "Saved" next to them.</summary>
+    [ObservableProperty]
+    private bool notesSaved;
 
     [ObservableProperty]
     private IReadOnlyList<ChoiceViewModel> areaChoices = [];
@@ -102,6 +113,7 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         this.strings = strings;
         this.time = time;
         this.openPage = openPage;
+        this.runOnUi = runOnUi;
         tasks.Changed += (_, _) => runOnUi(Refresh);
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);
@@ -224,9 +236,11 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     /// <summary>Shows <paramref name="id"/>; <paramref name="from"/> is the page Back returns to.</summary>
     public void Load(string id, AppPage from)
     {
+        SaveNotes();
         taskId = id;
         back = from;
         IsEditingNotes = false;
+        NotesSaved = false;
         Steps.Clear();
         Refresh();
     }
@@ -320,8 +334,49 @@ public sealed partial class TaskDetailViewModel : ObservableObject
 
     partial void OnNotesChanged(string value) => OnPropertyChanged(nameof(HasNotes));
 
+    // Typing in the notes saves them once it rests for a moment.
+    partial void OnNotesDraftChanged(string value)
+    {
+        if (!IsEditingNotes || loading)
+        {
+            return;
+        }
+
+        NotesSaved = false;
+        notesTimer?.Dispose();
+        notesTimer = time.CreateTimer(_ => runOnUi(SaveNotes), null, NotesPause, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>
+    /// Writes the notes being edited when they differ from the saved ones. The page calls it when it
+    /// closes; a pause in typing and opening another task call it too.
+    /// </summary>
+    public void SaveNotes()
+    {
+        notesTimer?.Dispose();
+        notesTimer = null;
+        if (!IsEditingNotes || taskId is not { } id || tasks.Find(id) is not { } task || NotesDraft == task.Notes)
+        {
+            return;
+        }
+
+        tasks.SetNotes(id, NotesDraft);
+        NotesSaved = true;
+    }
+
+    /// <summary>The notes box lost focus: the notes save and show as text again.</summary>
+    public void FinishNotes()
+    {
+        SaveNotes();
+        IsEditingNotes = false;
+    }
+
     [RelayCommand]
-    private void Back() => openPage(back);
+    private void Back()
+    {
+        FinishNotes();
+        openPage(back);
+    }
 
     /// <summary>Puts the item's id on the clipboard.</summary>
     [RelayCommand(CanExecute = nameof(CanCopyId))]
@@ -332,6 +387,9 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     [RelayCommand]
     private void Delete()
     {
+        notesTimer?.Dispose();
+        notesTimer = null;
+        IsEditingNotes = false;
         if (taskId is { } id)
         {
             tasks.Delete(id);
@@ -344,18 +402,8 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private void EditNotes()
     {
         NotesDraft = Notes;
+        NotesSaved = false;
         IsEditingNotes = true;
-    }
-
-    [RelayCommand]
-    private void SaveNotes()
-    {
-        if (taskId is { } id)
-        {
-            tasks.SetNotes(id, NotesDraft);
-        }
-
-        IsEditingNotes = false;
     }
 
     [RelayCommand]

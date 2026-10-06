@@ -19,6 +19,10 @@ item names its project in small muted text after the title, as the lists' chip d
 
 The habits on Today: due today, not paused, and not kept off Today ([habits](habits.md)). The header
 counts the ones left the way Today does, so a limit or a skipped habit never holds it up.
+Every habit on Today is listed (up to 60) and the list scrolls; when the widget is at least 220 dp
+wide and the habits don't fit one column, they sit in two columns of compact tiles, a long name cut
+so its count stays visible (the owner's board item "Habits widget doesn't include more than 7 habits
+well").
 Each has a mark for whether its period is met, its emoji and, for a habit that counts something, how
 far it has got. One tap checks a habit in, exactly as tapping its ring in the
 app does. A habit measured by an amount fills the rest of the day's target in that tap, as the app's

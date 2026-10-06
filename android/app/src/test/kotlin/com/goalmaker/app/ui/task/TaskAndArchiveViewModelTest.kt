@@ -19,6 +19,7 @@ import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.domain.composer.ComposerParser
 import com.goalmaker.app.ui.archive.ArchiveViewModel
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -226,5 +227,54 @@ class TaskAndArchiveViewModelTest {
 
         archive.setQuery("gm-12")
         assertEquals(listOf("Give items ids"), archive.results.filterNotNull().first { it.size == 1 }.map { it.title })
+    }
+
+    @Test
+    fun `notes typed and then left are written when the view closes`() {
+        val task = tasks.add(ComposerParser.parse("Pack for Prague", LocalDateTime.parse("2026-09-18T14:00")))!!
+        val viewModel = taskViewModel(task.id)
+
+        viewModel.editNotes("- passport")
+        viewModel.editNotes("- passport\n- charger")
+        assertEquals("", tasks.find(task.id)!!.notes)
+        viewModel.saveNotes()
+
+        assertEquals("- passport\n- charger", tasks.find(task.id)!!.notes)
+        assertEquals(NotesSave.SAVED, viewModel.notesSave.value)
+    }
+
+    @Test
+    fun `notes are written once typing pauses`() {
+        val task = tasks.add(ComposerParser.parse("Pack for Prague", LocalDateTime.parse("2026-09-18T14:00")))!!
+        val viewModel = taskViewModel(task.id)
+
+        viewModel.editNotes("Train at 9")
+        assertEquals(NotesSave.PENDING, viewModel.notesSave.value)
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500))
+        viewModel.editNotes("Train at 9:40")
+        // Typing again starts the pause over.
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(700))
+        assertEquals("", tasks.find(task.id)!!.notes)
+
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+        assertEquals("Train at 9:40", tasks.find(task.id)!!.notes)
+        assertEquals(NotesSave.SAVED, viewModel.notesSave.value)
+    }
+
+    @Test
+    fun `notes that did not change are not written`() = runTest {
+        val task = tasks.add(ComposerParser.parse("Pack for Prague", LocalDateTime.parse("2026-09-18T14:00")), "Passport")!!
+        val viewModel = taskViewModel(task.id)
+        val before = test.replica.watch("tasks").first()
+
+        // Leaving without typing writes nothing, and neither does typing back what was there.
+        viewModel.saveNotes()
+        viewModel.editNotes("Passport!")
+        viewModel.editNotes("Passport")
+        viewModel.saveNotes()
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+
+        assertEquals(before, test.replica.watch("tasks").first())
+        assertEquals("Passport", tasks.find(task.id)!!.notes)
     }
 }

@@ -34,6 +34,7 @@ public sealed partial class ReviewViewModel : ObservableObject
     private readonly TimeProvider time;
     private readonly TallyList? tally;
     private readonly Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels;
+    private readonly Action? close;
     private ReviewItem? review;
     private bool loading;
 
@@ -93,9 +94,11 @@ public sealed partial class ReviewViewModel : ObservableObject
         TimeProvider time,
         Action<Action> runOnUi,
         TallyList? tally = null,
-        Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels = null)
+        Func<IReadOnlyList<TallyCategory>, TallyLabels>? tallyLabels = null,
+        Action? close = null)
     {
         Kind = kind;
+        this.close = close;
         this.tally = tally;
         this.tallyLabels = tallyLabels;
         PeriodStart = periodStart;
@@ -333,10 +336,14 @@ public sealed partial class ReviewViewModel : ObservableObject
             return;
         }
 
-        if (Step != ReviewStep.Done)
+        // Done on the last step leaves the review, a new one or one opened again.
+        if (Step == ReviewStep.Done)
         {
-            Step = (ReviewStep)((int)Step + 1);
+            close?.Invoke();
+            return;
         }
+
+        Step = (ReviewStep)((int)Step + 1);
     }
 
     [RelayCommand]

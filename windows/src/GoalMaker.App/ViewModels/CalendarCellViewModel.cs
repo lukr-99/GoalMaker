@@ -14,12 +14,14 @@ public sealed class CalendarCellViewModel(
     string? automationName = null,
     bool isPicked = false,
     Action? pick = null,
-    Action? pickRun = null)
+    Action? pickRun = null,
+    bool isTomorrow = false,
+    string? dayTag = null)
 {
     public DateOnly Day { get; } = day;
 
     /// <summary>
-    /// The cell as a screen reader says it (M6-05): the date, whether it is today or open, and what is
+    /// The cell as a screen reader says it (M6-05): the date, whether it is today, tomorrow or open, and what is
     /// on it, since the number and the bar alone say little.
     /// </summary>
     public string AutomationName { get; } = automationName ?? day.ToString("D", System.Globalization.CultureInfo.CurrentCulture);
@@ -35,7 +37,16 @@ public sealed class CalendarCellViewModel(
 
     public bool HasAnything { get; } = count > 0;
 
+    /// <summary>Today: a tinted cell, a strong accent frame and the number in a filled accent pill.</summary>
     public bool IsToday { get; } = isToday;
+
+    /// <summary>Tomorrow: a softer accent frame, so the owner finds the next day at a glance too.</summary>
+    public bool IsTomorrow { get; } = isTomorrow;
+
+    /// <summary>The small word beside the number, "Today" or "Tomorrow"; empty on other days.</summary>
+    public string DayTag { get; } = dayTag ?? string.Empty;
+
+    public bool HasDayTag => DayTag.Length > 0;
 
     /// <summary>Whether the day belongs to the month on show; the ones around it are faint.</summary>
     public bool InPeriod { get; } = inPeriod;

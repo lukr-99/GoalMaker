@@ -46,11 +46,27 @@ class DayCellAccessibilityTest {
     private val busy = CalendarDay(saturday, planned = listOf(task("a"), task("b")), deadlines = listOf(task("c")), reminders = 1)
 
     // A week row the way the grid draws it: seven cells sharing the width.
-    private fun show(day: CalendarDay, today: Boolean = false, selected: Boolean = false, fontScale: Float = 1f, onClick: () -> Unit = {}) {
+    private fun show(
+        day: CalendarDay,
+        today: Boolean = false,
+        selected: Boolean = false,
+        fontScale: Float = 1f,
+        tomorrow: Boolean = false,
+        onClick: () -> Unit = {},
+    ) {
         rule.setContent {
             TestTheme(fontScale) {
                 Row(Modifier.fillMaxWidth()) {
-                    DayCell(day, today, inPeriod = true, selected = selected, onClick = onClick, onDropTask = {}, modifier = Modifier.weight(1f))
+                    DayCell(
+                        day,
+                        today,
+                        inPeriod = true,
+                        selected = selected,
+                        onClick = onClick,
+                        onDropTask = {},
+                        modifier = Modifier.weight(1f),
+                        tomorrow = tomorrow,
+                    )
                     repeat(6) { Spacer(Modifier.weight(1f)) }
                 }
             }
@@ -75,6 +91,13 @@ class DayCellAccessibilityTest {
         show(CalendarDay(saturday), selected = true)
 
         rule.onNode(hasClickAction()).assertContentDescriptionEquals("Saturday 3 October, open, nothing on it")
+    }
+
+    @Test
+    fun `tomorrow says so, and its label is not read twice`() {
+        show(CalendarDay(saturday), tomorrow = true)
+
+        rule.onNode(hasClickAction()).assertContentDescriptionEquals("Saturday 3 October, tomorrow, nothing on it")
     }
 
     // A narrow phone, where the grid's shape alone leaves no room under a doubled number for the bar.

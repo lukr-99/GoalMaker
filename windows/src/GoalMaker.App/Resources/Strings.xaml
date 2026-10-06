@@ -196,7 +196,7 @@
     <sys:String x:Key="Task.TitleWithId">Title of {0}</sys:String>
     <sys:String x:Key="Task.Notes">Notes</sys:String>
     <sys:String x:Key="Task.NotesEdit">Edit the notes</sys:String>
-    <sys:String x:Key="Task.NotesSave">Save the notes</sys:String>
+    <sys:String x:Key="Task.NotesSaved">Saved</sys:String>
     <sys:String x:Key="Task.NotesHint">**bold**, *italic*, a dash at the start of a line for a list, and links.</sys:String>
     <sys:String x:Key="Task.Day">Day</sys:String>
     <sys:String x:Key="Task.Time">Time</sys:String>
@@ -818,6 +818,9 @@
     <sys:String x:Key="Calendar.DragHint">Drag onto another day to move it</sys:String>
     <!-- A day cell as a screen reader says it, after the date (M6-05). -->
     <sys:String x:Key="Calendar.CellToday">today</sys:String>
+    <sys:String x:Key="Calendar.CellTomorrow">tomorrow</sys:String>
+    <sys:String x:Key="Calendar.TagToday">Today</sys:String>
+    <sys:String x:Key="Calendar.TagTomorrow">Tomorrow</sys:String>
     <sys:String x:Key="Calendar.CellOpen">open</sys:String>
     <sys:String x:Key="Calendar.CellEmpty">nothing on it</sys:String>
     <sys:String x:Key="Calendar.CellPlannedOne">1 planned</sys:String>

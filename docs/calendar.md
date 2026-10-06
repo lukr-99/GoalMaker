@@ -57,8 +57,12 @@ bar as "Prague, 12 to 15 October", and a cell's name counts its events.
 
 Android reaches the calendar from the bottom bar, beside Today, Tomorrow, the Inbox and Projects,
 Windows from the sidebar or `--open calendar`. Both draw the month as a grid of day cells with a bar
-that grows with what the day holds, today outlined and the day the owner picked filled; picking a day
-lists what is on it, and a task opens from there. The week view is the same grid, one row.
+that grows with what the day holds and the day the owner picked filled; picking a day lists what is
+on it, and a task opens from there. The week view is the same grid, one row. **Today** stands out
+most: an accent tint, a strong accent frame and its number in an accent pill; **tomorrow** has a
+softer frame. Both carry a small "Today" or "Tomorrow" label where the cell has room (the owner's
+board item "Highlights in calendar"), and a screen reader hears "today" or "tomorrow" in the cell's
+name.
 
 **Filtering**: the lists' area and tag filter ([lists](lists.md#filtering)), with a filter of its
 own, sits over the grid on both apps. It narrows everything a day holds, the planned tasks,

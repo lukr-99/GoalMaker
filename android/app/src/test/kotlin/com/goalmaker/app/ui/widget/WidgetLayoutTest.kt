@@ -5,6 +5,8 @@ import android.content.Context
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.GridView
+import android.widget.ListView
 import android.widget.TextView
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpSize
@@ -15,6 +17,7 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.compose
 import androidx.glance.appwidget.provideContent
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,8 +72,10 @@ class WidgetLayoutTest {
         assertVisible(root, "All done for today.")
     }
 
+    // Robolectric does not fill a widget's scrolling list, so the rows are laid out on their own and
+    // the list is checked for its place: under the header, over the rest of the widget.
     @Test
-    fun `the Habits widget shows its habits under the header`() = runTest {
+    fun `the Habits widget lists its habits under the header, over the rest of the widget`() = runTest {
         val habits = listOf(
             WidgetHabit("1", "Meditate", "🧘", ring = 0.0, done = false),
             WidgetHabit("2", "Drink water", "💧", ring = 0.4, done = false, count = "3/8"),
@@ -78,7 +83,26 @@ class WidgetLayoutTest {
         )
         val root = layOut { HabitsWidget().Content(context, skin, habits) }
 
-        listOf("Meditate", "Drink water", "3/8", "Coffee", "1/2").forEach { assertVisible(root, it) }
+        assertVisible(root, context.getString(com.goalmaker.app.R.string.widget_habits_header, 2))
+        val list = views<ListView>(root).single()
+        val header = texts(root).first().let { it.positionIn(root)[1] + it.height }
+        assertTrue("the list starts under the header", list.positionIn(root)[1] >= header)
+        assertTrue("the list fills the rest of the widget (height ${list.height})", list.positionIn(root)[1] + list.height in root.height - 40..root.height)
+
+        habits.forEach { habit ->
+            val row = layOut(DpSize(250.dp, 40.dp)) { HabitsWidget().HabitRow(habit, skin, context, compact = false) }
+            listOf(habit.name, habit.count).filter(String::isNotEmpty).forEach { assertVisible(row, it) }
+        }
+    }
+
+    @Test
+    fun `a compact habit tile keeps its count when the name is long`() = runTest {
+        val habit = WidgetHabit("1", "Water the plants on the balcony", "🌱", ring = 0.4, done = false, count = "2 of 5")
+        val tile = layOut(DpSize(120.dp, 40.dp)) { HabitsWidget().HabitRow(habit, skin, context, compact = true) }
+
+        assertVisible(tile, "2 of 5")
+        val count = texts(tile).first { it.text.toString() == "2 of 5" }
+        assertTrue("the count stays inside the tile", count.positionIn(tile)[0] + count.width <= tile.width)
     }
 
     @Test
@@ -88,12 +112,30 @@ class WidgetLayoutTest {
         assertVisible(root, context.getString(com.goalmaker.app.R.string.widget_habits_empty))
     }
 
-    /** Composes [content] at the Today widget's default 3 by 3 size and lays it out like a launcher. */
-    private suspend fun layOut(content: @Composable () -> Unit): ViewGroup {
+    @Test
+    fun `a wide Habits widget with many habits lays them out in two columns`() = runTest {
+        val habits = (1..10).map { WidgetHabit("$it", "Habit $it", "", ring = 0.0, done = false) }
+        val root = layOut(DpSize(300.dp, 200.dp)) { HabitsWidget().Content(context, skin, habits) }
+
+        val grid = views<GridView>(root).single()
+        assertEquals(2, grid.numColumns)
+        assertTrue("the grid has room to scroll in (height ${grid.height})", grid.height > root.height / 2)
+    }
+
+    @Test
+    fun `a narrow Habits widget keeps one column`() = runTest {
+        val habits = (1..10).map { WidgetHabit("$it", "Habit $it", "", ring = 0.0, done = false) }
+        val root = layOut(DpSize(180.dp, 200.dp)) { HabitsWidget().Content(context, skin, habits) }
+
+        assertTrue("no grid", views<GridView>(root).isEmpty())
+        assertTrue("one scrolling list", views<ListView>(root).single().height > root.height / 2)
+    }
+
+    /** Composes [content] at [size] (the Today widget's default 3 by 3) and lays it out like a launcher. */
+    private suspend fun layOut(size: DpSize = DpSize(250.dp, 250.dp), content: @Composable () -> Unit): ViewGroup {
         val widget = object : GlanceAppWidget() {
             override suspend fun provideGlance(context: Context, id: GlanceId) = provideContent { content() }
         }
-        val size = DpSize(250.dp, 250.dp)
         val views = widget.compose(context, size = size)
         val density = context.resources.displayMetrics.density
         val width = (size.width.value * density).toInt()
@@ -114,6 +156,13 @@ class WidgetLayoutTest {
         val place = view!!.positionIn(root)
         val inside = view!!.visibility == View.VISIBLE && view.height > 0 && place[1] + view.height <= root.height
         assertTrue("'$text' is drawn out of sight (top ${place[1]}, height ${view.height}, widget ${root.height})", inside)
+    }
+
+    private inline fun <reified T : View> views(group: ViewGroup): List<T> = all(group).filterIsInstance<T>()
+
+    private fun all(group: ViewGroup): List<View> = (0 until group.childCount).flatMap { index ->
+        val child = group.getChildAt(index)
+        listOf(child) + ((child as? ViewGroup)?.let(::all) ?: emptyList())
     }
 
     private fun texts(group: ViewGroup): List<TextView> = (0 until group.childCount).flatMap { index ->

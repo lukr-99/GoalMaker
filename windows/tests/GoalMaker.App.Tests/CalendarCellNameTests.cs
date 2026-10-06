@@ -34,9 +34,30 @@ public sealed class CalendarCellNameTests : IDisposable
     [Fact]
     public void AnEmptyCellSaysSo()
     {
-        var cell = Page().Cells.Single(cell => cell.Day == Today.AddDays(1));
+        var cell = Page().Cells.Single(cell => cell.Day == Today.AddDays(2));
 
-        Assert.Equal($"{Date(Today.AddDays(1))}, Calendar.CellEmpty", cell.AutomationName);
+        Assert.Equal($"{Date(Today.AddDays(2))}, Calendar.CellEmpty", cell.AutomationName);
+    }
+
+    [Fact]
+    public void TodayAndTomorrowStandOutAndSaySo()
+    {
+        var page = Page();
+        page.Open(Today.AddDays(1));
+
+        var today = page.Cells.Single(cell => cell.Day == Today);
+        var tomorrow = page.Cells.Single(cell => cell.Day == Today.AddDays(1));
+        var other = page.Cells.Single(cell => cell.Day == Today.AddDays(2));
+
+        Assert.Equal((true, false, "Calendar.TagToday"), (today.IsToday, today.IsTomorrow, today.DayTag));
+        Assert.Equal((false, true, "Calendar.TagTomorrow"), (tomorrow.IsToday, tomorrow.IsTomorrow, tomorrow.DayTag));
+        Assert.Equal((false, false, false), (other.IsToday, other.IsTomorrow, other.HasDayTag));
+        Assert.StartsWith($"{Date(Today.AddDays(1))}, Calendar.CellTomorrow, Calendar.CellOpen", tomorrow.AutomationName);
+        Assert.DoesNotContain("Calendar.CellTomorrow", today.AutomationName);
+
+        page.ShowCommand.Execute("week");
+        Assert.True(page.Cells.Single(cell => cell.Day == Today).IsToday);
+        Assert.True(page.Cells.Single(cell => cell.Day == Today.AddDays(1)).IsTomorrow);
     }
 
     private static string Date(DateOnly day) => day.ToString("D", CultureInfo.CurrentCulture);

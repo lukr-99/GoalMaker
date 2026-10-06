@@ -48,6 +48,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,10 +57,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -87,8 +93,9 @@ import java.time.format.FormatStyle
 /**
  * One task's detail view (spec stories 12 to 19, docs/archive.md): title and done box, notes in light
  * Markdown, day and time, deadline, area, tags, repeat and the checklist. A project item shows its id
- * (GM-12) once the server has numbered it, with a way to copy it. Leaving a text field saves it; a
- * deleted task closes the view.
+ * (GM-12) once the server has numbered it, with a way to copy it. Leaving a text field saves it,
+ * and notes also save after a pause in typing and when the view closes; a deleted task closes the
+ * view.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,6 +107,11 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
     }
     val snackbars = remember { SnackbarHostState() }
     CopiedIds(viewModel.copies, snackbars)
+    val notesSave by viewModel.notesSave.collectAsStateWithLifecycle()
+    // Notes still waiting for a pause in typing are written when the view goes away, by Back or not.
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.saveNotes() }
+    }
     val task = state.task ?: return
 
     Scaffold(
@@ -137,7 +149,7 @@ fun TaskScreen(viewModel: TaskViewModel, onBack: () -> Unit) {
         ) {
             state.itemId?.let { id -> ItemIdLine(id, onCopy = viewModel::copyId) }
             TitleField(task, onDone = viewModel::setDone, onRename = viewModel::rename)
-            Notes(task.notes, onSave = viewModel::setNotes)
+            Notes(task.notes, saved = notesSave, onEdit = viewModel::editNotes, onSave = viewModel::saveNotes)
             HorizontalDivider()
             Schedule(task, onSchedule = viewModel::schedule, onDeadline = viewModel::setDeadline)
             AreaField(task, state, onArea = viewModel::setArea)
@@ -197,29 +209,53 @@ private fun TitleField(task: TaskItem, onDone: (Boolean) -> Unit, onRename: (Str
     }
 }
 
+/**
+ * The notes, read as light Markdown until tapped. What is typed is written on its own: after a short
+ * pause, when the field loses focus and when the view closes, with a quiet mark saying so.
+ */
 @Composable
-private fun Notes(notes: String, onSave: (String) -> Unit) {
+private fun Notes(notes: String, saved: NotesSave, onEdit: (String) -> Unit, onSave: () -> Unit) {
     var editing by rememberSaveable { mutableStateOf(false) }
-    var draft by rememberSaveable(notes) { mutableStateOf(notes) }
+    // Not reset by a write coming back, so nothing typed since is lost.
+    var draft by rememberSaveable { mutableStateOf(notes) }
+    val focus = remember { FocusRequester() }
+    var focused by remember { mutableStateOf(false) }
     Label(stringResource(R.string.task_notes))
     if (editing) {
         OutlinedTextField(
             value = draft,
-            onValueChange = { draft = it.take(20_000) },
-            supportingText = { Text(stringResource(R.string.task_notes_hint)) },
+            onValueChange = { text ->
+                draft = text.take(20_000)
+                onEdit(draft)
+            },
+            supportingText = {
+                Row(Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.task_notes_hint), modifier = Modifier.weight(1f))
+                    NotesMark(saved)
+                }
+            },
             minLines = 3,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focus)
+                .onFocusChanged { state ->
+                    if (focused && !state.isFocused) {
+                        onSave()
+                        editing = false
+                    }
+                    focused = state.isFocused
+                },
         )
-        TextButton(onClick = {
-            onSave(draft)
-            editing = false
-        }) { Text(stringResource(R.string.task_notes_save)) }
+        LaunchedEffect(Unit) { focus.requestFocus() }
     } else {
         Box(
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 40.dp)
-                .clickable { editing = true }
+                .clickable {
+                    draft = notes
+                    editing = true
+                }
                 .padding(vertical = 8.dp),
         ) {
             if (notes.isBlank()) {
@@ -228,7 +264,24 @@ private fun Notes(notes: String, onSave: (String) -> Unit) {
                 MarkdownNotes(notes)
             }
         }
+        if (saved == NotesSave.SAVED) NotesMark(saved)
     }
+}
+
+/** "Saving" while typing pauses, then "Saved": small and muted, nothing to press. */
+@Composable
+private fun NotesMark(saved: NotesSave) {
+    val text = when (saved) {
+        NotesSave.IDLE -> return
+        NotesSave.PENDING -> stringResource(R.string.task_notes_saving)
+        NotesSave.SAVED -> stringResource(R.string.task_notes_saved)
+    }
+    Text(
+        text,
+        style = MaterialTheme.typography.labelSmall,
+        color = AppTheme.colors.textMuted,
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
