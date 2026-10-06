@@ -40,7 +40,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_habits`, `check_in_habit`, `skip_habit`, `fail_habit` | Habits in the Habits page's groups with where each stands, its streak and the goal it serves, and "not on Today" for one kept off Today; check one in, skip a period, or fail one (missed at once) |
 | `add_habit`, `update_habit`, `delete_habit` | A habit's cadence, measure, target, direction, the goal it feeds and whether it shows on Today (`show_on_today`); a new one also from a short `line` |
 | `pause_habit`, `resume_habit` | A stretch of days that neither breaks a streak nor counts; one pause at a time |
-| `get_projects`, `get_project_board` | The projects with what is open in each; one project's columns in board order (Backlog, To do, Doing, Done, then Dropped with every dropped item), all of them or only the owner's or Claude's items |
+| `get_projects`, `get_project_board` | The projects with their keys and what is open in each; one project's columns in board order (Backlog, To do, Doing, Done, then Dropped with every dropped item), all of them or only the owner's or Claude's items |
 | `find_project` | The project a repository URL or a working folder belongs to (story 76) |
 | `create_project`, `create_milestone` | A project with its area, repository, folder and milestones; a milestone on one that already exists |
 | `add_project_item`, `update_project_item` | An item with its type, priority, milestone, column and who made it; its project can change |
@@ -73,6 +73,14 @@ The board and the list never disagree: moving an item to Done completes the task
 moves it to Done, and reopening a done item puts it back in To do. A dropped item shows in Dropped,
 whatever column it is stored in. Moved to Done it is done, and moved to any other column it is open
 again ([projects](projects.md)).
+
+Every item has a short **id** like **GM-12**: its project's key and its number there, or **#12** in a
+project without a key ([item ids](projects.md#item-ids)). Item lines start with it, `get_projects`
+and boards show each project's key, and `search_tasks` finds an item by it. Every tool that takes a
+task's id also takes an item id, in any case (`gm-12`); `#12` alone is refused, since it could be in
+any project. `create_project` makes a key from the name unless one is given, and `update_project`
+changes or clears it; a key another project of the owner's has is refused. The numbers come from the
+server: an item moved to another project takes the next number there, and its old id is gone.
 
 A project is named by whatever is at hand: its id, its repository URL (https or ssh, with or
 without `.git`), the folder being worked in (a folder inside the project's own counts), or its

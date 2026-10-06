@@ -37,6 +37,8 @@ export interface TaskItem {
   madeBy?: string;
   /** A done project item the owner took off the board by hand (supabase/migrations/0018). */
   boardArchived?: boolean;
+  /** Its number in its project, given by the server (docs/projects.md, "Item ids"); null outside one. */
+  itemNumber?: number | null;
 }
 
 /** Text order, the way Kotlin and C# compare strings (UTF-16 code units). */

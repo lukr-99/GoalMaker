@@ -16,8 +16,10 @@ import {
   names,
   newYearLine,
   paceText,
+  projectLine,
   standingText,
   taskDetail,
+  taskLine,
   today,
   wantLine,
 } from "./format.ts";
@@ -305,4 +307,55 @@ Deno.test("a board shows Dropped after Done, with every dropped item in it", () 
   assert(lines[lines.indexOf("Doing (1):") + 1].includes("Fix the widget"), "not under the column it is stored in");
   assert(taskDetail(dropped, plain, [], []).includes("On the board in Dropped."), "its detail says Dropped too");
   assert(taskDetail(open, plain, [], []).includes("On the board in Doing."));
+});
+
+Deno.test("a project item's line starts with its id, KEY-number or #number", () => {
+  const project = (itemKey: string | null): ProjectItem => ({
+    id: ID,
+    name: "GoalMaker",
+    description: "",
+    areaId: null,
+    status: "active",
+    repositoryUrl: null,
+    localFolder: null,
+    notes: "",
+    position: 0,
+    deleted: false,
+    itemKey,
+  });
+  const item: TaskItem = {
+    id: "a",
+    title: "Fix the widget",
+    state: "open",
+    topPriority: false,
+    createdAt: "2026-09-18T08:00:00Z",
+    plannedDate: null,
+    plannedTime: null,
+    areaId: null,
+    recurrence: null,
+    deleted: false,
+    seriesId: null,
+    notes: "",
+    deadline: null,
+    completedAt: null,
+    projectId: ID,
+    itemType: "bug",
+    boardColumn: "todo",
+    priority: "normal",
+    itemNumber: 12,
+  };
+  const keyed = names([], [], new Map(), [project("GM")]);
+  assertEquals(taskLine(item, keyed), `- [ ] GM-12 Fix the widget · +GoalMaker · bug (id a)`);
+  assertEquals(
+    taskLine(item, names([], [], new Map(), [project(null)])),
+    `- [ ] #12 Fix the widget · +GoalMaker · bug (id a)`,
+  );
+  assertEquals(taskLine({ ...item, itemNumber: null }, keyed), `- [ ] Fix the widget · +GoalMaker · bug (id a)`);
+  assertEquals(
+    taskLine(item, names([], [], new Map())),
+    `- [ ] Fix the widget · bug (id a)`,
+    "no id without its project",
+  );
+  assert(projectLine(project("GM"), keyed, [item]).includes("1 open of 1 · key GM"));
+  assert(board(project("GM"), projectBoard([item]), keyed, []).startsWith("GoalMaker · active · key GM"));
 });

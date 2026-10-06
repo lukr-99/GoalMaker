@@ -332,7 +332,7 @@ Deno.test({
 
         const board = await client.tool("get_project_board", { project: "GoalMaker" });
         assertStringIncludes(board.text, "Backlog (1):");
-        assertStringIncludes(board.text, "[ ] Share to GoalMaker · idea · high · M5 · by Claude");
+        assertStringIncludes(board.text, "[ ] #1 Share to GoalMaker · idea · high · M5 · by Claude");
         assertStringIncludes(board.text, "To do: nothing.");
 
         const moved = await client.tool("move_project_item", { id: itemId, column: "done" });
@@ -383,7 +383,8 @@ Deno.test({
         assert(!claudes.text.includes("Dark mode for the widget"), claudes.text);
         const owners = await client.tool("get_project_board", { project: "GoalMaker", made_by: "owner" });
         assertStringIncludes(owners.text, "Only the items the owner made.");
-        assertStringIncludes(owners.text, "[ ] Dark mode for the widget · idea (id");
+        // #1 left the project and #2 is the bug, so the next number is 3.
+        assertStringIncludes(owners.text, "[ ] #3 Dark mode for the widget · idea (id");
         assert(!owners.text.includes("The ring flickers"), owners.text);
 
         const daily = await client.tool("add_task", {
@@ -1117,6 +1118,63 @@ Deno.test({
         assertStringIncludes(board.text, "Done today");
         const tooMany = await client.tool("update_project", { project: projectId, archive_after_days: 0 });
         assert(tooMany.isError, tooMany.text);
+      });
+
+      await t.step("project items get ids like GM-1, and the tools take them", async () => {
+        await sql`update public.connector_links set window_calls = 0 where owner_id = ${OWNER} and revoked_at is null`;
+        const made = await client.tool("create_project", { name: "Ids test", item_key: "gm" });
+        assert(!made.isError, made.text);
+        assertStringIncludes(made.text, "key GM");
+        const suggested = await client.tool("create_project", { name: "Widget Kit" });
+        assertStringIncludes(suggested.text, "key WK", "a key is suggested from the name");
+        const clash = await client.tool("create_project", { name: "Ids clash", item_key: "GM" });
+        assert(clash.isError, clash.text);
+        assertStringIncludes(clash.text, "Ids test already has the key GM");
+
+        const first = await client.tool("add_project_item", { project: "Ids test", title: "First idea", type: "idea" });
+        assertStringIncludes(first.text, "[ ] GM-1 First idea · idea");
+        const second = await client.tool("add_project_item", { project: "Ids test", title: "Second bug", type: "bug" });
+        assertStringIncludes(second.text, "[ ] GM-2 Second bug · bug");
+        const secondId = /\(id ([0-9a-f-]{36})\)/.exec(second.text)![1];
+        const board = await client.tool("get_project_board", { project: "Ids test" });
+        assertStringIncludes(board.text, "Ids test · active · key GM");
+        assertStringIncludes(board.text, "[ ] GM-1 First idea");
+        assertStringIncludes(board.text, "[ ] GM-2 Second bug");
+
+        const got = await client.tool("get_task", { id: "gm-2" });
+        assert(!got.isError, got.text);
+        assertStringIncludes(got.text, `GM-2 Second bug · +Ids test · bug · by Claude (id ${secondId})`);
+        const found = await client.tool("search_tasks", { query: " gm-2 " });
+        assertStringIncludes(found.text, "Item:\n- [ ] GM-2 Second bug");
+        const moved = await client.tool("move_project_item", { id: "GM-2", column: "doing" });
+        assert(!moved.isError, moved.text);
+        const [doing] = await sql`select board_column, item_number from public.tasks where id = ${secondId}`;
+        assertEquals(doing, { board_column: "doing", item_number: 2 });
+        const bare = await client.tool("get_task", { id: "#2" });
+        assert(bare.isError, bare.text);
+        assertStringIncludes(bare.text, "like GM-12");
+
+        // Moved to another project, an item takes the next number there, and its old id is gone.
+        await client.tool("create_project", { name: "Ids other", item_key: "OT" });
+        const other = await client.tool("add_project_item", { project: "Ids other", title: "Other first" });
+        assertStringIncludes(other.text, "OT-1 Other first");
+        const across = await client.tool("update_project_item", { id: "gm-1", project: "Ids other" });
+        assert(!across.isError, across.text);
+        assertStringIncludes(across.text, "[ ] OT-2 First idea");
+        assert((await client.tool("get_task", { id: "GM-1" })).isError, "GM-1 left with its item");
+        const third = await client.tool("add_project_item", { project: "Ids test", title: "Third" });
+        assertStringIncludes(third.text, "GM-3 Third", "a number is never given twice");
+
+        // A new key renames every id; a key in use is refused; an empty one leaves #number.
+        assert(!(await client.tool("update_project", { project: "Ids test", item_key: "GX" })).isError);
+        assertStringIncludes((await client.tool("get_task", { id: "GX-2" })).text, "GX-2 Second bug");
+        const taken = await client.tool("update_project", { project: "Ids test", item_key: "ot" });
+        assert(taken.isError, taken.text);
+        assert(!(await client.tool("update_project", { project: "Ids test", item_key: "" })).isError);
+        const keyless = await client.tool("get_project_board", { project: "Ids test" });
+        assertStringIncludes(keyless.text, "[ ] #2 Second bug");
+        const [row] = await sql`select item_key from public.projects where name = 'Ids test' and owner_id = ${OWNER}`;
+        assertEquals(row.item_key, null);
       });
 
       await t.step("an item moved to Dropped is dropped, shows there, and comes back when moved out", async () => {

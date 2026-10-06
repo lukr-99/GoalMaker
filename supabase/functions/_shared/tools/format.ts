@@ -7,7 +7,7 @@ import type { GoalItem, GoalProgress, GoalStanding } from "../rules/goals.ts";
 import { type HabitStanding, isPeriodic, limit } from "../rules/habits.ts";
 import type { TimeLeft } from "../rules/lifeGoals.ts";
 import type { PlanningLists } from "../rules/listRules.ts";
-import { type Column, type ProjectItem, type ProjectMilestone, shownColumn } from "../rules/projects.ts";
+import { type Column, formatItemId, type ProjectItem, type ProjectMilestone, shownColumn } from "../rules/projects.ts";
 import type { TaskItem } from "../rules/task.ts";
 import { NEED, needLate, type WantState } from "../rules/wants.ts";
 
@@ -56,8 +56,8 @@ export function longDay(day: Day): string {
 }
 
 /**
- * One task on one line, the way Claude can quote it and act on it: a box, the title, what the apps
- * show next to it, and the id for follow-up calls.
+ * One task on one line, the way Claude can quote it and act on it: a box, a project item's id (GM-12),
+ * the title, what the apps show next to it, and the id for follow-up calls.
  */
 export function taskLine(
   task: TaskItem,
@@ -65,7 +65,8 @@ export function taskLine(
   options: { showDay?: boolean; showProject?: boolean; milestone?: string; showMaker?: boolean } = {},
 ): string {
   const box = task.state === "done" ? "[x]" : task.state === "dropped" ? "[-]" : "[ ]";
-  const parts = [`${box} ${task.title}`];
+  const itemId = itemIdOf(task, names);
+  const parts = [`${box} ${itemId === null ? "" : `${itemId} `}${task.title}`];
   if (task.topPriority) parts.push("top priority");
   if (options.showDay && task.plannedDate) parts.push(task.plannedDate);
   if (task.plannedTime) parts.push(task.plannedTime);
@@ -82,6 +83,16 @@ export function taskLine(
   if (task.deadline) parts.push(`due ${task.deadline}`);
   if (options.showMaker && task.madeBy === "claude") parts.push("by Claude");
   return `- ${parts.join(" · ")} (id ${task.id})`;
+}
+
+/**
+ * A project item's id as the owner reads it, GM-12 or #12 in a project without a key (docs/projects.md,
+ * "Item ids"); null for a task outside a project, one the server hasn't numbered yet, or an unknown project.
+ */
+export function itemIdOf(task: TaskItem, names: Names): string | null {
+  const project = task.projectId ? names.projects.get(task.projectId) : undefined;
+  if (project === undefined || !task.itemNumber) return null;
+  return formatItemId(project.itemKey, task.itemNumber);
 }
 
 /** What the Goals screen adds to a goal's line: its pace and the goal it feeds. */
@@ -421,6 +432,7 @@ export function projectLine(project: ProjectItem, names: Names, items: TaskItem[
   const area = project.areaId ? names.areas.get(project.areaId) : undefined;
   if (area) parts.push(`@${area.name}`);
   parts.push(own.length === 0 ? "no items yet" : `${open} open of ${own.length}`);
+  parts.push(project.itemKey ? `key ${project.itemKey}` : "no key");
   if (project.repositoryUrl) parts.push(`repo ${project.repositoryUrl}`);
   if (project.localFolder) parts.push(`folder ${project.localFolder}`);
   return `- ${parts.join(" · ")} (project id ${project.id})`;
@@ -437,6 +449,7 @@ export function board(
   const head = [project.name, project.status];
   const area = project.areaId ? names.areas.get(project.areaId) : undefined;
   if (area) head.push(`@${area.name}`);
+  if (project.itemKey) head.push(`key ${project.itemKey}`);
   if (project.repositoryUrl) head.push(`repo ${project.repositoryUrl}`);
   if (project.localFolder) head.push(`folder ${project.localFolder}`);
   const lines = [`${head.join(" · ")} (project id ${project.id})`];

@@ -1,7 +1,16 @@
-// Finding the project a reference points at (docs/projects.md, spec story 76). The board rules
-// themselves run the contract vectors in rules_test.ts.
+// Finding the project a reference points at (docs/projects.md, spec story 76), and the item ids'
+// 'itemKeys' vectors. The board rules themselves run the contract vectors in rules_test.ts.
 import { assertEquals } from "jsr:@std/assert@1.0.13";
-import { folderKey, matchProject, type ProjectItem, repositoryKey } from "./projects.ts";
+import {
+  folderKey,
+  formatItemId,
+  isItemKey,
+  matchProject,
+  parseItemId,
+  type ProjectItem,
+  repositoryKey,
+  suggestItemKey,
+} from "./projects.ts";
 
 function project(fields: Partial<ProjectItem> & { id: string; name: string }): ProjectItem {
   return {
@@ -80,4 +89,34 @@ Deno.test("a deleted project and an unknown reference match nothing", () => {
   assertEquals(matchProject(all, gone.id), null);
   assertEquals(matchProject(all, "something else"), null);
   assertEquals(matchProject(all, "   "), null);
+});
+
+// deno-lint-ignore no-explicit-any
+type Json = any;
+
+async function itemKeys(): Promise<Json> {
+  const file = new URL("../../../../contracts/vectors/projects.json", import.meta.url);
+  return JSON.parse(await Deno.readTextFile(file)).itemKeys;
+}
+
+Deno.test("projects.json itemKeys: a key is suggested from the name", async () => {
+  for (const vector of (await itemKeys()).suggest) {
+    assertEquals(suggestItemKey(vector.project, vector.taken), vector.expect, vector.name);
+  }
+});
+
+Deno.test("projects.json itemKeys: which keys are kept", async () => {
+  for (const vector of (await itemKeys()).valid) {
+    assertEquals(isItemKey(vector.key), vector.expect, vector.key);
+  }
+});
+
+Deno.test("projects.json itemKeys: an item id is written and read back", async () => {
+  const vectors = await itemKeys();
+  for (const vector of vectors.format) {
+    assertEquals(formatItemId(vector.key, vector.number), vector.expect, vector.expect);
+  }
+  for (const vector of vectors.parse) {
+    assertEquals(parseItemId(vector.text), vector.expect, vector.text);
+  }
 });

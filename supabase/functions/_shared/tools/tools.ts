@@ -49,6 +49,7 @@ import {
   MAKER_FILTERS,
   MAKERS,
   onBoard,
+  parseItemId,
   PRIORITIES,
   type ProjectItem,
   shownColumn,
@@ -80,7 +81,7 @@ export interface Tool {
   run(planner: Planner, args: any): Promise<string>;
 }
 
-const id = z.string().describe("The task's id, from a list or a search.");
+const id = z.string().describe("The task's id, or an item id like GM-12.");
 const day = z.string().describe('"today", "tomorrow" or a date like 2026-09-21, in the owner\'s planning days.');
 const repeat = z.string().describe(
   "A repeat rule: FREQ=DAILY, FREQ=WEEKLY or FREQ=MONTHLY, with optional INTERVAL=n, BYDAY=MO,WE,FR (weekly) " +
@@ -118,7 +119,10 @@ async function taskFields(planner: Planner, args: Record<string, unknown>): Prom
 const projectRef = z.string().describe(
   "The project: its id, its repository URL, a folder inside it (the one you are working in), or its name.",
 );
-const itemId = z.string().describe("The item's id, from a board or a search; a project item is an ordinary task.");
+const itemId = z.string().describe("The item's id like GM-12, or its task id.");
+const itemKey = z.string().describe(
+  "The key its items' ids start with, like GM for GM-12: 2 to 6 letters or digits, starting with a letter.",
+);
 const itemType = z.enum(["task", "idea", "bug"]).describe("What kind of item it is. A new idea lands in the backlog.");
 const priority = z.enum(PRIORITIES as [string, ...string[]]).describe(
   "How important it is: urgent, high, normal or low. Items sit in a column in this order.",
@@ -617,7 +621,8 @@ export const tools: Tool[] = [
     title: "Search",
     description:
       "Finds tasks whose title or notes contain every word of the query, ignoring case and accents: open tasks, " +
-      "and done tasks from the archive (most recently completed first).",
+      "and done tasks from the archive (most recently completed first). A project item's id, like GM-12, finds " +
+      "that item.",
     input: {
       query: z.string().describe("Words to look for."),
       include_done: z.boolean().optional().describe("Also search done tasks in the archive (default true)."),
@@ -633,7 +638,12 @@ export const tools: Tool[] = [
         .sort(byCreation);
       const done = args.include_done === false ? [] : searchArchive(tasks, String(args.query));
       const names = await namesOf(planner);
+      // An item id finds its item first; #12 without a project is no error here, just no match.
+      const item = parseItemId(String(args.query)) === null
+        ? null
+        : await planner.task(String(args.query)).catch(() => null);
       const lines = [
+        ...(item !== null && !item.deleted ? ["Item:", format.taskLine(item, names, { showDay: true })] : []),
         ...(open.length > 0
           ? ["Open:", ...open.slice(0, 30).map((task) => format.taskLine(task, names, { showDay: true }))]
           : []),
@@ -1355,8 +1365,9 @@ export const tools: Tool[] = [
     name: "get_projects",
     title: "Projects",
     description:
-      "The owner's projects as the Projects screen lists them: name, status, area, how much is still open, and the " +
-      "repository and folder each one lives in. Paused and done projects come last.",
+      "The owner's projects as the Projects screen lists them: name, status, area, how much is still open, the " +
+      "key its items' ids start with (GM for GM-12), and the repository and folder each one lives in. Paused and " +
+      "done projects come last.",
     input: {
       include_done: z.boolean().optional().describe("Also show projects that are paused or done. On by default."),
     },
@@ -1452,7 +1463,8 @@ export const tools: Tool[] = [
     title: "Create a project",
     description: "Makes a project with a board of its own, the way the Projects screen's new-project form does. The " +
       "repository and the folder are worth filling in: they are what lets find_project reach this project later " +
-      "from the checkout being worked in. Items go on the board afterwards with add_project_item.",
+      "from the checkout being worked in. Items go on the board afterwards with add_project_item. Without an " +
+      "item_key one is made from the name (GoalMaker gives GM).",
     input: {
       name: z.string().describe("What the project is called, like GoalMaker."),
       description: z.string().optional().describe("A sentence on what it is."),
@@ -1462,6 +1474,7 @@ export const tools: Tool[] = [
       folder: z.string().optional().describe("The folder it lives in, like F:\\GoalMaker."),
       notes: z.string().optional().describe("Notes; light Markdown."),
       milestones: z.array(z.string()).optional().describe("Milestone names in the order they come, like M0, M1."),
+      item_key: itemKey.optional(),
     },
     readOnly: false,
     destructive: false,
@@ -1474,6 +1487,7 @@ export const tools: Tool[] = [
         repository: args.repository,
         folder: args.folder,
         notes: args.notes,
+        itemKey: args.item_key,
       });
       for (const name of (args.milestones ?? []) as string[]) await planner.addMilestone(project.id, name);
       const milestones = await milestonesOf(planner, project);
@@ -1556,7 +1570,7 @@ export const tools: Tool[] = [
       "Changes what an item is and where it belongs: its type, its priority, its milestone, or the project it is " +
       "in, and takes a done item off the board or puts it back. Everything else about it is edited with " +
       "update_task, and move_project_item moves it between columns. An empty milestone takes it off one; an empty " +
-      "project makes it a plain task again.",
+      "project makes it a plain task again. Moved to another project, it takes the next number there.",
     input: {
       id: itemId,
       type: itemType.optional(),
@@ -1583,14 +1597,15 @@ export const tools: Tool[] = [
         ? undefined
         : (await planner.findMilestone(project.id, (args.milestone as string).trim() === "" ? null : args.milestone))
           ?.id ?? null;
-      await planner.updateTask(args.id, {
+      // By its task id from here: moved to another project, GM-12 is no longer its id.
+      await planner.updateTask(task.id, {
         projectId: project?.id ?? null,
         itemType: args.type,
         priority: args.priority,
         milestoneId: milestone,
       });
-      if (args.archived !== undefined && project !== null) await planner.archiveItem(args.id, args.archived);
-      const item = (await planner.task(args.id))!;
+      if (args.archived !== undefined && project !== null) await planner.archiveItem(task.id, args.archived);
+      const item = (await planner.task(task.id))!;
       const names = await namesOf(planner);
       if (project === null) return `Out of its project, a plain task again:\n${format.taskLine(item, names)}`;
       return [
@@ -1624,8 +1639,8 @@ export const tools: Tool[] = [
     name: "update_project",
     title: "Edit a project",
     description:
-      "Changes a project's name, description, area, status, repository, folder, notes, or how long done items " +
-      "stay on its board. What is left out stays " +
+      "Changes a project's name, description, area, status, repository, folder, notes, item key, or how long done " +
+      "items stay on its board. A new key renames every item's id (GM-12 becomes GX-12). What is left out stays " +
       "as it was. Marking it paused or done is what takes it off the working list without losing the board. A new " +
       "name, repository or folder has to be free, for the same reason create_project asks.",
     input: {
@@ -1640,6 +1655,9 @@ export const tools: Tool[] = [
       archive_after_days: z.number().int().min(1).max(365).nullable().optional().describe(
         "Days a done item stays on the board after it was finished; null keeps them until archived by hand. 14 by default.",
       ),
+      item_key: itemKey.optional().describe(
+        "A new key its items' ids start with, like GM: 2 to 6 letters or digits, starting with a letter; empty for none.",
+      ),
     },
     readOnly: false,
     destructive: false,
@@ -1650,6 +1668,8 @@ export const tools: Tool[] = [
         project: undefined,
         archive_after_days: undefined,
         archiveAfterDays: args.archive_after_days,
+        item_key: undefined,
+        itemKey: args.item_key,
       });
       return ["Updated:", format.projectLine(project, await namesOf(planner), await planner.tasks())].join("\n");
     },
