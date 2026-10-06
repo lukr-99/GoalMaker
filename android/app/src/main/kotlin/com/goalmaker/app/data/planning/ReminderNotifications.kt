@@ -105,7 +105,8 @@ class ReminderNotifications(private val context: Context) {
             .setAutoCancel(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(openHabits(habit.id, due.day, log = false))
-        HabitReminderButtons.of(habit).forEach { button ->
+        val value = checkins.firstOrNull { it.day == due.day && !it.skipped && !it.failed }?.value ?: 0.0
+        HabitReminderButtons.of(habit, value).forEach { button ->
             val intent = if (button.action == ReminderAlarm.ACTION_HABIT_LOG) {
                 openHabits(habit.id, due.day, log = true)
             } else {

@@ -16,12 +16,15 @@ import com.goalmaker.app.application.planning.HabitStanding
 import com.goalmaker.app.application.planning.NewRows
 import com.goalmaker.app.data.replica.TestReplica
 import com.goalmaker.app.ui.composer.LineOutcome
+import com.goalmaker.app.ui.lists.UndoEvent
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -74,14 +77,65 @@ class HabitsViewModelTest {
     }
 
     @Test
-    fun `a tap checks a habit and unchecks it, and an amount asks for its value`() = runTest {
+    fun `a tap checks a habit and unchecks it`() = runTest {
         val read = habits.add(HabitDraft("Read", today))!!
-        val run = habits.add(HabitDraft("Run", today, measure = HabitRules.AMOUNT, target = 5.0, unit = "km"))!!
 
         assertTrue(viewModel.tap(read.id))
         assertEquals(1.0, viewModel.uiState.first { it.active.any { row -> row.done } }.active.first().ring!!, 1e-9)
         assertTrue(viewModel.tap(read.id))
-        assertFalse(viewModel.tap(run.id))
+    }
+
+    @Test
+    fun `a tap fills an amount to its target, and Undo puts the day's value back`() = runTest {
+        val water = habits.add(HabitDraft("Water", today, measure = HabitRules.AMOUNT, target = 2.5, unit = "L"))!!
+        habits.checkIn(water.id, today, 1.0)
+        val events = mutableListOf<UndoEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.undo.collect { events += it } }
+
+        assertTrue(viewModel.tap(water.id))
+
+        assertEquals(2.5, habits.read().checkinsOf(water.id).single().value, 1e-9)
+        val event = events.single()
+        assertEquals(UndoEvent.Kind.FILLED, event.kind)
+        assertEquals("Water", event.title)
+        event.undo()
+        assertEquals(1.0, habits.read().checkinsOf(water.id).single().value, 1e-9)
+    }
+
+    @Test
+    fun `a tap on an amount at its target asks for a value and changes nothing`() = runTest {
+        val water = habits.add(HabitDraft("Water", today, measure = HabitRules.AMOUNT, target = 2.5, unit = "L"))!!
+        habits.checkIn(water.id, today, 3.0)
+        val events = mutableListOf<UndoEvent>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.undo.collect { events += it } }
+
+        assertFalse("the screen opens the log sheet", viewModel.tap(water.id))
+
+        assertEquals(3.0, habits.read().checkinsOf(water.id).single().value, 1e-9)
+        assertTrue(events.isEmpty())
+    }
+
+    @Test
+    fun `a limit's amount still asks for its value`() = runTest {
+        val sugar = habits.add(HabitDraft("Sugar", today, measure = HabitRules.AMOUNT, target = 30.0, unit = "g", direction = HabitRules.AT_MOST))!!
+
+        assertFalse(viewModel.tap(sugar.id))
+        assertTrue(habits.read().checkinsOf(sugar.id).isEmpty())
+    }
+
+    @Test
+    fun `the log sheet's ready taps each log their amount`() = runTest {
+        val water = habits.add(HabitDraft("Water", today, measure = HabitRules.AMOUNT, target = 2.5, unit = "L"))!!
+        habits.checkIn(water.id, today, 1.0)
+        val row = viewModel.uiState.first { it.loaded && it.active.isNotEmpty() }.active.single()
+
+        val presets = HabitRules.fillPresets(row.habit, row.value)
+        assertEquals(listOf(0.63, 1.25, 1.5), presets)
+        viewModel.checkIn(water.id, presets[0])
+        assertEquals(1.63, habits.read().checkinsOf(water.id).single().value, 1e-9)
+        // The rest, worked out again from the new value, tops the day up to the target.
+        viewModel.checkIn(water.id, HabitRules.fill(row.habit, 1.63)!!)
+        assertEquals(2.5, habits.read().checkinsOf(water.id).single().value, 1e-9)
     }
 
     @Test

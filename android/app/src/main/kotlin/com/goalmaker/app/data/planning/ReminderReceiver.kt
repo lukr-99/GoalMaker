@@ -69,7 +69,7 @@ class ReminderReceiver : BroadcastReceiver() {
                         notifications.clearPlanTomorrow(it)
                     }
 
-                    ReminderAlarm.ACTION_HABIT_CHECK_IN, ReminderAlarm.ACTION_HABIT_SKIP -> {
+                    ReminderAlarm.ACTION_HABIT_CHECK_IN, ReminderAlarm.ACTION_HABIT_FILL, ReminderAlarm.ACTION_HABIT_SKIP -> {
                         HabitReminderButtons.settle(intent, reminders, notifications)
                     }
 

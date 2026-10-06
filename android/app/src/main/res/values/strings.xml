@@ -688,6 +688,9 @@
     <string name="habits_log_title">Log on “%1$s”</string>
     <string name="habits_log_amount">Amount</string>
     <string name="habits_log_add">Add</string>
+    <string name="habits_preset_unit">%1$s %2$s</string>
+    <string name="habits_preset_rest">Rest: %1$s</string>
+    <string name="habits_preset_rest_unit">Rest: %1$s %2$s</string>
     <string name="habits_clear">Clear today</string>
     <string name="habits_skip_day">Skip today</string>
     <string name="habits_skip_week">Skip this week</string>
@@ -703,6 +706,7 @@
     <string name="habit_reminder_check_in">Check in</string>
     <string name="habit_reminder_add_one">+1</string>
     <string name="habit_reminder_log">Log</string>
+    <string name="habit_reminder_fill">Fill</string>
     <string name="new_year_title">%1$d is here</string>
     <string name="new_year_both">Look back on %1$d before it fades, then set what %2$d is for.</string>
     <string name="new_year_review_only">%2$d has its goals. Look back on %1$d while you still remember it.</string>
@@ -807,6 +811,9 @@
     <string name="habits_summary_no_streak">No streak yet. Today can start one.</string>
     <string name="habits_add_one">Add one to %1$s</string>
     <string name="habits_log_on">Log an amount on %1$s</string>
+    <string name="habits_fill_to">Fill %1$s to %2$s</string>
+    <string name="habits_fill_to_unit">Fill %1$s to %2$s %3$s</string>
+    <string name="habits_filled_message">%1$s filled</string>
     <string name="habits_take_back">Take back %1$s</string>
     <string name="habits_unskip_on">Undo the skip on %1$s</string>
     <string name="habits_unfail_on">Undo the fail on %1$s</string>
