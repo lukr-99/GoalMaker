@@ -47,6 +47,27 @@ The column and the task's own state move together, so a board and a list never d
 Items are ordered inside a column by priority (urgent, high, normal, low), then by the position the
 owner dragged them to, then by when they were created.
 
+## Item ids
+
+Each item gets a short id people can say and type, like **GM-12** (the owner's board item "Start
+giving items in Projects ID"):
+
+- A project may have a **key**: 2 to 6 capital letters or digits, starting with a letter, one per
+  project among the owner's projects. The project form suggests one from the name: the capitals of
+  one word (GoalMaker gives GM), the first letters of several (Jsi na tahu gives JNT), or the first
+  three letters of one plain word (Thesis gives THE), with 2, 3 ... added when the key is taken. The
+  owner can change it; the items keep their numbers and read with the new key.
+- Each item has a **number** in its project, from 1. The **server** gives it, the next after the
+  project's highest, when the item is added to a project or moved to another one, so two devices
+  adding offline never get the same number. A number is never reused, and an item that leaves every
+  project loses it. Until the server has answered, a new item shows no id.
+- An item reads **KEY-number**, or **#number** in a project without a key. Search and the connector
+  take either form, in any case.
+
+The rules are pinned by the `itemKeys` group of
+[`contracts/vectors/projects.json`](../contracts/vectors/projects.json); Supabase migration 0027
+holds the numbering.
+
 ## Done items leave the board
 
 A done item leaves the board a number of days after the planning day it was finished: the project's

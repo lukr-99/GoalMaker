@@ -29,6 +29,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -417,5 +418,104 @@ class ProjectsViewModelTest {
         val again = SharedPreferencesSettingsStore(preferences)
         assertEquals(BoardView.LIST, again.boardView.value)
         assertEquals(setOf(ProjectRules.BACKLOG), again.collapsedColumns.value)
+    }
+
+    // A GoalMaker project keyed GM with two items the server has numbered 12 and 13, and one it hasn't yet.
+    private fun numbered(): String {
+        val project = projects.add(ProjectDraft("GoalMaker"))!!
+        projects.setItemKey(project.id, "GM")
+        listOf("Give items ids" to 12, "Copy an id" to 13, "Just added" to null).forEach { (title, number) ->
+            val item = tasks.add(title)!!
+            tasks.setProject(item.id, project.id, ProjectRules.TASK)
+            if (number != null) {
+                val row = test.replica.get("tasks", item.id)!!
+                test.replica.put("tasks", JsonObject(row + ("item_number" to JsonPrimitive(number))))
+            }
+        }
+        return project.id
+    }
+
+    @Test
+    fun `a card shows its id once the server has numbered it`() = runTest {
+        numbered()
+        val state = viewModel.uiState.first { todo(it).size == 3 }
+        val ids = state.board.single { it.column == ProjectRules.TODO }.items.associate { it.title to state.itemIdOf(it) }
+
+        assertEquals(mapOf("Give items ids" to "GM-12", "Copy an id" to "GM-13", "Just added" to null), ids)
+    }
+
+    @Test
+    fun `the form suggests a key the other projects don't use`() = runTest {
+        val first = projects.add(ProjectDraft("GoalMaker"))!!
+        projects.setItemKey(first.id, "GM")
+        viewModel.uiState.first { it.keys.isNotEmpty() }
+
+        assertEquals("GM2", viewModel.suggestKey("Game Master"))
+        assertEquals("JNT", viewModel.suggestKey("Jsi na tahu"))
+        // Editing GoalMaker itself, its own key is free.
+        assertEquals("GM", viewModel.suggestKey("GoalMaker", first.id))
+        assertNull(viewModel.suggestKey("!!!"))
+    }
+
+    @Test
+    fun `the form says why a key can't be saved`() = runTest {
+        val first = projects.add(ProjectDraft("GoalMaker"))!!
+        projects.setItemKey(first.id, "GM")
+        viewModel.uiState.first { it.keys.isNotEmpty() }
+
+        assertEquals(KeyProblem.NOT_VALID, viewModel.keyProblem("1GM"))
+        assertEquals(KeyProblem.TAKEN, viewModel.keyProblem("gm"))
+        assertNull(viewModel.keyProblem("gm", first.id))
+        assertNull(viewModel.keyProblem(""))
+        assertNull(viewModel.keyProblem("THE"))
+    }
+
+    @Test
+    fun `a new project keeps the key it was given, and an edit can change or clear it`() = runTest {
+        viewModel.addProject(ProjectDraft("GoalMaker"), ProjectRules.ARCHIVE_AFTER_DAYS, "gm")
+        val project = projects.all().single()
+        assertEquals("GM", project.itemKey)
+
+        viewModel.updateProject(project.id, ProjectDraft("GoalMaker"), ProjectRules.ARCHIVE_AFTER_DAYS, "GOAL")
+        assertEquals("GOAL", projects.get(project.id)!!.itemKey)
+
+        viewModel.updateProject(project.id, ProjectDraft("GoalMaker"), ProjectRules.ARCHIVE_AFTER_DAYS, "")
+        assertNull(projects.get(project.id)!!.itemKey)
+    }
+
+    @Test
+    fun `the board's search finds an item by its id, in any case, or by its number`() = runTest {
+        numbered()
+        viewModel.uiState.first { todo(it).size == 3 }
+
+        viewModel.setQuery("gm-12")
+        settle()
+        assertEquals(listOf("Give items ids"), todo(viewModel.uiState.first { it.query == "gm-12" }))
+
+        viewModel.setQuery("#13")
+        settle()
+        assertEquals(listOf("Copy an id"), todo(viewModel.uiState.first { it.query == "#13" }))
+
+        // Another project's key finds nothing on this board.
+        viewModel.setQuery("JNT-12")
+        settle()
+        assertTrue(todo(viewModel.uiState.first { it.query == "JNT-12" }).isEmpty())
+
+        viewModel.setQuery("just")
+        settle()
+        assertEquals(listOf("Just added"), todo(viewModel.uiState.first { it.query == "just" }))
+    }
+
+    @Test
+    fun `copy id sends the item's id, and an item without a number sends nothing`() = runTest {
+        numbered()
+        val state = viewModel.uiState.first { todo(it).size == 3 }
+        val items = state.board.single { it.column == ProjectRules.TODO }.items
+        val copied = async(start = CoroutineStart.UNDISPATCHED) { viewModel.copies.first() }
+
+        viewModel.copyId(items.single { it.title == "Just added" })
+        viewModel.copyId(items.single { it.title == "Copy an id" })
+
+        assertEquals("GM-13", copied.await())
     }
 }

@@ -25,6 +25,9 @@ namespace GoalMaker.App.ViewModels;
 /// Dropped starts folded.
 /// A new item goes in from the quick line above the board (a title and its type), or from the new item
 /// window, which the New item button, a column's plus and Ctrl+N open with every field.
+/// A project may have a key, so its items read GM-12 (docs/projects.md, "Item ids"): the form suggests
+/// one from a new project's name, a card shows its id once the server has numbered it, the card's menu
+/// copies it, and the board's search finds an item by its words, GM-12 or #12.
 /// </summary>
 public sealed partial class ProjectsViewModel : ObservableObject
 {
@@ -47,12 +50,17 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private readonly Action<ProjectItemFormViewModel> openItemWindow;
     private readonly Action<Action> runOnUi;
     private readonly TimeProvider time;
+    private readonly Action<string>? copyText;
     private string? chosen;
     private Action? undo;
     private ITimer? undoTimer;
 
     // Whether the new item window stays open for the next item, as it was last left.
     private bool addAnother;
+
+    // Whether the owner typed the key of the project being written, so a new name no longer suggests one.
+    private bool keyTyped;
+    private bool suggesting;
 
     [ObservableProperty]
     private bool isEmpty;
@@ -68,6 +76,17 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     [ObservableProperty]
     private string projectFolder = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KeyHint))]
+    private string projectKey = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasKeyProblem))]
+    private string keyProblem = string.Empty;
+
+    [ObservableProperty]
+    private string boardQuery = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ProjectStatusText))]
@@ -106,6 +125,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private ChoiceViewModel? projectArea;
 
     /// <param name="openItemWindow">Shows the new item window over the main window for the form given.</param>
+    /// <param name="copyText">Puts text on the clipboard, for a card's Copy id.</param>
     public ProjectsViewModel(
         ProjectList projects,
         TaskList tasks,
@@ -117,8 +137,10 @@ public sealed partial class ProjectsViewModel : ObservableObject
         Action<string> openTask,
         Action<Action> runOnUi,
         TimeProvider time,
-        Action<ProjectItemFormViewModel> openItemWindow)
+        Action<ProjectItemFormViewModel> openItemWindow,
+        Action<string>? copyText = null)
     {
+        this.copyText = copyText;
         this.projects = projects;
         this.tasks = tasks;
         this.areas = areas;
@@ -207,6 +229,14 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>Whether a project is on show, so the board and its boxes are worth drawing.</summary>
     public bool HasProject => chosen is not null;
 
+    /// <summary>How the project's items read with the key in the form: "Items read GM-12".</summary>
+    public string KeyHint => ProjectKey.Trim() is { Length: > 0 } key
+        ? strings.Get("Projects.KeyHint", ProjectRules.FormatItemId(key.ToUpperInvariant(), 12))
+        : strings.Get("Projects.KeyNone");
+
+    /// <summary>The key in the form can't be saved: it is not one, or another project uses it.</summary>
+    public bool HasKeyProblem => KeyProblem.Length > 0;
+
     /// <summary>The card of the project on show: there is one, and the editor is not in its place.</summary>
     public bool ShowsProject => HasProject && !IsEditing;
 
@@ -241,10 +271,12 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var shown = chosen is null ? null : projects.Get(chosen);
         var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
         var days = shown?.ArchiveAfterDays;
+        var found = Finder(shown);
         var items = chosen is null
             ? []
             : byProject[chosen]
                 .Where(task => ProjectRules.Shows(MadeByFilter, task.MadeBy) && narrowed.Matches(task, links.GetValueOrDefault(task.Id) ?? NoTags, shown?.AreaId))
+                .Where(found)
                 .ToList();
         var onBoard = items
             .Where(task => ProjectRules.OnBoard(task.State, CompletedOn(task), days, task.BoardArchivedAt is not null, today))
@@ -256,6 +288,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
             {
                 var id = item.Id;
                 var card = item;
+                var itemId = ProjectRules.ItemIdOf(item, shown);
                 column.Items.Add(new BoardItemViewModel(
                     id,
                     item.Title,
@@ -269,11 +302,14 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     () => openTask(id),
                     () => RemoveFromProject(card),
                     item.State == TaskState.Done,
-                    () => Archive(card)));
+                    () => Archive(card),
+                    itemId,
+                    itemId is null ? item.Title : strings.Get("Projects.ItemWithId", itemId, item.Title),
+                    copyText));
             }
         }
 
-        RefreshArchived(items.Except(onBoard), days, today);
+        RefreshArchived(items.Except(onBoard), days, today, shown);
 
         if (!IsEditing)
         {
@@ -281,6 +317,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
             ProjectDescription = shown?.Description ?? string.Empty;
             ProjectRepository = shown?.RepositoryUrl ?? string.Empty;
             ProjectFolder = shown?.LocalFolder ?? string.Empty;
+            ShowKey(shown?.ItemKey ?? string.Empty);
             ProjectStatus = shown?.Status ?? ProjectRules.Active;
             ShowArchiveChoices(shown is null ? ProjectRules.DefaultArchiveAfterDays : shown.ArchiveAfterDays);
             ShowAreaChoices(shown?.AreaId);
@@ -312,17 +349,37 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ShowArchiveChoices(ProjectRules.DefaultArchiveAfterDays);
         ShowAreaChoices(filter.Current.AreaId);
         IsEditing = true;
+        keyTyped = false;
+        SuggestKey();
         NotifyProjectShown();
     }
 
-    /// <summary>Opens the project on show for editing.</summary>
+    /// <summary>Opens the project on show for editing; its key stays as it is.</summary>
     [RelayCommand]
-    public void Edit() => IsEditing = true;
+    public void Edit()
+    {
+        KeyProblem = string.Empty;
+        IsEditing = true;
+    }
 
     /// <summary>Saves what the editor says, as a new project or a change to the one on show.</summary>
     [RelayCommand]
     public void Save()
     {
+        // The key is checked first, so a key that can't be saved keeps the form open with the reason.
+        var key = ProjectKey.Trim().ToUpperInvariant();
+        if (key.Length > 0 && !ProjectRules.IsItemKey(key))
+        {
+            KeyProblem = strings.Get("Projects.KeyNotValid");
+            return;
+        }
+
+        if (key.Length > 0 && projects.IsKeyTaken(key, chosen))
+        {
+            KeyProblem = strings.Get("Projects.KeyTaken", key);
+            return;
+        }
+
         // The notes are not on this form, so an edit keeps the ones the project has.
         var draft = new ProjectDraft(ProjectName)
         {
@@ -346,6 +403,11 @@ public sealed partial class ProjectsViewModel : ObservableObject
         if (chosen is { } saved && projects.Get(saved) is { } project && project.ArchiveAfterDays != days)
         {
             projects.SetArchiveAfterDays(saved, days);
+        }
+
+        if (chosen is { } keyed && projects.Get(keyed) is { } withKey && (withKey.ItemKey ?? string.Empty) != key)
+        {
+            projects.SetItemKey(keyed, key);
         }
 
         IsEditing = false;
@@ -504,7 +566,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     // The items off the board, under Done. Taking the hand archive off brings one back when it is still
     // young enough for Done; an older one goes back to To do, open again.
-    private void RefreshArchived(IEnumerable<TaskItem> archived, int? days, DateOnly today)
+    private void RefreshArchived(IEnumerable<TaskItem> archived, int? days, DateOnly today, ProjectItem? project)
     {
         var done = Columns.Single(column => column.Column == ProjectRules.Done);
         done.Archived.Clear();
@@ -527,7 +589,8 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     {
                         tasks.SetBoardColumn(id, ProjectRules.Todo);
                     }
-                })));
+                }),
+                ProjectRules.ItemIdOf(item, project)));
         }
 
         done.ArchivedText = strings.Get("Projects.ArchivedCount", done.Archived.Count);
@@ -603,6 +666,50 @@ public sealed partial class ProjectsViewModel : ObservableObject
     }
 
     partial void OnMadeByFilterChanged(string value) => Refresh();
+
+    partial void OnBoardQueryChanged(string value) => Refresh();
+
+    // A new project's name suggests its key until the owner types one of their own.
+    partial void OnProjectNameChanged(string value)
+    {
+        if (IsEditing && chosen is null && !keyTyped)
+        {
+            SuggestKey();
+        }
+    }
+
+    partial void OnProjectKeyChanged(string value)
+    {
+        KeyProblem = string.Empty;
+        keyTyped |= !suggesting;
+    }
+
+    private void SuggestKey() => ShowKey(ProjectRules.SuggestItemKey(ProjectName, projects.OtherKeys()) ?? string.Empty);
+
+    private void ShowKey(string key)
+    {
+        suggesting = true;
+        ProjectKey = key;
+        suggesting = false;
+        KeyProblem = string.Empty;
+    }
+
+    // What the board's search keeps: an item by its id (GM-12, or #12 for the project on show), or by
+    // every word of the query in its title or notes, ignoring case and accents.
+    private Func<TaskItem, bool> Finder(ProjectItem? shown)
+    {
+        if (ProjectRules.ParseItemId(BoardQuery) is { } wanted)
+        {
+            return task => ProjectRules.IsItem(wanted, shown?.ItemKey, task.ItemNumber, inProject: true);
+        }
+
+        var words = BoardQuery.Split(' ').Select(ArchiveRules.Fold).Where(word => word.Length > 0).ToList();
+        return task =>
+        {
+            var text = ArchiveRules.Fold(task.Title) + "\n" + ArchiveRules.Fold(task.Notes);
+            return words.TrueForAll(word => text.Contains(word, StringComparison.Ordinal));
+        };
+    }
 
     private static string ColumnKey(string column) => column switch
     {

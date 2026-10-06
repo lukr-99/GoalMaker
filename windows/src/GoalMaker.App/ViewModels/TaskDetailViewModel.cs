@@ -11,7 +11,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// One task's detail page (spec stories 12 to 19, docs/archive.md): title and done box, notes in
-/// light Markdown, day, time and deadline, area, the goal it serves, repeat, tags and the checklist. Each field saves when
+/// light Markdown, day, time and deadline, area, the goal it serves, repeat, tags and the checklist. A
+/// project item shows its id (GM-12) once the server has numbered it, with a way to copy it. Each field saves when
 /// it changes; a refused value goes back to what was saved. Rebuilt in place when the replica
 /// changes, so editing one field doesn't take the keyboard from another. The notes save on their
 /// own: after a short pause in typing, when the box loses focus, and when the page closes or another
@@ -34,6 +35,8 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     private readonly Action<Action> runOnUi;
     private readonly GoalList? goals;
     private readonly ISettingsStore? settings;
+    private readonly ProjectList? projects;
+    private readonly Action<string>? copyText;
     private string? taskId;
     private AppPage back = AppPage.Today;
     private bool loading;
@@ -49,6 +52,11 @@ public sealed partial class TaskDetailViewModel : ObservableObject
 
     [ObservableProperty]
     private bool hasTask;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasItemId), nameof(TitleName))]
+    [NotifyCanExecuteChangedFor(nameof(CopyIdCommand))]
+    private string itemId = string.Empty;
 
     [ObservableProperty]
     private string notes = string.Empty;
@@ -90,8 +98,12 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         Action<Action> runOnUi,
         Action<AppPage> openPage,
         GoalList? goals = null,
-        ISettingsStore? settings = null)
+        ISettingsStore? settings = null,
+        ProjectList? projects = null,
+        Action<string>? copyText = null)
     {
+        this.projects = projects;
+        this.copyText = copyText;
         this.goals = goals;
         this.settings = settings;
         this.tasks = tasks;
@@ -110,6 +122,11 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         {
             goals.Changed += (_, _) => runOnUi(Refresh);
         }
+
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
     }
 
     /// <summary>Whether the page offers the goal picker (there is a goal list to pick from).</summary>
@@ -120,6 +137,12 @@ public sealed partial class TaskDetailViewModel : ObservableObject
     public ObservableCollection<StepRowViewModel> Steps { get; } = [];
 
     public bool HasNotes => Notes.Length > 0;
+
+    /// <summary>A project item's id, GM-12, is on show; a new item has none until the server numbers it.</summary>
+    public bool HasItemId => ItemId.Length > 0;
+
+    /// <summary>What a screen reader calls the title box: "Title", or "Title of GM-12" for a numbered item.</summary>
+    public string TitleName => HasItemId ? strings.Get("Task.TitleWithId", ItemId) : strings.Get("Task.TitleLabel");
 
     public bool HasPlannedDate => PlannedDate is not null;
 
@@ -227,6 +250,7 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         if (taskId is null || tasks.Find(taskId) is not { } task)
         {
             HasTask = false;
+            ItemId = string.Empty;
             return;
         }
 
@@ -234,6 +258,7 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         try
         {
             HasTask = true;
+            ItemId = ProjectRules.ItemIdOf(task, task.ProjectId is { } projectId ? projects?.Get(projectId) : null) ?? string.Empty;
             Set(ref title, task.Title, nameof(Title));
             Set(ref isDone, task.State == TaskState.Done, nameof(IsDone));
             Notes = task.Notes;
@@ -352,6 +377,12 @@ public sealed partial class TaskDetailViewModel : ObservableObject
         FinishNotes();
         openPage(back);
     }
+
+    /// <summary>Puts the item's id on the clipboard.</summary>
+    [RelayCommand(CanExecute = nameof(CanCopyId))]
+    private void CopyId() => copyText?.Invoke(ItemId);
+
+    private bool CanCopyId() => HasItemId && copyText is not null;
 
     [RelayCommand]
     private void Delete()

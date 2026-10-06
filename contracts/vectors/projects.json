@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'boardColumns': the columns a board shows, left to right: the four an item is stored in ('columns'), then dropped, which holds every dropped item whatever column it is stored in. 'moves': what moving an item to a board column does to the task itself: the dropped column drops it (its stored column stays as it was), the done column completes it, and any other column reopens a done or dropped one. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the board columns of a project with their items in that order: a dropped item is in the dropped column, never in the column it is stored in. 2026-09-18 is a Friday. 'archive': whether an item is on its board (supabase/migrations/0018_board_archive.sql). An item that isn't done always is. A done item archived by hand ('archivedByHand') isn't. Otherwise a done item stays until 'archiveAfterDays' days after the planning day it was finished ('completedOn'), so it is gone from 'today' = completedOn + archiveAfterDays on; null days keep it until it is archived by hand, and a done item with no completion day stays.",
+  "description": "Projects and their boards (docs/projects.md, supabase/migrations/0013_projects.sql). A project item is an ordinary task with a project, an item type (task, idea or bug), a board column (backlog, todo, doing or done), a priority (low, normal, high or urgent) and an optional milestone of its project. 'newItems': the column a new item of a type lands in: an idea in the backlog, anything else in to do. 'boardColumns': the columns a board shows, left to right: the four an item is stored in ('columns'), then dropped, which holds every dropped item whatever column it is stored in. 'moves': what moving an item to a board column does to the task itself: the dropped column drops it (its stored column stays as it was), the done column completes it, and any other column reopens a done or dropped one. 'finishing': what finishing or reopening a task does to its column: done sends it to the done column, reopening a done item puts it back in to do, and dropping leaves the column alone. 'order': the items of one column, by priority (urgent, high, normal, low), then the position the owner dragged them to, then oldest first, then id. 'board': the board columns of a project with their items in that order: a dropped item is in the dropped column, never in the column it is stored in. 2026-09-18 is a Friday. 'archive': whether an item is on its board (supabase/migrations/0018_board_archive.sql). An item that isn't done always is. A done item archived by hand ('archivedByHand') isn't. Otherwise a done item stays until 'archiveAfterDays' days after the planning day it was finished ('completedOn'), so it is gone from 'today' = completedOn + archiveAfterDays on; null days keep it until it is archived by hand, and a done item with no completion day stays. 'itemKeys': short ids for a project's items (docs/projects.md, 'Item ids'). A key is 2 to 6 capital letters or digits starting with a letter; 'valid' says which typed keys are kept (a key is upper-cased first, so 'gm' is GM). 'suggest' makes a key from a project's name: letters and digits only, diacritics dropped, words split at anything else, a word starting with a digit left out; one word with two or more capitals gives its capitals, two or more words give their first letters, one word gives its first three letters; at most four characters; fewer than two characters gives none. A key in 'taken' (any case) gets 2, 3 ... on the end. 'format' writes an item's id as KEY-number, or #number without a key. 'parse' reads one back, in any case and with spaces around it: KEY-number or #number, the number 1 or more; anything else gives none.",
   "columns": [
     "backlog",
     "todo",
@@ -530,5 +530,183 @@
       "today": "2026-09-30",
       "onBoard": true
     }
-  ]
+  ],
+  "itemKeys": {
+    "suggest": [
+      {
+        "name": "capitals inside one word",
+        "project": "GoalMaker",
+        "taken": [],
+        "expect": "GM"
+      },
+      {
+        "name": "first letters of the words",
+        "project": "Jsi na tahu",
+        "taken": [],
+        "expect": "JNT"
+      },
+      {
+        "name": "one plain word gives its first three letters",
+        "project": "Thesis",
+        "taken": [],
+        "expect": "THE"
+      },
+      {
+        "name": "diacritics are dropped",
+        "project": "Úklid bytu",
+        "taken": [],
+        "expect": "UB"
+      },
+      {
+        "name": "a taken key gets a number",
+        "project": "GoalMaker",
+        "taken": [
+          "GM"
+        ],
+        "expect": "GM2"
+      },
+      {
+        "name": "the next number when that is taken too",
+        "project": "GoalMaker",
+        "taken": [
+          "gm",
+          "GM2"
+        ],
+        "expect": "GM3"
+      },
+      {
+        "name": "at most four letters",
+        "project": "Very Long Project Name Here",
+        "taken": [],
+        "expect": "VLPN"
+      },
+      {
+        "name": "a word starting with a digit is left out",
+        "project": "2026 Taxes",
+        "taken": [],
+        "expect": "TAX"
+      },
+      {
+        "name": "nothing to make a key from",
+        "project": "!!!",
+        "taken": [],
+        "expect": null
+      },
+      {
+        "name": "one letter is too short",
+        "project": "X",
+        "taken": [],
+        "expect": null
+      }
+    ],
+    "valid": [
+      {
+        "key": "GM",
+        "expect": true
+      },
+      {
+        "key": "JNT",
+        "expect": true
+      },
+      {
+        "key": "A1",
+        "expect": true
+      },
+      {
+        "key": "ABCDEF",
+        "expect": true
+      },
+      {
+        "key": "gm",
+        "expect": true
+      },
+      {
+        "key": "G",
+        "expect": false
+      },
+      {
+        "key": "1GM",
+        "expect": false
+      },
+      {
+        "key": "ABCDEFG",
+        "expect": false
+      },
+      {
+        "key": "G-M",
+        "expect": false
+      },
+      {
+        "key": "",
+        "expect": false
+      }
+    ],
+    "format": [
+      {
+        "key": "GM",
+        "number": 12,
+        "expect": "GM-12"
+      },
+      {
+        "key": null,
+        "number": 7,
+        "expect": "#7"
+      },
+      {
+        "key": "JNT",
+        "number": 1,
+        "expect": "JNT-1"
+      }
+    ],
+    "parse": [
+      {
+        "text": "GM-12",
+        "expect": {
+          "key": "GM",
+          "number": 12
+        }
+      },
+      {
+        "text": "gm-12",
+        "expect": {
+          "key": "GM",
+          "number": 12
+        }
+      },
+      {
+        "text": " JNT-1 ",
+        "expect": {
+          "key": "JNT",
+          "number": 1
+        }
+      },
+      {
+        "text": "#7",
+        "expect": {
+          "key": null,
+          "number": 7
+        }
+      },
+      {
+        "text": "GM-0",
+        "expect": null
+      },
+      {
+        "text": "GM12",
+        "expect": null
+      },
+      {
+        "text": "G-1",
+        "expect": null
+      },
+      {
+        "text": "GM-",
+        "expect": null
+      },
+      {
+        "text": "1234567890",
+        "expect": null
+      }
+    ]
+  }
 }

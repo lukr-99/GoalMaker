@@ -499,6 +499,11 @@
           "name": "deleted_at",
           "kind": "timestamp",
           "required": false
+        },
+        {
+          "name": "item_key",
+          "kind": "text",
+          "required": false
         }
       ]
     },
@@ -678,6 +683,11 @@
         {
           "name": "deleted_at",
           "kind": "timestamp",
+          "required": false
+        },
+        {
+          "name": "item_number",
+          "kind": "integer",
           "required": false
         }
       ]

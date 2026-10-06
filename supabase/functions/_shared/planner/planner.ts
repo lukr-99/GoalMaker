@@ -31,9 +31,11 @@ import {
   DROPPED,
   finishedIn,
   folderKey,
+  isItemKey,
   type ItemType,
   matchProject,
   moved,
+  parseItemId,
   PRIORITIES,
   type Priority,
   type ProjectItem,
@@ -41,6 +43,7 @@ import {
   type ProjectStatus,
   repositoryKey,
   type ShownColumn,
+  suggestItemKey,
 } from "../rules/projects.ts";
 import { AREA_COLORS, colorForNewArea } from "./palette.ts";
 import { TallyDays } from "./tallyDays.ts";
@@ -174,6 +177,11 @@ export interface ProjectFields {
   notes?: string;
   /** Days a done item stays on the board; null keeps it until archived by hand; undefined leaves it. */
   archiveAfterDays?: number | null;
+  /**
+   * The key its items' ids start with, like GM (docs/projects.md, "Item ids"); empty or null for none.
+   * Left out, a new project gets one suggested from its name and an edit keeps the one it has.
+   */
+  itemKey?: string | null;
 }
 
 export interface Habit extends HabitItem {
@@ -284,11 +292,42 @@ export class Planner {
     return (await this.db`${this.taskColumns()} where deleted_at is null`).map(toTask);
   }
 
-  /** The task with this id, deleted or not; null when there is none (or it is someone else's). */
-  async task(id: string): Promise<TaskItem | null> {
-    if (!isUuid(id)) return null;
+  /**
+   * The task `reference` names, deleted or not: its id, or a project item's id like GM-12 (#12 only
+   * with `projectId`, the project it is in). Null when there is none (or it is someone else's).
+   */
+  async task(reference: string, projectId?: string | null): Promise<TaskItem | null> {
+    const id = await this.taskId(reference, projectId);
+    if (id === null) return null;
     const rows = await this.db`${this.taskColumns()} where id = ${id}`;
     return rows.length === 0 ? null : toTask(rows[0]);
+  }
+
+  /**
+   * The one place a task reference is resolved: a task id stays as it is, and an item id like GM-12 or
+   * gm-12 is looked up by its project's key and number (docs/projects.md, "Item ids"). #12 has no key,
+   * so it needs the project it is in. Null when nothing matches.
+   */
+  async taskId(reference: string, projectId?: string | null): Promise<string | null> {
+    const text = reference.trim();
+    if (isUuid(text)) return text;
+    const item = parseItemId(text);
+    if (item === null) return null;
+    if (item.key === null) {
+      if (!projectId) {
+        throw new PlannerError(
+          `${text} has no project key, so it could be in any project. Use the item's id with its project's key, ` +
+            "like GM-12, or its task id.",
+        );
+      }
+      const rows = await this.db`
+        select id::text from public.tasks where project_id = ${projectId} and item_number = ${item.number}`;
+      return rows.length === 0 ? null : rows[0].id;
+    }
+    const rows = await this.db`
+      select t.id::text from public.tasks t join public.projects p on p.id = t.project_id
+      where p.item_key = ${item.key} and p.deleted_at is null and t.item_number = ${item.number}`;
+    return rows.length === 0 ? null : rows[0].id;
   }
 
   async areas(): Promise<Area[]> {
@@ -367,6 +406,7 @@ export class Planner {
   /** Changes what `fields` names and leaves the rest. */
   async updateTask(id: string, fields: TaskFields): Promise<TaskItem> {
     const task = await this.live(id);
+    id = task.id;
     const day = fields.day === undefined ? task.plannedDate : fields.day;
     const time = fields.time === undefined ? (day === null ? null : task.plannedTime) : cleanTime(fields.time, day);
     const repeat = fields.repeat === undefined ? task.recurrence : cleanRepeat(fields.repeat);
@@ -413,6 +453,7 @@ export class Planner {
   /** Done or dropped; a repeating task moves on to its next occurrence (docs/repeating.md). */
   async finish(id: string, status: "done" | "dropped"): Promise<{ task: TaskItem; next: TaskItem | null }> {
     const task = await this.live(id);
+    id = task.id;
     await this.db`
       update public.tasks set status = ${status}, completed_at = ${status === "done" ? this.db`now()` : null},
         board_column = ${columnAfter(task, status)}
@@ -427,6 +468,7 @@ export class Planner {
    */
   async reopen(id: string, day?: Day | null, column?: string): Promise<TaskItem> {
     const task = await this.live(id);
+    id = task.id;
     const planned = day === undefined ? task.plannedDate : day;
     await this.db`
       update public.tasks set status = 'open', completed_at = null, planned_date = ${planned},
@@ -444,7 +486,7 @@ export class Planner {
   }
 
   async delete(id: string): Promise<TaskItem> {
-    await this.live(id);
+    id = (await this.live(id)).id;
     await this.db`update public.tasks set deleted_at = now() where id = ${id}`;
     return (await this.task(id))!;
   }
@@ -452,6 +494,7 @@ export class Planner {
   async restore(id: string): Promise<TaskItem> {
     const task = await this.task(id);
     if (task === null) throw new PlannerError(`No task with id ${id}.`);
+    id = task.id;
     await this.db`update public.tasks set deleted_at = null where id = ${id}`;
     return (await this.task(id))!;
   }
@@ -462,6 +505,7 @@ export class Planner {
     reminder: { at?: string; minutesBefore?: number; important?: boolean },
   ): Promise<Reminder> {
     const task = await this.live(taskId);
+    taskId = task.id;
     const { timeZone } = await this.now();
     const id = crypto.randomUUID();
     if (reminder.minutesBefore !== undefined) {
@@ -491,7 +535,7 @@ export class Planner {
   }
 
   async addStep(taskId: string, title: string): Promise<Step> {
-    await this.live(taskId);
+    taskId = (await this.live(taskId)).id;
     const text = title.trim();
     if (text.length === 0 || text.length > MAX_STEP) {
       throw new PlannerError(`A step needs 1 to ${MAX_STEP} characters.`);
@@ -826,7 +870,7 @@ export class Planner {
   async projects(): Promise<ProjectItem[]> {
     const rows = await this.db`
       select id::text, name, description, area_id::text, status, repository_url, local_folder, notes, position,
-             archive_after_days
+             archive_after_days, item_key
       from public.projects where deleted_at is null
       order by (status = 'done'), (status = 'paused'), position, lower(name)`;
     return rows.map(toProject);
@@ -899,14 +943,17 @@ export class Planner {
         throw new PlannerError(`${project.name} is already that folder (project id ${project.id}).`);
       }
     }
+    const itemKey = fields.itemKey === undefined
+      ? suggestItemKey(name, projects.flatMap((project) => project.itemKey ? [project.itemKey] : []))
+      : cleanItemKey(fields.itemKey, projects, null);
     const area = clip(fields.area ?? null, MAX_AREA) === null ? null : await this.findOrCreateArea(fields.area!);
     const id = crypto.randomUUID();
     await this.db`
       insert into public.projects
-        (id, name, description, area_id, status, repository_url, local_folder, notes, position)
+        (id, name, description, area_id, status, repository_url, local_folder, notes, position, item_key)
       values (${id}, ${name}, ${clip(fields.description ?? null, MAX_DESCRIPTION) ?? ""}, ${area?.id ?? null},
               ${fields.status ?? "active"}, ${repository}, ${folder},
-              ${clip(fields.notes ?? null, MAX_NOTES) ?? ""}, ${projects.length})`;
+              ${clip(fields.notes ?? null, MAX_NOTES) ?? ""}, ${projects.length}, ${itemKey})`;
     return await this.findProject(id);
   }
 
@@ -933,6 +980,7 @@ export class Planner {
    */
   async moveItem(id: string, column: ShownColumn): Promise<{ task: TaskItem; next: TaskItem | null }> {
     const task = await this.live(id);
+    id = task.id;
     if (!task.projectId) throw new PlannerError(`"${task.title}" is not a project item, so it has no board column.`);
     const wanted = moved(column, task.state);
     let next: TaskItem | null = null;
@@ -1171,10 +1219,11 @@ export class Planner {
       ? project.description
       : clip(fields.description, MAX_DESCRIPTION) ?? "";
     const notes = fields.notes === undefined ? project.notes : clip(fields.notes, MAX_NOTES) ?? "";
+    const itemKey = fields.itemKey === undefined ? project.itemKey ?? null : cleanItemKey(fields.itemKey, projects, id);
     await this.db`
       update public.projects set name = ${name}, description = ${description}, area_id = ${areaId},
         status = ${fields.status ?? project.status}, repository_url = ${repository}, local_folder = ${folder},
-        notes = ${notes},
+        notes = ${notes}, item_key = ${itemKey},
         archive_after_days = ${
       fields.archiveAfterDays === undefined
         ? project.archiveAfterDays ?? null
@@ -1190,6 +1239,7 @@ export class Planner {
    */
   async archiveItem(id: string, archived: boolean): Promise<TaskItem> {
     const task = await this.live(id);
+    id = task.id;
     if (task.projectId === null || task.projectId === undefined) {
       throw new PlannerError(`"${task.title}" is not a project item, so it has no board to leave.`);
     }
@@ -1402,7 +1452,7 @@ export class Planner {
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
              series_id::text, goal_id::text, moved_count, position,
              project_id::text, item_type, board_column, priority, milestone_id::text, made_by,
-             board_archived_at is not null as board_archived,
+             board_archived_at is not null as board_archived, item_number,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
@@ -1571,6 +1621,7 @@ function toProject(row: any): ProjectItem {
     position: row.position,
     deleted: false,
     archiveAfterDays: row.archive_after_days ?? null,
+    itemKey: row.item_key ?? null,
   };
 }
 
@@ -1601,11 +1652,29 @@ function toTask(row: any): TaskItem {
     position: row.position ?? 0,
     madeBy: row.made_by ?? "owner",
     boardArchived: row.board_archived ?? false,
+    itemNumber: row.item_number ?? null,
   };
 }
 
 export function isUuid(text: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(text);
+}
+
+/**
+ * A project key as typed: upper-cased, empty for none, and free among the owner's other projects
+ * (docs/projects.md, "Item ids").
+ */
+function cleanItemKey(text: string | null, projects: ProjectItem[], self: string | null): string | null {
+  const key = (text ?? "").trim().toUpperCase();
+  if (key === "") return null;
+  if (!isItemKey(key)) {
+    throw new PlannerError(`"${text}" can't be a key: use 2 to 6 letters or digits, starting with a letter, like GM.`);
+  }
+  const other = projects.find((project) => project.id !== self && project.itemKey === key);
+  if (other !== undefined) {
+    throw new PlannerError(`${other.name} already has the key ${key} (project id ${other.id}). Pick another one.`);
+  }
+  return key;
 }
 
 function cleanArchiveDays(days: number | null): number | null {

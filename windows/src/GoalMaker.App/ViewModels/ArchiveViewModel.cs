@@ -10,8 +10,8 @@ using GoalMaker.Core.Sync;
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The archive of done tasks (docs/archive.md): searched as you type, newest first, and narrowed by an
-/// area and tag filter of its own, the same filter the lists use.
+/// The archive of done tasks (docs/archive.md): searched as you type, by words or by a project item's id
+/// (GM-12), newest first, and narrowed by an area and tag filter of its own, the same filter the lists use.
 /// </summary>
 public sealed partial class ArchiveViewModel : ObservableObject
 {
@@ -66,7 +66,10 @@ public sealed partial class ArchiveViewModel : ObservableObject
     {
         Results.Clear();
         var projectById = projects.All().ToDictionary(project => project.Id, StringComparer.Ordinal);
-        var found = ArchiveRules.Search(tasks.All(), Query);
+        // An id, GM-12 or #12, finds that item; anything else is words to find (docs/projects.md, "Item ids").
+        IReadOnlyList<TaskItem> found = ProjectRules.ParseItemId(Query) is { } wanted
+            ? [.. ProjectRules.Named(wanted, ArchiveRules.Search(tasks.All(), string.Empty), projectById)]
+            : ArchiveRules.Search(tasks.All(), Query);
         if (!filter.Current.IsEmpty)
         {
             found = filter.Current.Apply(found, tags.TagLinks(), projects.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal));

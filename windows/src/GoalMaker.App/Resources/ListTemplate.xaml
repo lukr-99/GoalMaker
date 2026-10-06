@@ -20,6 +20,17 @@
         </StackPanel>
     </DataTemplate>
 
+    <!--
+        A project item's id, GM-12 (docs/projects.md, "Item ids"): small, muted and in a fixed-width face,
+        so it reads as a reference beside the title rather than part of it.
+    -->
+    <Style x:Key="GM.ItemId" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Courier New" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+    </Style>
+
     <!-- The icon a project item's chip wears: an idea's lightbulb and a bug in their board colors, the board for a plain task. -->
     <Style x:Key="GM.ProjectTagIcon" TargetType="ui:SymbolIcon">
         <Setter Property="Symbol" Value="Board16" />
@@ -38,7 +49,7 @@
 
     <!--
         A project item's chip in a task list, the calendar's day and the archive (docs/lists.md): the
-        project's name in a quiet outline, with an idea's or a bug's icon. Where the page can go to the
+        project's name in a quiet outline, with an idea's or a bug's icon and the item's id. Where the page can go to the
         board it is a button that opens it; elsewhere it only says which project.
     -->
     <DataTemplate x:Key="ProjectTag" DataType="{x:Type vm:ProjectTagViewModel}">
@@ -58,6 +69,8 @@
                                 <ui:SymbolIcon Margin="0,0,3,0" FontSize="12" VerticalAlignment="Center" Style="{StaticResource GM.ProjectTagIcon}" />
                                 <TextBlock x:Name="Name" MaxWidth="180" VerticalAlignment="Center" FontSize="12" Text="{Binding Name}"
                                            TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                <TextBlock Margin="5,0,0,0" Style="{StaticResource GM.ItemId}" Text="{Binding ItemId}"
+                                           Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -87,6 +100,8 @@
                     <ui:SymbolIcon Margin="0,0,3,0" FontSize="12" VerticalAlignment="Center" Style="{StaticResource GM.ProjectTagIcon}" />
                     <TextBlock MaxWidth="180" VerticalAlignment="Center" FontSize="12" Text="{Binding Name}"
                                TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                    <TextBlock Margin="5,0,0,0" Style="{StaticResource GM.ItemId}" Text="{Binding ItemId}"
+                               Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
             </Border>
         </Grid>

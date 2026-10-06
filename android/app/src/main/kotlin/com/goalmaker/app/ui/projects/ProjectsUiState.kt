@@ -15,7 +15,9 @@ import com.goalmaker.app.ui.lists.FilterChoices
  * to, and the board holds only the items it shows. [filter] is the area and tag filter, which narrows
  * [projects] and the board; [anyProject] says whether there are projects at all, filtered away or not.
  * [archived] are the done items that left the board, most recently finished first. [view] and
- * [collapsed] are how this phone shows the board.
+ * [collapsed] are how this phone shows the board. [keys] are the item keys of every project, filtered
+ * away or not, by project id, so the form can suggest a free one; [query] is what the board's search
+ * holds, words or an item's id (GM-12, #12), and the board and [archived] hold only what it finds.
  */
 data class ProjectsUiState(
     val loaded: Boolean = false,
@@ -30,7 +32,15 @@ data class ProjectsUiState(
     val filter: FilterChoices = FilterChoices(),
     val view: BoardView = BoardView.COLUMNS,
     val collapsed: Set<String> = setOf(ProjectRules.DONE),
+    val keys: Map<String, String> = emptyMap(),
+    val query: String = "",
 ) {
+    /** The id an item of the project on show reads by, GM-12, or null until the server has numbered it. */
+    fun itemIdOf(task: TaskItem): String? = ProjectRules.itemIdOf(task, selected)
+
+    /** The keys the projects other than [exceptId] read by. */
+    fun otherKeys(exceptId: String? = null): List<String> = keys.filterKeys { it != exceptId }.values.toList()
+
     /** How many items are in the columns that are not done. */
     val open: Int get() = board.filterNot { it.column == "done" }.sumOf { it.items.size }
 }

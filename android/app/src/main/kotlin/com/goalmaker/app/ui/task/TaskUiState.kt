@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.task
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.GoalItem
 import com.goalmaker.app.application.planning.ProjectItem
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.StepItem
 import com.goalmaker.app.application.planning.TagItem
 import com.goalmaker.app.application.planning.TaskItem
@@ -21,4 +22,10 @@ data class TaskUiState(
     val taskTagIds: Set<String> = emptySet(),
     val goals: List<GoalItem> = emptyList(),
     val projects: List<ProjectItem> = emptyList(),
-)
+) {
+    /**
+     * A project item's id, GM-12, or null for a plain task and for an item the server hasn't numbered
+     * yet (docs/projects.md, "Item ids").
+     */
+    val itemId: String? get() = task?.let { item -> ProjectRules.itemIdOf(item, projects.firstOrNull { it.id == item.projectId }) }
+}

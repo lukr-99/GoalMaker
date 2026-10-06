@@ -322,7 +322,12 @@ class TaskList(
     fun setProject(id: String, projectId: String?, itemType: String = ProjectRules.TASK) = change(id) { row ->
         // An item that leaves its project leaves its archived mark behind too.
         val before = (row["project_id"] as? JsonPrimitive)?.takeUnless { it == JsonNull }?.content
-        if (projectId != before) row[BOARD_ARCHIVED_AT] = JsonNull
+        if (projectId != before) {
+            row[BOARD_ARCHIVED_AT] = JsonNull
+            // The server numbers an item in its new project (docs/projects.md, "Item ids"), so until it
+            // answers the item shows no id rather than its old number with the new project's key.
+            row[ITEM_NUMBER] = JsonNull
+        }
         row["project_id"] = projectId?.let(::JsonPrimitive) ?: JsonNull
         if (projectId == null) {
             row["board_column"] = JsonNull
@@ -428,6 +433,7 @@ class TaskList(
         position = (row["position"] as? JsonPrimitive)?.doubleOrNull ?: 0.0,
         madeBy = row.text("made_by") ?: ProjectRules.OWNER,
         boardArchivedAt = row.text(BOARD_ARCHIVED_AT),
+        itemNumber = (row[ITEM_NUMBER] as? JsonPrimitive)?.intOrNull,
     )
 
     private companion object {
@@ -437,6 +443,7 @@ class TaskList(
         const val GOAL_ID = "goal_id"
         const val GOALS = "goals"
         const val BOARD_ARCHIVED_AT = "board_archived_at"
+        const val ITEM_NUMBER = "item_number"
         val NOON: LocalTime = LocalTime.NOON
         const val MAX_TITLE = 500
         const val MAX_NOTES = 20_000

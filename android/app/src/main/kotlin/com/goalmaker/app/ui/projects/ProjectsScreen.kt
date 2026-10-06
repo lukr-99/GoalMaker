@@ -15,17 +15,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDropDown
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PauseCircle
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material3.AlertDialog
@@ -63,6 +66,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -77,6 +81,7 @@ import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.domain.settings.BoardView
 import com.goalmaker.app.ui.components.AppSnackbarHost
 import com.goalmaker.app.ui.components.ChoiceChip
+import com.goalmaker.app.ui.components.CopiedIds
 import com.goalmaker.app.ui.components.ScreenTitle
 import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.lists.SectionHeader
@@ -119,6 +124,8 @@ fun ProjectsScreen(
             if (result == SnackbarResult.ActionPerformed) event.undo()
         }
     }
+
+    CopiedIds(viewModel.copies, snackbars)
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -194,6 +201,17 @@ fun ProjectsScreen(
                         ViewSwitch(state.view, onPick = viewModel::showView)
                     }
                 }
+                item("find") { FindItem(state.query, onChange = viewModel::setQuery) }
+                if (state.query.isNotBlank() && state.board.all { it.items.isEmpty() } && state.archived.isEmpty()) {
+                    item("nothing-found") {
+                        Text(
+                            stringResource(R.string.projects_nothing_found),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = AppTheme.colors.textMuted,
+                            modifier = Modifier.padding(8.dp),
+                        )
+                    }
+                }
                 // The phone shows one column at a time behind tabs, or the columns stacked with each one
                 // folding away, so a long Done no longer pushes everything else down (docs/projects.md).
                 val shown = if (state.view == BoardView.COLUMNS) {
@@ -227,12 +245,14 @@ fun ProjectsScreen(
                     items(column.items, key = { "item-" + it.id }) { task ->
                         ItemRow(
                             task = task,
+                            itemId = state.itemIdOf(task),
                             columns = column,
                             onOpen = { onOpenTask(task.id) },
                             onMove = { to -> viewModel.move(task, to) },
                             onPriority = { priority -> viewModel.setPriority(task.id, priority) },
                             onArchive = { viewModel.archive(task) },
                             onRemove = { viewModel.removeFromProject(task) },
+                            onCopyId = { viewModel.copyId(task) },
                         )
                     }
                     if (column.column == ProjectRules.DONE && state.archived.isNotEmpty()) {
@@ -249,6 +269,7 @@ fun ProjectsScreen(
     if (showArchived && !nothingArchived) {
         ArchivedDialog(
             items = state.archived,
+            itemId = state::itemIdOf,
             onOpen = { task ->
                 showArchived = false
                 onOpenTask(task.id)
@@ -264,12 +285,14 @@ fun ProjectsScreen(
             project = editing,
             areas = state.filter.areas,
             newArea = state.filter.filter.areaId,
-            onSave = { draft, archiveAfterDays ->
+            suggestKey = { name -> viewModel.suggestKey(name, editing?.id) },
+            keyProblem = { key -> viewModel.keyProblem(key, editing?.id) },
+            onSave = { draft, archiveAfterDays, key ->
                 val current = editing
                 if (current == null) {
-                    viewModel.addProject(draft, archiveAfterDays)
+                    viewModel.addProject(draft, archiveAfterDays, key)
                 } else {
-                    viewModel.updateProject(current.id, draft, archiveAfterDays)
+                    viewModel.updateProject(current.id, draft, archiveAfterDays, key)
                 }
                 adding = false
                 editing = null
@@ -428,6 +451,7 @@ private fun ArchivedLink(count: Int, onOpen: () -> Unit) {
 @Composable
 private fun ArchivedDialog(
     items: List<TaskItem>,
+    itemId: (TaskItem) -> String?,
     onOpen: (TaskItem) -> Unit,
     onPutBack: (TaskItem) -> Unit,
     onReopen: (TaskItem) -> Unit,
@@ -449,12 +473,10 @@ private fun ArchivedDialog(
                 items(items, key = { it.id }) { task ->
                     val byHand = task.boardArchivedAt != null
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            task.title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 2,
-                            modifier = Modifier.weight(1f).clickable { onOpen(task) }.padding(vertical = 12.dp),
-                        )
+                        Column(Modifier.weight(1f).clickable { onOpen(task) }.padding(vertical = 12.dp)) {
+                            Text(task.title, style = MaterialTheme.typography.bodyLarge, maxLines = 2)
+                            itemId(task)?.let { ItemIdLabel(it) }
+                        }
                         TextButton(onClick = { if (byHand) onPutBack(task) else onReopen(task) }) {
                             Text(stringResource(if (byHand) R.string.projects_put_back else R.string.projects_reopen))
                         }
@@ -512,12 +534,14 @@ private fun ProjectCard(project: ProjectItem, onEdit: () -> Unit) {
 @Composable
 private fun ItemRow(
     task: TaskItem,
+    itemId: String?,
     columns: ProjectColumn,
     onOpen: () -> Unit,
     onMove: (String) -> Unit,
     onPriority: (String) -> Unit,
     onArchive: () -> Unit,
     onRemove: () -> Unit,
+    onCopyId: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     Row(
@@ -541,8 +565,10 @@ private fun ItemRow(
                 color = if (task.state == TaskState.DROPPED) AppTheme.colors.textMuted else AppTheme.colors.text,
                 maxLines = 2,
             )
-            // An idea and a bug carry their own icon and colour, so a board reads at a glance.
+            // An idea and a bug carry their own icon and colour, so a board reads at a glance. The id,
+            // GM-12, leads the line once the server has numbered the item; the card reads it out too.
             Row(verticalAlignment = Alignment.CenterVertically) {
+                itemId?.let { ItemIdLabel(it, Modifier.padding(end = 6.dp)) }
                 Icon(
                     ItemTypeLook.icon(task.itemType),
                     contentDescription = null,
@@ -604,6 +630,15 @@ private fun ItemRow(
                         },
                     )
                 }
+                if (itemId != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.projects_copy_id)) },
+                        onClick = {
+                            menu = false
+                            onCopyId()
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.projects_remove_item)) },
                     onClick = {
@@ -621,7 +656,9 @@ private fun ProjectDialog(
     project: ProjectItem?,
     areas: List<AreaItem>,
     newArea: String?,
-    onSave: (ProjectDraft, Int?) -> Unit,
+    suggestKey: (String) -> String?,
+    keyProblem: (String) -> KeyProblem?,
+    onSave: (ProjectDraft, Int?, String) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -633,13 +670,24 @@ private fun ProjectDialog(
     // A new project made while an area filter is on starts in that area, so it stays in sight.
     var area by remember { mutableStateOf(if (project == null) newArea else project.areaId) }
     var archiveAfterDays by remember { mutableStateOf(if (project == null) ProjectRules.ARCHIVE_AFTER_DAYS else project.archiveAfterDays) }
+    // A new project's name suggests its key until the owner types one; an edit keeps the key it has.
+    var key by remember { mutableStateOf(project?.itemKey.orEmpty()) }
+    var keyTyped by remember { mutableStateOf(project != null) }
+    val problem = keyProblem(key)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (project == null) R.string.projects_add else R.string.projects_edit)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                Field(name, { name = it }, R.string.projects_name)
+                Field(name, { typed ->
+                    name = typed
+                    if (!keyTyped) key = suggestKey(typed).orEmpty()
+                }, R.string.projects_name)
+                KeyField(key, problem) { typed ->
+                    key = typed.uppercase()
+                    keyTyped = true
+                }
                 Field(description, { description = it }, R.string.projects_description)
                 Field(repository, { repository = it }, R.string.projects_repository)
                 Field(folder, { folder = it }, R.string.projects_folder)
@@ -682,7 +730,7 @@ private fun ProjectDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() && problem == null,
                 onClick = {
                     onSave(
                         ProjectDraft(
@@ -695,6 +743,7 @@ private fun ProjectDialog(
                             notes = project?.notes.orEmpty(),
                         ),
                         archiveAfterDays,
+                        key.trim(),
                     )
                 },
             ) { Text(stringResource(R.string.goals_save)) }
@@ -740,6 +789,66 @@ private fun ItemDialog(onSave: (title: String, type: String, column: String, pri
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.goals_cancel)) } },
     )
+}
+
+/**
+ * The key a project's items read by, GM in GM-12 (docs/projects.md, "Item ids"), with how an item
+ * reads with it, or why it can't be saved.
+ */
+@Composable
+private fun KeyField(key: String, problem: KeyProblem?, onChange: (String) -> Unit) {
+    val clean = key.trim()
+    OutlinedTextField(
+        value = key,
+        onValueChange = onChange,
+        label = { Text(stringResource(R.string.projects_key)) },
+        singleLine = true,
+        isError = problem != null,
+        supportingText = {
+            Text(
+                when (problem) {
+                    KeyProblem.NOT_VALID -> stringResource(R.string.projects_key_not_valid)
+                    KeyProblem.TAKEN -> stringResource(R.string.projects_key_taken, clean)
+                    null -> if (clean.isEmpty()) {
+                        stringResource(R.string.projects_key_none)
+                    } else {
+                        stringResource(R.string.projects_key_hint, ProjectRules.formatItemId(clean, 12))
+                    }
+                },
+            )
+        },
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+    )
+}
+
+/** The board's search: words from an item's title or notes, or its id, GM-12 or #12 in this project. */
+@Composable
+private fun FindItem(query: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+        trailingIcon = if (query.isEmpty()) {
+            null
+        } else {
+            {
+                IconButton(onClick = { onChange("") }) {
+                    Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.projects_find_clear))
+                }
+            }
+        },
+        label = { Text(stringResource(R.string.projects_find_item)) },
+        placeholder = { Text(stringResource(R.string.projects_find_item_hint), maxLines = 1) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/** An item's id, GM-12, as a small muted label. */
+@Composable
+private fun ItemIdLabel(id: String, modifier: Modifier = Modifier) {
+    Text(id, style = MaterialTheme.typography.labelSmall, color = AppTheme.colors.textMuted, maxLines = 1, modifier = modifier)
 }
 
 /** One labelled row of chips; a narrow phone scrolls it sideways rather than cutting a chip off. */

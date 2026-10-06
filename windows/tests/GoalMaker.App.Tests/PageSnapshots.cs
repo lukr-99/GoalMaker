@@ -936,6 +936,16 @@ public sealed class PageSnapshots
         planner.Tasks.SetBoardColumn(planner.Task("Dark mode for the widget").Id, ProjectRules.Dropped);
         var done = projects.Columns.Single(column => column.Column == ProjectRules.Done);
         done.ToggleArchivedCommand.Execute(null);
+        // The form suggested GM for GoalMaker, and the server numbered every item but the newest, as a
+        // sync brings them back; the dropped idea has no id yet (docs/projects.md, "Item ids").
+        var number = 0;
+        foreach (var item in planner.Tasks.All().Where(task => task.ProjectId is not null && task.Title != "Dark mode for the widget").OrderBy(task => task.CreatedAt, StringComparer.Ordinal))
+        {
+            var row = planner.Replica.Get("tasks", item.Id)!;
+            row["item_number"] = ++number;
+            planner.Replica.Put("tasks", row);
+        }
+
         // A card just finished, so the undo bar is on show.
         projects.Columns.Single(column => column.Column == ProjectRules.Todo).Items[0].MoveCommand.Execute(ProjectRules.Done);
 
@@ -965,6 +975,11 @@ public sealed class PageSnapshots
         content.Width = window.Width;
         Save(content, folder, "project-item-window", new Size(window.Width, 680));
         window.Close();
+
+        // A new project: its name suggests the key its items will read by.
+        projects.NewCommand.Execute(null);
+        projects.ProjectName = "Jsi na tahu";
+        Save(new ProjectsPage(projects), folder, "projects-new", new Size(1100, 700));
     });
 
     [Fact(Explicit = true)]

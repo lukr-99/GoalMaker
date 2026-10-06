@@ -18,6 +18,9 @@ public sealed class TaskList
     private const string GoalId = "goal_id";
     private const string Goals = "goals";
     private const string BoardArchivedAt = "board_archived_at";
+
+    // The server gives an item its number (docs/projects.md, "Item ids"); this app only reads it.
+    private const string ItemNumber = "item_number";
     private static readonly TimeOnly Noon = new(12, 0);
     private const int MaxTitle = 500;
     private const int MaxNotes = 20_000;
@@ -286,10 +289,16 @@ public sealed class TaskList
     // Done or dropped; an open repeating task makes its next occurrence in the same transaction.
     /// <summary>
     /// Puts a task in a project, or takes it out of one (docs/projects.md). A new item lands in the
-    /// column its type calls for; taking it out leaves a plain task with no column and no milestone.
+    /// column its type calls for; taking it out leaves a plain task with no column and no milestone. An
+    /// item that changes project shows no id until the server has given it its new number.
     /// </summary>
     public void SetProject(string id, string? projectId, string itemType = ProjectRules.Task) => Change(id, row =>
     {
+        if ((string?)row["project_id"] != projectId)
+        {
+            row[ItemNumber] = null;
+        }
+
         row["project_id"] = projectId;
         if (projectId is null)
         {
@@ -571,5 +580,11 @@ public sealed class TaskList
         MilestoneId: (string?)row["milestone_id"],
         Position: row["position"] is System.Text.Json.Nodes.JsonValue place && place.TryGetValue<double>(out var at) ? at : 0,
         MadeBy: (string?)row["made_by"] ?? ProjectRules.Owner,
-        BoardArchivedAt: (string?)row[BoardArchivedAt]);
+        BoardArchivedAt: (string?)row[BoardArchivedAt],
+        ItemNumber: row[ItemNumber] switch
+        {
+            System.Text.Json.Nodes.JsonValue value when value.TryGetValue<long>(out var number) => (int)number,
+            System.Text.Json.Nodes.JsonValue value when value.TryGetValue<int>(out var number) => number,
+            _ => null,
+        });
 }

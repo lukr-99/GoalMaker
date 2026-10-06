@@ -49,7 +49,13 @@ public sealed record TaskItem(
     string MadeBy = ProjectRules.Owner,
 
     /// <summary>When the owner took this done item off its board by hand; null while it is not (docs/projects.md).</summary>
-    string? BoardArchivedAt = null)
+    string? BoardArchivedAt = null,
+
+    /// <summary>
+    /// Its number in its project, 12 in GM-12. The server gives it, so a new item has none until it
+    /// comes back from a sync (docs/projects.md, "Item ids").
+    /// </summary>
+    int? ItemNumber = null)
 {
     /// <summary>The day it was finished, by the server's timestamp, or null while it is not done.</summary>
     public DateOnly? CompletedDay =>

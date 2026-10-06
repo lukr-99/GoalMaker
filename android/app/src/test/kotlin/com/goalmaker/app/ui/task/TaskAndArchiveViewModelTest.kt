@@ -23,12 +23,17 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -182,6 +187,46 @@ class TaskAndArchiveViewModelTest {
         archive.setQuery("invoice")
         settle()
         assertEquals(emptyList<String>(), archive.results.filterNotNull().first { it.isEmpty() }.map { it.title })
+    }
+
+    // An item of a GoalMaker project keyed GM, numbered [number] by the server (null: not yet), done when [done].
+    private fun item(title: String, number: Int?, done: Boolean = false): String {
+        val project = projects.find("GoalMaker") ?: projects.add(ProjectDraft("GoalMaker"))!!.also { projects.setItemKey(it.id, "GM") }
+        val task = tasks.add(title)!!
+        tasks.setProject(task.id, project.id)
+        if (done) tasks.setDone(task.id, true)
+        if (number != null) {
+            val row = test.replica.get("tasks", task.id)!!
+            test.replica.put("tasks", JsonObject(row + ("item_number" to JsonPrimitive(number))))
+        }
+        return task.id
+    }
+
+    @Test
+    fun `the detail shows a project item's id and copies it`() = runTest {
+        val viewModel = taskViewModel(item("Give items ids", 12))
+
+        assertEquals("GM-12", viewModel.uiState.first { it.loaded && it.projects.isNotEmpty() }.itemId)
+        val copied = async(start = CoroutineStart.UNDISPATCHED) { viewModel.copies.first() }
+        viewModel.copyId()
+        assertEquals("GM-12", copied.await())
+    }
+
+    @Test
+    fun `a new item shows no id until the server has numbered it`() = runTest {
+        val viewModel = taskViewModel(item("Just added", null))
+
+        assertNull(viewModel.uiState.first { it.loaded && it.projects.isNotEmpty() }.itemId)
+    }
+
+    @Test
+    fun `the archive's search finds a done item by its id, in any case`() = runTest {
+        item("Give items ids", 12, done = true)
+        item("Copy an id", 13, done = true)
+        val archive = ArchiveViewModel(tasks, areas, tags, projects, Dispatchers.Unconfined)
+
+        archive.setQuery("gm-12")
+        assertEquals(listOf("Give items ids"), archive.results.filterNotNull().first { it.size == 1 }.map { it.title })
     }
 
     @Test

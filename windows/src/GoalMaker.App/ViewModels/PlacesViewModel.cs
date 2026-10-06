@@ -10,7 +10,7 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// The sidebar's places (ADR 0014): the ones pinned to the top in the owner's order, All places below
 /// them (which opens the Places page), the Pin toggle for the page on show, and Go to (Ctrl+K), which
-/// finds any page by typing.
+/// finds any page by typing, and a project item by its id, GM-12 (docs/projects.md, "Item ids").
 /// Pins are this PC's own setting; the rules are <see cref="PlaceRules"/>.
 /// </summary>
 public sealed partial class PlacesViewModel : ObservableObject
@@ -27,8 +27,13 @@ public sealed partial class PlacesViewModel : ObservableObject
 
     private static readonly string[] Extras = [AllPlaces, Settings, Activity, Areas];
 
+    // How a project item's entry in Go to is told from a place: its id starts with this.
+    private const string ItemPrefix = "item:";
+
     private readonly ISettingsStore settings;
     private readonly IStrings strings;
+    private readonly Func<string, IReadOnlyList<PlaceEntry>>? findItems;
+    private readonly Action<string>? openItem;
     private List<string> pins;
 
     [ObservableProperty]
@@ -47,10 +52,18 @@ public sealed partial class PlacesViewModel : ObservableObject
     [ObservableProperty]
     private bool hasNoMatches;
 
-    public PlacesViewModel(ISettingsStore settings, IStrings strings)
+    /// <param name="findItems">The project items a query names by id, as (task id, what Go to shows); none for anything else.</param>
+    /// <param name="openItem">Opens a project item by its task id.</param>
+    public PlacesViewModel(
+        ISettingsStore settings,
+        IStrings strings,
+        Func<string, IReadOnlyList<PlaceEntry>>? findItems = null,
+        Action<string>? openItem = null)
     {
         this.settings = settings;
         this.strings = strings;
+        this.findItems = findItems;
+        this.openItem = openItem;
         pins = [.. settings.PinnedPlaces];
         Refresh();
     }
@@ -156,6 +169,12 @@ public sealed partial class PlacesViewModel : ObservableObject
         }
 
         IsPaletteOpen = false;
+        if (chosen.StartsWith(ItemPrefix, StringComparison.Ordinal))
+        {
+            openItem?.Invoke(chosen[ItemPrefix.Length..]);
+            return;
+        }
+
         Open(chosen);
     }
 
@@ -167,6 +186,11 @@ public sealed partial class PlacesViewModel : ObservableObject
     private void FilterMatches()
     {
         Matches.Clear();
+        foreach (var item in findItems?.Invoke(Query) ?? [])
+        {
+            Matches.Add(item with { Id = ItemPrefix + item.Id });
+        }
+
         foreach (var place in PlaceRules.Places.Concat(Extras))
         {
             if (Label(place).Contains(Query.Trim(), StringComparison.CurrentCultureIgnoreCase))

@@ -250,6 +250,28 @@ public sealed class TaskListTests : IDisposable
     }
 
     [Fact]
+    public void ANewItemHasNoNumberUntilTheServerGivesItOne()
+    {
+        var tasks = Tasks();
+        var item = tasks.Add(Draft("Ship the board +GoalMaker"))!;
+
+        Assert.Null(tasks.Find(item.Id)!.ItemNumber);
+        var queued = JsonNode.Parse(test.Replica.Outbox().Last(entry => entry.RowId == item.Id).Payload)!;
+        Assert.Null(queued["item_number"]);
+
+        var synced = test.Replica.Get("tasks", item.Id)!;
+        synced["item_number"] = 12;
+        test.Replica.Put("tasks", synced);
+        Assert.Equal(12, tasks.Find(item.Id)!.ItemNumber);
+
+        // Another field changes and the number stays; another project, and it waits for a new one.
+        tasks.SetPriority(item.Id, ProjectRules.High);
+        Assert.Equal(12, tasks.Find(item.Id)!.ItemNumber);
+        tasks.SetProject(item.Id, null);
+        Assert.Null(tasks.Find(item.Id)!.ItemNumber);
+    }
+
+    [Fact]
     public void ReopeningAnArchivedItemBringsItBackInTheRowItQueues()
     {
         var tasks = Tasks();

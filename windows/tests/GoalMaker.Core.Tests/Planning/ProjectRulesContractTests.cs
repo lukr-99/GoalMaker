@@ -114,6 +114,53 @@ public sealed class ProjectRulesContractTests
         }
     }
 
+    [Fact]
+    public void EveryKeySuggestion()
+    {
+        foreach (var testCase in vectors.GetProperty("itemKeys").GetProperty("suggest").EnumerateArray())
+        {
+            var taken = testCase.GetProperty("taken").EnumerateArray().Select(key => key.GetString()!);
+            Assert.True(
+                testCase.GetProperty("expect").GetString() == ProjectRules.SuggestItemKey(testCase.GetProperty("project").GetString()!, taken),
+                Name(testCase));
+        }
+    }
+
+    [Fact]
+    public void EveryKey()
+    {
+        foreach (var testCase in vectors.GetProperty("itemKeys").GetProperty("valid").EnumerateArray())
+        {
+            var key = testCase.GetProperty("key").GetString()!;
+            Assert.True(testCase.GetProperty("expect").GetBoolean() == ProjectRules.IsItemKey(key.ToUpperInvariant()), key);
+        }
+    }
+
+    [Fact]
+    public void EveryItemIdWritten()
+    {
+        foreach (var testCase in vectors.GetProperty("itemKeys").GetProperty("format").EnumerateArray())
+        {
+            Assert.Equal(
+                testCase.GetProperty("expect").GetString(),
+                ProjectRules.FormatItemId(testCase.GetProperty("key").GetString(), testCase.GetProperty("number").GetInt32()));
+        }
+    }
+
+    [Fact]
+    public void EveryItemIdRead()
+    {
+        foreach (var testCase in vectors.GetProperty("itemKeys").GetProperty("parse").EnumerateArray())
+        {
+            var text = testCase.GetProperty("text").GetString()!;
+            var expect = testCase.GetProperty("expect");
+            var wanted = expect.ValueKind == JsonValueKind.Null
+                ? null
+                : new ItemId(expect.GetProperty("key").GetString(), expect.GetProperty("number").GetInt32());
+            Assert.True(wanted == ProjectRules.ParseItemId(text), text);
+        }
+    }
+
     private static DateOnly Day(string text) => DateOnly.ParseExact(text, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
 
     private static IReadOnlyList<TaskItem> Items(JsonElement testCase) =>

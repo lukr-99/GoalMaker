@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.goalmaker.app.R
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.ProjectItem
+import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ProjectChip
@@ -223,7 +224,7 @@ internal fun TaskDetails(
                 Text(it.name, style = MaterialTheme.typography.bodySmall, color = AppTheme.colors.textMuted)
             }
         }
-        project?.let { ProjectChip(it, task.itemType, onOpenProject) }
+        project?.let { ProjectChip(it, task.itemType, onOpenProject, itemId = ProjectRules.itemIdOf(task, it)) }
         if (task.recurrence != null) {
             Icon(Icons.Outlined.Repeat, contentDescription = stringResource(R.string.lists_repeats), tint = AppTheme.colors.textMuted, modifier = Modifier.size(14.dp))
         }

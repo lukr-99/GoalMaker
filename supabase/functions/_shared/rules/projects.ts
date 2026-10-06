@@ -47,6 +47,8 @@ export interface ProjectItem {
   deleted: boolean;
   /** Days a done item stays on the board after it was finished; null keeps it until archived by hand. */
   archiveAfterDays?: number | null;
+  /** The key its items' ids start with, like GM (docs/projects.md, "Item ids"); null for none. */
+  itemKey?: string | null;
 }
 
 export interface ProjectMilestone {
@@ -206,6 +208,60 @@ export function matchProject(projects: ProjectItem[], reference: string): Projec
 
   const name = text.toLowerCase();
   return live.find((project) => project.name.trim().toLowerCase() === name) ?? null;
+}
+
+/** An item id as typed: a project's key and an item's number, or only the number (#12). */
+export interface ItemId {
+  key: string | null;
+  number: number;
+}
+
+const KEY = /^[A-Z][A-Z0-9]{1,5}$/;
+const MAX_SUGGESTED = 4;
+
+/** Whether a typed key is kept: 2 to 6 capital letters or digits starting with a letter, after upper-casing. */
+export function isItemKey(key: string): boolean {
+  return KEY.test(key.trim().toUpperCase());
+}
+
+/**
+ * A key made from a project's name (contracts/vectors/projects.json 'itemKeys'): the capitals of one
+ * word, the first letters of several, or the first three letters of one plain word, at most four, with
+ * 2, 3 ... on the end when `taken` (any case) has it. Null when the name gives fewer than two characters.
+ */
+export function suggestItemKey(name: string, taken: Iterable<string>): string | null {
+  const words = name.normalize("NFD").replace(/\p{M}/gu, "").split(/[^A-Za-z0-9]+/)
+    .filter((word) => word.length > 0 && !/^[0-9]/.test(word));
+  let base: string;
+  if (words.length === 0) return null;
+  if (words.length === 1) {
+    const capitals = words[0].replace(/[^A-Z]/g, "");
+    base = capitals.length >= 2 ? capitals : words[0].slice(0, 3);
+  } else {
+    base = words.map((word) => word[0]).join("");
+  }
+  base = base.toUpperCase().slice(0, MAX_SUGGESTED);
+  if (base.length < 2) return null;
+  const used = new Set([...taken].map((key) => key.trim().toUpperCase()));
+  if (!used.has(base)) return base;
+  for (let next = 2;; next++) {
+    if (!used.has(`${base}${next}`)) return `${base}${next}`;
+  }
+}
+
+/** An item's id as it reads: KEY-number, or #number without a key. */
+export function formatItemId(key: string | null | undefined, number: number): string {
+  return key ? `${key}-${number}` : `#${number}`;
+}
+
+/** An item id read back, in any case and with spaces around it; null for anything else. */
+export function parseItemId(text: string): ItemId | null {
+  const typed = text.trim().toUpperCase();
+  const keyed = /^([A-Z][A-Z0-9]{1,5})-([0-9]{1,9})$/.exec(typed);
+  const bare = keyed === null ? /^#([0-9]{1,9})$/.exec(typed) : null;
+  const number = Number(keyed?.[2] ?? bare?.[1] ?? 0);
+  if (number < 1) return null;
+  return { key: keyed?.[1] ?? null, number };
 }
 
 // Trailing slashes and a trailing .git, however they are stacked up.
