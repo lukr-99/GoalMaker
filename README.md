@@ -1,12 +1,12 @@
 # GoalMaker
 
 Plan tomorrow's tasks and keep daily, weekly, monthly and yearly goals alive, on an Android phone and
-a Windows PC that share one Supabase backend. Claude joins through a connector (from M3). The product
+a Windows PC that share one Supabase backend. Claude joins through a connector. The product
 spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap.md).
 
 ## Status
 
-**M0 to M6 and M8 are built; 1.5.0 is the latest release.** What works today, on both apps unless it
+**M0 to M10 are built; 1.14.0 is the latest release.** What works today, on both apps unless it
 says otherwise:
 
 - **Delivery (M0):** sign-in with an emailed 6-digit code ([docs/sign-in.md](docs/sign-in.md)),
@@ -15,24 +15,26 @@ says otherwise:
   every part and a tag-driven release.
 - **Sync (M1):** a SQLite replica with an outbox on each device, offline work, Realtime refresh
   ([docs/sync.md](docs/sync.md)).
-- **Tasks (M2):** Today, Tomorrow and Inbox, the composer with shortcuts and a live preview, Plan
+- **Tasks (M2):** Today, Tomorrow and Inbox, the bottom bar with shortcuts and a live preview, Plan
   tomorrow, repeating tasks ([docs/repeating.md](docs/repeating.md)), reminders with quiet hours and
   snooze ([docs/reminders.md](docs/reminders.md)), areas and tags with filters, a task's detail view
-  with notes in light Markdown and a checklist, the searchable archive
+  with notes in light Markdown that save on their own and a checklist, the searchable archive
   ([docs/archive.md](docs/archive.md)), the four switchable themes, and on Windows the tray's Today
   flyout and a global quick-add shortcut.
 - **Claude (M3):** the connector, an MCP Edge Function Claude reaches through a secret link, with
   the activity log and undo ([docs/connector.md](docs/connector.md)).
 - **Goals, habits, reviews, stats (M4):** the year to day goal cascade with three progress modes
-  ([docs/goals.md](docs/goals.md)), habits with cadences, check-ins, streaks and a heatmap
-  ([docs/habits.md](docs/habits.md)), which can also be limits to stay under, the guided weekly and
-  monthly review with a rotating prompt library and prompts that react to the period's data
-  ([docs/reviews.md](docs/reviews.md)), review reminders, and the stats screen
+  ([docs/goals.md](docs/goals.md)), habits with cadences, check-ins, streaks, a heatmap, skips and
+  fails ([docs/habits.md](docs/habits.md)), limits to stay under for a day, a week or a month (typed
+  in the bottom bar too: "at most 2 takeaways a week"), an amount filled to its target in one tap,
+  the guided weekly, monthly and yearly review with a rotating prompt library and prompts that react
+  to the period's data ([docs/reviews.md](docs/reviews.md)), review reminders, and the stats screen
   ([docs/stats.md](docs/stats.md)).
-- **Projects, calendar, widgets and the desktop (M5):** projects with a Backlog, To do, Doing and
-  Done board ([docs/projects.md](docs/projects.md)), a week and month calendar with dragging
-  ([docs/calendar.md](docs/calendar.md)), Today, Habits, Goals, Motivation and quick-add widgets
-  on Android ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
+- **Projects, calendar, widgets and the desktop (M5):** projects with a Backlog, To do, Doing, Done
+  and Dropped board and short item ids like GM-12 ([docs/projects.md](docs/projects.md)), a week and
+  month calendar with dragging and today and tomorrow picked out ([docs/calendar.md](docs/calendar.md)),
+  Today, Habits, Goals, Motivation, Life goals and quick-add widgets on Android
+  ([docs/widgets.md](docs/widgets.md)), projects through the connector, where Claude finds the
   project by the repository or folder it is working in ([docs/connector.md](docs/connector.md)),
   sharing text or a link from any Android app into a task ([docs/composer.md](docs/composer.md)),
   the pinnable Today and Habits mini windows on Windows
@@ -41,15 +43,20 @@ says otherwise:
 - **v1 (M6):** a versioned backup and a checked restore ([docs/backup.md](docs/backup.md)), updates
   from the latest GitHub Release, the Problems place in Settings, and hardening: a session the server
   refuses sends the app to sign-in with the outbox kept, and a replica that won't open says so.
+- **Quick chat (M7):** the bottom bar switches between quick-add and a chat that plans with the
+  connector's everyday tools through the `assistant` Edge Function ([docs/assistant.md](docs/assistant.md)).
 - **Wants, the Letter and Tally (M8):** pinned places and a Places hub with room to grow; Wants, a
-  wishlist where everything waits out a cooldown before it is bought or dropped
-  ([docs/wants.md](docs/wants.md)); the Letter, a weekly letter a Claude routine writes from
-  `get_review_digest` that opens the review ([docs/letter.md](docs/letter.md)); and Tally, where time
-  went on the phone and the PC by category and project, with only daily minutes leaving the device
-  ([docs/tally.md](docs/tally.md)).
+  wishlist where everything waits out a cooldown before it is bought or dropped, with a Needs tab
+  for things to buy now ([docs/wants.md](docs/wants.md)); the Letter, a weekly letter a Claude
+  routine writes from `get_review_digest` that opens the review ([docs/letter.md](docs/letter.md));
+  and Tally, where time went on the phone and the PC by category and project, with only daily minutes
+  leaving the device, a To sort list and an 8-week trend ([docs/tally.md](docs/tally.md)).
+- **Life goals (M9):** what the owner wants in the long run, with why it matters, a by date and
+  pictures, a why reminder now and then and a picture widget ([docs/life-goals.md](docs/life-goals.md)).
+- **Calendar events (M10):** trips and holidays as bars across their days, "day 2 of 4" on Today, and
+  adding from the calendar's bottom bar on one day or several ([docs/calendar.md](docs/calendar.md)).
 
-**Next:** M7, the quick chat in the composer (planned in `.scratch/m7-quick-chat/`, waiting on the
-owner's decisions). GoalMaker is for personal use only (ADR 0011). The plan is in
+**Next:** the owner's board. GoalMaker is for personal use only (ADR 0011). The plan is in
 [docs/roadmap.md](docs/roadmap.md).
 
 Releases are on GitHub, and both apps update from the latest one. GoalMaker is built for one person, so there is no server of ours
@@ -99,7 +106,8 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
 ## Data safety
 
 - **Source of truth:** the Supabase project (ADR 0002): profiles, areas, tags, tasks, steps,
-  reminders and the activity log, each row visible only to its owner. Deleted rows stay as
+  reminders, goals, habits, projects, wants, Tally totals, life goals, events and the activity log,
+  each row visible only to its owner. Deleted rows stay as
   tombstones for 90 days so every device learns about them, then a nightly job purges them.
 - **Device replicas:** each app keeps a SQLite copy with an outbox of unsent changes (one file per
   backend). Signing out pushes first and asks before discarding anything unsent.
