@@ -100,7 +100,8 @@ disk and sync under pressure.
 ### M7: quick chat
 
 The `assistant` Edge Function over the shared tool module with the Gemini free tier behind a
-provider interface; the composer switches between quick-add and chat.
+provider interface; the composer switches between quick-add and chat. Shipped in 1.7.0
+(2026-10-01), polished on Windows in 1.8.0.
 
 ### M8: Letter, Tally, Wants
 
@@ -133,6 +134,26 @@ ADR 0018). Issues: `.scratch/m9-life-goals/`.
 - **The place (M9-02, M9-03):** Life goals on Android, then Windows, with pictures.
 - **The why reminder (M9-04)** on both apps, **the widget (M9-05)** on Android, and **the connector
   tools (M9-06)**.
+
+Shipped in 1.11.0 (2026-10-05).
+
+### M10: Calendar events
+
+Things that take up days rather than get done (a trip, a holiday) as their own synced table, drawn
+as bars across the calendar's days and shown on Today while they last, and adding from the
+calendar's bottom bar on one day or several ([docs/calendar.md](calendar.md), ADR 0019). Issues:
+`.scratch/m10-calendar-events/`.
+
+- **Data and rules (M10-01):** the `events` table, the day's events, the bars with lanes and "day N
+  of M" as vectors, and the lists on both apps.
+- **The calendar (M10-02, M10-03):** the bars, the event sheet and Today's line on Android, then
+  Windows.
+- **Adding from the calendar (M10-04):** the bottom bar, picking several days, one event across them
+  or a task on each.
+- **The connector (M10-05):** `add_event`, `update_event`, `delete_event`, events in `get_calendar`
+  and `get_today`.
+
+Shipped in 1.13.0 (2026-10-05).
 
 ## After v1
 
