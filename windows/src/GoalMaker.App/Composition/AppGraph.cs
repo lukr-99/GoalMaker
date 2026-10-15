@@ -241,7 +241,16 @@ public sealed class AppGraph : IDisposable
         var mailbox = build.IsDevBuild ? DevSignIn.MailboxOf(backend.Url) : null;
         Func<string, CancellationToken, Task<string?>>? devCode =
             mailbox is null ? null : new LocalMailbox(http, mailbox).CodeForAsync;
-        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode, ReadClipboardText);
+        // The QR code the signed-in phone scans (ADR 0020). A local-only dev build has nobody to approve it.
+        var phone = localOnly ? null : new PhoneSignInViewModel(
+            new SupabasePcSignIn(http, backend.Url, backend.PublishableKey),
+            Auth,
+            SignInWatch,
+            strings,
+            Environment.MachineName,
+            () => DateTimeOffset.UtcNow,
+            (wait, cancellationToken) => Task.Delay(wait, cancellationToken));
+        SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode, ReadClipboardText, phone);
         Shell = new ShellViewModel(Auth, SignIn, Problems, Updates, runOnUi);
         // Go to finds a project item by its id too, GM-12 (docs/projects.md, "Item ids").
         Places = new PlacesViewModel(Settings, strings, FindItems, id => OpenTask(id, AppPage.Projects));

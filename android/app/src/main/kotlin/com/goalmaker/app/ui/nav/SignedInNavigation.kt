@@ -42,6 +42,9 @@ import com.goalmaker.app.ui.areas.AreasViewModel
 import com.goalmaker.app.ui.connector.ConnectorKey
 import com.goalmaker.app.ui.connector.ConnectorScreen
 import com.goalmaker.app.ui.connector.ConnectorViewModel
+import com.goalmaker.app.ui.pcsignin.PcSignInKey
+import com.goalmaker.app.ui.pcsignin.PcSignInScreen
+import com.goalmaker.app.ui.pcsignin.PcSignInViewModel
 import com.goalmaker.app.ui.goals.GoalsKey
 import com.goalmaker.app.ui.goals.GoalsScreen
 import com.goalmaker.app.ui.goals.GoalsViewModel
@@ -511,6 +514,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onBack = { backStack.removeLastOrNull() },
                             onOpenAreas = { backStack.add(AreasKey) },
                             onOpenConnector = { backStack.add(ConnectorKey) },
+                            onOpenPcSignIn = { backStack.add(PcSignInKey) },
                             onOpenActivity = { backStack.add(ActivityKey) },
                             problems = problems,
                             onProblemsRead = graph.problems::read,
@@ -522,6 +526,10 @@ fun SignedInNavigation(graph: AppGraph) {
                     entry<ConnectorKey> {
                         val connectorViewModel = viewModel { ConnectorViewModel(graph.connectorLinks, graph.appInfo.backend.url, graph.io) }
                         ConnectorScreen(viewModel = connectorViewModel, onBack = { backStack.removeLastOrNull() })
+                    }
+                    entry<PcSignInKey> {
+                        val pcSignInViewModel = viewModel { PcSignInViewModel(graph.pcSignInApprovals, graph.io) }
+                        PcSignInScreen(viewModel = pcSignInViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ActivityKey> {
                         val activityViewModel = viewModel { ActivityViewModel(graph.activity, graph.sync::request, graph.io) }

@@ -13,7 +13,7 @@ signed update channel on GitHub Releases (ADR 0010).
   Android app  ──┐                           ┌── Claude apps (MCP, the connector's secret link)
   (Kotlin)       │  HTTPS, user session      │
                  ├──────────► Supabase ◄─────┘
-  Windows app  ──┤   Auth · Postgres (RLS) · Realtime · Edge Functions (connector, assistant)
+  Windows app  ──┤   Auth · Postgres (RLS) · Realtime · Edge Functions (connector, assistant, pc-sign-in)
   (.NET/WPF)     │              ▲
                  │              │ migrations, deploys (CLI)
                  │       supabase/ folder
@@ -163,18 +163,28 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   delete, with Gemini's free tier behind the `ChatProvider` interface in `_shared/assistant/`, each
   tool in a transaction as the owner, logged as the owner's change through the chat. Its limits are
   counted in `assistant_usage`; the `GEMINI_API_KEY` function secret holds the model key.
+- `pc-sign-in/`: the PC's QR sign-in (ADR 0020, docs/sign-in.md). The PC is not signed in, so the
+  gateway lets it through and the function checks the request's own secrets (`pc_sign_ins`, 0028),
+  with per-caller limits on a hash of the IP. An approved request (the phone picked the PC's match
+  number) gets a one-time email code for the approving owner from Supabase Auth's admin API, without
+  any mail, and is used up only once the code is made. The phone approves through PostgREST, never
+  here. `_shared/pcSignIn/` holds its handler and request rules and runs
+  `contracts/vectors/pc-sign-in.json`.
 - `_shared/`: what the connector and the quick chat share: `owner.ts` (the owner-scoped
   transaction), `planner/` (data access that does what the apps' lists do), `tools/` and
   `prompts/`, `assistant/` (the chat's provider interface, Gemini and fake providers, prompt and
   tool loop), and `rules/`, the planning rules ported from Kotlin and C#, which run the same vectors
-  in `contracts/vectors/`. `deno task test` runs them; `connector/endpoint_test.ts` and
-  `assistant/endpoint_test.ts` drive the running functions on the local stack.
+  in `contracts/vectors/`. `deno task test` runs them; `connector/endpoint_test.ts`,
+  `assistant/endpoint_test.ts` and `pc-sign-in/endpoint_test.ts` drive the running functions on the
+  local stack.
 
 ## Data flow
 
 - **Sign-in:** the app asks Supabase Auth to email a code, verifies it, and stores the session
   (Android: private preferences through supabase-kt; Windows: a DPAPI file). A trigger creates the
-  user's `profiles` row. Every table is owner-only through row security.
+  user's `profiles` row. Every table is owner-only through row security. The PC can instead show a
+  QR code the signed-in phone approves; the PC then gets a one-time code for that owner from the
+  `pc-sign-in` function and verifies it the same way (ADR 0020).
 - **Updates:** release source (manifest and signature from `releases/latest/`) → signature check
   with the key built into the app → manifest validation → version policy (dev builds never update,
   pre-releases are never offered) → download → size and SHA-256 check → platform installer. The

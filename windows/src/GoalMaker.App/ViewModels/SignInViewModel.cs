@@ -52,8 +52,10 @@ public sealed partial class SignInViewModel : ObservableObject
         IStrings strings,
         string? devBackend,
         Func<string, CancellationToken, Task<string?>>? devCode = null,
-        Func<string?>? readClipboard = null)
+        Func<string?>? readClipboard = null,
+        PhoneSignInViewModel? phone = null)
     {
+        Phone = phone;
         this.readClipboard = readClipboard;
         this.auth = auth;
         this.watch = watch;
@@ -63,6 +65,11 @@ public sealed partial class SignInViewModel : ObservableObject
     }
 
     public bool IsEmailStep => !IsCodeStep;
+
+    /// <summary>The QR code the signed-in phone scans (ADR 0020), or null when this build has none.</summary>
+    public PhoneSignInViewModel? Phone { get; }
+
+    public bool HasPhone => Phone is not null;
 
     public bool IsIdle => !IsBusy;
 

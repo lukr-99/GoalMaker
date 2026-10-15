@@ -401,6 +401,10 @@ verify_jwt = false
 [functions.assistant]
 verify_jwt = true
 
+# The PC is not signed in yet when it asks (ADR 0020); the function checks its own secrets.
+[functions.pc-sign-in]
+verify_jwt = false
+
 [analytics]
 # Off locally: GoalMaker does not use log analytics and it saves memory.
 enabled = false

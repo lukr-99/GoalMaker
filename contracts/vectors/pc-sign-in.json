@@ -1,0 +1,164 @@
+{
+  "schema": 1,
+  "description": "What the QR code on the PC's sign-in screen holds and how the phone reads it (ADR 0020, docs/sign-in.md). The code holds only the scan secret: 43 URL-safe base64 characters (32 random bytes, no padding) after the prefix. 'build': the text the PC puts in the QR code for a scan secret. 'read': the scan secret the phone takes from a scanned text, or null when the text is not a GoalMaker PC sign-in. Spaces and line breaks around the text are ignored, nothing else is: the prefix is matched exactly and nothing may follow the secret. 'match': the PC shows a match number and the phone picks it from three choices (ADR 0020). 'numbers': whether a value from the server is a match number, two digits from 10 to 99. 'choices': whether the phone's list is three different match numbers; anything else is not shown, and the phone says the code didn't work.",
+  "prefix": "goalmaker://sign-in/pc/",
+  "build": [
+    {
+      "name": "a scan secret",
+      "secret": "Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_",
+      "expect": "goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_"
+    }
+  ],
+  "read": [
+    {
+      "name": "the PC's code",
+      "text": "goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_",
+      "expect": "Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_"
+    },
+    {
+      "name": "a line break the scanner kept",
+      "text": "  goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_\n",
+      "expect": "Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_"
+    },
+    {
+      "name": "a web link is not a sign-in",
+      "text": "https://example.com/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_",
+      "expect": null
+    },
+    {
+      "name": "another prefix is not a sign-in",
+      "text": "goalmaker://sign-in/phone/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_",
+      "expect": null
+    },
+    {
+      "name": "the prefix in capitals is not the PC's code",
+      "text": "GOALMAKER://SIGN-IN/PC/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_",
+      "expect": null
+    },
+    {
+      "name": "a secret one character short",
+      "text": "goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-",
+      "expect": null
+    },
+    {
+      "name": "a secret one character long",
+      "text": "goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_A",
+      "expect": null
+    },
+    {
+      "name": "plain base64 characters are not URL-safe",
+      "text": "goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM+/",
+      "expect": null
+    },
+    {
+      "name": "something after the secret",
+      "text": "goalmaker://sign-in/pc/Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_?device=PC",
+      "expect": null
+    },
+    {
+      "name": "the prefix alone",
+      "text": "goalmaker://sign-in/pc/",
+      "expect": null
+    },
+    {
+      "name": "nothing",
+      "text": "",
+      "expect": null
+    }
+  ],
+  "match": {
+    "numbers": [
+      {
+        "name": "the smallest",
+        "value": 10,
+        "expect": true
+      },
+      {
+        "name": "a usual one",
+        "value": 42,
+        "expect": true
+      },
+      {
+        "name": "the largest",
+        "value": 99,
+        "expect": true
+      },
+      {
+        "name": "one digit",
+        "value": 9,
+        "expect": false
+      },
+      {
+        "name": "three digits",
+        "value": 100,
+        "expect": false
+      },
+      {
+        "name": "below zero",
+        "value": -42,
+        "expect": false
+      }
+    ],
+    "choices": [
+      {
+        "name": "three different numbers",
+        "choices": [
+          17,
+          42,
+          88
+        ],
+        "expect": true
+      },
+      {
+        "name": "in any order",
+        "choices": [
+          88,
+          17,
+          42
+        ],
+        "expect": true
+      },
+      {
+        "name": "two the same",
+        "choices": [
+          17,
+          17,
+          88
+        ],
+        "expect": false
+      },
+      {
+        "name": "only two",
+        "choices": [
+          17,
+          42
+        ],
+        "expect": false
+      },
+      {
+        "name": "four",
+        "choices": [
+          17,
+          42,
+          88,
+          90
+        ],
+        "expect": false
+      },
+      {
+        "name": "one not two digits",
+        "choices": [
+          7,
+          42,
+          88
+        ],
+        "expect": false
+      },
+      {
+        "name": "none",
+        "choices": [],
+        "expect": false
+      }
+    ]
+  }
+}

@@ -95,6 +95,59 @@
                 </StackPanel>
             </ui:Card>
 
+            <!-- The signed-in phone scans this and approves (ADR 0020). The emailed code above stays. -->
+            <ui:Card Margin="0,16,0,0"
+                     Padding="24"
+                     DataContext="{Binding Phone}"
+                     Visibility="{Binding DataContext.HasPhone, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BoolToVisibility}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="168"
+                            Height="168"
+                            Margin="0,0,20,0"
+                            VerticalAlignment="Top"
+                            CornerRadius="8"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                        <controls:QrCode x:Name="PhoneCode"
+                                         Margin="0"
+                                         Text="{Binding QrText}"
+                                         AutomationProperties.Name="{DynamicResource SignIn.Phone.CodeName}"
+                                         Visibility="{Binding HasCode, Converter={StaticResource BoolToVisibility}}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{DynamicResource SignIn.Phone.Title}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="{Binding StepsText}"
+                                   TextWrapping="Wrap" />
+                        <!-- The match number against a QR code someone else sent (ADR 0020). -->
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding HasCode, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{DynamicResource SignIn.Phone.MatchLabel}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding MatchText}"
+                                       FontSize="40"
+                                       FontWeight="SemiBold"
+                                       AutomationProperties.Name="{Binding MatchText}"
+                                       AutomationProperties.HelpText="{DynamicResource SignIn.Phone.MatchLabel}" />
+                        </StackPanel>
+                        <TextBlock Margin="0,12,0,0"
+                                   Text="{Binding StatusText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   AutomationProperties.LiveSetting="Polite" />
+                        <ui:HyperlinkButton Margin="-8,4,0,0"
+                                            Content="{DynamicResource SignIn.Phone.NewCode}"
+                                            Command="{Binding MakeNewCodeCommand}"
+                                            Visibility="{Binding CanMakeNewCode, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
+            </ui:Card>
+
             <TextBlock Margin="4,16,0,0"
                        Text="{Binding DevBackendText}"
                        Foreground="{DynamicResource TextFillColorTertiaryBrush}" />

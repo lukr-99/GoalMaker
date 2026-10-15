@@ -175,3 +175,23 @@ answers "unavailable" and everything else works.
 3. Push migration 0019 first (`npx supabase db push`, step 2): the function counts its limits there.
 
 To change the key, set it again; to turn the chat off, `npx supabase secrets unset GEMINI_API_KEY`.
+
+## 9. Signing in on the PC with the phone
+
+The PC's QR sign-in (ADR 0020, [sign-in.md](../sign-in.md#the-pc-signs-in-with-the-phone)) needs
+migration 0028 and the `pc-sign-in` function. It needs no secret of its own: it uses the service role
+key every function already gets.
+
+```powershell
+npx supabase db push
+npx supabase functions deploy pc-sign-in --no-verify-jwt --project-ref <project ref>
+```
+
+`--no-verify-jwt` is on purpose: the PC is not signed in when it asks, so the function checks its
+own secrets instead (config.toml says the same for the local stack). Until it is deployed, the PC's
+sign-in screen says the QR code isn't available and the emailed code works as before.
+
+After deploying, open the PC's sign-in screen once. When it shows a QR code, the function sees the
+caller's address. When it says that did not work, look in the function's logs for `no_caller`: the
+project did not pass Cloudflare's `cf-connecting-ip` to the function, and the per-caller limits
+(ADR 0020) need another trusted header before QR sign-in can work.

@@ -16,6 +16,7 @@ import com.goalmaker.app.application.backup.BackupService
 import com.goalmaker.app.application.activity.ActivityLog
 import com.goalmaker.app.application.auth.AuthSession
 import com.goalmaker.app.application.connector.ConnectorLinks
+import com.goalmaker.app.application.auth.PcSignInApprovals
 import com.goalmaker.app.application.auth.DevSignIn
 import com.goalmaker.app.application.environment.BackendEnvironment
 import com.goalmaker.app.application.problems.ProblemLog
@@ -68,6 +69,7 @@ import com.goalmaker.app.data.auth.LocalOnlyAuthGateway
 import com.goalmaker.app.domain.problems.ProblemRules
 import com.goalmaker.app.data.auth.SupabaseAuthGateway
 import com.goalmaker.app.data.connector.PostgrestConnectorLinks
+import com.goalmaker.app.data.auth.PostgrestPcSignInApprovals
 import com.goalmaker.app.data.diagnostics.CrashLog
 import com.goalmaker.app.data.planning.AlarmReminderScheduler
 import com.goalmaker.app.data.planning.ReminderNotifications
@@ -288,6 +290,9 @@ class AppGraph(context: Context) {
 
     /** The Claude connector's links (docs/connector.md), read and changed online. */
     val connectorLinks: ConnectorLinks = PostgrestConnectorLinks(postgrest)
+
+    /** The phone's answer to a PC's QR sign-in (ADR 0020). */
+    val pcSignInApprovals: PcSignInApprovals = PostgrestPcSignInApprovals(postgrest)
 
     /** The server's activity log with undo (docs/activity.md), read online. */
     val activity: ActivityLog = PostgrestActivityLog(postgrest)

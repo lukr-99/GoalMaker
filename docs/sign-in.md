@@ -37,6 +37,40 @@ signing in again with the same address sends what was waiting. Signing in as som
 the replica first, and sync only ever pushes the signed-in owner's rows. Only the sign-out in
 Settings empties the device.
 
+## The PC signs in with the phone
+
+The PC's sign-in screen also shows a QR code and a two-digit number (ADR 0020). On the phone,
+**Settings → Account → Sign in on a PC** opens the scanner; after the scan the phone asks "Sign in on
+DESKTOP-1?" and shows three numbers, and tapping the one the PC shows signs the PC in as the phone's
+owner within two seconds. No email is sent and nothing is typed.
+The emailed code above stays exactly as it was, for a PC with no phone at hand.
+
+1. The PC asks the `pc-sign-in` function for a request. It gets two random secrets: the **scan
+   secret**, which goes in the QR code as `goalmaker://sign-in/pc/<secret>`
+   ([`contracts/vectors/pc-sign-in.json`](../contracts/vectors/pc-sign-in.json)), and the **pick-up
+   secret**, which never leaves the PC, and the **match number** it shows beside the code. The
+   request lives two minutes.
+2. The phone reads the PC's name and three numbers with the scan secret and sends the owner's
+   answer, both through PostgREST with the phone's own session (`pc_sign_in_look`,
+   `pc_sign_in_answer`, migration 0028). Nothing is sent before the owner taps a number or Don't
+   sign in. A number that isn't the PC's burns the request: it is how a QR code someone else sent
+   ends, since they can't put the right number on the owner's screen.
+3. The PC asks every two seconds with the pick-up secret. Once the request is approved, the function
+   claims it, asks Supabase Auth for a one-time email code for the owner who approved, without
+   mailing it, and only then marks it used. When the code can't be made the claim is let go and the
+   PC's next ask tries again. The PC signs in with the code through the same call as an emailed
+   code, so the week below starts here too.
+
+A code that ran out, or that the phone declined, is not replaced by itself: **Make a new code** on
+the PC does that, so a PC left on the sign-in screen does not keep making requests. The PC only asks
+while the sign-in screen is on show. A phone without Google Play services can't scan, and says to use
+the emailed code. The name on the phone is whatever the PC sent, so the phone says to approve only a
+code on a PC in front of you; the scanner is only inside the app, so a QR code seen anywhere else
+can't open that question. The function counts calls per caller, by a hash of the IP (an IPv6 address by its /64): six starts
+and 120 asks a minute, and three open codes at a time. It trusts only the address Cloudflare reports
+and refuses a call without one. What the server keeps and why the QR code is safe
+to show is in ADR 0020.
+
 ## The PC's week
 
 Windows keeps its session for a week and then asks for the code once more (`SignInPolicy`,

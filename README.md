@@ -9,7 +9,8 @@ spec is [docs/spec.md](docs/spec.md); the plan is [docs/roadmap.md](docs/roadmap
 **M0 to M10 are built; 1.14.0 is the latest release.** What works today, on both apps unless it
 says otherwise:
 
-- **Delivery (M0):** sign-in with an emailed 6-digit code ([docs/sign-in.md](docs/sign-in.md)),
+- **Delivery (M0):** sign-in with an emailed 6-digit code ([docs/sign-in.md](docs/sign-in.md)), or
+  on the PC by scanning its QR code with the signed-in phone (ADR 0020),
   sessions kept across restarts, a signed update channel on GitHub Releases that both apps verify
   before installing, the migration chain with full-chain, isolated and row-security tests, CI for
   every part and a tag-driven release.

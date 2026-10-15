@@ -133,6 +133,10 @@ jobs:
         working-directory: supabase/functions
         run: GOALMAKER_ASSISTANT_TEST=1 npx deno test --allow-read --allow-env --allow-net assistant/endpoint_test.ts
 
+      - name: PC sign-in by QR code end to end, with the phone's approval through PostgREST
+        working-directory: supabase/functions
+        run: GOALMAKER_PC_SIGN_IN_TEST=1 npx deno test --allow-read --allow-env --allow-net pc-sign-in/endpoint_test.ts
+
       - name: Functions log
         if: failure()
         run: cat "$RUNNER_TEMP/functions.log" || true
