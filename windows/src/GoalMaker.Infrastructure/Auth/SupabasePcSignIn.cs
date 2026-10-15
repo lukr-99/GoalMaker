@@ -24,10 +24,13 @@ public sealed class SupabasePcSignIn(HttpClient http, string baseUrl, string pub
             null => new PcSignInStart.Offline(),
             HttpStatusCode.OK when Text(body, "id") is { } id && Text(body, "scan") is { } scan
                 && Text(body, "pickup") is { } pickup && (body as JsonObject)?["expires_in"] is JsonValue seconds
-                && seconds.TryGetValue<int>(out var lifetime) && PcSignInCode.ScanSecretOf(PcSignInCode.QrText(scan)) is not null =>
-                new PcSignInStart.Started(id, scan, pickup, TimeSpan.FromSeconds(lifetime)),
+                && seconds.TryGetValue<int>(out var lifetime) && PcSignInCode.ScanSecretOf(PcSignInCode.QrText(scan)) is not null
+                && (body as JsonObject)?["match"] is JsonValue matchValue && matchValue.TryGetValue<int>(out var match)
+                && PcSignInCode.IsMatchNumber(match) =>
+                new PcSignInStart.Started(id, scan, pickup, match, TimeSpan.FromSeconds(lifetime)),
             // No function by that name: this server has no QR sign-in yet.
             HttpStatusCode.NotFound => new PcSignInStart.Unavailable(),
+            // Too many open codes, or too many calls from this network.
             HttpStatusCode.TooManyRequests => new PcSignInStart.Busy(),
             _ => new PcSignInStart.Failed(),
         };

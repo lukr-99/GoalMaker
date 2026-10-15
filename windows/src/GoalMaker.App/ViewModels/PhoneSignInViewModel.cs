@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.Localization;
@@ -7,7 +8,8 @@ namespace GoalMaker.App.ViewModels;
 
 /// <summary>
 /// The QR code on the sign-in screen (ADR 0020, docs/sign-in.md). It starts a request, shows its scan
-/// secret as a QR code and asks every two seconds whether the phone answered. An approval brings a
+/// secret as a QR code with the match number the phone must pick, and asks every two seconds whether
+/// the phone answered. An approval brings a
 /// one-time code, which signs in through the same call as an emailed code and starts the PC's week.
 /// A code that ran out, or that the phone declined, is not replaced by itself: the owner asks for a
 /// new one, so a PC left on the sign-in screen doesn't keep making requests.
@@ -28,6 +30,10 @@ public sealed partial class PhoneSignInViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCode))]
     private string? qrText;
+
+    /// <summary>The number the owner picks on the phone, shown with the code; null without one.</summary>
+    [ObservableProperty]
+    private string? matchText;
 
     [ObservableProperty]
     private string statusText = string.Empty;
@@ -77,6 +83,7 @@ public sealed partial class PhoneSignInViewModel : ObservableObject
         running?.Dispose();
         running = null;
         QrText = null;
+        MatchText = null;
     }
 
     [RelayCommand]
@@ -113,6 +120,7 @@ public sealed partial class PhoneSignInViewModel : ObservableObject
             }
 
             QrText = request.QrText;
+            MatchText = request.MatchNumber.ToString(CultureInfo.InvariantCulture);
             StatusText = strings.Get("SignIn.Phone.Waiting", (int)request.Lifetime.TotalMinutes);
             var deadline = now() + request.Lifetime;
             while (true)
@@ -131,13 +139,10 @@ public sealed partial class PhoneSignInViewModel : ObservableObject
                     case PcSignInState.Expired:
                         End("SignIn.Phone.Expired");
                         return;
-                    case PcSignInState.Failed:
-                        End("SignIn.Phone.Failed");
-                        return;
                     default:
-                        // Waiting, or offline for a moment: the next ask may get through. The phone
-                        // can't approve after the deadline, and the ask after it would have caught one
-                        // just before.
+                        // Waiting, offline for a moment, or a code the server couldn't make yet: the
+                        // approval is kept for the next ask. The phone can't approve after the
+                        // deadline, and the ask after it would have caught one just before.
                         if (now() >= deadline)
                         {
                             End("SignIn.Phone.Expired");
@@ -157,6 +162,7 @@ public sealed partial class PhoneSignInViewModel : ObservableObject
     private async Task SignInAsync(PcSignInState.Approved approved)
     {
         QrText = null;
+        MatchText = null;
         StatusText = strings.Get("SignIn.Phone.SigningIn");
         var result = await auth.VerifyCodeAsync(approved.Email, approved.Code, CancellationToken.None);
         if (result is AuthResult.Success)
@@ -173,6 +179,7 @@ public sealed partial class PhoneSignInViewModel : ObservableObject
     private void End(string key)
     {
         QrText = null;
+        MatchText = null;
         StatusText = strings.Get(key);
         CanMakeNewCode = key != "SignIn.Phone.Unavailable";
     }

@@ -24,6 +24,29 @@ public sealed class PcSignInCodeContractTests
     }
 
     [Fact]
+    public void EveryValueIsAMatchNumberOrNot()
+    {
+        foreach (var testCase in vectors.GetProperty("match").GetProperty("numbers").EnumerateArray())
+        {
+            Assert.Equal(
+                $"{testCase.GetProperty("name").GetString()}: {testCase.GetProperty("expect").GetBoolean()}",
+                $"{testCase.GetProperty("name").GetString()}: {PcSignInCode.IsMatchNumber(testCase.GetProperty("value").GetInt32())}");
+        }
+    }
+
+    [Fact]
+    public void EveryListIsThePhonesChoicesOrNot()
+    {
+        foreach (var testCase in vectors.GetProperty("match").GetProperty("choices").EnumerateArray())
+        {
+            var choices = testCase.GetProperty("choices").EnumerateArray().Select(value => value.GetInt32()).ToList();
+            Assert.Equal(
+                $"{testCase.GetProperty("name").GetString()}: {testCase.GetProperty("expect").GetBoolean()}",
+                $"{testCase.GetProperty("name").GetString()}: {PcSignInCode.IsMatchChoices(choices)}");
+        }
+    }
+
+    [Fact]
     public void EveryTextGivesUpItsSecretOrNone()
     {
         foreach (var testCase in vectors.GetProperty("read").EnumerateArray())

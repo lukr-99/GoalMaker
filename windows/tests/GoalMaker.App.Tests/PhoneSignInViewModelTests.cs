@@ -40,6 +40,7 @@ public sealed class PhoneSignInViewModelTests
         viewModel.Start();
 
         Assert.Equal("goalmaker://sign-in/pc/" + Scan, viewModel.QrText);
+        Assert.Equal("42", viewModel.MatchText);
         Assert.True(viewModel.HasCode);
         Assert.Equal("SignIn.Phone.Waiting 2", viewModel.StatusText);
         Assert.Equal(["DESKTOP-1"], server.Devices);
@@ -47,6 +48,7 @@ public sealed class PhoneSignInViewModelTests
         server.Hold.SetResult();
         await viewModel.Running;
         Assert.False(viewModel.HasCode);
+        Assert.Null(viewModel.MatchText);
     }
 
     [Fact]
@@ -81,19 +83,28 @@ public sealed class PhoneSignInViewModelTests
         Assert.Null(settings.SignedInAt);
     }
 
+    [Fact]
+    public async Task ACodeTheServerCouldNotMakeYetIsAskedForAgain()
+    {
+        // The server let the approval go when it couldn't make the code, so the next ask gets it.
+        server.States.Enqueue(new PcSignInState.Failed());
+        server.States.Enqueue(Approved());
+        var viewModel = Create();
+
+        viewModel.Start();
+        await viewModel.Running;
+
+        Assert.Equal([("me@example.com", "482913")], auth.Verified);
+        Assert.Equal(2, server.PickUps);
+    }
+
     [Theory]
     [InlineData("declined", "SignIn.Phone.Declined")]
     [InlineData("expired", "SignIn.Phone.Expired")]
-    [InlineData("failed", "SignIn.Phone.Failed")]
     public async Task AnEndHidesTheCodeAndOffersANewOne(string end, string status)
     {
         server.States.Enqueue(new PcSignInState.Waiting());
-        server.States.Enqueue(end switch
-        {
-            "declined" => new PcSignInState.Declined(),
-            "expired" => new PcSignInState.Expired(),
-            _ => new PcSignInState.Failed(),
-        });
+        server.States.Enqueue(end == "declined" ? new PcSignInState.Declined() : new PcSignInState.Expired());
         var viewModel = Create();
 
         viewModel.Start();
@@ -184,7 +195,7 @@ public sealed class PhoneSignInViewModelTests
     {
         public Queue<PcSignInState> States { get; } = new();
 
-        public PcSignInStart StartResult { get; set; } = new PcSignInStart.Started("id-1", Scan, "pickup", TimeSpan.FromMinutes(2));
+        public PcSignInStart StartResult { get; set; } = new PcSignInStart.Started("id-1", Scan, "pickup", 42, TimeSpan.FromMinutes(2));
 
         public List<string> Devices { get; } = [];
 

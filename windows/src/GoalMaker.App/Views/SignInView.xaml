@@ -125,6 +125,16 @@
                         <TextBlock Margin="0,8,0,0"
                                    Text="{Binding StepsText}"
                                    TextWrapping="Wrap" />
+                        <!-- The match number against a QR code someone else sent (ADR 0020). -->
+                        <StackPanel Margin="0,12,0,0" Visibility="{Binding HasCode, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{DynamicResource SignIn.Phone.MatchLabel}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding MatchText}"
+                                       FontSize="40"
+                                       FontWeight="SemiBold"
+                                       AutomationProperties.Name="{Binding MatchText}"
+                                       AutomationProperties.HelpText="{DynamicResource SignIn.Phone.MatchLabel}" />
+                        </StackPanel>
                         <TextBlock Margin="0,12,0,0"
                                    Text="{Binding StatusText}"
                                    TextWrapping="Wrap"

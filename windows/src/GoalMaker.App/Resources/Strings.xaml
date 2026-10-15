@@ -59,12 +59,13 @@
     <sys:String x:Key="Startup.Failed">GoalMaker could not open its data on this PC, so it cannot start.&#10;&#10;Your data is still in {0}. Starting it again is worth a try. If that does not help, move that folder aside and restore from an export.</sys:String>
     <sys:String x:Key="SignIn.Error.Other">That did not work. Try again in a moment.</sys:String>
     <sys:String x:Key="SignIn.Phone.Title">Or sign in with your phone</sys:String>
-    <sys:String x:Key="SignIn.Phone.Steps">On your phone, open GoalMaker, go to Settings and tap Sign in on a PC. Then scan this code.</sys:String>
+    <sys:String x:Key="SignIn.Phone.Steps">On your phone, open GoalMaker, go to Settings and tap Sign in on a PC. Scan this code, then pick the number below.</sys:String>
     <sys:String x:Key="SignIn.Phone.CodeName">QR code to scan with GoalMaker on your phone</sys:String>
+    <sys:String x:Key="SignIn.Phone.MatchLabel">Pick this number on your phone</sys:String>
     <sys:String x:Key="SignIn.Phone.Making">Making a code to scan...</sys:String>
     <sys:String x:Key="SignIn.Phone.Waiting">This code works for {0} minutes.</sys:String>
     <sys:String x:Key="SignIn.Phone.SigningIn">Your phone said yes. Signing in...</sys:String>
-    <sys:String x:Key="SignIn.Phone.Declined">Your phone said no, so this PC stays signed out.</sys:String>
+    <sys:String x:Key="SignIn.Phone.Declined">Your phone said no, or another number was picked, so this PC stays signed out.</sys:String>
     <sys:String x:Key="SignIn.Phone.Expired">This code ran out.</sys:String>
     <sys:String x:Key="SignIn.Phone.Unavailable">Signing in with your phone isn't set up on this server yet. Use the email code.</sys:String>
     <sys:String x:Key="SignIn.Phone.Busy">Too many PCs are asking right now. Try again in a minute.</sys:String>

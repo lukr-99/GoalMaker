@@ -12,7 +12,7 @@ public sealed class SupabasePcSignInTests
 {
     private const string Scan = "Qx3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_";
     private const string Pickup = "Ab3mT9vB2kLw8RfN1pZc7YhJ4sDg6EaU0oKiVt5nM-_";
-    private static readonly PcSignInStart.Started Request = new("c0ffee00-0000-4000-8000-000000000001", Scan, Pickup, TimeSpan.FromMinutes(2));
+    private static readonly PcSignInStart.Started Request = new("c0ffee00-0000-4000-8000-000000000001", Scan, Pickup, 42, TimeSpan.FromMinutes(2));
     private readonly FakeServer server = new();
 
     private SupabasePcSignIn Client() => new(new HttpClient(server), "http://127.0.0.1:55321/", "publishable");
@@ -20,7 +20,7 @@ public sealed class SupabasePcSignInTests
     [Fact]
     public async Task StartingSendsTheNameWithOnlyThePublishableKey()
     {
-        server.Respond(HttpStatusCode.OK, $$"""{"id":"{{Request.Id}}","scan":"{{Scan}}","pickup":"{{Pickup}}","expires_in":120}""");
+        server.Respond(HttpStatusCode.OK, $$"""{"id":"{{Request.Id}}","scan":"{{Scan}}","pickup":"{{Pickup}}","match":42,"expires_in":120}""");
 
         var started = await Client().StartAsync("DESKTOP-1", TestContext.Current.CancellationToken);
 
@@ -42,10 +42,13 @@ public sealed class SupabasePcSignInTests
         Assert.IsType(expected, await Client().StartAsync("PC", TestContext.Current.CancellationToken));
     }
 
-    [Fact]
-    public async Task AStartWithABadSecretIsAFailure()
+    [Theory]
+    [InlineData("short", "42")]
+    [InlineData(Scan, "7")]
+    [InlineData(Scan, "null")]
+    public async Task AStartWithABadSecretOrMatchNumberIsAFailure(string scan, string match)
     {
-        server.Respond(HttpStatusCode.OK, $$"""{"id":"x","scan":"short","pickup":"{{Pickup}}","expires_in":120}""");
+        server.Respond(HttpStatusCode.OK, $$"""{"id":"x","scan":"{{scan}}","pickup":"{{Pickup}}","match":{{match}},"expires_in":120}""");
         Assert.IsType<PcSignInStart.Failed>(await Client().StartAsync("PC", TestContext.Current.CancellationToken));
     }
 
