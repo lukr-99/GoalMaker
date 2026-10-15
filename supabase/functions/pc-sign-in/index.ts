@@ -1,34 +1,42 @@
 // The PC's QR sign-in (ADR 0020, docs/sign-in.md). The PC is not signed in, so the gateway lets the
 // call through without a session (verify_jwt = false in config.toml) and this function checks nothing
-// but the request's own secrets. Two calls:
+// but the request's own secrets, with per-caller limits. Two calls:
 //
 //   {"action": "start", "device": "DESKTOP-1"}
-//     -> {"id", "scan", "pickup", "expires_in"}: the scan secret goes in the QR code, the pick-up
-//        secret stays on the PC.
+//     -> {"id", "scan", "pickup", "match", "expires_in"}: the scan secret goes in the QR code, the
+//        match number is shown beside it, the pick-up secret stays on the PC.
 //   {"action": "pick_up", "id", "pickup"}
-//     -> {"state": "waiting" | "declined" | "expired"}, or once, after the phone approved it,
-//        {"state": "approved", "email", "code"}: a one-time email code for the owner who approved,
-//        made by Supabase Auth without sending any mail. The PC signs in with it like an emailed code.
+//     -> {"state": "waiting" | "declined" | "expired"}, or once, after the phone approved it with the
+//        right number, {"state": "approved", "email", "code"}: a one-time email code for the owner who
+//        approved, made by Supabase Auth without sending any mail. The PC signs in with it like an
+//        emailed code. The approval is used up only once the code is made.
 //
 // The phone approves through PostgREST with its own session (pc_sign_in_answer, 0028), never here.
+// The logic is in _shared/pcSignIn/handler.ts; this file wires the database and Supabase Auth.
 import { postgres } from "../_shared/deps.ts";
-import { readRequest } from "../_shared/pcSignIn/pcSignIn.ts";
-
-const LIFETIME_SECONDS = 120;
-const MAX_OPEN = 20;
+import { handle, type PcSignInStore } from "../_shared/pcSignIn/handler.ts";
 
 const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 2, idle_timeout: 20 });
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
-}
-
-function failure(status: number, error: string, message: string): Response {
-  return json(status, { error, message });
-}
+const store: PcSignInStore = {
+  async allow(caller, kind, perMinute) {
+    const [row] = await sql`select public.pc_sign_in_allow(${caller}, ${kind}, ${perMinute}) as allowed`;
+    return row.allowed === true;
+  },
+  async start(device, caller, lifetimeSeconds) {
+    const [made] = await sql`
+      select id, scan_secret, pickup_secret, match_number
+      from public.pc_sign_in_start(${device}, ${caller}, ${`${lifetimeSeconds} seconds`}::interval)`;
+    return made ? { id: made.id, scan: made.scan_secret, pickup: made.pickup_secret, match: made.match_number } : null;
+  },
+  async pickUp(id, pickup) {
+    const [found] = await sql`select state, email from public.pc_sign_in_pick_up(${id}, ${pickup})`;
+    return { state: found.state, email: found.email };
+  },
+  async finish(id, pickup, made) {
+    await sql`select public.pc_sign_in_finish(${id}, ${pickup}, ${made})`;
+  },
+};
 
 /** A one-time email code for an owner, from Supabase Auth's admin API. Nothing is mailed. */
 async function codeFor(email: string): Promise<string> {
@@ -47,37 +55,4 @@ async function codeFor(email: string): Promise<string> {
   return code;
 }
 
-Deno.serve(async (request) => {
-  if (request.method !== "POST") return failure(405, "bad_request", "Send the call with POST.");
-
-  const call = readRequest(await request.json().catch(() => null));
-  if (call === null) {
-    return failure(
-      400,
-      "bad_request",
-      'Send {"action": "start", "device": "..."} or {"action": "pick_up", "id": "...", "pickup": "..."}.',
-    );
-  }
-
-  try {
-    if (call.action === "start") {
-      const [made] = await sql`
-        select id, scan_secret, pickup_secret
-        from public.pc_sign_in_start(${call.device}, ${`${LIFETIME_SECONDS} seconds`}::interval, ${MAX_OPEN})`;
-      if (!made) return failure(429, "busy", "Too many PCs are asking at once. Try again in a minute.");
-      return json(200, {
-        id: made.id,
-        scan: made.scan_secret,
-        pickup: made.pickup_secret,
-        expires_in: LIFETIME_SECONDS,
-      });
-    }
-
-    const [found] = await sql`select state, email from public.pc_sign_in_pick_up(${call.id}, ${call.pickup})`;
-    if (found.state !== "approved") return json(200, { state: found.state });
-    return json(200, { state: "approved", email: found.email, code: await codeFor(found.email) });
-  } catch (error) {
-    console.error("pc-sign-in failed", error);
-    return failure(502, "failed", "The sign-in couldn't go through just now. Make a new code.");
-  }
-});
+Deno.serve((request) => handle(request, store, codeFor));

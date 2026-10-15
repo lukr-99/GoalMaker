@@ -42,10 +42,19 @@ async function sign(claims: Record<string, unknown>): Promise<string> {
   return `${header}.${payload}.${base64url(new Uint8Array(signature))}`;
 }
 
+// Every run is a caller of its own, so the per-caller limits start fresh. The local stack has no
+// Cloudflare in front, so the header passes through as the hosted one would set it.
+const caller = `192.0.2.${Math.floor(Math.random() * 250) + 1}-${crypto.randomUUID()}`;
+
 async function post(path: string, body: unknown, token: string): Promise<{ status: number; body: Json }> {
   const response = await fetch(`${api}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", apikey: anonKey, authorization: `Bearer ${token}` },
+    headers: {
+      "content-type": "application/json",
+      apikey: anonKey,
+      authorization: `Bearer ${token}`,
+      "cf-connecting-ip": caller,
+    },
     body: JSON.stringify(body),
   });
   const text = await response.text();
@@ -84,11 +93,12 @@ Deno.test({
 
       const started = await post("/functions/v1/pc-sign-in", { action: "start", device: "TEST-PC" }, anon);
       assertEquals(started.status, 200, JSON.stringify(started.body));
-      const { id, scan, pickup } = started.body;
+      const { id, scan, pickup, match } = started.body;
       const pickUp = () => post("/functions/v1/pc-sign-in", { action: "pick_up", id, pickup }, anon);
 
       await t.step("the PC waits until the phone answers", async () => {
         assertEquals(started.body.expires_in, 120);
+        assert(match >= 10 && match <= 99, String(match));
         assertEquals((await pickUp()).body, { state: "waiting" });
       });
 
@@ -98,7 +108,11 @@ Deno.test({
       });
 
       await t.step("without a session the phone can't approve", async () => {
-        const answer = await post("/rest/v1/rpc/pc_sign_in_answer", { scan_secret: scan, approve: true }, anon);
+        const answer = await post(
+          "/rest/v1/rpc/pc_sign_in_answer",
+          { scan_secret: scan, approve: true, picked: match },
+          anon,
+        );
         assertEquals(answer.status, 401, JSON.stringify(answer.body));
       });
 
@@ -106,8 +120,14 @@ Deno.test({
         const look = await post("/rest/v1/rpc/pc_sign_in_look", { scan_secret: scan }, owner);
         assertEquals(look.status, 200, JSON.stringify(look.body));
         assertEquals(look.body[0].device, "TEST-PC");
-        const answer = await post("/rest/v1/rpc/pc_sign_in_answer", { scan_secret: scan, approve: true }, owner);
-        assertEquals(answer.body, true);
+        assertEquals(look.body[0].choices.length, 3);
+        assert(look.body[0].choices.includes(match));
+        const answer = await post(
+          "/rest/v1/rpc/pc_sign_in_answer",
+          { scan_secret: scan, approve: true, picked: match },
+          owner,
+        );
+        assertEquals(answer.body, "approved");
       });
 
       let code = "";
@@ -136,7 +156,7 @@ Deno.test({
           { scan_secret: next.body.scan, approve: false },
           owner,
         );
-        assertEquals(answer.body, true);
+        assertEquals(answer.body, "declined");
         const picked = await post("/functions/v1/pc-sign-in", {
           action: "pick_up",
           id: next.body.id,
@@ -144,8 +164,35 @@ Deno.test({
         }, anon);
         assertEquals(picked.body, { state: "declined" });
       });
+
+      await t.step("a wrong number burns the request", async () => {
+        const next = await post("/functions/v1/pc-sign-in", { action: "start", device: "PHISHED-PC" }, anon);
+        const wrong = next.body.match === 10 ? 11 : 10;
+        const answer = await post(
+          "/rest/v1/rpc/pc_sign_in_answer",
+          { scan_secret: next.body.scan, approve: true, picked: wrong },
+          owner,
+        );
+        assertEquals(answer.body, "mismatch");
+        const again = await post(
+          "/rest/v1/rpc/pc_sign_in_answer",
+          { scan_secret: next.body.scan, approve: true, picked: next.body.match },
+          owner,
+        );
+        assertEquals(again.body, "gone");
+      });
+
+      await t.step("one caller holds at most three open codes", async () => {
+        const open = [];
+        for (let i = 0; i < 3; i++) {
+          open.push(await post("/functions/v1/pc-sign-in", { action: "start", device: "BUSY-PC" }, anon));
+        }
+        assertEquals(open.map((answer) => answer.status), [200, 200, 200]);
+        const fourth = await post("/functions/v1/pc-sign-in", { action: "start", device: "BUSY-PC" }, anon);
+        assertEquals(fourth.status, 429, JSON.stringify(fourth.body));
+      });
     } finally {
-      await sql`delete from public.pc_sign_ins where device in ('TEST-PC', 'OTHER-PC')`;
+      await sql`delete from public.pc_sign_ins where device in ('TEST-PC', 'OTHER-PC', 'PHISHED-PC', 'BUSY-PC')`;
       await sql`delete from auth.users where id = ${OWNER}`;
       await sql.end();
     }

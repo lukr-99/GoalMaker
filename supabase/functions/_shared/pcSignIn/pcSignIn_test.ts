@@ -1,5 +1,15 @@
-import { assertEquals } from "jsr:@std/assert@1.0.13";
-import { deviceName, MAX_DEVICE, qrText, readRequest, scanSecretOf } from "./pcSignIn.ts";
+import { assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert@1.0.13";
+import {
+  callerAddress,
+  callerHash,
+  deviceName,
+  isMatchChoices,
+  isMatchNumber,
+  MAX_DEVICE,
+  qrText,
+  readRequest,
+  scanSecretOf,
+} from "./pcSignIn.ts";
 
 const vectors = JSON.parse(
   await Deno.readTextFile(new URL("../../../../contracts/vectors/pc-sign-in.json", import.meta.url)),
@@ -15,6 +25,15 @@ Deno.test("the QR text the PC builds (contracts/vectors/pc-sign-in.json)", () =>
 Deno.test("the scan secret the phone reads (contracts/vectors/pc-sign-in.json)", () => {
   for (const vector of vectors.read) {
     assertEquals(scanSecretOf(vector.text), vector.expect, vector.name);
+  }
+});
+
+Deno.test("match numbers and the phone's choices (contracts/vectors/pc-sign-in.json)", () => {
+  for (const vector of vectors.match.numbers) {
+    assertEquals(isMatchNumber(vector.value), vector.expect, vector.name);
+  }
+  for (const vector of vectors.match.choices) {
+    assertEquals(isMatchChoices(vector.choices), vector.expect, vector.name);
   }
 });
 
@@ -35,4 +54,20 @@ Deno.test("the function knows two calls and nothing else", () => {
   assertEquals(readRequest({ action: "pick_up", id, pickup: "short" }), null);
   assertEquals(readRequest({ action: "approve", id, pickup: SECRET }), null);
   assertEquals(readRequest(null), null);
+});
+
+Deno.test("the caller is Cloudflare's address first, then the first forwarded one", () => {
+  assertEquals(
+    callerAddress(new Headers({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" })),
+    "203.0.113.7",
+  );
+  assertEquals(callerAddress(new Headers({ "x-forwarded-for": " 198.51.100.1, 10.0.0.2" })), "198.51.100.1");
+  assertEquals(callerAddress(new Headers()), "unknown");
+});
+
+Deno.test("only a hash of the caller's address is kept", async () => {
+  const hash = await callerHash("203.0.113.7");
+  assertMatch(hash, /^[0-9a-f]{64}$/);
+  assertEquals(await callerHash("203.0.113.7"), hash);
+  assertNotEquals(await callerHash("203.0.113.8"), hash);
 });

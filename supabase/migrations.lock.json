@@ -28,6 +28,6 @@
     "0025_wants_needs.sql": "aa1b289881a3afbd6b35e60ece26e9eaad5d101cae11afab892ff5fb028e76b3",
     "0026_calendar_events.sql": "bb5412b95ed36ca956993bf30bd85ef205e571c678dc89b747453f50745deb71",
     "0027_project_item_ids.sql": "bdaab234d2679fe4e3ccf0f6fbf16cf60521ee13f54c1922516c41be97281cf8",
-    "0028_pc_sign_ins.sql": "0339bc6fe1841b36ae07722305dc344cf29339de66dec43065d8f6feb46d3712"
+    "0028_pc_sign_ins.sql": "6fed69ef4b10b9b2efeeaebaa7eadc5819ca6747605506922d24ec1a7c9be081"
   }
 }
