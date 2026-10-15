@@ -42,9 +42,11 @@ async function sign(claims: Record<string, unknown>): Promise<string> {
   return `${header}.${payload}.${base64url(new Uint8Array(signature))}`;
 }
 
-// Every run is a caller of its own, so the per-caller limits start fresh. The local stack has no
-// Cloudflare in front, so the header passes through as the hosted one would set it.
-const caller = `192.0.2.${Math.floor(Math.random() * 250) + 1}-${crypto.randomUUID()}`;
+// Every run is a caller of its own (an IPv6 /64 of the documentation range), so the per-caller limits
+// start fresh. The local stack has no Cloudflare in front, so the header passes through as the hosted
+// one would set it.
+const hex = () => Math.floor(Math.random() * 0x10000).toString(16);
+const caller = `2001:db8:${hex()}:${hex()}::1`;
 
 async function post(path: string, body: unknown, token: string): Promise<{ status: number; body: Json }> {
   const response = await fetch(`${api}${path}`, {

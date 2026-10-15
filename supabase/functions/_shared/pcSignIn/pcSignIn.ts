@@ -59,19 +59,68 @@ export function readRequest(body: unknown): PcSignInRequest | null {
 }
 
 /**
- * Who is calling, for the per-caller limits. The hosted project sits behind Cloudflare, which sets
- * cf-connecting-ip itself and drops one a client sends. Without it (the local stack) the first
- * x-forwarded-for entry stands in. Nothing else is known about the caller, so all others share one.
+ * The caller's address, for the per-caller limits, or null when there is none to trust. The hosted
+ * project sits behind Cloudflare, which sets cf-connecting-ip itself and drops one a client sends,
+ * so that is the only header trusted there; x-forwarded-for is whatever the client wrote. On the
+ * local stack ([localStack]) nothing is in front but the gateway, which adds the address it saw to
+ * x-forwarded-for, so a missing cf-connecting-ip falls back to that, and only there.
  */
-export function callerAddress(headers: Headers): string {
+export function callerAddress(headers: Headers, localStack: boolean): string | null {
   const cloudflare = headers.get("cf-connecting-ip")?.trim();
   if (cloudflare) return cloudflare;
-  const forwarded = headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || "unknown";
+  if (!localStack) return null;
+  return headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 }
 
-/** The caller as the database keeps it: a SHA-256 hash of the address, never the address. */
-export async function callerHash(address: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`pc-sign-in:${address}`));
+/** An IPv4 address as four numbers, or null. */
+function ipv4Of(text: string): number[] | null {
+  const parts = text.split(".");
+  if (parts.length !== 4 || !parts.every((part) => /^\d{1,3}$/.test(part))) return null;
+  const numbers = parts.map(Number);
+  return numbers.every((number) => number <= 255) ? numbers : null;
+}
+
+/** An IPv6 address as eight 16-bit groups, or null. Takes "::", a zone and a dotted IPv4 tail. */
+function ipv6Of(text: string): number[] | null {
+  let address = text.replace(/^\[|\]$/g, "").replace(/%.*$/, "").toLowerCase();
+  const tail = /:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(address);
+  if (tail) {
+    const v4 = ipv4Of(tail[1]);
+    if (v4 === null) return null;
+    const high = ((v4[0] << 8) | v4[1]).toString(16);
+    const low = ((v4[2] << 8) | v4[3]).toString(16);
+    address = `${address.slice(0, tail.index)}:${high}:${low}`;
+  }
+  const halves = address.split("::");
+  if (halves.length > 2) return null;
+  const groups = (half: string) => half === "" ? [] : half.split(":");
+  const head = groups(halves[0]);
+  const rest = halves.length === 2 ? groups(halves[1]) : [];
+  const missing = 8 - head.length - rest.length;
+  if (halves.length === 2 ? missing < 1 : missing !== 0) return null;
+  const all = [...head, ...Array(halves.length === 2 ? missing : 0).fill("0"), ...rest];
+  if (!all.every((group) => /^[0-9a-f]{1,4}$/.test(group))) return null;
+  return all.map((group) => parseInt(group, 16));
+}
+
+/**
+ * What the limits count as one caller: an IPv4 address whole, an IPv6 address by its /64, since one
+ * home or server gets a whole /64 and can take a new address from it for every call. An IPv4 address
+ * written as IPv6 (::ffff:a.b.c.d) is that IPv4 address. Null for anything that isn't an address.
+ */
+export function callerKey(address: string): string | null {
+  const v4 = ipv4Of(address.trim());
+  if (v4 !== null) return `ipv4:${v4.join(".")}`;
+  const v6 = ipv6Of(address.trim());
+  if (v6 === null) return null;
+  if (v6.slice(0, 5).every((group) => group === 0) && v6[5] === 0xffff) {
+    return `ipv4:${[v6[6] >> 8, v6[6] & 0xff, v6[7] >> 8, v6[7] & 0xff].join(".")}`;
+  }
+  return `ipv6:${v6.slice(0, 4).map((group) => group.toString(16).padStart(4, "0")).join(":")}::/64`;
+}
+
+/** The caller as the database keeps it: a SHA-256 hash of its key, never the address. */
+export async function callerHash(key: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`pc-sign-in:${key}`));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }

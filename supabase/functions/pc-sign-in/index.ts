@@ -14,6 +14,7 @@
 // The phone approves through PostgREST with its own session (pc_sign_in_answer, 0028), never here.
 // The logic is in _shared/pcSignIn/handler.ts; this file wires the database and Supabase Auth.
 import { postgres } from "../_shared/deps.ts";
+import { onLocalStack } from "../_shared/assistant/providerChoice.ts";
 import { handle, type PcSignInStore } from "../_shared/pcSignIn/handler.ts";
 
 const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 2, idle_timeout: 20 });
@@ -55,4 +56,7 @@ async function codeFor(email: string): Promise<string> {
   return code;
 }
 
-Deno.serve((request) => handle(request, store, codeFor));
+// Only the local stack may count callers by the gateway's x-forwarded-for (callerAddress).
+const localStack = onLocalStack(Deno.env.get("SUPABASE_URL"));
+
+Deno.serve((request) => handle(request, store, codeFor, localStack));

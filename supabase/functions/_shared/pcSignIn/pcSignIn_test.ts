@@ -2,6 +2,7 @@ import { assertEquals, assertMatch, assertNotEquals } from "jsr:@std/assert@1.0.
 import {
   callerAddress,
   callerHash,
+  callerKey,
   deviceName,
   isMatchChoices,
   isMatchNumber,
@@ -56,18 +57,52 @@ Deno.test("the function knows two calls and nothing else", () => {
   assertEquals(readRequest(null), null);
 });
 
-Deno.test("the caller is Cloudflare's address first, then the first forwarded one", () => {
-  assertEquals(
-    callerAddress(new Headers({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" })),
-    "203.0.113.7",
-  );
-  assertEquals(callerAddress(new Headers({ "x-forwarded-for": " 198.51.100.1, 10.0.0.2" })), "198.51.100.1");
-  assertEquals(callerAddress(new Headers()), "unknown");
+Deno.test("the hosted project trusts only Cloudflare's address", () => {
+  const both = new Headers({ "cf-connecting-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1" });
+  assertEquals(callerAddress(both, false), "203.0.113.7");
+  assertEquals(callerAddress(new Headers({ "x-forwarded-for": "198.51.100.1" }), false), null);
+  assertEquals(callerAddress(new Headers(), false), null);
 });
 
-Deno.test("only a hash of the caller's address is kept", async () => {
-  const hash = await callerHash("203.0.113.7");
+Deno.test("the local stack may fall back to the gateway's forwarded address", () => {
+  assertEquals(callerAddress(new Headers({ "x-forwarded-for": " 198.51.100.1, 10.0.0.2" }), true), "198.51.100.1");
+  assertEquals(callerAddress(new Headers({ "cf-connecting-ip": "203.0.113.7" }), true), "203.0.113.7");
+  assertEquals(callerAddress(new Headers(), true), null);
+});
+
+Deno.test("an IPv4 caller is its whole address", () => {
+  assertEquals(callerKey("203.0.113.7"), "ipv4:203.0.113.7");
+  assertNotEquals(callerKey("203.0.113.7"), callerKey("203.0.113.8"));
+  assertEquals(callerKey("256.0.0.1"), null);
+  assertEquals(callerKey("1.2.3"), null);
+});
+
+Deno.test("an IPv6 caller is its /64, however it is written", () => {
+  const key = "ipv6:2001:0db8:0001:0002::/64";
+  assertEquals(callerKey("2001:db8:1:2::1"), key);
+  assertEquals(callerKey("2001:db8:1:2:aaaa:bbbb:cccc:dddd"), key);
+  assertEquals(callerKey("2001:0DB8:0001:0002:0000:0000:0000:0042"), key);
+  assertEquals(callerKey("[2001:db8:1:2::9]"), key);
+  assertEquals(callerKey("2001:db8:1:2::9%eth0"), key);
+  assertNotEquals(callerKey("2001:db8:1:3::1"), key);
+  assertEquals(callerKey("::1"), "ipv6:0000:0000:0000:0000::/64");
+});
+
+Deno.test("an IPv4 address written as IPv6 is that IPv4 address", () => {
+  assertEquals(callerKey("::ffff:203.0.113.7"), "ipv4:203.0.113.7");
+  assertEquals(callerKey("::FFFF:cb00:7107"), "ipv4:203.0.113.7");
+  assertEquals(callerKey("0:0:0:0:0:ffff:203.0.113.7"), "ipv4:203.0.113.7");
+});
+
+Deno.test("anything that isn't an address is no caller", () => {
+  for (const text of ["", "unknown", "2001:db8::1::2", "1:2:3:4:5:6:7:8:9", "2001:db8:1:2::g", "::ffff:999.0.0.1"]) {
+    assertEquals(callerKey(text), null, text);
+  }
+});
+
+Deno.test("only a hash of the caller's key is kept", async () => {
+  const hash = await callerHash("ipv4:203.0.113.7");
   assertMatch(hash, /^[0-9a-f]{64}$/);
-  assertEquals(await callerHash("203.0.113.7"), hash);
-  assertNotEquals(await callerHash("203.0.113.8"), hash);
+  assertEquals(await callerHash("ipv4:203.0.113.7"), hash);
+  assertNotEquals(await callerHash("ipv4:203.0.113.8"), hash);
 });

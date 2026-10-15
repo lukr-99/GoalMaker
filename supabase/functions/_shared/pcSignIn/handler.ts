@@ -1,6 +1,6 @@
 // The pc-sign-in function's calls (ADR 0020), over a store and a code maker so the tests can stand in
 // for the database and Supabase Auth. index.ts wires the real ones.
-import { callerAddress, callerHash, readRequest } from "./pcSignIn.ts";
+import { callerAddress, callerHash, callerKey, readRequest } from "./pcSignIn.ts";
 
 export const LIFETIME_SECONDS = 120;
 /** Starts a caller may make in a minute. A PC on its sign-in screen makes one every two minutes. */
@@ -44,7 +44,16 @@ function failure(status: number, error: string, message: string, headers: Record
   return json(status, { error, message }, headers);
 }
 
-export async function handle(request: Request, store: PcSignInStore, makeCode: CodeMaker): Promise<Response> {
+/**
+ * Answers one call. [localStack] is true only on the local stack (onLocalStack), where the gateway's
+ * x-forwarded-for may stand in for Cloudflare's address.
+ */
+export async function handle(
+  request: Request,
+  store: PcSignInStore,
+  makeCode: CodeMaker,
+  localStack = false,
+): Promise<Response> {
   if (request.method !== "POST") return failure(405, "bad_request", "Send the call with POST.");
 
   const call = readRequest(await request.json().catch(() => null));
@@ -56,8 +65,16 @@ export async function handle(request: Request, store: PcSignInStore, makeCode: C
     );
   }
 
+  // Fail closed: without an address to count, no call goes through, rather than sharing one bucket.
+  const address = callerAddress(request.headers, localStack);
+  const key = address === null ? null : callerKey(address);
+  if (key === null) {
+    console.error(`pc-sign-in refused a ${call.action} without a caller address it can trust`);
+    return failure(403, "no_caller", "The server couldn't tell where this call came from, so it didn't take it.");
+  }
+
   try {
-    const caller = await callerHash(callerAddress(request.headers));
+    const caller = await callerHash(key);
     const limit = call.action === "start" ? STARTS_PER_MINUTE : PICK_UPS_PER_MINUTE;
     if (!await store.allow(caller, call.action, limit)) {
       return failure(429, "rate_limited", "Too many calls from here. Wait a minute.", { "Retry-After": "60" });
