@@ -8,13 +8,16 @@ enum class PcSignInStep {
     /** Asking the server which PC the code belongs to, or sending the answer. */
     CHECKING,
 
-    /** "Sign in on DESKTOP-1?" with Sign in and Don't sign in. */
+    /** "Sign in on DESKTOP-1?" with the three numbers to pick from and Don't sign in. */
     ASK,
 
     /** Approved: the PC signs itself in within a couple of seconds. */
     APPROVED,
 
     DECLINED,
+
+    /** The number picked was not the PC's, so that code no longer works. */
+    MISMATCH,
 
     /** The scanned code is not a GoalMaker PC sign-in. */
     NOT_A_CODE,

@@ -2,6 +2,7 @@ package com.goalmaker.app.ui.pcsignin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.goalmaker.app.application.auth.PcSignInAnswer
 import com.goalmaker.app.application.auth.PcSignInApprovals
 import com.goalmaker.app.application.sync.RemoteRejectedException
 import com.goalmaker.app.application.sync.RemoteUnavailableException
@@ -16,8 +17,9 @@ import kotlinx.coroutines.withContext
 
 /**
  * Signing in on a PC (ADR 0020): the owner scans the QR code on the PC's sign-in screen, the screen
- * asks which PC it is, and the owner approves or declines. Nothing is sent before the owner taps one
- * of the two, and the scan secret is kept only in this view model.
+ * says which PC it is, and the owner picks the number the PC shows, or declines. A wrong number burns
+ * the code on the server. Nothing is sent before the owner taps, and the scan secret is kept only in
+ * this view model.
  */
 class PcSignInViewModel(
     private val approvals: PcSignInApprovals,
@@ -39,17 +41,19 @@ class PcSignInViewModel(
         scanSecret = secret
         call {
             val request = withContext(io) { approvals.look(secret) }
-            state.value = if (request == null) {
-                PcSignInUiState(PcSignInStep.GONE)
-            } else {
-                PcSignInUiState(PcSignInStep.ASK, request.device)
+            state.value = when {
+                request == null -> PcSignInUiState(PcSignInStep.GONE)
+                // Without three numbers to pick from there is nothing safe to ask.
+                !PcSignInCode.isMatchChoices(request.choices) -> PcSignInUiState(PcSignInStep.FAILED, request.device)
+                else -> PcSignInUiState(PcSignInStep.ASK, request.device, request.choices)
             }
         }
     }
 
-    fun approve() = answer(approve = true)
+    /** The owner picked [number] as the one the PC shows. */
+    fun pick(number: Int) = answer(approve = true, picked = number)
 
-    fun decline() = answer(approve = false)
+    fun decline() = answer(approve = false, picked = null)
 
     /** The scanner could not start on this phone. */
     fun scannerUnavailable() {
@@ -63,17 +67,20 @@ class PcSignInViewModel(
         state.value = PcSignInUiState()
     }
 
-    private fun answer(approve: Boolean) {
+    private fun answer(approve: Boolean, picked: Int?) {
         val secret = scanSecret ?: return
         if (state.value.step != PcSignInStep.ASK) return
+        if (approve && picked !in state.value.choices) return
         val device = state.value.device
         call {
-            val answered = withContext(io) { approvals.answer(secret, approve) }
+            val answer = withContext(io) { approvals.answer(secret, approve, picked) }
             scanSecret = null
-            val step = when {
-                !answered -> PcSignInStep.GONE
-                approve -> PcSignInStep.APPROVED
-                else -> PcSignInStep.DECLINED
+            val step = when (answer) {
+                PcSignInAnswer.APPROVED -> PcSignInStep.APPROVED
+                PcSignInAnswer.DECLINED -> PcSignInStep.DECLINED
+                PcSignInAnswer.MISMATCH -> PcSignInStep.MISMATCH
+                PcSignInAnswer.GONE -> PcSignInStep.GONE
+                PcSignInAnswer.NO_EMAIL -> PcSignInStep.FAILED
             }
             state.value = PcSignInUiState(step, device)
         }

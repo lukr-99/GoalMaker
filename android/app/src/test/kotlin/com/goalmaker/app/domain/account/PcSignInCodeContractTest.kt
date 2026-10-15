@@ -5,6 +5,8 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -25,6 +27,25 @@ class PcSignInCodeContractTest {
     fun `every secret builds its text`() {
         cases("build").forEach { case ->
             assertEquals(case.text("name"), case.text("expect"), PcSignInCode.qrText(case.text("secret")!!))
+        }
+    }
+
+    @Test
+    fun `every value is a match number or not`() {
+        vectors.getValue("match").jsonObject.getValue("numbers").jsonArray.map { it.jsonObject }.forEach { case ->
+            assertEquals(
+                case.text("name"),
+                case.getValue("expect").jsonPrimitive.boolean,
+                PcSignInCode.isMatchNumber(case.getValue("value").jsonPrimitive.int),
+            )
+        }
+    }
+
+    @Test
+    fun `every list is the phone's choices or not`() {
+        vectors.getValue("match").jsonObject.getValue("choices").jsonArray.map { it.jsonObject }.forEach { case ->
+            val choices = case.getValue("choices").jsonArray.map { it.jsonPrimitive.int }
+            assertEquals(case.text("name"), case.getValue("expect").jsonPrimitive.boolean, PcSignInCode.isMatchChoices(choices))
         }
     }
 

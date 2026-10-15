@@ -1,5 +1,6 @@
 package com.goalmaker.app.ui.pcsignin
 
+import com.goalmaker.app.application.auth.PcSignInAnswer
 import com.goalmaker.app.application.auth.PcSignInApprovals
 import com.goalmaker.app.application.auth.PcSignInRequest
 import com.goalmaker.app.application.sync.RemoteUnavailableException
@@ -19,11 +20,13 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class PcSignInViewModelTest {
     private class FakeApprovals : PcSignInApprovals {
-        var request: PcSignInRequest? = PcSignInRequest("DESKTOP-1", Instant.EPOCH, Instant.EPOCH.plusSeconds(120))
-        var answered = true
+        var request: PcSignInRequest? =
+            PcSignInRequest("DESKTOP-1", Instant.EPOCH, Instant.EPOCH.plusSeconds(120), listOf(17, 42, 88))
+        var match = 42
+        var gone = false
         var offline = false
         val looked = mutableListOf<String>()
-        val answers = mutableListOf<Pair<String, Boolean>>()
+        val answers = mutableListOf<Triple<String, Boolean, Int?>>()
 
         override suspend fun look(scanSecret: String): PcSignInRequest? {
             if (offline) throw RemoteUnavailableException("offline")
@@ -31,10 +34,15 @@ class PcSignInViewModelTest {
             return request
         }
 
-        override suspend fun answer(scanSecret: String, approve: Boolean): Boolean {
+        override suspend fun answer(scanSecret: String, approve: Boolean, picked: Int?): PcSignInAnswer {
             if (offline) throw RemoteUnavailableException("offline")
-            answers += scanSecret to approve
-            return answered
+            answers += Triple(scanSecret, approve, picked)
+            return when {
+                gone -> PcSignInAnswer.GONE
+                !approve -> PcSignInAnswer.DECLINED
+                picked != match -> PcSignInAnswer.MISMATCH
+                else -> PcSignInAnswer.APPROVED
+            }
         }
     }
 
@@ -55,20 +63,52 @@ class PcSignInViewModelTest {
 
         viewModel.scanned("goalmaker://sign-in/pc/$SECRET\n")
 
-        assertEquals(PcSignInUiState(PcSignInStep.ASK, "DESKTOP-1"), viewModel.uiState.value)
+        assertEquals(PcSignInUiState(PcSignInStep.ASK, "DESKTOP-1", listOf(17, 42, 88)), viewModel.uiState.value)
         assertEquals(listOf(SECRET), approvals.looked)
         assertTrue(approvals.answers.isEmpty())
     }
 
     @Test
-    fun `approving signs the PC in as this owner`() {
+    fun `picking the PC's number signs it in as this owner`() {
         val viewModel = viewModel()
         viewModel.scanned(CODE)
 
-        viewModel.approve()
+        viewModel.pick(42)
 
         assertEquals(PcSignInUiState(PcSignInStep.APPROVED, "DESKTOP-1"), viewModel.uiState.value)
-        assertEquals(listOf(SECRET to true), approvals.answers)
+        assertEquals(listOf(Triple(SECRET, true, 42)), approvals.answers)
+    }
+
+    @Test
+    fun `picking another number says the code no longer works`() {
+        val viewModel = viewModel()
+        viewModel.scanned(CODE)
+
+        viewModel.pick(17)
+
+        assertEquals(PcSignInStep.MISMATCH, viewModel.uiState.value.step)
+        assertEquals(listOf(Triple(SECRET, true, 17)), approvals.answers)
+    }
+
+    @Test
+    fun `a number that isn't one of the choices is never sent`() {
+        val viewModel = viewModel()
+        viewModel.scanned(CODE)
+
+        viewModel.pick(50)
+
+        assertEquals(PcSignInStep.ASK, viewModel.uiState.value.step)
+        assertTrue(approvals.answers.isEmpty())
+    }
+
+    @Test
+    fun `without three numbers to pick from nothing is asked`() {
+        approvals.request = approvals.request!!.copy(choices = listOf(42, 42, 88))
+        val viewModel = viewModel()
+
+        viewModel.scanned(CODE)
+
+        assertEquals(PcSignInStep.FAILED, viewModel.uiState.value.step)
     }
 
     @Test
@@ -79,16 +119,16 @@ class PcSignInViewModelTest {
         viewModel.decline()
 
         assertEquals(PcSignInUiState(PcSignInStep.DECLINED, "DESKTOP-1"), viewModel.uiState.value)
-        assertEquals(listOf(SECRET to false), approvals.answers)
+        assertEquals(listOf(Triple(SECRET, false, null)), approvals.answers)
     }
 
     @Test
     fun `an answer is sent once`() {
         val viewModel = viewModel()
         viewModel.scanned(CODE)
-        viewModel.approve()
+        viewModel.pick(42)
 
-        viewModel.approve()
+        viewModel.pick(42)
         viewModel.decline()
 
         assertEquals(1, approvals.answers.size)
@@ -96,11 +136,11 @@ class PcSignInViewModelTest {
 
     @Test
     fun `a code that ran out before the answer says so`() {
-        approvals.answered = false
+        approvals.gone = true
         val viewModel = viewModel()
         viewModel.scanned(CODE)
 
-        viewModel.approve()
+        viewModel.pick(42)
 
         assertEquals(PcSignInStep.GONE, viewModel.uiState.value.step)
     }

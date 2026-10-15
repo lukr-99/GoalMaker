@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -30,6 +31,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -43,7 +45,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
 /**
  * Settings, Sign in on a PC (ADR 0020): scan the QR code on the PC's sign-in screen, see which PC
- * asked, and sign it in or not. Google Play services shows the camera, so the app asks for no camera
+ * asked, and sign it in by picking the number it shows, or not. Google Play services shows the camera, so the app asks for no camera
  * permission; a phone without it is told to use the emailed code on the PC.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -101,16 +103,27 @@ fun PcSignInScreen(viewModel: PcSignInViewModel, onBack: () -> Unit) {
                             style = MaterialTheme.typography.bodyMedium,
                             color = AppTheme.colors.textMuted,
                         )
+                        // The match number against a QR code someone else sent (ADR 0020).
+                        Text(stringResource(R.string.pc_sign_in_pick), style = MaterialTheme.typography.titleMedium)
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = viewModel::approve) { Text(stringResource(R.string.pc_sign_in_approve)) }
-                            OutlinedButton(onClick = viewModel::decline) { Text(stringResource(R.string.pc_sign_in_decline)) }
+                            state.choices.forEach { number ->
+                                val label = stringResource(R.string.pc_sign_in_pick_number, number)
+                                FilledTonalButton(
+                                    onClick = { viewModel.pick(number) },
+                                    modifier = Modifier.semantics { contentDescription = label },
+                                ) {
+                                    Text(number.toString(), style = MaterialTheme.typography.headlineMedium)
+                                }
+                            }
                         }
+                        OutlinedButton(onClick = viewModel::decline) { Text(stringResource(R.string.pc_sign_in_decline)) }
                     }
                 }
                 else -> {
                     val (said, button) = when (state.step) {
                         PcSignInStep.APPROVED -> stringResource(R.string.pc_sign_in_approved, device) to null
                         PcSignInStep.DECLINED -> stringResource(R.string.pc_sign_in_declined, device) to R.string.pc_sign_in_scan_another
+                        PcSignInStep.MISMATCH -> stringResource(R.string.pc_sign_in_mismatch) to R.string.pc_sign_in_scan_again
                         PcSignInStep.NOT_A_CODE -> stringResource(R.string.pc_sign_in_not_a_code) to R.string.pc_sign_in_scan_again
                         PcSignInStep.GONE -> stringResource(R.string.pc_sign_in_gone) to R.string.pc_sign_in_scan_again
                         PcSignInStep.OFFLINE -> stringResource(R.string.pc_sign_in_offline) to R.string.pc_sign_in_scan_again

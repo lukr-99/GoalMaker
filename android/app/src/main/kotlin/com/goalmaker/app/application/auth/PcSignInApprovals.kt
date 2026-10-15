@@ -9,6 +9,6 @@ interface PcSignInApprovals {
     /** The PC asking, or null when the code is unknown, ran out or was answered already. */
     suspend fun look(scanSecret: String): PcSignInRequest?
 
-    /** Approves as the signed-in owner, or declines. False when the code is unknown, ran out or was answered already. */
-    suspend fun answer(scanSecret: String, approve: Boolean): Boolean
+    /** Approves as the signed-in owner with the number the owner [picked], or declines. */
+    suspend fun answer(scanSecret: String, approve: Boolean, picked: Int? = null): PcSignInAnswer
 }
