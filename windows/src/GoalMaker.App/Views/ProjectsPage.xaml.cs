@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using GoalMaker.App.ViewModels;
 
 namespace GoalMaker.App.Views;
@@ -29,5 +30,22 @@ public partial class ProjectsPage
         menu.PlacementTarget = dots;
         menu.Placement = PlacementMode.Bottom;
         menu.IsOpen = true;
+    }
+
+    // The board scrolls sideways only, and a scroll viewer takes the wheel even when it cannot use it,
+    // so the wheel over the board would do nothing. Hand it on to the page, which scrolls up and down.
+    private void OnBoardWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (e.Handled || sender is not FrameworkElement { Parent: UIElement page })
+        {
+            return;
+        }
+
+        e.Handled = true;
+        page.RaiseEvent(new MouseWheelEventArgs(e.MouseDevice, e.Timestamp, e.Delta)
+        {
+            RoutedEvent = UIElement.MouseWheelEvent,
+            Source = sender,
+        });
     }
 }
