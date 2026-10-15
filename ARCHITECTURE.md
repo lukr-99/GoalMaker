@@ -164,10 +164,12 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   tool in a transaction as the owner, logged as the owner's change through the chat. Its limits are
   counted in `assistant_usage`; the `GEMINI_API_KEY` function secret holds the model key.
 - `pc-sign-in/`: the PC's QR sign-in (ADR 0020, docs/sign-in.md). The PC is not signed in, so the
-  gateway lets it through and the function checks the request's own secrets (`pc_sign_ins`, 0028).
-  An approved request gets a one-time email code for the approving owner from Supabase Auth's admin
-  API, without any mail. The phone approves through PostgREST, never here. `_shared/pcSignIn/` holds
-  its request rules and runs `contracts/vectors/pc-sign-in.json`.
+  gateway lets it through and the function checks the request's own secrets (`pc_sign_ins`, 0028),
+  with per-caller limits on a hash of the IP. An approved request (the phone picked the PC's match
+  number) gets a one-time email code for the approving owner from Supabase Auth's admin API, without
+  any mail, and is used up only once the code is made. The phone approves through PostgREST, never
+  here. `_shared/pcSignIn/` holds its handler and request rules and runs
+  `contracts/vectors/pc-sign-in.json`.
 - `_shared/`: what the connector and the quick chat share: `owner.ts` (the owner-scoped
   transaction), `planner/` (data access that does what the apps' lists do), `tools/` and
   `prompts/`, `assistant/` (the chat's provider interface, Gemini and fake providers, prompt and
