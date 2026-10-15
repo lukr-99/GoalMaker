@@ -125,6 +125,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onOpenAreas: () -> Unit,
     onOpenConnector: () -> Unit = {},
+    onOpenPcSignIn: () -> Unit = {},
     onOpenActivity: () -> Unit = {},
     problems: List<Problem> = emptyList(),
     onProblemsRead: () -> Unit = {},
@@ -245,7 +246,7 @@ fun SettingsScreen(
                                     if (index > 0) RowDivider()
                                     ProblemRow(problem)
                                 }
-                                SettingsSection.ACCOUNT -> AccountRows(state, saved, viewModel)
+                                SettingsSection.ACCOUNT -> AccountRows(state, saved, viewModel, onOpenPcSignIn)
                                 SettingsSection.APPEARANCE -> AppearanceRows(state, saved, viewModel)
                                 SettingsSection.PLANNING -> PlanningRows(state, saved, viewModel, onOpenDndSettings)
                                 SettingsSection.AREAS -> AreasAndTagsCard(areas = areas, tags = tags, onOpenAreas = onOpenAreas)
@@ -329,7 +330,12 @@ private fun SectionChips(sections: List<SettingsSection>, current: SettingsSecti
 }
 
 @Composable
-private fun AccountRows(state: SettingsUiState, saved: Map<SettingKey, Int>, viewModel: SettingsViewModel) {
+private fun AccountRows(
+    state: SettingsUiState,
+    saved: Map<SettingKey, Int>,
+    viewModel: SettingsViewModel,
+    onOpenPcSignIn: () -> Unit,
+) {
     // A dev build that stays on the phone has no account to show or leave (docs/sign-in.md).
     if (state.appInfo.localOnly) {
         Text(
@@ -354,6 +360,14 @@ private fun AccountRows(state: SettingsUiState, saved: Map<SettingKey, Int>, vie
         saved = saved[SettingKey.APP_LOCK],
     )
     if (state.appInfo.localOnly) return
+    RowDivider()
+    // The PC's QR sign-in (ADR 0020): this phone approves it with its own session.
+    LinkRow(
+        stringResource(R.string.pc_sign_in_open),
+        stringResource(R.string.pc_sign_in_open_hint),
+        external = false,
+        onClick = onOpenPcSignIn,
+    )
     RowDivider()
     val unsynced = state.unsyncedAtSignOut
     ButtonRow(

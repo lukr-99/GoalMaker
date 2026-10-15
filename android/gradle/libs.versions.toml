@@ -25,6 +25,8 @@ robolectric = "4.17"
 konfetti = "2.0.5"
 # Home screen widgets (spec, stories 85 and 86).
 glance = "1.2.0"
+# The PC's QR sign-in (ADR 0020): Play services draws the camera, so the app needs no camera permission.
+codeScanner = "16.1.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -62,6 +64,7 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 konfetti-compose = { module = "nl.dionsegijn:konfetti-compose", version.ref = "konfetti" }
 androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 androidx-glance-material3 = { module = "androidx.glance:glance-material3", version.ref = "glance" }
+play-services-code-scanner = { module = "com.google.android.gms:play-services-code-scanner", version.ref = "codeScanner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -296,6 +296,10 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment)
 
+    // Scanning the PC's sign-in QR code (ADR 0020). Play services shows the camera, so there is no
+    // camera permission and no bundled model.
+    implementation(libs.play.services.code.scanner)
+
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.realtime)

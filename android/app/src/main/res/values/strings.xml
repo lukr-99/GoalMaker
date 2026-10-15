@@ -431,6 +431,26 @@
 
     <!-- Claude connector (docs/connector.md) -->
     <string name="settings_claude">Claude</string>
+    <string name="pc_sign_in_open">Sign in on a PC</string>
+    <string name="pc_sign_in_open_hint">Scan the QR code on the PC\'s sign-in screen instead of typing an emailed code.</string>
+    <string name="pc_sign_in_title">Sign in on a PC</string>
+    <string name="pc_sign_in_intro">Open GoalMaker on your PC. Its sign-in screen shows a QR code. Scan it here and say yes, and the PC signs in as you.</string>
+    <string name="pc_sign_in_scan">Scan the code</string>
+    <string name="pc_sign_in_ask">Sign in on %1$s?</string>
+    <string name="pc_sign_in_ask_warning">Only say yes if this is your PC and it shows this code right now. The PC gets your whole GoalMaker account.</string>
+    <string name="pc_sign_in_approve">Sign in</string>
+    <string name="pc_sign_in_decline">Don\'t sign in</string>
+    <string name="pc_sign_in_approved">%1$s is signing in. You can put your phone away.</string>
+    <string name="pc_sign_in_declined">%1$s stays signed out.</string>
+    <string name="pc_sign_in_not_a_code">That isn\'t a GoalMaker sign-in code. Scan the code on the PC\'s sign-in screen.</string>
+    <string name="pc_sign_in_gone">That code ran out or was used already. Make a new code on the PC and scan it again.</string>
+    <string name="pc_sign_in_offline">No connection to GoalMaker\'s server. Check your internet and scan again.</string>
+    <string name="pc_sign_in_failed">That did not work. Make a new code on the PC and scan it again.</string>
+    <string name="pc_sign_in_no_scanner">This phone can\'t scan codes here, because it needs Google Play services. Sign in on the PC with the emailed code instead.</string>
+    <string name="pc_sign_in_scan_again">Scan again</string>
+    <string name="pc_sign_in_scan_another">Scan another code</string>
+    <string name="pc_sign_in_done">Done</string>
+    <string name="pc_sign_in_safety">The code only works for two minutes and only once. It holds no password, and nothing signs in until you tap Sign in here.</string>
     <string name="connector_open">Claude connector</string>
     <string name="connector_open_hint">Let Claude read and change your plans, on every Claude app.</string>
     <string name="connector_title">Claude connector</string>
