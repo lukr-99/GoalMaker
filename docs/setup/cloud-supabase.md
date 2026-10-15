@@ -190,3 +190,8 @@ npx supabase functions deploy pc-sign-in --no-verify-jwt --project-ref <project 
 `--no-verify-jwt` is on purpose: the PC is not signed in when it asks, so the function checks its
 own secrets instead (config.toml says the same for the local stack). Until it is deployed, the PC's
 sign-in screen says the QR code isn't available and the emailed code works as before.
+
+After deploying, open the PC's sign-in screen once. When it shows a QR code, the function sees the
+caller's address. When it says that did not work, look in the function's logs for `no_caller`: the
+project did not pass Cloudflare's `cf-connecting-ip` to the function, and the per-caller limits
+(ADR 0020) need another trusted header before QR sign-in can work.

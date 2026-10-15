@@ -66,8 +66,9 @@ the PC does that, so a PC left on the sign-in screen does not keep making reques
 while the sign-in screen is on show. A phone without Google Play services can't scan, and says to use
 the emailed code. The name on the phone is whatever the PC sent, so the phone says to approve only a
 code on a PC in front of you; the scanner is only inside the app, so a QR code seen anywhere else
-can't open that question. The function counts calls per caller, by a hash of the IP: six starts and
-120 asks a minute, and three open codes at a time. What the server keeps and why the QR code is safe
+can't open that question. The function counts calls per caller, by a hash of the IP (an IPv6 address by its /64): six starts
+and 120 asks a minute, and three open codes at a time. It trusts only the address Cloudflare reports
+and refuses a call without one. What the server keeps and why the QR code is safe
 to show is in ADR 0020.
 
 ## The PC's week

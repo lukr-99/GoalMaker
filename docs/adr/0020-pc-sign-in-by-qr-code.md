@@ -40,11 +40,22 @@ them, but it turns one careless tap into a deliberate step.
   them. The phone only reaches them through two functions that check `auth.uid()`; the start and
   the pick-up run as the service role inside the Edge Function.
 - A request is refused when it is older than two minutes, already answered, declined or picked up.
-- **Limits per caller.** The function keys every call on a SHA-256 hash of the caller's IP (the
-  address Cloudflare reports for the hosted project), never the address itself. A caller may start
-  six requests a minute and hold three open ones, and ask 120 times a minute, so one script can't
-  fill the table for everyone; a cap of 50 open requests in all stays behind that. pg_cron clears
-  requests older than a day and the counts every hour.
+- **Limits per caller.** The function keys every call on a SHA-256 hash of the caller, never the
+  address itself. A caller may start six requests a minute and hold three open ones, and ask 120
+  times a minute, so one script can't fill the table for everyone; a cap of 50 open requests in all
+  stays behind that. pg_cron clears requests older than a day and the counts every hour.
+- **Who the caller is.** An IPv4 address counts whole. An IPv6 address counts by its /64, because a
+  home or a server gets a whole /64 and can take a new address from it for every call; the address
+  is read in any written form (`::`, capitals, brackets, a zone) and an IPv4 address written as IPv6
+  (`::ffff:a.b.c.d`) counts as that IPv4 address.
+- **Only a trusted address.** On the hosted project the function trusts only `cf-connecting-ip`,
+  which Cloudflare in front of Supabase sets itself; `x-forwarded-for` is whatever the client wrote,
+  so it is never used there. A call without a trusted address is refused (`403 no_caller`) and
+  logged, rather than shared in one bucket that one script could fill. Only on the local stack
+  (`onLocalStack`: the function reaches the gateway over plain http) may the gateway's
+  `x-forwarded-for` stand in, so local builds and CI work. That the hosted project passes
+  `cf-connecting-ip` through to the function is not documented by Supabase, so the first QR sign-in
+  after deploying is the check: a refusal shows as `no_caller` in the function's logs.
 - The device name the PC sends is only a label: anyone can make a QR code that says any name. The
   phone shows it and says to approve only a code on the screen in front of you. The scanner is only
   inside the app, so a QR code seen somewhere else cannot open the approve screen.
