@@ -65,6 +65,8 @@
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="NHotkey.Wpf" Version="4.0.0" />
+    <!-- The QR code on the sign-in screen (ADR 0020). Only its encoder is used; the view draws it. -->
+    <PackageReference Include="QRCoder" Version="1.7.0" />
     <!--
       The shared tray kit (CodePrint): WPF UI's themes and controls, the theme applier, the menu
       builder, .ico files, dialogs and the notification area icon. It brings WPF UI 4.3 and
