@@ -3,6 +3,16 @@
 Mistakes this project has already made, kept short so they are not made twice. Add one when a bug
 took longer to find than to fix.
 
+## Supabase Auth can't read a user made by a plain insert
+
+2026-10-15, GM-93. The pc-sign-in endpoint test inserted its user into `auth.users` by SQL, like the
+other tests do, and then asked Auth's admin API for a code for it. Auth answered 500, and its log said
+`Scan error on column index 3, name "confirmation_token": converting NULL to string is unsupported`
+(then the same for `created_at`). Row security and PostgREST never read those columns, so inserted
+users work everywhere else. A test that goes through Auth itself (`generate_link`, `verify`) must
+make its user with `POST /auth/v1/admin/users` and the service role key. `docker logs
+supabase_auth_goalmaker` shows the real error behind a bare 500.
+
 ## A merge to main cancelled the one before it
 
 2026-10-02, the CI review. CI's concurrency group was `ci-${{ github.ref }}` with
