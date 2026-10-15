@@ -276,3 +276,11 @@ and the `TextControlBackground*` brushes) and show focus on the container.
 2026-10-01. `PageSnapshots` takes a window's content out to render it. Detached elements don't hear
 the application's resources change, so applying another theme and saving again wrote the first
 theme's picture under every name. Build the content again after each `ThemeApplier.Apply`.
+
+## A StackPanel never scrolls, and a scroll viewer eats the wheel it cannot use
+
+2026-10-15, GM-94. The Projects page kept its project list in a plain `StackPanel` beside the board, so
+with many projects the rows ran off the bottom with no scroll bar. Keep the title and buttons fixed and
+put only the rows in their own `ScrollViewer` (`ProjectListScroller`). Also, the board's inner sideways
+`ScrollViewer` (vertical disabled) still marks the mouse wheel handled, so the wheel did nothing over the
+board; `ProjectsPage.OnBoardWheel` hands it on to the page. `ProjectsPageScrollTests` covers both.

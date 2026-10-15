@@ -276,17 +276,25 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Grid.Column="0" Grid.RowSpan="2" Margin="0,0,16,0">
-            <controls:HeadlineText Title="{DynamicResource Projects.Title}" FontSize="32" />
-            <ui:Button Margin="0,8,0,8" HorizontalAlignment="Left" Appearance="Primary"
-                       Command="{Binding NewCommand}" Content="{DynamicResource Projects.Add}" />
-            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.Empty}"
-                       Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
-            <!-- Every project filtered away: the filter stays over the board, where it can be let go. -->
-            <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.NoneMatch}"
-                       Visibility="{Binding IsFilteredAway, Converter={StaticResource BoolToVisibility}}" />
-            <ItemsControl ItemsSource="{Binding Projects}" ItemTemplate="{StaticResource ProjectRow}" Focusable="False" />
-        </StackPanel>
+        <!--
+          The title and New project stay put; only the project rows scroll, so a long list is never
+          cut off at the window's edge (docs/pitfalls.md, "A StackPanel never scrolls").
+        -->
+        <DockPanel Grid.Column="0" Grid.RowSpan="2" Margin="0,0,16,0" LastChildFill="True">
+            <StackPanel DockPanel.Dock="Top">
+                <controls:HeadlineText Title="{DynamicResource Projects.Title}" FontSize="32" />
+                <ui:Button Margin="0,8,0,8" HorizontalAlignment="Left" Appearance="Primary"
+                           Command="{Binding NewCommand}" Content="{DynamicResource Projects.Add}" />
+                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.Empty}"
+                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                <!-- Every project filtered away: the filter stays over the board, where it can be let go. -->
+                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.NoneMatch}"
+                           Visibility="{Binding IsFilteredAway, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <ScrollViewer x:Name="ProjectListScroller" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Projects}" ItemTemplate="{StaticResource ProjectRow}" Focusable="False" />
+            </ScrollViewer>
+        </DockPanel>
 
         <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
             <!-- The scrollbar rides the window's edge, and the page's own gutter keeps the content clear of it. -->
@@ -438,7 +446,8 @@
                       its strip. In a narrow window they stop shrinking and the board scrolls sideways,
                       so a card is never cut off and its menu stays on screen.
                     -->
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                                  PreviewMouseWheel="OnBoardWheel">
                         <!-- The board takes the width it is shown in, and what its columns need at the least, so a title still wraps. -->
                         <Grid MinWidth="{Binding BoardMinWidth}"
                               Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
