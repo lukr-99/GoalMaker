@@ -20,6 +20,12 @@ run by both apps.
   never have interrupted anything in the first place.
 - **A kind holds one problem at a time.** A newer one takes the place of the older, because what
   matters is what is wrong now, not every time it has been.
+- **The same problem again is nothing new.** A sync that keeps failing on the same change reports
+  the same thing on every run. That keeps the problem as it was, read or not, so the mark does not
+  come back the moment Settings closes. Only a new kind, a new detail, or a problem that came right
+  and then came back marks the item again.
+- **Settings on screen is watching.** A problem that shows up while Settings is open is already
+  read. A window hidden to the tray is nobody watching.
 
 ## What belongs there
 

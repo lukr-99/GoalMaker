@@ -284,3 +284,12 @@ with many projects the rows ran off the bottom with no scroll bar. Keep the titl
 put only the rows in their own `ScrollViewer` (`ProjectListScroller`). Also, the board's inner sideways
 `ScrollViewer` (vertical disabled) still marks the mouse wheel handled, so the wheel did nothing over the
 board; `ProjectsPage.OnBoardWheel` hands it on to the page. `ProjectsPageScrollTests` covers both.
+
+## A problem reported on every run brings the Settings mark straight back
+
+2026-10-18. The blue dot on the Settings item looked stuck. It was the unread-problem mark, not the
+update badge (that one is an accent circle with a download arrow). Sync reports its problem on every
+failed run, and each report made a fresh unread problem, so the dot came back the moment Settings
+was opened and closed. The same kind with the same detail now keeps the problem as it was
+(`contracts/vectors/problems.json`), and a problem that shows up while Settings is on screen is read
+at once (`ProblemsViewModel.Open`).
