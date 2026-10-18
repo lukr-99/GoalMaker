@@ -210,8 +210,10 @@ and says "not on Today" beside them ([connector](connector.md)); and `add_habit`
 ## Goals
 
 A habit can serve a goal. When the goal counts a number and the habit's unit is the goal's (ignoring
-case and spaces), the habit's check-ins in the goal's period add to it like logged amounts (story 32,
-[goals](goals.md)).
+case and spaces, with no unit matching no unit), the habit's check-ins in the goal's period add to it
+like logged amounts (story 32, [goals](goals.md)). A check habit has no unit, so it feeds a goal without
+one, and each day it met adds 1: "Go to the gym 3 times a week" feeds "Go to the gym 10 times in
+October". Skipped and failed check-ins add nothing.
 
 ## Reminders
 

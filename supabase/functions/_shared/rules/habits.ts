@@ -321,24 +321,24 @@ export function checkinId(habitId: string, day: Day): Promise<string> {
 }
 
 /**
- * The check-in values that count toward `goal`: of habits serving it, measured by count or amount, in its
- * unit (lowercased, without spaces), not skipped, on a day in its period (story 32).
+ * The check-in values that count toward `goal`: of habits serving it whose unit is its unit (lowercased,
+ * without spaces, no unit matching no unit), not skipped or failed, on a day in its period (story 32). A
+ * check habit has no unit and adds 1 for each day it met.
  */
 export function goalAmounts(
   goal: Pick<GoalItem, "id" | "unit" | "horizon" | "periodStart">,
   habits: Pick<HabitItem, "id" | "goalId" | "measure" | "unit" | "deleted">[],
   checkins: HabitCheckin[],
 ): number[] {
-  if (goal.unit === null) return [];
   const unit = unitKey(goal.unit);
   const end = goalPeriodEnd(goal.horizon, goal.periodStart);
-  const serving = new Set(
+  const serving = new Map(
     habits
       .filter((habit) =>
-        !habit.deleted && habit.goalId === goal.id && habit.measure !== "check" && habit.unit !== null &&
-        unitKey(habit.unit) === unit
+        !habit.deleted && habit.goalId === goal.id &&
+        (habit.measure === "check" ? unit === "" : unitKey(habit.unit) === unit)
       )
-      .map((habit) => habit.id),
+      .map((habit) => [habit.id, habit.measure] as const),
   );
   return checkins
     .filter((checkin) =>
@@ -346,7 +346,10 @@ export function goalAmounts(
       checkin.day >= goal.periodStart &&
       checkin.day <= end
     )
-    .map((checkin) => checkin.value);
+    .flatMap((checkin) => {
+      if (serving.get(checkin.habitId) !== "check") return [checkin.value];
+      return checkin.value >= 1 ? [1] : [];
+    });
 }
 
 function covers(pause: HabitPause, start: Day, end: Day): boolean {
@@ -365,8 +368,8 @@ function share(habit: HabitItem, value: number): number {
   return Math.min(1, Math.max(0, value / (habit.target ?? 1)));
 }
 
-function unitKey(unit: string): string {
-  return unit.replace(/\s/g, "").toLowerCase();
+function unitKey(unit: string | null): string {
+  return (unit ?? "").replace(/\s/g, "").toLowerCase();
 }
 
 /** Two decimals with halves rounded up, the way every app rounds a fill (0.625 is 0.63). */

@@ -389,25 +389,21 @@ public static class HabitRules
         NameBasedUuid.Of(Namespace, $"checkin/{habitId.ToLowerInvariant()}/{day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
 
     /// <summary>
-    /// The check-in values that count toward <paramref name="goal"/>: of habits serving it, measured by count
-    /// or amount, in its unit (lowercased, without spaces), not skipped, on a day in its period (story 32).
+    /// The check-in values that count toward <paramref name="goal"/>: of habits serving it whose unit is its
+    /// unit (lowercased, without spaces, no unit matching no unit), not skipped or failed, on a day in its
+    /// period (story 32). A check habit has no unit and adds 1 for each day it met.
     /// </summary>
     public static IReadOnlyList<double> GoalAmounts(GoalItem goal, IEnumerable<HabitItem> habits, IEnumerable<HabitCheckin> checkins)
     {
-        if (goal.Unit is null)
-        {
-            return [];
-        }
-
         var unit = UnitKey(goal.Unit);
         var end = GoalRules.PeriodEnd(goal.Horizon, goal.PeriodStart);
         var serving = habits
-            .Where(habit => !habit.Deleted && habit.GoalId == goal.Id && habit.Measure != Check && habit.Unit is not null && UnitKey(habit.Unit) == unit)
-            .Select(habit => habit.Id)
-            .ToHashSet();
+            .Where(habit => !habit.Deleted && habit.GoalId == goal.Id && (habit.Measure == Check ? unit.Length == 0 : UnitKey(habit.Unit) == unit))
+            .ToDictionary(habit => habit.Id, habit => habit.Measure == Check);
         return checkins
-            .Where(checkin => !checkin.Deleted && !checkin.Skipped && !checkin.Failed && serving.Contains(checkin.HabitId) && checkin.Day >= goal.PeriodStart && checkin.Day <= end)
-            .Select(checkin => checkin.Value)
+            .Where(checkin => !checkin.Deleted && !checkin.Skipped && !checkin.Failed && serving.ContainsKey(checkin.HabitId) && checkin.Day >= goal.PeriodStart && checkin.Day <= end)
+            .Where(checkin => !serving[checkin.HabitId] || checkin.Value >= 1)
+            .Select(checkin => serving[checkin.HabitId] ? 1 : checkin.Value)
             .ToList();
     }
 
@@ -459,5 +455,5 @@ public static class HabitRules
     // Two decimals with halves rounded up (0.625 is 0.63); the nudge keeps 0.625 * 100 from landing just below 62.5.
     private static double TwoPlaces(double value) => Math.Round((value * 100) + 1e-9, MidpointRounding.AwayFromZero) / 100;
 
-    private static string UnitKey(string unit) => string.Concat(unit.Where(character => !char.IsWhiteSpace(character))).ToLowerInvariant();
+    private static string UnitKey(string? unit) => string.Concat((unit ?? string.Empty).Where(character => !char.IsWhiteSpace(character))).ToLowerInvariant();
 }
