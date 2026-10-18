@@ -34,8 +34,7 @@ public partial class SettingsPage
         // The danger row's confirmation wears the app's body font, as its other windows do.
         SignOutAnywayRow.PrepareConfirm = prepareConfirm;
 
-        // Opening Settings is reading them, so the mark on the item goes (docs/problems.md). When the
-        // mark stood for an update, the page lands on Updates with the jump hint.
+        // When the mark stood for an update, the page lands on Updates with the jump hint.
         Loaded += async (_, _) =>
         {
             if (SettingsSectionsViewModel.Landing(problems.HasProblems, viewModel.CanInstall) is { } section)
@@ -43,8 +42,21 @@ public partial class SettingsPage
                 JumpTo(section);
             }
 
-            problems.Read();
             await connector.RefreshAsync();
+        };
+
+        // Seeing Settings is reading the problems, so the mark on the item goes and stays off while the
+        // page is on screen (docs/problems.md). A window hidden to the tray is nobody watching.
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true)
+            {
+                problems.Open();
+            }
+            else
+            {
+                problems.Close();
+            }
         };
     }
 
