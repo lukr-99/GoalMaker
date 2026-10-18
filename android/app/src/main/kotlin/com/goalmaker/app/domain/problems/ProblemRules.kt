@@ -20,9 +20,17 @@ object ProblemRules {
     /** Every kind both apps know, in no particular order. */
     val KINDS: List<String> = listOf(SYNC, BACKUP, UPDATE)
 
-    /** That kind went wrong: its problem goes to the front, unread, and any older one goes. */
+    /**
+     * That kind went wrong: its problem goes to the front, unread, and any older one goes. The same
+     * problem again, a sync that keeps failing on the same change, is nothing new to tell, so it stays
+     * as it was, read or not.
+     */
     fun report(problems: List<Problem>, kind: String, at: Instant, detail: String?): List<Problem> =
-        listOf(Problem(kind, at, detail)) + problems.filterNot { it.kind == kind }
+        if (problems.any { it.kind == kind && it.detail == detail }) {
+            problems
+        } else {
+            listOf(Problem(kind, at, detail)) + problems.filterNot { it.kind == kind }
+        }
 
     /** That kind came right by itself, so there is nothing left to tell. */
     fun clear(problems: List<Problem>, kind: String): List<Problem> = problems.filterNot { it.kind == kind }

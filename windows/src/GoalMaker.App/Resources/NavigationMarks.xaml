@@ -3,40 +3,47 @@
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
     <!--
-      The mark on the sidebar's Settings item, bound to the window's ShellViewModel. A problem nobody
-      has read is WPF UI's quiet attention dot (docs/problems.md). An update the last check found is a
-      round accent badge with a down arrow, and it shows over the dot when both wait: Settings shows
-      both. Screen readers hear "Update available" or "Something needs a look".
+      The mark on the sidebar's Settings item, bound to the window's ShellViewModel (docs/problems.md,
+      "What the owner sees"). A problem nobody has read is a warning triangle in the danger color. An
+      update the last check found is a round accent badge with a down arrow. When both wait they sit
+      side by side. The tooltip and the screen reader name say what it is, for example "Sync hit a
+      problem. Open Settings to see what to do."
     -->
     <Style x:Key="GM.SettingsMark" TargetType="ui:InfoBadge" BasedOn="{StaticResource {x:Type ui:InfoBadge}}">
-        <Setter Property="Severity" Value="Attention" />
         <Setter Property="Visibility" Value="{Binding DataContext.HasSettingsMark, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BoolToVisibility}}" />
-        <Setter Property="AutomationProperties.Name" Value="{DynamicResource Nav.ProblemsWaiting}" />
-        <Style.Triggers>
-            <DataTrigger Binding="{Binding DataContext.HasUpdate, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" Value="True">
-                <Setter Property="AutomationProperties.Name" Value="{DynamicResource Nav.UpdateAvailable}" />
-                <Setter Property="ToolTip" Value="{DynamicResource Nav.UpdateAvailable}" />
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="ui:InfoBadge">
-                            <Border Width="18"
-                                    Height="18"
-                                    CornerRadius="9"
-                                    Background="{DynamicResource GM.AccentBrush}"
-                                    BorderBrush="{DynamicResource GM.BackgroundBrush}"
-                                    BorderThickness="1.5"
-                                    VerticalAlignment="Center">
-                                <ui:SymbolIcon Symbol="ArrowDownload16"
-                                               Filled="True"
-                                               FontSize="11"
-                                               Foreground="{DynamicResource GM.OnAccentBrush}"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center" />
-                            </Border>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </DataTrigger>
-        </Style.Triggers>
+        <Setter Property="AutomationProperties.Name" Value="{Binding DataContext.SettingsMarkText, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" />
+        <Setter Property="ToolTip" Value="{Binding DataContext.SettingsMarkText, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ui:InfoBadge">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Background="Transparent">
+                        <ui:SymbolIcon x:Name="ProblemMark"
+                                       Symbol="Warning16"
+                                       Filled="True"
+                                       FontSize="16"
+                                       Foreground="{DynamicResource GM.DangerBrush}"
+                                       VerticalAlignment="Center"
+                                       Visibility="{Binding DataContext.HasProblems, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BoolToVisibility}}" />
+                        <Border x:Name="UpdateMark"
+                                Width="18"
+                                Height="18"
+                                Margin="4,0,0,0"
+                                CornerRadius="9"
+                                Background="{DynamicResource GM.AccentBrush}"
+                                BorderBrush="{DynamicResource GM.BackgroundBrush}"
+                                BorderThickness="1.5"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding DataContext.HasUpdate, RelativeSource={RelativeSource AncestorType={x:Type Window}}, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Symbol="ArrowDownload16"
+                                           Filled="True"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource GM.OnAccentBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                        </Border>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 </ResourceDictionary>

@@ -9,6 +9,7 @@ using GoalMaker.Core.Auth;
 using GoalMaker.Core.Backend;
 using GoalMaker.Core.Backup;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Notices;
 using GoalMaker.Core.Problems;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Startup;
@@ -397,7 +398,7 @@ public sealed class SettingsViewModelTests : IDisposable
         var auth = new SignedOutAuth();
         var watch = new SignInWatch(auth, planner.Settings, () => DateTimeOffset.Now);
         return new ShellViewModel(
-            auth, new SignInViewModel(auth, watch, planner.Strings, devBackend: null), problems ?? new ProblemLog(planner.Time), updates, action => action());
+            auth, new SignInViewModel(auth, watch, planner.Strings, devBackend: null), new NoticeBoard(problems ?? new ProblemLog(planner.Time), updates), planner.Strings, action => action());
     }
 
     private SettingsViewModel Settings(string? releasesPage, UpdateService? service = null) =>

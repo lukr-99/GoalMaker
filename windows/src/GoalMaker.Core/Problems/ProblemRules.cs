@@ -19,9 +19,15 @@ public static class ProblemRules
     /// <summary>Every kind both apps know, in no particular order.</summary>
     public static IReadOnlyList<string> Kinds { get; } = [Sync, Backup, Update];
 
-    /// <summary>That kind went wrong: its problem goes to the front, unread, and any older one goes.</summary>
+    /// <summary>
+    /// That kind went wrong: its problem goes to the front, unread, and any older one goes. The same
+    /// problem again, a sync that keeps failing on the same change, is nothing new to tell, so it stays
+    /// as it was, read or not.
+    /// </summary>
     public static IReadOnlyList<Problem> Report(IReadOnlyList<Problem> problems, string kind, DateTimeOffset at, string? detail) =>
-        [new Problem(kind, at, detail), .. problems.Where(problem => problem.Kind != kind)];
+        problems.Any(problem => problem.Kind == kind && problem.Detail == detail)
+            ? problems
+            : [new Problem(kind, at, detail), .. problems.Where(problem => problem.Kind != kind)];
 
     /// <summary>That kind came right by itself, so there is nothing left to tell.</summary>
     public static IReadOnlyList<Problem> Clear(IReadOnlyList<Problem> problems, string kind) =>

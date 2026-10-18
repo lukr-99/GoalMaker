@@ -2,6 +2,7 @@ using GoalMaker.App.Localization;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Account;
 using GoalMaker.Core.Auth;
+using GoalMaker.Core.Notices;
 using GoalMaker.Core.Problems;
 using Microsoft.Extensions.Time.Testing;
 
@@ -42,10 +43,57 @@ public sealed class ProblemsViewModelTests
         var shell = Shell(log);
         log.Report(ProblemRules.Sync, "the push that would not go");
 
-        page.Read();
+        page.Open();
 
         Assert.False(shell.HasProblems);
         Assert.False(Assert.Single(page.Rows).IsUnread);
+    }
+
+    [Fact]
+    public void ASyncThatKeepsFailingTheSameWayDoesNotBringTheMarkBack()
+    {
+        var log = new ProblemLog(time);
+        var page = new ProblemsViewModel(log, new KeyStrings(), action => action());
+        var shell = Shell(log);
+        log.Report(ProblemRules.Sync, "the push that would not go");
+        page.Open();
+        page.Close();
+
+        time.Advance(TimeSpan.FromMinutes(5));
+        log.Report(ProblemRules.Sync, "the push that would not go");
+
+        Assert.False(shell.HasProblems);
+        Assert.False(Assert.Single(page.Rows).IsUnread);
+    }
+
+    [Fact]
+    public void AProblemThatArrivesWhileSettingsIsOpenIsAlreadySeen()
+    {
+        var log = new ProblemLog(time);
+        var page = new ProblemsViewModel(log, new KeyStrings(), action => action());
+        var shell = Shell(log);
+        page.Open();
+
+        log.Report(ProblemRules.Backup, "the folder would not take the file");
+
+        Assert.False(shell.HasProblems);
+        Assert.False(Assert.Single(page.Rows).IsUnread);
+    }
+
+    [Fact]
+    public void SomethingNewAfterLeavingSettingsMarksTheItemAgain()
+    {
+        var log = new ProblemLog(time);
+        var page = new ProblemsViewModel(log, new KeyStrings(), action => action());
+        var shell = Shell(log);
+        log.Report(ProblemRules.Sync, "the push that would not go");
+        page.Open();
+        page.Close();
+
+        log.Report(ProblemRules.Sync, "another push that would not go");
+
+        Assert.True(shell.HasProblems);
+        Assert.True(Assert.Single(page.Rows).IsUnread);
     }
 
     [Fact]
@@ -78,7 +126,7 @@ public sealed class ProblemsViewModelTests
     {
         var auth = new SignedOutAuth();
         var watch = new SignInWatch(auth, new TestPlanner.FakeSettings(), () => DateTimeOffset.Now);
-        return new ShellViewModel(auth, new SignInViewModel(auth, watch, new KeyStrings(), devBackend: null), log, new TestUpdates().Service, action => action());
+        return new ShellViewModel(auth, new SignInViewModel(auth, watch, new KeyStrings(), devBackend: null), new NoticeBoard(log, new TestUpdates().Service), new KeyStrings(), action => action());
     }
 
     private sealed class KeyStrings : IStrings

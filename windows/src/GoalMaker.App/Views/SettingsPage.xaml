@@ -59,6 +59,59 @@
                        ClearSearchText="{DynamicResource Settings.ClearSearch}"
                        Background="{DynamicResource GM.BackgroundBrush}">
 
+        <!-- What needs the owner, under the title (docs/problems.md, "What the owner sees"): each line
+             says what it is and what to do, with a button and Dismiss. Hidden with nothing to act on;
+             its view model is set in code. -->
+        <tray:SettingsPage.HeaderContent>
+            <ItemsControl x:Name="NoticeBanner" Margin="0,12,0,0" ItemsSource="{Binding Rows}" Focusable="False"
+                          AutomationProperties.Name="{DynamicResource Notice.BannerName}"
+                          Visibility="{Binding HasNotices, Converter={StaticResource BoolToVisibility}}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,0,0,8">
+                            <Border x:Name="Tint" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.DangerBrush}" Opacity="0.10" />
+                            <Border x:Name="Edge" CornerRadius="{DynamicResource GM.RowCorner}" BorderBrush="{DynamicResource GM.DangerBrush}" BorderThickness="1" Padding="12,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon x:Name="ProblemIcon" Symbol="Warning20" Filled="True" FontSize="24" VerticalAlignment="Top" Margin="0,2,0,0"
+                                                   Foreground="{DynamicResource GM.DangerBrush}" />
+                                    <Border x:Name="UpdateIcon" Width="28" Height="28" CornerRadius="14" VerticalAlignment="Top" Visibility="Collapsed"
+                                            Background="{DynamicResource GM.AccentBrush}">
+                                        <ui:SymbolIcon Symbol="ArrowDownload20" Filled="True" FontSize="16" Foreground="{DynamicResource GM.OnAccentBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" FontSize="15"
+                                                   FontFamily="{DynamicResource GM.BodyStrongFont}" Foreground="{DynamicResource GM.TextBrush}" />
+                                        <TextBlock Style="{StaticResource Hint}" Text="{Binding Advice}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <ui:Button x:Name="ActButton" Appearance="Secondary" Content="{Binding ActionText}" Command="{Binding ActCommand}" />
+                                        <ui:Button Margin="6,0,0,0" Appearance="Transparent" Content="{DynamicResource Notice.Dismiss}"
+                                                   Command="{Binding DismissCommand}" AutomationProperties.Name="{Binding DismissName}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                        <DataTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsUpdate}" Value="True">
+                                <Setter TargetName="Tint" Property="Background" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="Tint" Property="Opacity" Value="0.12" />
+                                <Setter TargetName="Edge" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                <Setter TargetName="ProblemIcon" Property="Visibility" Value="Collapsed" />
+                                <Setter TargetName="UpdateIcon" Property="Visibility" Value="Visible" />
+                                <Setter TargetName="ActButton" Property="Appearance" Value="Primary" />
+                            </DataTrigger>
+                        </DataTemplate.Triggers>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </tray:SettingsPage.HeaderContent>
+
         <!-- What went wrong while nobody was watching (docs/problems.md); its view model is set in code. -->
         <tray:SettingsSection x:Name="ProblemsSection" SectionId="problems"
                               Title="{DynamicResource Problems.Title}" Description="{DynamicResource Settings.ProblemsDescription}"
