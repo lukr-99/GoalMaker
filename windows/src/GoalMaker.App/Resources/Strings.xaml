@@ -34,8 +34,12 @@
     <sys:String x:Key="Nav.Tomorrow">Tomorrow</sys:String>
     <sys:String x:Key="Nav.Inbox">Inbox</sys:String>
     <sys:String x:Key="Nav.Settings">Settings</sys:String>
-    <sys:String x:Key="Nav.UpdateAvailable">Update available</sys:String>
-    <sys:String x:Key="Nav.ProblemsWaiting">Something needs a look in Settings</sys:String>
+    <!-- The tooltip and screen reader name of the icons on the Settings item (docs/problems.md). -->
+    <sys:String x:Key="Nav.Mark.UpdateReady">Version {0} is ready to install. Open Settings to install it.</sys:String>
+    <sys:String x:Key="Nav.Mark.Sync">Sync hit a problem. Open Settings to see what to do.</sys:String>
+    <sys:String x:Key="Nav.Mark.Backup">The weekly backup was not written. Open Settings to see what to do.</sys:String>
+    <sys:String x:Key="Nav.Mark.Update">An update could not be installed. Open Settings to see what to do.</sys:String>
+    <sys:String x:Key="Nav.Mark.Several">{0} things need a look in Settings.</sys:String>
 
     <sys:String x:Key="SignIn.Title">Plan tomorrow.&#10;Keep your goals alive.</sys:String>
     <sys:String x:Key="SignIn.EmailLabel">Email</sys:String>
@@ -355,9 +359,26 @@
     <sys:String x:Key="Problems.Backup">The weekly copy of your data was not written</sys:String>
     <sys:String x:Key="Problems.BackupAdvice">Choose the folder again under Your data, or export one yourself.</sys:String>
     <sys:String x:Key="Problems.Update">An update could not be installed</sys:String>
-    <sys:String x:Key="Problems.UpdateAdvice">Try again under About, or install it yourself from the release page.</sys:String>
+    <sys:String x:Key="Problems.UpdateAdvice">Try again under Updates, or install it yourself from the release page.</sys:String>
     <sys:String x:Key="Problems.BackupFolderGone">The folder chosen for the weekly copy is not there any more, so it was turned off.</sys:String>
     <sys:String x:Key="Problems.BackupCouldNotWrite">The folder is there, but the file could not be written to it.</sys:String>
+
+    <!-- The banner at the top of Settings: what needs the owner and what to do (docs/problems.md). -->
+    <sys:String x:Key="Notice.BannerName">Needs your attention</sys:String>
+    <sys:String x:Key="Notice.UpdateReady">An update is ready: version {0}</sys:String>
+    <sys:String x:Key="Notice.UpdateReadyAdvice">Install it now. GoalMaker closes, updates and opens again.</sys:String>
+    <sys:String x:Key="Notice.Install">Install now</sys:String>
+    <sys:String x:Key="Notice.Sync">Sync hit a problem</sys:String>
+    <sys:String x:Key="Notice.SyncAdvice">Some changes have not reached the server yet. They are safe on this PC, and GoalMaker keeps trying.</sys:String>
+    <sys:String x:Key="Notice.SyncAction">See what happened</sys:String>
+    <sys:String x:Key="Notice.Backup">The weekly backup was not written</sys:String>
+    <sys:String x:Key="Notice.BackupAdvice">Choose the backup folder again, or export a copy yourself.</sys:String>
+    <sys:String x:Key="Notice.BackupAction">Go to Your data</sys:String>
+    <sys:String x:Key="Notice.Update">An update could not be installed</sys:String>
+    <sys:String x:Key="Notice.UpdateAdvice">Try again, or download it yourself from the release page.</sys:String>
+    <sys:String x:Key="Notice.UpdateAction">Go to Updates</sys:String>
+    <sys:String x:Key="Notice.Dismiss">Dismiss</sys:String>
+    <sys:String x:Key="Notice.DismissName">Dismiss: {0}</sys:String>
     <sys:String x:Key="Sync.Syncing">Syncing…</sys:String>
     <sys:String x:Key="Sync.SyncedAt">Synced at {0}</sys:String>
     <sys:String x:Key="Sync.Offline">Offline · {0} change(s) waiting</sys:String>

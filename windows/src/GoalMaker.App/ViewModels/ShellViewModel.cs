@@ -1,7 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using GoalMaker.App.Localization;
 using GoalMaker.Core.Auth;
-using GoalMaker.Core.Problems;
-using GoalMaker.Core.Updates;
+using GoalMaker.Core.Notices;
 
 namespace GoalMaker.App.ViewModels;
 
@@ -23,27 +23,35 @@ public sealed partial class ShellViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasSettingsMark))]
     private bool hasUpdate;
 
-    public ShellViewModel(IAuthGateway auth, SignInViewModel signIn, ProblemLog problems, UpdateService updates, Action<Action> runOnUi)
+    [ObservableProperty]
+    private string settingsMarkText = string.Empty;
+
+    public ShellViewModel(IAuthGateway auth, SignInViewModel signIn, NoticeBoard notices, IStrings strings, Action<Action> runOnUi)
     {
         SignIn = signIn;
         auth.SessionChanged += (_, session) => runOnUi(() => Apply(session));
-        // The quiet mark on the Settings item: something went wrong while nobody was watching.
-        problems.Changed += (_, _) => runOnUi(() => HasProblems = problems.IsMarked);
-        HasProblems = problems.IsMarked;
-        // The accent mark on the Settings item: the last check found an update that is not installed.
-        updates.WaitingChanged += (_, _) => runOnUi(() => HasUpdate = updates.Waiting is not null);
-        HasUpdate = updates.Waiting is not null;
+        // The icons on the Settings item (docs/problems.md): a warning for a problem nobody has read, a
+        // download arrow for an update the last check found, and a tooltip that says which.
+        notices.Changed += (_, _) => runOnUi(() => ShowMarks(notices.Marked, strings));
+        ShowMarks(notices.Marked, strings);
         Apply(auth.Session);
     }
 
     public SignInViewModel SignIn { get; }
 
-    /// <summary>Whether the Settings item wears a mark at all; an update shows over a problem.</summary>
+    /// <summary>Whether the Settings item wears a mark at all; a problem and an update sit side by side.</summary>
     public bool HasSettingsMark => HasProblems || HasUpdate;
 
     public bool IsSignedOut => !IsLoading && !IsSignedIn;
 
     partial void OnIsLoadingChanged(bool value) => OnPropertyChanged(nameof(IsSignedOut));
+
+    private void ShowMarks(IReadOnlyList<Notice> marked, IStrings strings)
+    {
+        HasProblems = marked.Any(notice => notice is Notice.ProblemWaiting);
+        HasUpdate = marked.Any(notice => notice is Notice.UpdateReady);
+        SettingsMarkText = NoticeCopy.Mark(marked, strings);
+    }
 
     private void Apply(AuthSession session)
     {

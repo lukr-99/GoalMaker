@@ -2,6 +2,7 @@ using GoalMaker.App.Localization;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Account;
 using GoalMaker.Core.Auth;
+using GoalMaker.Core.Notices;
 using GoalMaker.Core.Problems;
 using Microsoft.Extensions.Time.Testing;
 
@@ -125,7 +126,7 @@ public sealed class ProblemsViewModelTests
     {
         var auth = new SignedOutAuth();
         var watch = new SignInWatch(auth, new TestPlanner.FakeSettings(), () => DateTimeOffset.Now);
-        return new ShellViewModel(auth, new SignInViewModel(auth, watch, new KeyStrings(), devBackend: null), log, new TestUpdates().Service, action => action());
+        return new ShellViewModel(auth, new SignInViewModel(auth, watch, new KeyStrings(), devBackend: null), new NoticeBoard(log, new TestUpdates().Service), new KeyStrings(), action => action());
     }
 
     private sealed class KeyStrings : IStrings

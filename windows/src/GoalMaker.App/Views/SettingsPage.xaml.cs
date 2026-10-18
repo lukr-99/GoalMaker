@@ -6,7 +6,8 @@ namespace GoalMaker.App.Views;
 
 /// <summary>
 /// Settings on the dotnetlib settings kit. All behavior is in <see cref="SettingsViewModel"/> and,
-/// for the problems, Areas and tags and the Claude connector, <see cref="ProblemsViewModel"/>,
+/// for the banner, the problems, Areas and tags and the Claude connector,
+/// <see cref="SettingsNoticesViewModel"/>, <see cref="ProblemsViewModel"/>,
 /// <see cref="AreasViewModel"/> and <see cref="ConnectorViewModel"/>; this hands each section its view
 /// model, reads the keys for the quick-add shortcut, and lands on Updates when the mark on the
 /// Settings item stood for an update (<see cref="SettingsSectionsViewModel.Landing"/>).
@@ -19,6 +20,7 @@ public partial class SettingsPage
         SettingsViewModel viewModel,
         ConnectorViewModel connector,
         ProblemsViewModel problems,
+        SettingsNoticesViewModel notices,
         SettingsSectionsViewModel sections,
         AreasViewModel areas,
         Action<Window>? prepareConfirm = null)
@@ -27,12 +29,26 @@ public partial class SettingsPage
         this.viewModel = viewModel;
         DataContext = viewModel;
         ProblemsSection.DataContext = problems;
+        NoticeBanner.DataContext = notices;
         ClaudeSection.DataContext = connector;
         AreasSection.DataContext = areas;
         OpenAreasRow.DataContext = sections;
 
         // The danger row's confirmation wears the app's body font, as its other windows do.
         SignOutAnywayRow.PrepareConfirm = prepareConfirm;
+
+        // A banner button installs the update, or jumps to the section that helps with the problem.
+        notices.ActRequested += (_, notice) =>
+        {
+            if (NoticeCopy.Section(notice) is { } section)
+            {
+                JumpTo(section);
+            }
+            else if (viewModel.InstallUpdateCommand.CanExecute(null))
+            {
+                viewModel.InstallUpdateCommand.Execute(null);
+            }
+        };
 
         // When the mark stood for an update, the page lands on Updates with the jump hint.
         Loaded += async (_, _) =>

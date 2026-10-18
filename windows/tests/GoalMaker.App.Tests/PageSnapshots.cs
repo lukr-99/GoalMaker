@@ -19,6 +19,7 @@ using GoalMaker.Core.Auth;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Connector;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Notices;
 using GoalMaker.Core.Problems;
 using GoalMaker.Core.Settings;
 using GoalMaker.Infrastructure.Sync;
@@ -1345,7 +1346,7 @@ public sealed class PageSnapshots
         var auth = new SnapshotAuth();
         var watch = new SignInWatch(auth, planner.Settings, () => DateTimeOffset.Now);
         var shell = new ShellViewModel(
-            auth, new SignInViewModel(auth, watch, strings, devBackend: null), problems, updates.Service, action => action());
+            auth, new SignInViewModel(auth, watch, strings, devBackend: null), new NoticeBoard(problems, updates.Service), strings, action => action());
 
         void Sidebar(string name)
         {
@@ -1420,7 +1421,14 @@ public sealed class PageSnapshots
         var connector = new ConnectorViewModel(new SnapshotLinks(), "https://example.supabase.co", strings, _ => { });
         var sections = new SettingsSectionsViewModel(() => { });
         var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
-        Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action()), sections, areas), folder, "update-mark-settings-page", new Size(852, 4200));
+        Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action()), new SettingsNoticesViewModel(new NoticeBoard(problems, updates.Service), strings, action => action()), sections, areas), folder, "update-mark-settings-page", new Size(852, 4200));
+
+        // A sync problem beside the update: both icons on the item, and both lines in the banner.
+        problems.Report(ProblemRules.Sync, "23502: null value in column \"priority\"");
+        Sidebar("update-mark-both-track-dark");
+        var notices = new SettingsNoticesViewModel(new NoticeBoard(problems, updates.Service), strings, action => action());
+        Save(new SettingsPage(page, connector, new ProblemsViewModel(problems, strings, action => action()), notices, sections, areas), folder, "notices-settings-page", new Size(852, 900));
+        problems.Clear(ProblemRules.Sync);
 
         updates.Latest = "1.0.0";
         updates.Service.CheckAsync(CancellationToken.None).GetAwaiter().GetResult();
@@ -1471,7 +1479,7 @@ public sealed class PageSnapshots
 
             var settings = SettingsViewModelTests.Build(planner, strings, updates.Service, "https://example.com/releases/latest", _ => { });
             var areas = new AreasViewModel(planner.Areas, planner.Tags, strings, theme.AreaBrush, action => action());
-            return new SettingsPage(settings, connector, new ProblemsViewModel(problems, strings, action => action()), new SettingsSectionsViewModel(() => { }), areas);
+            return new SettingsPage(settings, connector, new ProblemsViewModel(problems, strings, action => action()), new SettingsNoticesViewModel(new NoticeBoard(problems, updates.Service), strings, action => action()), new SettingsSectionsViewModel(() => { }), areas);
         }
 
         foreach (var (id, mode) in new[]

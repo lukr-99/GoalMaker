@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Account;
 using GoalMaker.Core.Auth;
+using GoalMaker.Core.Notices;
 using GoalMaker.Core.Problems;
 using GoalMaker.Core.Sync;
 using GoalMaker.Infrastructure.Sync;
@@ -29,7 +30,7 @@ public sealed class SessionEndedTests : IDisposable
         var sessionSync = new SessionSync(catalog, planner.Replica, sync);
         auth.SessionChanged += (_, session) => sessionSync.Apply(session);
         var signIn = new SignInViewModel(auth, new SignInWatch(auth, planner.Settings, () => planner.Time.GetUtcNow()), planner.Strings, devBackend: null);
-        shell = new ShellViewModel(auth, signIn, new ProblemLog(planner.Time), new TestUpdates().Service, action => action());
+        shell = new ShellViewModel(auth, signIn, new NoticeBoard(new ProblemLog(planner.Time), new TestUpdates().Service), planner.Strings, action => action());
     }
 
     private CancellationToken Token => TestContext.Current.CancellationToken;

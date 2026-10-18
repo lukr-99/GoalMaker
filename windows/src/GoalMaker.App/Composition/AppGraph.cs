@@ -12,6 +12,7 @@ using GoalMaker.Core.Assistant;
 using GoalMaker.Core.Backup;
 using GoalMaker.Core.Auth;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Notices;
 using GoalMaker.Core.Problems;
 using GoalMaker.Core.Settings;
 using GoalMaker.Core.Startup;
@@ -114,6 +115,8 @@ public sealed class AppGraph : IDisposable
             releases is null ? new NotConfiguredReleaseChannel() : new GitHubReleaseChannel(updatesHttp, releases, Paths.Updates),
             new ReleaseVerifier(signatures),
             new InstallerLauncher(shutdownApp));
+        // What needs the owner, for the icons on the Settings item and the banner in Settings.
+        Notices = new NoticeBoard(Problems, Updates);
 
         // The quiet check (docs/setup/signing-and-releases.md): half a minute after the start, then a
         // look every hour that checks once a day. It never installs, and a failure is only logged.
@@ -251,7 +254,7 @@ public sealed class AppGraph : IDisposable
             () => DateTimeOffset.UtcNow,
             (wait, cancellationToken) => Task.Delay(wait, cancellationToken));
         SignIn = new SignInViewModel(Auth, SignInWatch, strings, build.IsDevBuild ? backend.Url : null, devCode, ReadClipboardText, phone);
-        Shell = new ShellViewModel(Auth, SignIn, Problems, Updates, runOnUi);
+        Shell = new ShellViewModel(Auth, SignIn, Notices, strings, runOnUi);
         // Go to finds a project item by its id too, GM-12 (docs/projects.md, "Item ids").
         Places = new PlacesViewModel(Settings, strings, FindItems, id => OpenTask(id, AppPage.Projects));
 
@@ -463,6 +466,7 @@ public sealed class AppGraph : IDisposable
             runOnUi);
 
         ProblemsPage = new ProblemsViewModel(Problems, strings, runOnUi);
+        SettingsNotices = new SettingsNoticesViewModel(Notices, strings, runOnUi);
 
         // Where opening Settings lands, and its way from Areas and tags to the full Areas page.
         SettingsSections = new SettingsSectionsViewModel(() => Places.Open(PlacesViewModel.Areas));
@@ -694,6 +698,12 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The problems card on the Settings page.</summary>
     public ProblemsViewModel ProblemsPage { get; }
+
+    /// <summary>An update waiting and problems still wrong, for the sidebar mark and the Settings banner.</summary>
+    public NoticeBoard Notices { get; }
+
+    /// <summary>The banner at the top of the Settings page.</summary>
+    public SettingsNoticesViewModel SettingsNotices { get; }
 
     public SettingsSectionsViewModel SettingsSections { get; }
 
