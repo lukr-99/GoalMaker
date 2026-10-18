@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "What the owner is told has gone wrong, and where (docs/problems.md). A problem belongs to a kind, and a kind holds one problem at a time: a newer one takes the place of the older, because what matters is what is wrong now rather than every time it has been. 'kinds': the kinds both apps know. 'runs': things that happen in order, and the problems left afterwards, newest first, each with whether it is still unread, and 'marked', whether anything is unread at all, which is the quiet mark on the Settings item. A step is 'report' (a kind went wrong, with the detail kept behind 'what happened' for a bug report), 'clear' (that kind came right by itself, so nothing is left to tell) or 'read' (the owner opened the problems).",
+  "description": "What the owner is told has gone wrong, and where (docs/problems.md). A problem belongs to a kind, and a kind holds one problem at a time: a newer one takes the place of the older, because what matters is what is wrong now rather than every time it has been. 'kinds': the kinds both apps know. 'runs': things that happen in order, and the problems left afterwards, newest first, each with whether it is still unread, and 'marked', whether anything is unread at all, which is the quiet mark on the Settings item. A step is 'report' (a kind went wrong, with the detail kept behind 'what happened' for a bug report; the same kind with the same detail again is the same problem still going, so it stays as it was), 'clear' (that kind came right by itself, so nothing is left to tell) or 'read' (the owner opened the problems).",
   "kinds": [
     "sync",
     "backup",
@@ -56,6 +56,122 @@
             "kind": "sync",
             "at": "2026-09-21T10:05:00Z",
             "detail": "the second",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "the same problem again before it is read stays one unread problem, from when it started",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:05:00Z",
+          "detail": "the push that would not go"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "the push that would not go",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "the same problem again after reading is nothing new, so the mark stays off",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "read": true
+        },
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:05:00Z",
+          "detail": "the push that would not go"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:00:00Z",
+            "detail": "the push that would not go",
+            "unread": false
+          }
+        ],
+        "marked": false
+      }
+    },
+    {
+      "name": "the same kind going wrong in a new way after reading marks again",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "read": true
+        },
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:05:00Z",
+          "detail": "another push that would not go"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T10:05:00Z",
+            "detail": "another push that would not go",
+            "unread": true
+          }
+        ],
+        "marked": true
+      }
+    },
+    {
+      "name": "a problem that came right and comes back marks again",
+      "steps": [
+        {
+          "report": "sync",
+          "at": "2026-09-21T10:00:00Z",
+          "detail": "the push that would not go"
+        },
+        {
+          "read": true
+        },
+        {
+          "clear": "sync"
+        },
+        {
+          "report": "sync",
+          "at": "2026-09-21T11:00:00Z",
+          "detail": "the push that would not go"
+        }
+      ],
+      "expect": {
+        "problems": [
+          {
+            "kind": "sync",
+            "at": "2026-09-21T11:00:00Z",
+            "detail": "the push that would not go",
             "unread": true
           }
         ],
