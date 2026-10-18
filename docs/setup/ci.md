@@ -66,11 +66,12 @@ have.
 `main` gets its own group and is never cancelled (see the pitfall "A merge to main cancelled the
 one before it").
 
-**Caching.** Gradle (`gradle/actions/setup-gradle`, read-only outside `main`), NuGet
-(`setup-dotnet` with `cache: true`, in CI and in the release) and npm (`setup-node` with
-`cache: npm`). The Supabase Docker images are pulled each time: pulling them from the registry is
-about as fast as restoring multi-gigabyte `docker save` tarballs, and they would crowd the 10 GB
-cache.
+**Caching.** Gradle (`gradle/actions/setup-gradle`, read-only outside `main`), NuGet (the release
+uses `setup-dotnet` with `cache: true`; CI uses the SDK already on the runner image plus
+`actions/cache` on `~/.nuget/packages`, which saves a 300 MB SDK download per run) and npm
+(`setup-node` with `cache: npm`). The Supabase Docker images are pulled each time: pulling them from
+the registry is about as fast as restoring multi-gigabyte `docker save` tarballs, and they would
+crowd the 10 GB cache.
 
 **Release.** Unchanged apart from the NuGet cache: it still checks that the tag matches
 `version.properties`, that every secret is set, runs the unit tests, verifies the APK signature and
