@@ -62,13 +62,19 @@ object GoalRules {
 
     /**
      * Where [goal] stands, from the [tasks] that serve it, the [entries] logged on it and the
-     * check-ins of the [habits] that feed a numeric goal (docs/habits.md).
+     * check-ins of the [habits] that feed a numeric goal or a goal under it in [goals] (docs/habits.md).
      */
-    fun progressOf(goal: GoalItem, tasks: List<TaskItem>, entries: List<GoalEntryItem>, habits: HabitData): GoalProgress {
+    fun progressOf(
+        goal: GoalItem,
+        tasks: List<TaskItem>,
+        entries: List<GoalEntryItem>,
+        habits: HabitData,
+        goals: List<GoalItem>,
+    ): GoalProgress {
         val amounts = if (goal.mode != MODE_NUMBER || habits.habits.isEmpty()) {
             emptyList()
         } else {
-            HabitRules.goalAmounts(goal, habits.habits, habits.checkins).map { GoalEntryItem("", goal.id, goal.periodStart, it) }
+            HabitRules.goalAmounts(goal, habits.habits, habits.checkins, goals).map { GoalEntryItem("", goal.id, goal.periodStart, it) }
         }
         return progress(goal.mode, goal.status, goal.target, tasks, entries + amounts)
     }

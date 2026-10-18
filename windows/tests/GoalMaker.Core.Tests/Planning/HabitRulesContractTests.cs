@@ -190,8 +190,15 @@ public sealed class HabitRulesContractTests
                 Unit = habit.GetProperty("unit").GetString(),
                 GoalId = habit.GetProperty("goalId").GetString(),
             });
+            var under = testCase.TryGetProperty("goals", out var goalsJson)
+                ? goalsJson.EnumerateArray().Select(each => new GoalItem(each.GetProperty("id").GetString()!, "Goal", GoalHorizon.Week, goal.PeriodStart)
+                {
+                    ParentId = each.GetProperty("parentId").GetString(),
+                    Deleted = each.TryGetProperty("deleted", out var deleted) && deleted.GetBoolean(),
+                })
+                : [];
             var expected = testCase.GetProperty("expect").EnumerateArray().Select(amount => amount.GetDouble());
-            Assert.Equal(expected, HabitRules.GoalAmounts(goal, habits, Checkins(testCase)));
+            Assert.Equal(expected, HabitRules.GoalAmounts(goal, habits, Checkins(testCase), [goal, .. under]));
         }
     }
 

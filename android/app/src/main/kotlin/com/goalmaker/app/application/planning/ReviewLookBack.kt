@@ -63,7 +63,7 @@ object ReviewLookBack {
         val entriesByGoal = entries.groupBy(GoalEntryItem::goalId)
         val tasksByGoal = live.filter { it.goalId != null }.groupBy { it.goalId!! }
         val goalRows = periodGoals.map { goal ->
-            val progress = GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty(), habits)
+            val progress = GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty(), habits, goals)
             ReviewDigest.Goal(goal.id, goal.title, goal.emoji, progress.fraction, progress.hit)
         }
 

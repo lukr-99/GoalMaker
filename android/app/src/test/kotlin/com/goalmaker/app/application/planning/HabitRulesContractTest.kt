@@ -221,8 +221,19 @@ class HabitRulesContractTest {
                     goalId = habit.text("goalId"),
                 )
             }
+            val under = case["goals"]?.jsonArray.orEmpty().map { element ->
+                val each = element.jsonObject
+                GoalItem(
+                    id = each.text("id")!!,
+                    title = "Goal",
+                    horizon = GoalHorizon.WEEK,
+                    periodStart = goal.periodStart,
+                    parentId = each.text("parentId"),
+                    deleted = each["deleted"]?.jsonPrimitive?.boolean ?: false,
+                )
+            }
             val expect = case.getValue("expect").jsonArray.map { it.jsonPrimitive.double }
-            assertEquals(case.text("name"), expect, HabitRules.goalAmounts(goal, habits, case.checkins()))
+            assertEquals(case.text("name"), expect, HabitRules.goalAmounts(goal, habits, case.checkins(), listOf(goal) + under))
         }
     }
 }

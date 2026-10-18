@@ -321,24 +321,27 @@ export function checkinId(habitId: string, day: Day): Promise<string> {
 }
 
 /**
- * The check-in values that count toward `goal`: of habits serving it, measured by count or amount, in its
- * unit (lowercased, without spaces), not skipped, on a day in its period (story 32).
+ * The check-in values that count toward `goal`: of habits serving it or a goal under it in the cascade
+ * (`goals` gives the parents), whose unit is its unit (lowercased, without spaces, no unit matching no
+ * unit), not skipped or failed, on a day in its period (story 32). A check habit has no unit and adds 1
+ * for each day it met.
  */
 export function goalAmounts(
   goal: Pick<GoalItem, "id" | "unit" | "horizon" | "periodStart">,
   habits: Pick<HabitItem, "id" | "goalId" | "measure" | "unit" | "deleted">[],
   checkins: HabitCheckin[],
+  goals: Pick<GoalItem, "id" | "parentId" | "deleted">[],
 ): number[] {
-  if (goal.unit === null) return [];
+  const parents = new Map(goals.filter((each) => !each.deleted).map((each) => [each.id, each.parentId]));
   const unit = unitKey(goal.unit);
   const end = goalPeriodEnd(goal.horizon, goal.periodStart);
-  const serving = new Set(
+  const serving = new Map(
     habits
       .filter((habit) =>
-        !habit.deleted && habit.goalId === goal.id && habit.measure !== "check" && habit.unit !== null &&
-        unitKey(habit.unit) === unit
+        !habit.deleted && feeds(habit.goalId, goal.id, parents) &&
+        (habit.measure === "check" ? unit === "" : unitKey(habit.unit) === unit)
       )
-      .map((habit) => habit.id),
+      .map((habit) => [habit.id, habit.measure] as const),
   );
   return checkins
     .filter((checkin) =>
@@ -346,7 +349,23 @@ export function goalAmounts(
       checkin.day >= goal.periodStart &&
       checkin.day <= end
     )
-    .map((checkin) => checkin.value);
+    .flatMap((checkin) => {
+      if (serving.get(checkin.habitId) !== "check") return [checkin.value];
+      return checkin.value >= 1 ? [1] : [];
+    });
+}
+
+// Whether the goal `from` is `to` or sits under it, climbing the parents; a missing parent ends the climb
+// and a loop is walked once.
+function feeds(from: string | null, to: string, parents: Map<string, string | null>): boolean {
+  const seen = new Set<string>();
+  let at = from;
+  while (at !== null && !seen.has(at)) {
+    if (at === to) return true;
+    seen.add(at);
+    at = parents.get(at) ?? null;
+  }
+  return false;
 }
 
 function covers(pause: HabitPause, start: Day, end: Day): boolean {
@@ -365,8 +384,8 @@ function share(habit: HabitItem, value: number): number {
   return Math.min(1, Math.max(0, value / (habit.target ?? 1)));
 }
 
-function unitKey(unit: string): string {
-  return unit.replace(/\s/g, "").toLowerCase();
+function unitKey(unit: string | null): string {
+  return (unit ?? "").replace(/\s/g, "").toLowerCase();
 }
 
 /** Two decimals with halves rounded up, the way every app rounds a fill (0.625 is 0.63). */

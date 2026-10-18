@@ -252,19 +252,26 @@ object HabitRules {
         NameBasedUuid.of(NAMESPACE, "checkin/${habitId.lowercase(Locale.ROOT)}/$day")
 
     /**
-     * The check-in values that count toward [goal]: of habits serving it, measured by count or amount, in
-     * its unit (lowercased, without spaces), not skipped, on a day in its period (story 32).
+     * The check-in values that count toward [goal]: of habits serving it or a goal under it in the cascade
+     * ([goals] gives the parents), whose unit is its unit (lowercased, without spaces, no unit matching no
+     * unit), not skipped or failed, on a day in its period (story 32). A check habit has no unit and adds 1
+     * for each day it met.
      */
-    fun goalAmounts(goal: GoalItem, habits: List<HabitItem>, checkins: List<HabitCheckin>): List<Double> {
-        val unit = goal.unit?.let(::unitKey) ?: return emptyList()
+    fun goalAmounts(goal: GoalItem, habits: List<HabitItem>, checkins: List<HabitCheckin>, goals: List<GoalItem>): List<Double> {
+        val parents = goals.filterNot(GoalItem::deleted).associate { it.id to it.parentId }
+        val unit = unitKey(goal.unit)
         val end = GoalRules.periodEnd(goal.horizon, goal.periodStart)
         val serving = habits
-            .filter { !it.deleted && it.goalId == goal.id && it.measure != CHECK && it.unit?.let(::unitKey) == unit }
-            .map(HabitItem::id)
-            .toSet()
+            .filter { !it.deleted && feeds(it.goalId, goal.id, parents) && if (it.measure == CHECK) unit.isEmpty() else unitKey(it.unit) == unit }
+            .associate { it.id to (it.measure == CHECK) }
         return checkins
             .filter { !it.deleted && !it.skipped && !it.failed && it.habitId in serving && !it.day.isBefore(goal.periodStart) && !it.day.isAfter(end) }
-            .map(HabitCheckin::value)
+            .mapNotNull { checkin ->
+                when {
+                    serving.getValue(checkin.habitId) -> if (checkin.value >= 1.0) 1.0 else null
+                    else -> checkin.value
+                }
+            }
     }
 
     /**
@@ -302,5 +309,17 @@ object HabitRules {
     private fun share(habit: HabitItem, value: Double): Double =
         if (habit.measure == CHECK) (if (value >= 1.0) 1.0 else 0.0) else (value / (habit.target ?: 1.0)).coerceIn(0.0, 1.0)
 
-    private fun unitKey(unit: String): String = unit.filterNot(Char::isWhitespace).lowercase(Locale.ROOT)
+    // Whether the goal [from] is [to] or sits under it, climbing the parents; a missing parent ends the climb
+    // and a loop is walked once.
+    private fun feeds(from: String?, to: String, parents: Map<String, String?>): Boolean {
+        val seen = mutableSetOf<String>()
+        var at = from
+        while (at != null && seen.add(at)) {
+            if (at == to) return true
+            at = parents[at]
+        }
+        return false
+    }
+
+    private fun unitKey(unit: String?): String = unit.orEmpty().filterNot(Char::isWhitespace).lowercase(Locale.ROOT)
 }

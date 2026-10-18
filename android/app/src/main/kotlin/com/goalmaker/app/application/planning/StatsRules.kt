@@ -101,7 +101,7 @@ object StatsRules {
             val start = first.plusMonths(step.toLong())
             val month = live.filter { GoalRules.periodStart(GoalHorizon.MONTH, it.periodStart) == start }
             val hit = month.count { goal ->
-                GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty(), habits).hit
+                GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), entriesByGoal[goal.id].orEmpty(), habits, goals).hit
             }
             StatsDigest.Month(start, hit, month.size)
         }

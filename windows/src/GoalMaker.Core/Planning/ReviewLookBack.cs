@@ -93,7 +93,7 @@ public static class ReviewLookBack
         var tasksByGoal = live.Where(task => task.GoalId is not null).ToLookup(task => task.GoalId!, StringComparer.Ordinal);
         var goalRows = periodGoals.Select(goal =>
         {
-            var progress = GoalRules.ProgressOf(goal, tasksByGoal[goal.Id], entriesByGoal[goal.Id], habits, checkins);
+            var progress = GoalRules.ProgressOf(goal, tasksByGoal[goal.Id], entriesByGoal[goal.Id], habits, checkins, goalList);
             return new ReviewDigest.Goal(goal.Id, goal.Title, goal.Emoji, progress.Fraction, progress.Hit);
         }).ToList();
 

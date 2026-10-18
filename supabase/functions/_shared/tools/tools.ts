@@ -340,6 +340,7 @@ async function progressOf(planner: Planner) {
   const entries = await planner.goalEntries();
   const habits = await planner.habits();
   const checkins = await planner.checkins();
+  const goals = await planner.goals();
   return (goal: GoalItem) =>
     goalProgress(
       goal.mode,
@@ -349,7 +350,7 @@ async function progressOf(planner: Planner) {
       [
         ...(entries.get(goal.id) ?? []),
         ...(goal.mode === "number"
-          ? goalAmounts(goal, habits, checkins).map((amount) => ({ amount, deleted: false }))
+          ? goalAmounts(goal, habits, checkins, goals).map((amount) => ({ amount, deleted: false }))
           : []),
       ],
     );
