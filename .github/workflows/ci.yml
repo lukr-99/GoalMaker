@@ -288,20 +288,25 @@ jobs:
       - uses: actions/checkout@v7
         if: env.NEEDED == 'true'
 
-      - uses: actions/setup-dotnet@v6
+      # The runner image already has a .NET 10 SDK that global.json accepts (rollForward), so the SDK
+      # is not downloaded again (setup-dotnet fetched 300 MB per run). Only the NuGet packages are cached.
+      - uses: actions/cache@v6
         if: env.NEEDED == 'true'
         with:
-          global-json-file: windows/global.json
-          cache: true
-          cache-dependency-path: windows/**/*.csproj
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('windows/**/*.csproj', 'windows/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
 
       - name: Restore
         if: env.NEEDED == 'true'
         run: dotnet restore GoalMaker.slnx
 
       - name: Check formatting
+        # Whitespace only. The build below already enforces code style and the analyzers as errors
+        # (EnforceCodeStyleInBuild and TreatWarningsAsErrors in Directory.Build.props), so the full
+        # "dotnet format" would only run them a second time.
         if: env.NEEDED == 'true'
-        run: dotnet format GoalMaker.slnx --verify-no-changes --no-restore
+        run: dotnet format whitespace GoalMaker.slnx --verify-no-changes --no-restore
 
       - name: Build
         if: env.NEEDED == 'true'
