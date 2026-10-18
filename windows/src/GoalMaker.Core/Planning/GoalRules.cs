@@ -94,17 +94,19 @@ public static class GoalRules
 
     /// <summary>
     /// Where <paramref name="goal"/> stands, from the tasks that serve it, the entries logged on it and
-    /// the check-ins of the habits that feed a numeric goal (docs/habits.md).
+    /// the check-ins of the habits that feed a numeric goal or a goal under it in <paramref name="goals"/>
+    /// (docs/habits.md).
     /// </summary>
     public static GoalProgress ProgressOf(
         GoalItem goal,
         IEnumerable<TaskItem> tasks,
         IEnumerable<GoalEntryItem> entries,
         IReadOnlyList<HabitItem> habits,
-        IReadOnlyList<HabitCheckin> checkins)
+        IReadOnlyList<HabitCheckin> checkins,
+        IEnumerable<GoalItem> goals)
     {
         IEnumerable<GoalEntryItem> amounts = goal.Mode == ModeNumber && habits.Count > 0
-            ? HabitRules.GoalAmounts(goal, habits, checkins).Select(amount => new GoalEntryItem(string.Empty, goal.Id, goal.PeriodStart, amount))
+            ? HabitRules.GoalAmounts(goal, habits, checkins, goals).Select(amount => new GoalEntryItem(string.Empty, goal.Id, goal.PeriodStart, amount))
             : [];
         return Progress(goal.Mode, goal.Status, goal.Target, tasks, [.. entries, .. amounts]);
     }

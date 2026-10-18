@@ -202,6 +202,6 @@ public sealed class HabitListTests : IDisposable
         habits.CheckIn(run.Id, Today.AddDays(-1), 4);
         habits.CheckIn(other.Id, Today, 30);
 
-        Assert.Equal([4, 6], HabitRules.GoalAmounts(goal, habits.All(), habits.Checkins()).Order());
+        Assert.Equal([4, 6], HabitRules.GoalAmounts(goal, habits.All(), habits.Checkins(), goals.All()).Order());
     }
 }

@@ -106,7 +106,7 @@ public static class StatsRules
         {
             var start = first.AddMonths(step);
             var month = live.Where(goal => GoalRules.PeriodStart(GoalHorizon.Month, goal.PeriodStart) == start).ToList();
-            var hit = month.Count(goal => GoalRules.ProgressOf(goal, tasksByGoal[goal.Id], entriesByGoal[goal.Id], habits, checkins).Hit);
+            var hit = month.Count(goal => GoalRules.ProgressOf(goal, tasksByGoal[goal.Id], entriesByGoal[goal.Id], habits, checkins, goals).Hit);
             return new StatsDigest.Month(start, hit, month.Count);
         })];
     }

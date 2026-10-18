@@ -29,7 +29,7 @@ object GoalBoard {
         val tasksByGoal = tasks.filter { it.goalId != null }.groupBy { it.goalId!! }
         fun row(goal: GoalItem): GoalRow {
             val own = entriesByGoal[goal.id].orEmpty()
-            val progress = GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), own, habits)
+            val progress = GoalRules.progressOf(goal, tasksByGoal[goal.id].orEmpty(), own, habits, all)
             return GoalRow(
                 goal = goal,
                 progress = progress,

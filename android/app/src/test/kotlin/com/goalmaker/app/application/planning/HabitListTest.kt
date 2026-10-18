@@ -192,6 +192,6 @@ class HabitListTest {
         assertNotNull(habits.checkIn(other.id, today, 30.0))
 
         val data = habits.read()
-        assertEquals(listOf(4.0, 6.0), HabitRules.goalAmounts(goal, data.habits, data.checkins).sorted())
+        assertEquals(listOf(4.0, 6.0), HabitRules.goalAmounts(goal, data.habits, data.checkins, goals.all()).sorted())
     }
 }

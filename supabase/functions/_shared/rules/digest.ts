@@ -173,7 +173,11 @@ export function digest(input: DigestInput): Digest {
 
   const goals = input.goals
     .filter((goal) => !goal.deleted && goal.horizon === horizon && goal.periodStart === start)
-    .map((goal) => ({ goal, progress: progressOf(goal, tasks, input.entries, habits, input.checkins), expected }));
+    .map((goal) => ({
+      goal,
+      progress: progressOf(goal, tasks, input.entries, habits, input.checkins, input.goals),
+      expected,
+    }));
 
   const habitRows = habits.map((habit) => {
     const own = input.checkins.filter((checkin) => checkin.habitId === habit.id);
@@ -245,6 +249,7 @@ function progressOf(
   entries: Map<string, GoalEntryItem[]>,
   habits: DigestHabit[],
   checkins: HabitCheckin[],
+  goals: GoalItem[],
 ): GoalProgress {
   return goalProgress(
     goal.mode,
@@ -254,7 +259,7 @@ function progressOf(
     [
       ...(entries.get(goal.id) ?? []),
       ...(goal.mode === "number"
-        ? goalAmounts(goal, habits, checkins).map((amount) => ({ amount, deleted: false }))
+        ? goalAmounts(goal, habits, checkins, goals).map((amount) => ({ amount, deleted: false }))
         : []),
     ],
   );

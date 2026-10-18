@@ -431,7 +431,8 @@ Deno.test("habits.json: due days, periods, states, streaks, heat, rings, ids, go
   for (const vector of file.goalAmounts) {
     const goal = { ...vector.goal, periodStart: vector.goal.start };
     const habits = vector.habits.map((fields: Json) => ({ deleted: false, ...fields }));
-    assertEquals(goalAmounts(goal, habits, checkins(vector)), vector.expect, vector.name);
+    const goals = (vector.goals ?? []).map((fields: Json) => ({ deleted: false, ...fields }));
+    assertEquals(goalAmounts(goal, habits, checkins(vector), [goal, ...goals]), vector.expect, vector.name);
   }
 });
 

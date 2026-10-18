@@ -389,16 +389,23 @@ public static class HabitRules
         NameBasedUuid.Of(Namespace, $"checkin/{habitId.ToLowerInvariant()}/{day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}");
 
     /// <summary>
-    /// The check-in values that count toward <paramref name="goal"/>: of habits serving it whose unit is its
-    /// unit (lowercased, without spaces, no unit matching no unit), not skipped or failed, on a day in its
-    /// period (story 32). A check habit has no unit and adds 1 for each day it met.
+    /// The check-in values that count toward <paramref name="goal"/>: of habits serving it or a goal under it
+    /// in the cascade (<paramref name="goals"/> gives the parents), whose unit is its unit (lowercased, without
+    /// spaces, no unit matching no unit), not skipped or failed, on a day in its period (story 32). A check
+    /// habit has no unit and adds 1 for each day it met.
     /// </summary>
-    public static IReadOnlyList<double> GoalAmounts(GoalItem goal, IEnumerable<HabitItem> habits, IEnumerable<HabitCheckin> checkins)
+    public static IReadOnlyList<double> GoalAmounts(GoalItem goal, IEnumerable<HabitItem> habits, IEnumerable<HabitCheckin> checkins, IEnumerable<GoalItem> goals)
     {
+        var parents = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var each in goals.Where(each => !each.Deleted))
+        {
+            parents[each.Id] = each.ParentId;
+        }
+
         var unit = UnitKey(goal.Unit);
         var end = GoalRules.PeriodEnd(goal.Horizon, goal.PeriodStart);
         var serving = habits
-            .Where(habit => !habit.Deleted && habit.GoalId == goal.Id && (habit.Measure == Check ? unit.Length == 0 : UnitKey(habit.Unit) == unit))
+            .Where(habit => !habit.Deleted && Feeds(habit.GoalId, goal.Id, parents) && (habit.Measure == Check ? unit.Length == 0 : UnitKey(habit.Unit) == unit))
             .ToDictionary(habit => habit.Id, habit => habit.Measure == Check);
         return checkins
             .Where(checkin => !checkin.Deleted && !checkin.Skipped && !checkin.Failed && serving.ContainsKey(checkin.HabitId) && checkin.Day >= goal.PeriodStart && checkin.Day <= end)
@@ -454,6 +461,22 @@ public static class HabitRules
 
     // Two decimals with halves rounded up (0.625 is 0.63); the nudge keeps 0.625 * 100 from landing just below 62.5.
     private static double TwoPlaces(double value) => Math.Round((value * 100) + 1e-9, MidpointRounding.AwayFromZero) / 100;
+
+    // Whether the goal from is to or sits under it, climbing the parents; a missing parent ends the climb and
+    // a loop is walked once.
+    private static bool Feeds(string? from, string to, Dictionary<string, string?> parents)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var at = from; at is not null && seen.Add(at); at = parents.GetValueOrDefault(at))
+        {
+            if (at == to)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private static string UnitKey(string? unit) => string.Concat((unit ?? string.Empty).Where(character => !char.IsWhiteSpace(character))).ToLowerInvariant();
 }
