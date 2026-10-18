@@ -13,8 +13,8 @@ run by both apps.
   about it, and when. The technical line is folded away behind **What happened**, for a bug report.
 - **The way in is quiet**: a small mark on the Settings item in the Windows sidebar, and on the gear
   in Today's top bar on Android. Opening Settings reads them, and the mark goes. An update waiting
-  wears its own accent mark with a download arrow in the same place (ARCHITECTURE.md, updating); on
-  Windows it shows over the problem dot, and on the phone the two sit side by side.
+  wears its own accent mark with a download arrow in the same place (ARCHITECTURE.md, updating); the
+  two sit side by side.
 - **They stay until they come right.** A problem that fixes itself, a sync that gets through on the
   next run, takes itself off the list with nobody doing anything. Something that fixes itself should
   never have interrupted anything in the first place.
@@ -26,6 +26,23 @@ run by both apps.
   and then came back marks the item again.
 - **Settings on screen is watching.** A problem that shows up while Settings is open is already
   read. A window hidden to the tray is nobody watching.
+
+## What the owner sees
+
+On Windows the marks say what they are, and Settings says what to do:
+
+- **On the Settings item** a problem nobody has read is a warning triangle in the danger color, and
+  an update is the accent circle with a download arrow. The tooltip and the screen reader name say
+  which, for example "Sync hit a problem. Open Settings to see what to do.", or how many things wait
+  when there is more than one.
+- **At the top of Settings** a banner has one line for the update and one for each problem still
+  wrong: what it is, what to do, a button (Install now, or a jump to the section that helps) and
+  Dismiss. With nothing to act on there is no banner.
+- **Dismiss** takes a line off the banner and its icon off the item until something new comes: a
+  newer version, or a problem that came right and went wrong again. The problem itself stays in the
+  Problems card until it comes right.
+- `NoticeBoard` (Core) puts the update and the problems together for both places; `NoticeCopy` holds
+  what each one says. The other sidebar items carry no marks.
 
 ## What belongs there
 
