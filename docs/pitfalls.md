@@ -116,6 +116,15 @@ space, while the advance width stays the same. Check with `Typeface.TryGetGlyphT
 has one (`tools/build_windows_fonts.py`), and leave room after a slanted word when it doesn't
 (`GM.ItalicGap`).
 
+## A missing place case in Label() falls through to Nav.Settings
+
+2026-11-11, adding the focus place. `PlacesViewModel.Label()` has a switch that maps each place
+string to its string key, with `_ => "Nav.Settings"` as the catch-all. Adding a new place to
+`PlaceRules.Places` without also adding a case there made Label() return "Nav.Settings" for the new
+place. The symptom was a flaky Go-to test: searching for "nav.s" returned the new place as a match
+because "Nav.Settings" contains "nav.s". The fix is obvious once found, but the catch-all hid it
+completely at runtime. When adding a place, add its case to `Label()` at the same time.
+
 ## Ordering by a column the select turned into text
 
 2026-10-01, PR 36. The connector's `get_activity` selected `id::text as id` and then said `order by
