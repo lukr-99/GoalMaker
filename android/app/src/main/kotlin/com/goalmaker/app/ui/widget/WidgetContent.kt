@@ -14,6 +14,8 @@ import com.goalmaker.app.application.planning.LifeGoalRules
 import com.goalmaker.app.application.planning.ListRules
 import com.goalmaker.app.application.planning.ProjectItem
 import com.goalmaker.app.application.planning.TaskItem
+import com.goalmaker.app.application.planning.TaskState
+import com.goalmaker.app.domain.planning.FocusBoardRules
 import com.goalmaker.app.ui.goals.GoalBoard
 import java.time.Instant
 import java.time.LocalDate
@@ -165,6 +167,18 @@ object WidgetContent {
         val slot = now.epochSecond / (LIFE_GOAL_SLIDE_MINUTES * 60)
         return slides[Math.floorMod(slot, slides.size.toLong()).toInt()]
     }
+
+    /** The Focus Board widget's rows: board items in priority order, up to [ROWS]. */
+    fun focusBoard(tasks: List<TaskItem>, rows: Int = ROWS): List<WidgetTask> =
+        FocusBoardRules.board(tasks).take(rows).map { task ->
+            WidgetTask(
+                id = task.id,
+                title = task.title,
+                time = (task.deadline ?: task.plannedDate)?.toString().orEmpty(),
+                topPriority = task.topPriority,
+                project = "",
+            )
+        }
 
     private fun number(value: Double): String =
         if (value == value.toLong().toDouble()) value.toLong().toString() else String.format(java.util.Locale.ROOT, "%.1f", value)

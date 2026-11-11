@@ -18,8 +18,8 @@ param(
     [string]$BuildType = 'minified',
     # Install this APK instead of building one.
     [string]$Apk,
-    [ValidateSet('TODAY', 'HABITS', 'GOALS', 'MOTIVATION', 'QUICK_ADD', 'LIFE_GOALS')]
-    [string[]]$Kinds = @('TODAY', 'HABITS', 'GOALS', 'MOTIVATION', 'QUICK_ADD', 'LIFE_GOALS'),
+    [ValidateSet('TODAY', 'HABITS', 'GOALS', 'MOTIVATION', 'QUICK_ADD', 'LIFE_GOALS', 'FOCUS')]
+    [string[]]$Kinds = @('TODAY', 'HABITS', 'GOALS', 'MOTIVATION', 'QUICK_ADD', 'LIFE_GOALS', 'FOCUS'),
     [string]$Output,
     [ValidateRange(0, 120)]
     [int]$SyncSeconds = 8

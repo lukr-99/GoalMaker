@@ -15,4 +15,5 @@ enum class WidgetKind(val receiver: Class<out GlanceAppWidgetReceiver>, val crea
     MOTIVATION(MotivationWidgetReceiver::class.java, ::MotivationWidget),
     QUICK_ADD(QuickAddWidgetReceiver::class.java, ::QuickAddWidget),
     LIFE_GOALS(LifeGoalsWidgetReceiver::class.java, ::LifeGoalsWidget),
+    FOCUS(FocusWidgetReceiver::class.java, ::FocusWidget),
 }

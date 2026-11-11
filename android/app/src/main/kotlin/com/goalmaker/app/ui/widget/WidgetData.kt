@@ -53,6 +53,11 @@ object WidgetData {
         return slide to slide.pictureId?.let(graph.lifeGoalPictures::read)
     }
 
+    fun focusBoard(context: Context): List<WidgetTask> {
+        val graph = (context.applicationContext as GoalMakerApplication).graph
+        return WidgetContent.focusBoard(graph.tasks.all())
+    }
+
     /** The owner's planning day, which starts at their day-start hour, not midnight. */
     fun day(context: Context): LocalDate {
         val graph = (context.applicationContext as GoalMakerApplication).graph
