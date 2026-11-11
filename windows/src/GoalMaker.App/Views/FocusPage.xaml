@@ -13,7 +13,7 @@
         <!-- Main board (hidden while add panel is open) -->
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       Visibility="{Binding IsAddClosed, Converter={StaticResource BoolToVisibility}}">
-            <Grid>
+            <StackPanel>
                 <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
                     <controls:HeadlineText Margin="0,0,0,16" Title="{DynamicResource Focus.Title}" FontSize="40" />
                     <TextBlock Text="{DynamicResource Focus.Empty}" Foreground="{DynamicResource GM.TextMutedBrush}"
@@ -62,7 +62,21 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-            </Grid>
+                <!-- Quick-add: full-width so it stretches on wide windows -->
+                <DockPanel Margin="{DynamicResource GM.PagePadding}" KeyboardNavigation.TabNavigation="Local">
+                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Focus.Add}"
+                               Command="{Binding QuickAddCommand}"
+                               AutomationProperties.Name="{DynamicResource Focus.Add}" />
+                    <ui:TextBox TabIndex="0" PlaceholderText="{DynamicResource Focus.QuickAddPlaceholder}"
+                                MaxLength="500"
+                                Text="{Binding QuickAddTitle, UpdateSourceTrigger=PropertyChanged}"
+                                AutomationProperties.Name="{DynamicResource Focus.QuickAddPlaceholder}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding QuickAddCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                </DockPanel>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- Add to board panel (shown when IsAddOpen) -->

@@ -36,6 +36,9 @@ public sealed partial class FocusViewModel : ObservableObject
     [ObservableProperty]
     private bool isCandidatesEmpty;
 
+    [ObservableProperty]
+    private string quickAddTitle = string.Empty;
+
     public FocusViewModel(TaskList tasks, AreaList areas, Action<Action> runOnUi)
     {
         this.tasks = tasks;
@@ -107,6 +110,19 @@ public sealed partial class FocusViewModel : ObservableObject
         var current = Items.ToList();
         double pos = current.Count == 0 ? 1.0 : (current[^1].FocusPosition ?? 1.0) + 1.0;
         tasks.SetFocusPosition(candidate.Id, pos);
+    }
+
+    [RelayCommand]
+    private void QuickAdd()
+    {
+        var title = QuickAddTitle.Trim();
+        if (string.IsNullOrEmpty(title)) return;
+        var current = Items.ToList();
+        var pos = current.Count == 0 ? 1.0 : (current[^1].FocusPosition ?? 1.0) + 1.0;
+        var item = tasks.Add(title);
+        if (item is null) return;
+        tasks.SetFocusPosition(item.Id, pos);
+        QuickAddTitle = string.Empty;
     }
 
     [RelayCommand]

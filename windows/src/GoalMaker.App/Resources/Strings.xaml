@@ -1379,4 +1379,5 @@
     <sys:String x:Key="Focus.Complete">Complete</sys:String>
     <sys:String x:Key="Focus.MoveUp">Move up</sys:String>
     <sys:String x:Key="Focus.MoveDown">Move down</sys:String>
+    <sys:String x:Key="Focus.QuickAddPlaceholder">New task...</sys:String>
 </ResourceDictionary>
