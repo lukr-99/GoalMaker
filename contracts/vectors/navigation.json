@@ -14,7 +14,8 @@
     "tally",
     "reviews",
     "stats",
-    "archive"
+    "archive",
+    "focus"
   ],
   "limits": {
     "phone": 4,
@@ -104,7 +105,7 @@
     {
       "name": "a place that no longer exists is dropped",
       "device": "phone",
-      "stored": ["today", "focus", "habits"],
+      "stored": ["today", "unknown-old", "habits"],
       "expect": ["today", "habits"]
     },
     {
@@ -128,7 +129,7 @@
     {
       "name": "only unknown places means the defaults",
       "device": "phone",
-      "stored": ["focus", "settings"],
+      "stored": ["unknown-old", "settings"],
       "expect": ["today", "tomorrow", "inbox", "projects"]
     }
   ],

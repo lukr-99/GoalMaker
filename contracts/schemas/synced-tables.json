@@ -689,6 +689,11 @@
           "name": "item_number",
           "kind": "integer",
           "required": false
+        },
+        {
+          "name": "focus_position",
+          "kind": "real",
+          "required": false
         }
       ]
     },
