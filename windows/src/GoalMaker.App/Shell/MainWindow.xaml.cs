@@ -63,6 +63,7 @@ public partial class MainWindow
             [typeof(ReviewPage)] = () => new ReviewPage(graph.Review),
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
+            [typeof(FocusPage)] = () => new FocusPage(graph.Focus),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
             [typeof(PlacesPage)] = () => new PlacesPage(graph.PlacesHub),
         }));

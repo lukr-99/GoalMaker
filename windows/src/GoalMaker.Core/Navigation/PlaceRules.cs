@@ -20,12 +20,13 @@ public static class PlaceRules
     public const string Reviews = "reviews";
     public const string Stats = "stats";
     public const string Archive = "archive";
+    public const string Focus = "focus";
 
     private const int PhoneLimit = 4;
 
     /// <summary>Every place, in the order the Places hub and All places list them.</summary>
     public static readonly IReadOnlyList<string> Places =
-        [Today, Tomorrow, Inbox, Calendar, Habits, Goals, LifeGoals, Projects, Wants, Tally, Reviews, Stats, Archive];
+        [Today, Tomorrow, Inbox, Calendar, Habits, Goals, LifeGoals, Projects, Wants, Tally, Reviews, Stats, Archive, Focus];
 
     /// <summary>How many pins a device holds, or null for no limit.</summary>
     public static int? Limit(DeviceKind device) => device == DeviceKind.Phone ? PhoneLimit : null;

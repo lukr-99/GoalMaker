@@ -172,6 +172,9 @@ public sealed partial class PlacesHubViewModel : ObservableObject
                 case PlaceRules.Archive:
                     Line(tile, strings.Get("Places.ArchiveLine", ArchiveRules.Search(all, string.Empty).Count));
                     break;
+                case PlaceRules.Focus:
+                    Line(tile, strings.Get("Places.FocusLine", all.Count(t => !t.Deleted && t.State == TaskState.Open && t.FocusPosition.HasValue)));
+                    break;
             }
         }
 

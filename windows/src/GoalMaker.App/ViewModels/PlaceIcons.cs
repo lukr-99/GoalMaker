@@ -21,6 +21,7 @@ public static class PlaceIcons
         PlaceRules.Wants => SymbolRegular.ShoppingBag24,
         PlaceRules.Tally => SymbolRegular.Timer24,
         PlaceRules.Archive => SymbolRegular.Archive24,
+        PlaceRules.Focus => SymbolRegular.Pin24,
         PlacesViewModel.AllPlaces => SymbolRegular.Apps24,
         PlacesViewModel.Activity => SymbolRegular.History24,
         PlacesViewModel.Areas => SymbolRegular.Tag24,

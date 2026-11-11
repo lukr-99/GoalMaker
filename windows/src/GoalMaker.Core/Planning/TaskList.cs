@@ -21,6 +21,7 @@ public sealed class TaskList
 
     // The server gives an item its number (docs/projects.md, "Item ids"); this app only reads it.
     private const string ItemNumber = "item_number";
+    private const string FocusPosition = "focus_position";
     private static readonly TimeOnly Noon = new(12, 0);
     private const int MaxTitle = 500;
     private const int MaxNotes = 20_000;
@@ -586,5 +587,14 @@ public sealed class TaskList
             System.Text.Json.Nodes.JsonValue value when value.TryGetValue<long>(out var number) => (int)number,
             System.Text.Json.Nodes.JsonValue value when value.TryGetValue<int>(out var number) => number,
             _ => null,
-        });
+        },
+        FocusPosition: row[FocusPosition] is System.Text.Json.Nodes.JsonValue fp && fp.TryGetValue<double>(out var fpos) ? fpos : null);
+
+    public void SetFocusPosition(string id, double? position) => Change(id, row =>
+    {
+        if (position is { } pos)
+            row[FocusPosition] = System.Text.Json.Nodes.JsonValue.Create(pos);
+        else
+            row[FocusPosition] = null;
+    });
 }

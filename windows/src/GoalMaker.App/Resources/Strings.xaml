@@ -123,6 +123,7 @@
     <sys:String x:Key="Nav.Filters">Filter</sys:String>
     <sys:String x:Key="Nav.AreasAndTags">Areas and tags</sys:String>
     <sys:String x:Key="Nav.Archive">Archive</sys:String>
+    <sys:String x:Key="Nav.Focus">Focus</sys:String>
     <sys:String x:Key="Nav.Activity">Activity</sys:String>
 
     <!-- Claude connector (docs/connector.md) -->
@@ -1367,4 +1368,15 @@
     <sys:String x:Key="Places.LifeGoal">{0} life goal</sys:String>
     <sys:String x:Key="Places.LifeGoals">{0} life goals</sys:String>
     <sys:String x:Key="Places.LifeGoalsNone">What do you want in life?</sys:String>
+    <sys:String x:Key="Places.FocusLine">{0} on the board</sys:String>
+
+    <sys:String x:Key="Focus.Title">Focus</sys:String>
+    <sys:String x:Key="Focus.Empty">Nothing on your board yet. Add a task with the button below.</sys:String>
+    <sys:String x:Key="Focus.AddTitle">Add to Focus Board</sys:String>
+    <sys:String x:Key="Focus.AddEmpty">All open tasks are already on the board.</sys:String>
+    <sys:String x:Key="Focus.Add">Add</sys:String>
+    <sys:String x:Key="Focus.Remove">Remove from board</sys:String>
+    <sys:String x:Key="Focus.Complete">Complete</sys:String>
+    <sys:String x:Key="Focus.MoveUp">Move up</sys:String>
+    <sys:String x:Key="Focus.MoveDown">Move down</sys:String>
 </ResourceDictionary>

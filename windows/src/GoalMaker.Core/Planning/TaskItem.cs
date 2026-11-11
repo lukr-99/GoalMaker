@@ -55,7 +55,10 @@ public sealed record TaskItem(
     /// Its number in its project, 12 in GM-12. The server gives it, so a new item has none until it
     /// comes back from a sync (docs/projects.md, "Item ids").
     /// </summary>
-    int? ItemNumber = null)
+    int? ItemNumber = null,
+
+    /// <summary>Its position on the Focus Board, or null when it is not on the board.</summary>
+    double? FocusPosition = null)
 {
     /// <summary>The day it was finished, by the server's timestamp, or null while it is not done.</summary>
     public DateOnly? CompletedDay =>

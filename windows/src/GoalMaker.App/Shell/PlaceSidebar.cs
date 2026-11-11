@@ -33,6 +33,7 @@ internal static class PlaceSidebar
         [PlaceRules.Wants] = typeof(WantsPage),
         [PlaceRules.Tally] = typeof(TallyPage),
         [PlaceRules.Archive] = typeof(ArchivePage),
+        [PlaceRules.Focus] = typeof(FocusPage),
         [PlacesViewModel.AllPlaces] = typeof(PlacesPage),
         [PlacesViewModel.Settings] = typeof(SettingsPage),
         [PlacesViewModel.Activity] = typeof(ActivityPage),
