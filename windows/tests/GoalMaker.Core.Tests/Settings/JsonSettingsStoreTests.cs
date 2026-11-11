@@ -43,7 +43,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
 
         Assert.Equal(["stats", "today", "habits", "goals", "inbox"], new JsonSettingsStore(SettingsFile).PinnedPlaces);
 
-        File.WriteAllText(SettingsFile, """{ "Version": 1, "PinnedPlaces": ["focus", "stats", "stats"] }""");
+        File.WriteAllText(SettingsFile, """{ "Version": 1, "PinnedPlaces": ["unknown-old", "stats", "stats"] }""");
         Assert.Equal(["stats"], new JsonSettingsStore(SettingsFile).PinnedPlaces);
     }
 

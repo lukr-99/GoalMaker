@@ -29,7 +29,7 @@ public sealed class PlacesHubViewModelTests : IDisposable
         var hub = Hub();
 
         Assert.Equal(
-            ["today", "tomorrow", "inbox", "calendar", "habits", "goals", "life-goals", "projects", "wants", "tally", "reviews", "stats", "archive"],
+            ["today", "tomorrow", "inbox", "calendar", "habits", "goals", "life-goals", "projects", "wants", "tally", "reviews", "stats", "archive", "focus"],
             hub.Tiles.Select(tile => tile.Id));
         Assert.Equal("Nav.Habits", Tile(hub, "habits").Title);
     }
@@ -218,7 +218,7 @@ public sealed class PlacesHubViewModelTests : IDisposable
             tile.ActivateCommand.Execute(null);
         }
 
-        Assert.Equal(13, planner.Settings.PinnedPlaces.Count);
+        Assert.Equal(14, planner.Settings.PinnedPlaces.Count);
         Assert.All(hub.Tiles, tile => Assert.True(tile.IsActionable));
 
         foreach (var tile in hub.Tiles.Where(tile => tile.Id != "goals"))
