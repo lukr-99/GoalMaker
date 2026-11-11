@@ -40,6 +40,8 @@ data class TaskItem(
      * makes one up (docs/projects.md, "Item ids").
      */
     val itemNumber: Int? = null,
+    /** Its position on the Focus Board, or null when it is not on the board. */
+    val focusPosition: Double? = null,
 ) {
     /** The day it was finished, by the server's timestamp, or null while it is not done. */
     val completedDay: LocalDate? get() {

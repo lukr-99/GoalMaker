@@ -370,6 +370,11 @@ class TaskList(
         change(id) { row -> row[BOARD_ARCHIVED_AT] = if (archived) JsonPrimitive(rows.timestamp()) else JsonNull }
     }
 
+    /** Places the task on the Focus Board at [position], replacing its current position. */
+    fun setFocusPosition(id: String, position: Double?) = change(id) { row ->
+        row[FOCUS_POSITION] = position?.let(::JsonPrimitive) ?: JsonNull
+    }
+
     /** What kind of item this is: a task, an idea or a bug. */
     fun setItemType(id: String, itemType: String) {
         if (itemType !in setOf(ProjectRules.TASK, ProjectRules.IDEA, ProjectRules.BUG)) return
@@ -434,6 +439,7 @@ class TaskList(
         madeBy = row.text("made_by") ?: ProjectRules.OWNER,
         boardArchivedAt = row.text(BOARD_ARCHIVED_AT),
         itemNumber = (row[ITEM_NUMBER] as? JsonPrimitive)?.intOrNull,
+        focusPosition = (row[FOCUS_POSITION] as? JsonPrimitive)?.doubleOrNull,
     )
 
     private companion object {
@@ -444,6 +450,7 @@ class TaskList(
         const val GOALS = "goals"
         const val BOARD_ARCHIVED_AT = "board_archived_at"
         const val ITEM_NUMBER = "item_number"
+        const val FOCUS_POSITION = "focus_position"
         val NOON: LocalTime = LocalTime.NOON
         const val MAX_TITLE = 500
         const val MAX_NOTES = 20_000

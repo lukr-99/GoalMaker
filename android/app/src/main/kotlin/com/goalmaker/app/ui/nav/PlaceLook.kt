@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.DonutLarge
@@ -44,6 +45,7 @@ object PlaceLook {
         PlaceRules.REVIEWS -> R.string.reviews_title
         PlaceRules.STATS -> R.string.stats_title
         PlaceRules.ARCHIVE -> R.string.archive_title
+        PlaceRules.FOCUS -> R.string.focus_title
         else -> R.string.places_title
     }
 
@@ -61,6 +63,7 @@ object PlaceLook {
         PlaceRules.REVIEWS -> Icons.AutoMirrored.Outlined.MenuBook
         PlaceRules.STATS -> Icons.AutoMirrored.Outlined.TrendingUp
         PlaceRules.ARCHIVE -> Icons.Outlined.Archive
+        PlaceRules.FOCUS -> Icons.Outlined.PushPin
         else -> Icons.Outlined.Apps
     }
 
