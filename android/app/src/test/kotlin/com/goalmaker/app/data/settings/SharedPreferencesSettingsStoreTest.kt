@@ -58,7 +58,7 @@ class SharedPreferencesSettingsStoreTest {
         assertEquals(listOf("habits", "today"), store.pins.value)
         assertEquals(listOf("habits", "today"), SharedPreferencesSettingsStore(preferences).pins.value)
 
-        preferences.edit(commit = true) { putString("pinned_places", "focus,stats,stats") }
+        preferences.edit(commit = true) { putString("pinned_places", "unknown-old,stats,stats") }
         assertEquals(listOf("stats"), SharedPreferencesSettingsStore(preferences).pins.value)
     }
 

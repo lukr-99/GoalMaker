@@ -1546,4 +1546,8 @@
     <string name="widget_focus_description">Your prioritised watchlist: the tasks and deadlines you want in view.</string>
     <string name="widget_focus_title">Focus</string>
     <string name="widget_focus_empty">Nothing on your board.</string>
+    <string name="widget_focus_preview_header">Focus Board</string>
+    <string name="widget_focus_preview_first">☐  Finish quarterly report</string>
+    <string name="widget_focus_preview_second">☐  Call the dentist</string>
+    <string name="widget_focus_preview_third">☐  Review pull requests</string>
 </resources>
