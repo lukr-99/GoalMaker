@@ -213,7 +213,9 @@ into sections, each one card with a title, a one-line description, then rows spl
 dividers. The order: Problems (only while there are some), Account, Appearance, Planning day and
 reminders, Areas and tags, Claude, Your data (ending with its danger zone), Updates, About, and
 Developer in a dev build. On the PC Quick add, Startup and Mini windows sit before Your data. Areas
-and tags shows the areas in use with their colors and the tags, and opens the full manager.
+and tags shows the areas in use with their colors and the tags, and opens the full manager. About
+opens its own page: the hero, the author card, your data, this build and the credits
+([about](../about.md)).
 
 **Jump navigation.** Only with 4 or more visible sections; with 3 or fewer the page is short enough.
 On the phone a row of chips under the app bar that stays put (chips 32 dp, 8 dp apart, the current
