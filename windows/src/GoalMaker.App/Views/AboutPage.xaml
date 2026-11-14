@@ -265,11 +265,11 @@
                                 <RowDefinition />
                             </Grid.RowDefinitions>
                             <TextBlock Margin="0,4,16,4" Text="{DynamicResource Settings.Version}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBox Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Version, Mode=OneWay}" />
+                            <TextBox AutomationProperties.Name="{DynamicResource Settings.Version}" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Version, Mode=OneWay}" />
                             <TextBlock Grid.Row="1" Margin="0,4,16,4" Text="{DynamicResource About.Kind}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Kind, Mode=OneWay}" />
+                            <TextBox AutomationProperties.Name="{DynamicResource About.Kind}" Grid.Row="1" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Kind, Mode=OneWay}" />
                             <TextBlock Grid.Row="2" Margin="0,4,16,4" Text="{DynamicResource Settings.Backend}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Backend, Mode=OneWay}" />
+                            <TextBox AutomationProperties.Name="{DynamicResource Settings.Backend}" Grid.Row="2" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Backend, Mode=OneWay}" />
                         </Grid>
                     </StackPanel>
                 </Border>
