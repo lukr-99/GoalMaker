@@ -830,6 +830,12 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     public bool IsDevBuild => appInfo.IsDevBuild;
 
+    /// <summary>Asks the shell for the About page (docs/about.md).</summary>
+    public event EventHandler? AboutRequested;
+
+    [RelayCommand]
+    private void OpenAbout() => AboutRequested?.Invoke(this, EventArgs.Empty);
+
     [RelayCommand(CanExecute = nameof(IsUpdateIdle))]
     private async Task CheckForUpdatesAsync()
     {
