@@ -1,0 +1,324 @@
+<Page x:Class="GoalMaker.App.Views.AboutPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:controls="clr-namespace:GoalMaker.App.Controls"
+      xmlns:vm="clr-namespace:GoalMaker.App.ViewModels"
+      Title="{DynamicResource About.Title}"
+      Background="{DynamicResource GM.BackgroundBrush}"
+      FontFamily="{DynamicResource GM.BodyFont}"
+      Foreground="{DynamicResource GM.TextBrush}">
+    <!-- What GoalMaker is and who made it (docs/about.md): the hero with the version, the author's card
+         as the centrepiece, what the app keeps and where, this build and the credits. Opened from
+         Settings > About. Each block rises into place when the page opens (AboutPage.xaml.cs). -->
+    <Page.Resources>
+        <!-- A section label as the design spec sets them: small, strong, upper case and spaced out. -->
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+        </Style>
+        <!-- A read-only value the owner can select and copy, as the Settings info rows have them. -->
+        <Style x:Key="SelectableValue" TargetType="TextBox">
+            <Setter Property="Margin" Value="0,4" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Padding" Value="{DynamicResource GM.CardPadding}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource GM.CardCorner}" />
+            <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+        </Style>
+        <Style x:Key="Fact" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,4" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="FactIcon" TargetType="ui:SymbolIcon">
+            <Setter Property="Margin" Value="0,5,12,0" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+        </Style>
+
+        <!-- A way to reach the author: an icon, the place's name with the handle under it and the ↗ that
+             says it leaves the app. Filled with the primary color; the Outline one takes an outline. -->
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="MinHeight" Value="52" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="Background" Value="{DynamicResource GM.PrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GM.PrimaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.OnPrimaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="1.5" CornerRadius="{DynamicResource GM.LinkButtonCorner}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter VerticalAlignment="Center" />
+                            </Border>
+                            <Border x:Name="Focus" Margin="-3" BorderThickness="2" BorderBrush="{DynamicResource GM.AccentBrush}"
+                                    CornerRadius="{DynamicResource GM.LinkButtonCorner}" Visibility="Collapsed" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="Opacity" Value="0.88" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Box" Property="Opacity" Value="0.75" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Focus" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="OutlineLinkButton" TargetType="Button" BasedOn="{StaticResource LinkButton}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+        </Style>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid>
+            <StackPanel x:Name="Blocks" MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Stretch" Margin="{DynamicResource GM.PagePadding}">
+                <!-- Title line with the way back to Settings. -->
+                <DockPanel Margin="0,0,0,12">
+                    <ui:Button DockPanel.Dock="Left" Margin="0,0,12,0" Padding="8" Appearance="Transparent" VerticalAlignment="Center"
+                               Command="{Binding BackCommand}"
+                               ToolTip="{DynamicResource About.Back}" AutomationProperties.Name="{DynamicResource About.Back}">
+                        <ui:SymbolIcon Symbol="ArrowLeft24" />
+                    </ui:Button>
+                    <controls:HeadlineText Title="{DynamicResource About.Title}" FontSize="40" />
+                </DockPanel>
+
+                <!-- The hero, like the big-number cards: the mark, the name, what it is and the version. -->
+                <Border Padding="20" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.HeroBrush}" ClipToBounds="True">
+                    <Grid>
+                        <controls:TrendStroke Width="260" Height="150" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-20,-20"
+                                              StrokeThickness="12" Delay="250" Opacity="0.28" Stroke="{DynamicResource GM.HeroAccentBrush}" />
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal">
+                                <controls:GoalMakerLogo x:Name="HeroLogo" Width="60" Height="60" Margin="0,0,14,0" />
+                                <controls:HeadlineText VerticalAlignment="Center" Title="{DynamicResource App.Name}" FontSize="34"
+                                                       Foreground="{DynamicResource GM.OnHeroBrush}" />
+                            </StackPanel>
+                            <TextBlock Margin="0,14,0,0" MaxWidth="520" HorizontalAlignment="Left" FontSize="15" TextWrapping="Wrap"
+                                       Text="{DynamicResource About.Tagline}" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                            <TextBlock Margin="0,20,0,0" Style="{StaticResource Label}" Text="{DynamicResource About.VersionLabel}"
+                                       Foreground="{DynamicResource GM.OnHeroBrush}" />
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Version}" FontSize="52" FontFamily="{DynamicResource GM.NumberFont}"
+                                           Foreground="{DynamicResource GM.HeroAccentBrush}" />
+                                <Border Margin="12,0,0,0" Padding="10,3" VerticalAlignment="Center" BorderThickness="1"
+                                        BorderBrush="{DynamicResource GM.OnHeroBrush}" CornerRadius="{DynamicResource GM.ChipCorner}"
+                                        Visibility="{Binding IsDevBuild, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock FontSize="12" Text="{DynamicResource About.DevBuild}" Foreground="{DynamicResource GM.OnHeroBrush}" />
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- The centrepiece: who made it, the feedback invitation and the three links. -->
+                <Border Margin="0,16,0,0" CornerRadius="{DynamicResource GM.CardCorner}" Background="{DynamicResource GM.SurfaceBrush}"
+                        BorderThickness="2.5">
+                    <Border.BorderBrush>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Offset="0" Color="{DynamicResource GM.PrimaryColor}" />
+                            <GradientStop Offset="1" Color="{DynamicResource GM.AccentColor}" />
+                        </LinearGradientBrush>
+                    </Border.BorderBrush>
+                    <Grid>
+                        <controls:TrendStroke Width="80" Height="56" Margin="0,10,10,0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                              StrokeThickness="4" Delay="400" Opacity="0.55" Stroke="{DynamicResource GM.AccentBrush}" />
+                        <StackPanel Margin="24,26" HorizontalAlignment="Center" MaxWidth="560">
+                            <Border Width="76" Height="76" HorizontalAlignment="Center" CornerRadius="{DynamicResource GM.CardCorner}"
+                                    Background="{DynamicResource GM.PrimaryBrush}">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding AuthorMonogram}" FontSize="30"
+                                           FontFamily="{DynamicResource GM.NumberFont}" Foreground="{DynamicResource GM.OnPrimaryBrush}" />
+                            </Border>
+                            <TextBlock Margin="0,16,0,0" HorizontalAlignment="Center" Style="{StaticResource Label}" Text="{DynamicResource About.MadeBy}" />
+                            <controls:HeadlineText Margin="0,2,0,0" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                                                   Title="{Binding AuthorName}" FontSize="30" Foreground="{DynamicResource GM.TextBrush}"
+                                                   AutomationProperties.HeadingLevel="Level2" />
+                            <TextBlock Margin="0,6,0,0" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="13"
+                                       Text="{DynamicResource About.AuthorBody}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            <controls:HeadlineText Margin="0,22,0,0" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                                                   Title="{DynamicResource About.FeedbackHeading}" FontSize="20"
+                                                   AutomationProperties.HeadingLevel="Level2" />
+                            <TextBlock Margin="0,6,0,18" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="15"
+                                       Text="{DynamicResource About.FeedbackBody}" />
+                            <UniformGrid Columns="2">
+                                <Button Margin="0,0,5,0" Style="{StaticResource LinkButton}" Command="{Binding OpenInstagramCommand}"
+                                        AutomationProperties.Name="{DynamicResource About.Instagram}" AutomationProperties.HelpText="{Binding InstagramHandle}"
+                                        ToolTip="{DynamicResource About.OpensInBrowser}">
+                                    <DockPanel>
+                                        <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,12,0" Symbol="Camera24" FontSize="20" Foreground="{DynamicResource GM.OnPrimaryBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center" Text="↗" FontSize="18" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource About.Instagram}" FontFamily="{DynamicResource GM.BodyStrongFont}" FontSize="14" />
+                                            <TextBlock Text="{Binding InstagramHandle}" FontSize="12" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Button>
+                                <Button Margin="5,0,0,0" Style="{StaticResource LinkButton}" Command="{Binding OpenGitHubCommand}"
+                                        AutomationProperties.Name="{DynamicResource About.GitHub}" AutomationProperties.HelpText="{Binding GitHubHandle}"
+                                        ToolTip="{DynamicResource About.OpensInBrowser}">
+                                    <DockPanel>
+                                        <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,12,0" Symbol="Code24" FontSize="20" Foreground="{DynamicResource GM.OnPrimaryBrush}" />
+                                        <TextBlock DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center" Text="↗" FontSize="18" />
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{DynamicResource About.GitHub}" FontFamily="{DynamicResource GM.BodyStrongFont}" FontSize="14" />
+                                            <TextBlock Text="{Binding GitHubHandle}" FontSize="12" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Button>
+                            </UniformGrid>
+                            <Button Margin="0,10,0,0" Style="{StaticResource OutlineLinkButton}" Command="{Binding OpenIssuesCommand}"
+                                    AutomationProperties.Name="{DynamicResource About.Issues}" AutomationProperties.HelpText="{Binding IssuesHandle}"
+                                    ToolTip="{DynamicResource About.OpensInBrowser}">
+                                <DockPanel>
+                                    <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,12,0" Symbol="Bug24" FontSize="20" Foreground="{DynamicResource GM.TextBrush}" />
+                                    <TextBlock DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center" Text="↗" FontSize="18" />
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{DynamicResource About.Issues}" FontFamily="{DynamicResource GM.BodyStrongFont}" FontSize="14" />
+                                        <TextBlock Text="{Binding IssuesHandle}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                    </StackPanel>
+                                </DockPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Your data: only what the code does. -->
+                <Border Margin="0,16,0,0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                            <Border Width="4" Margin="0,2,10,2" CornerRadius="{DynamicResource GM.CheckboxCorner}" Background="{DynamicResource GM.AccentBrush}" />
+                            <controls:HeadlineText Title="{DynamicResource About.DataHeading}" FontSize="22" Foreground="{DynamicResource GM.TextBrush}"
+                                                   AutomationProperties.HeadingLevel="Level2" />
+                        </DockPanel>
+                        <DockPanel Visibility="{Binding IsLocalOnly, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="Desktop24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataLocalOnly}" />
+                        </DockPanel>
+                        <DockPanel Visibility="{Binding Syncs, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="Desktop24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataDevice}" />
+                        </DockPanel>
+                        <DockPanel Visibility="{Binding Syncs, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="CloudSync24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataSync}" />
+                        </DockPanel>
+                        <DockPanel>
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="Timer24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataTally}" />
+                        </DockPanel>
+                        <DockPanel Visibility="{Binding Syncs, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="Chat24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataChat}" />
+                        </DockPanel>
+                        <DockPanel Visibility="{Binding Syncs, Converter={StaticResource BoolToVisibility}}">
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="Link24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataClaude}" />
+                        </DockPanel>
+                        <DockPanel>
+                            <ui:SymbolIcon Style="{StaticResource FactIcon}" Symbol="Save24" />
+                            <TextBlock Style="{StaticResource Fact}" Text="{DynamicResource About.DataBackup}" />
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- This build. -->
+                <Border Margin="0,16,0,0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                            <Border Width="4" Margin="0,2,10,2" CornerRadius="{DynamicResource GM.CheckboxCorner}" Background="{DynamicResource GM.AccentBrush}" />
+                            <controls:HeadlineText Title="{DynamicResource About.BuildHeading}" FontSize="22" Foreground="{DynamicResource GM.TextBrush}"
+                                                   AutomationProperties.HeadingLevel="Level2" />
+                        </DockPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" MinWidth="120" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition />
+                                <RowDefinition />
+                                <RowDefinition />
+                            </Grid.RowDefinitions>
+                            <TextBlock Margin="0,4,16,4" Text="{DynamicResource Settings.Version}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBox Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Version, Mode=OneWay}" />
+                            <TextBlock Grid.Row="1" Margin="0,4,16,4" Text="{DynamicResource About.Kind}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Kind, Mode=OneWay}" />
+                            <TextBlock Grid.Row="2" Margin="0,4,16,4" Text="{DynamicResource Settings.Backend}" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                            <TextBox Grid.Row="2" Grid.Column="1" Style="{StaticResource SelectableValue}" Text="{Binding Backend, Mode=OneWay}" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Credits and licences, as the projects ship them. -->
+                <Border Margin="0,16,0,0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,8">
+                            <Border Width="4" Margin="0,2,10,2" CornerRadius="{DynamicResource GM.CheckboxCorner}" Background="{DynamicResource GM.AccentBrush}" />
+                            <controls:HeadlineText Title="{DynamicResource About.CreditsHeading}" FontSize="22" Foreground="{DynamicResource GM.TextBrush}"
+                                                   AutomationProperties.HeadingLevel="Level2" />
+                        </DockPanel>
+                        <TextBlock FontSize="13" TextWrapping="Wrap" Text="{DynamicResource About.CreditsBody}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <ItemsControl ItemsSource="{Binding CreditGroups}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:AboutCreditGroup}">
+                                    <StackPanel Margin="0,14,0,0">
+                                        <TextBlock Margin="0,0,0,4" Style="{StaticResource Label}" Text="{Binding Title}" />
+                                        <ItemsControl ItemsSource="{Binding Credits}" Focusable="False">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:AboutCredit}">
+                                                    <DockPanel Margin="0,5">
+                                                        <Border DockPanel.Dock="Right" Margin="12,0,0,0" Padding="10,3" VerticalAlignment="Center" BorderThickness="1"
+                                                                BorderBrush="{DynamicResource GM.OutlineBrush}" CornerRadius="{DynamicResource GM.ChipCorner}">
+                                                            <TextBlock FontSize="12" Text="{Binding Licence}" Foreground="{DynamicResource GM.AccentBrush}" />
+                                                        </Border>
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" FontSize="14" FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                                            <TextBlock Text="{Binding Role}" FontSize="12" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- The page's last line: the trend arrow once more, small, and a thank you. -->
+                <StackPanel Margin="0,20,0,8" HorizontalAlignment="Center">
+                    <controls:TrendStroke Width="60" Height="38" HorizontalAlignment="Center" StrokeThickness="3" Delay="800"
+                                          Stroke="{DynamicResource GM.AccentBrush}" />
+                    <TextBlock Margin="0,8,0,0" HorizontalAlignment="Center" FontSize="13" Text="{DynamicResource About.Thanks}"
+                               Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>

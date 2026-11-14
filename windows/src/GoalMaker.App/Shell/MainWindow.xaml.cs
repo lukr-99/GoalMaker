@@ -51,6 +51,7 @@ public partial class MainWindow
             [typeof(PlanPage)] = () => new PlanPage(graph.Plan),
             [typeof(SettingsPage)] = () => new SettingsPage(graph.SettingsPage, graph.Connector, graph.ProblemsPage, graph.SettingsNotices, graph.SettingsSections, graph.AreasPage, graph.Theme.Attach),
             [typeof(ActivityPage)] = () => new ActivityPage(graph.Activity),
+            [typeof(AboutPage)] = () => new AboutPage(graph.About),
             [typeof(GoalsPage)] = () => new GoalsPage(graph.GoalsPage),
             [typeof(LifeGoalsPage)] = () => new LifeGoalsPage(graph.LifeGoalsPage),
             [typeof(HabitsPage)] = () => new HabitsPage(graph.HabitsPage),
@@ -230,6 +231,7 @@ public partial class MainWindow
             AppPage.Calendar => typeof(CalendarPage),
             AppPage.Review => typeof(ReviewPage),
             AppPage.Task => typeof(TaskPage),
+            AppPage.About => typeof(AboutPage),
             _ => typeof(TodayPage),
         };
         NavigateWhenReady();

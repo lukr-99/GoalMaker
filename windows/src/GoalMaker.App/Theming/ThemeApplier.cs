@@ -395,6 +395,8 @@ public sealed class ThemeApplier : IDisposable
         resources["GM.ButtonCorner"] = new CornerRadius(shapes.Button);
         // Chips are about 28 px tall: 14 makes a pill, where WPF would draw 999 as an ellipse.
         resources["GM.ChipCorner"] = new CornerRadius(Math.Min(shapes.Button, 14));
+        // The About page's link buttons are about 52 px tall: 26 makes them a pill rather than an ellipse.
+        resources["GM.LinkButtonCorner"] = new CornerRadius(Math.Min(shapes.Button, 26));
         // WPF UI draws checkboxes, buttons and inputs with one radius; the checkbox's keeps Track square
         // and stops a small box from turning into a circle.
         resources["ControlCornerRadius"] = new CornerRadius(Math.Min(shapes.Checkbox, 6));

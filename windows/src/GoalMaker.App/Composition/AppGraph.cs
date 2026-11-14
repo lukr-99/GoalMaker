@@ -475,6 +475,11 @@ public sealed class AppGraph : IDisposable
         // The Claude connector's link and the activity log with undo (docs/connector.md, docs/activity.md), read online.
         Connector = new ConnectorViewModel(new PostgrestConnectorLinks(postgrest), backend.Url, strings, text => System.Windows.Clipboard.SetText(text));
         Activity = new ActivityViewModel(new PostgrestActivityLog(postgrest), strings, Sync.Request);
+
+        // About (docs/about.md): opened from Settings > About, and its Back goes to Settings again.
+        About = new AboutViewModel(AppInfo, strings, OpenInBrowser);
+        SettingsPage.AboutRequested += (_, _) => PageRequested?.Invoke(this, AppPage.About);
+        About.BackRequested += (_, _) => PageRequested?.Invoke(this, AppPage.Settings);
     }
 
     // Where an export is written, where one is read from, and the folder the weekly one uses. The
@@ -544,6 +549,8 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>Recent changes with undo.</summary>
     public ActivityViewModel Activity { get; }
+
+    public AboutViewModel About { get; }
 
     public AppDataPaths Paths { get; }
 
