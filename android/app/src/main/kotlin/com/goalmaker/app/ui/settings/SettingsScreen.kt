@@ -127,6 +127,7 @@ fun SettingsScreen(
     onOpenConnector: () -> Unit = {},
     onOpenPcSignIn: () -> Unit = {},
     onOpenActivity: () -> Unit = {},
+    onOpenAbout: () -> Unit = {},
     problems: List<Problem> = emptyList(),
     onProblemsRead: () -> Unit = {},
     /** What the update notification asked for: Settings jumps to Updates, and Install starts. */
@@ -268,6 +269,13 @@ fun SettingsScreen(
                                 SettingsSection.DATA -> BackupCard(viewModel, state.backup)
                                 SettingsSection.UPDATES -> UpdatesRows(state, viewModel)
                                 SettingsSection.ABOUT -> {
+                                    LinkRow(
+                                        stringResource(R.string.about_open),
+                                        stringResource(R.string.about_open_hint),
+                                        external = false,
+                                        onClick = onOpenAbout,
+                                    )
+                                    RowDivider()
                                     InfoRow(stringResource(R.string.settings_version), state.appInfo.versionName)
                                     RowDivider()
                                     InfoRow(stringResource(R.string.settings_backend), state.appInfo.backend.url)
