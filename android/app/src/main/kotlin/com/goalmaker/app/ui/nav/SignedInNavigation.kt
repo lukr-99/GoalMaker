@@ -30,6 +30,8 @@ import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.domain.navigation.PlaceRules
 import com.goalmaker.app.ui.settings.SettingsScreen
 import com.goalmaker.app.ui.settings.SettingsViewModel
+import com.goalmaker.app.ui.about.AboutKey
+import com.goalmaker.app.ui.about.AboutScreen
 import com.goalmaker.app.ui.activity.ActivityKey
 import com.goalmaker.app.ui.activity.ActivityScreen
 import com.goalmaker.app.ui.activity.ActivityViewModel
@@ -524,6 +526,7 @@ fun SignedInNavigation(graph: AppGraph) {
                             onOpenConnector = { backStack.add(ConnectorKey) },
                             onOpenPcSignIn = { backStack.add(PcSignInKey) },
                             onOpenActivity = { backStack.add(ActivityKey) },
+                            onOpenAbout = { backStack.add(AboutKey) },
                             problems = problems,
                             onProblemsRead = graph.problems::read,
                             updateRequest = updateRequested,
@@ -538,6 +541,9 @@ fun SignedInNavigation(graph: AppGraph) {
                     entry<PcSignInKey> {
                         val pcSignInViewModel = viewModel { PcSignInViewModel(graph.pcSignInApprovals, graph.io) }
                         PcSignInScreen(viewModel = pcSignInViewModel, onBack = { backStack.removeLastOrNull() })
+                    }
+                    entry<AboutKey> {
+                        AboutScreen(info = graph.appInfo, onBack = { backStack.removeLastOrNull() })
                     }
                     entry<ActivityKey> {
                         val activityViewModel = viewModel { ActivityViewModel(graph.activity, graph.sync::request, graph.io) }

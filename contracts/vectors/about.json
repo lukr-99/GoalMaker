@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "description": "The About page (docs/about.md): who made GoalMaker, the three places to reach them in this order, each with the handle the button shows, and the monogram on the author card. The monogram is the first letter of the first and the last word of the name, upper case; one word gives one letter, and a blank name gives none.",
+  "author": "Lukáš Krejčí",
+  "links": [
+    {
+      "id": "instagram",
+      "url": "https://www.instagram.com/lukas9krejci/",
+      "handle": "@lukas9krejci"
+    },
+    {
+      "id": "github",
+      "url": "https://github.com/lukr-99",
+      "handle": "lukr-99"
+    },
+    {
+      "id": "issues",
+      "url": "https://github.com/lukr-99/GoalMaker/issues",
+      "handle": "lukr-99/GoalMaker"
+    }
+  ],
+  "monogram": [
+    { "name": "Lukáš Krejčí", "expect": "LK" },
+    { "name": "  lukáš   krejčí  ", "expect": "LK" },
+    { "name": "Ada", "expect": "A" },
+    { "name": "Jan van der Berg", "expect": "JB" },
+    { "name": "Šárka Ňuková", "expect": "ŠŇ" },
+    { "name": "   ", "expect": "" }
+  ]
+}

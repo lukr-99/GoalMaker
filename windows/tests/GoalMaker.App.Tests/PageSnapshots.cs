@@ -36,6 +36,26 @@ public sealed class PageSnapshots
 {
     private static readonly DateOnly Today = new(2026, 9, 18);
 
+    // The About page in every theme, light and dark, tall enough to show all of it. Reduce motion is on,
+    // so each block is in place rather than caught mid-rise.
+    [Fact(Explicit = true)]
+    public void About() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var backend = new GoalMaker.Core.Backend.BackendEnvironment("https://example.supabase.co", "key");
+        var about = new AboutViewModel(new GoalMaker.Core.About.AppInfo("1.16.0", false, backend, backend), strings, _ => { });
+        foreach (var id in new[] { "track", "electric", "night", "sunrise" })
+        {
+            foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Dark, GoalMaker.Core.Settings.ThemeMode.Light })
+            {
+                theme.Apply(Appearance.Default with { ThemeId = id, Mode = mode, ReduceMotion = ReduceMotion.On });
+                Save(new AboutPage(about), folder, $"about-{id}-{mode}".ToLowerInvariant(), new Size(852, 2100));
+            }
+        }
+    });
+
     [Fact(Explicit = true)]
     public void PlanTomorrow() => OnUiThread(folder =>
     {

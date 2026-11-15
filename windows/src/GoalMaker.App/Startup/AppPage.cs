@@ -26,4 +26,7 @@ public enum AppPage
 
     /// <summary>A task's details; opened from a list, never by a launch switch.</summary>
     Task,
+
+    /// <summary>Who made GoalMaker, feedback, data and credits; opened from Settings > About, never by a launch switch.</summary>
+    About,
 }

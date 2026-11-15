@@ -372,6 +372,7 @@
         </tray:SettingsSection>
 
         <tray:SettingsSection SectionId="about" Title="{DynamicResource Settings.About}" Description="{DynamicResource Settings.AboutDescription}">
+            <tray:LinkRow Label="{DynamicResource About.Open}" Hint="{DynamicResource About.OpenHint}" Command="{Binding OpenAboutCommand}" />
             <tray:InfoRow Label="{DynamicResource Settings.Version}" Value="{Binding VersionValue}" />
             <tray:InfoRow Label="{DynamicResource Settings.Backend}" Value="{Binding BackendValue}" IsMonospace="True" />
         </tray:SettingsSection>

@@ -56,6 +56,8 @@ says otherwise:
   pictures, a why reminder now and then and a picture widget ([docs/life-goals.md](docs/life-goals.md)).
 - **Calendar events (M10):** trips and holidays as bars across their days, "day 2 of 4" on Today, and
   adding from the calendar's bottom bar on one day or several ([docs/calendar.md](docs/calendar.md)).
+- **About:** a page from Settings with who made GoalMaker, links for feedback and bug reports, what
+  the app keeps and where, and the credits ([docs/about.md](docs/about.md)).
 
 **Next:** the owner's board. GoalMaker is for personal use only (ADR 0011). The plan is in
 [docs/roadmap.md](docs/roadmap.md).
