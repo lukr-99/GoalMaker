@@ -1,0 +1,49 @@
+# Local (Kiln) version of .github/workflows/codeprint.yml: the repository baseline.
+name: Repository baseline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container: python:3.13
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate repository
+        run: python tools/validate_repository.py --root .
+
+      - name: Test the device replica's migration chain
+        run: python tools/migrations.py test replica/migrations
+
+      - name: The synced-tables contract matches the replica
+        run: python tools/check_synced_tables.py
+
+      - name: Every theme is complete and readable (WCAG AA)
+        run: python tools/check_design_tokens.py
+
+      - name: The review prompt library is sound
+        run: python tools/check_prompts.py
+
+      - name: The Tally defaults are sound
+        run: python tools/check_tally_rules.py
+
+      - name: Every control has something a screen reader can read
+        run: python tools/check_accessibility.py
+
+      - name: A fork runs its own project and signing key
+        run: python tools/check_own_copy.py
+
+  powershell-syntax:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/powershell:lts-ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check PowerShell syntax
+        shell: pwsh
+        run: ./tools/test-powershell-syntax.ps1
