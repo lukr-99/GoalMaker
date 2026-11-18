@@ -1,0 +1,126 @@
+# Local (Kiln) version of .github/workflows/ci.yml. Kiln runs Linux containers only, so:
+# - the "changes" job and path filters are left out (every job always runs),
+# - the Supabase stack needs Docker inside the job and is only probed here,
+# - the Windows job builds what can be built on Linux (see the notes on each job).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  supabase-connector:
+    name: Supabase connector lint, types and unit tests
+    runs-on: ubuntu-latest
+    container: node:22
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the pinned Supabase CLI and Deno
+        run: npm ci
+
+      - name: Connector lint, types and unit tests (the shared rules run the contract vectors)
+        working-directory: supabase/functions
+        run: |
+          npx deno task lint
+          npx deno task check
+          npx deno test --allow-read --allow-env --allow-net _shared connector
+
+  supabase-stack:
+    name: Supabase stack probe (needs Docker inside the job)
+    runs-on: ubuntu-latest
+    container: node:22
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Is a Docker engine reachable from the job?
+        run: |
+          which docker || echo "no docker CLI in the image"
+          ls -l /var/run/docker.sock || echo "no docker socket in the job"
+
+  android:
+    name: Android build, unit tests and lint
+    runs-on: ubuntu-latest
+    container: ghcr.io/cirruslabs/android-sdk:36
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain
+        working-directory: android
+        run: |
+          java -version
+          echo "ANDROID_HOME=$ANDROID_HOME ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+
+      - name: Build, unit test and lint
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew testDebugUnitTest assembleDebug lintDebug --stacktrace
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-reports
+          path: |
+            android/app/build/reports/
+            android/app/build/test-results/
+          if-no-files-found: warn
+
+  windows-core:
+    name: Windows core tests on Linux (non-UI projects only)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    timeout-minutes: 25
+    env:
+      # The projects target net10.0-windows. This lets a Linux SDK restore and build them.
+      EnableWindowsTargeting: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Restore the non-UI test project
+        working-directory: windows
+        run: dotnet restore tests/GoalMaker.Core.Tests/GoalMaker.Core.Tests.csproj
+
+      - name: Build
+        working-directory: windows
+        run: dotnet build tests/GoalMaker.Core.Tests/GoalMaker.Core.Tests.csproj -c Release --no-restore
+
+      - name: Test
+        working-directory: windows
+        run: dotnet test --project tests/GoalMaker.Core.Tests/GoalMaker.Core.Tests.csproj -c Release --no-build
+
+  windows-full:
+    name: Windows format, build and tests (whole solution, needs the private feed)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    timeout-minutes: 25
+    env:
+      EnableWindowsTargeting: "true"
+      # A fake value: the real token must never be used in these test runs.
+      NuGetPackageSourceCredentials_dotnetlib: Username=lukr-99;Password=${{ secrets.DOTNETLIB_PACKAGES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Restore
+        working-directory: windows
+        run: dotnet restore GoalMaker.slnx
+
+      - name: Check formatting
+        working-directory: windows
+        run: dotnet format whitespace GoalMaker.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        working-directory: windows
+        run: dotnet build GoalMaker.slnx -c Release --no-restore
+
+      - name: Test
+        working-directory: windows
+        run: dotnet test --solution GoalMaker.slnx -c Release --no-build
