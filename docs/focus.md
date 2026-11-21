@@ -3,7 +3,8 @@
 The Focus Board is the owner's short list of tasks to keep an eye on, whatever day or list they sit
 in: a school deadline, a form to hand in, an errand that keeps slipping. It is a place of its own in
 both apps. The rules below are pinned by [`contracts/vectors/focus.json`](../contracts/vectors/focus.json)
-and run by both apps and the connector.
+and run by both apps and the connector: the board's order, adding at the end, putting a task at a
+place, and what the add panel offers.
 
 ## On the board
 
@@ -18,12 +19,28 @@ position and leaves the task itself alone: its day, area and list stay as they w
 - Moving a task to a place puts it halfway between its new neighbours, one below the first at the top
   and one past the last at the end. Positions are fractions, so nothing else is renumbered.
 
+## Finding and adding tasks
+
+- **Quick add.** The field on the board makes a new task straight onto it, at the end. It reads the
+  composer's shortcuts ([composer](composer.md)), so "Hand in the form @School #forms friday" sets the
+  area, a tag and the day. On Android it sits at the top of the board, on Windows under it.
+- **The add panel** (the add button) finds a task that already exists. Its search box keeps the open
+  tasks off the board that have every typed word in their title or notes, ignoring case and accents,
+  so "studijni zrusit" finds "Studijní: zrušit dipl. práci". They come by their date (the deadline,
+  else the planned day), earliest first and undated last, then by title. With something typed, the
+  first row makes it a new task on the board instead.
+- **The filter.** An area and tag filter of the board's own, the same one the lists use
+  ([lists](lists.md)), narrows both the board and the add panel. A task without an area counts as
+  being in its project's area. While it hides part of the board, a task moved up or down lands next
+  to its shown neighbours, so the hidden tasks keep their places. A filter that hides every task on the
+  board says so.
+
 ## In the apps
 
 - **Android:** long-press the handle and drag to reorder, swipe a task off the board, tick it to
-  complete it, and the add button to pick a task.
-- **Windows:** Up and Down to reorder, the add list to pick a task, and the quick-add field to make a
-  new task straight onto the board.
+  complete it, and the add button for the add panel.
+- **Windows:** Up and Down to reorder, Complete, the pin to take a task off, and Add for the add panel;
+  Enter in its search box makes the typed task.
 
 ## Through Claude
 

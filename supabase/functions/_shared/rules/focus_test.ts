@@ -1,6 +1,6 @@
 // Runs contracts/vectors/focus.json, which the Kotlin and C# tests run too.
 import { assertEquals } from "jsr:@std/assert@1.0.13";
-import { appendPosition, focusBoard, placeAt } from "./focus.ts";
+import { appendPosition, focusBoard, focusCandidates, placeAt } from "./focus.ts";
 import type { TaskItem, TaskState } from "./task.ts";
 
 // deno-lint-ignore no-explicit-any
@@ -13,18 +13,18 @@ const file: Json = JSON.parse(
 function tasks(rows: Json[]): TaskItem[] {
   return rows.map((row) => ({
     id: row.id,
-    title: row.id,
+    title: row.title ?? row.id,
     state: row.state as TaskState,
     topPriority: false,
     createdAt: row.createdAt,
-    plannedDate: null,
+    plannedDate: row.day ?? null,
     plannedTime: null,
     areaId: null,
     recurrence: null,
     deleted: row.deleted ?? false,
     seriesId: null,
-    notes: "",
-    deadline: null,
+    notes: row.notes ?? "",
+    deadline: row.deadline ?? null,
     completedAt: null,
     focusPosition: row.focus,
   }));
@@ -42,4 +42,10 @@ Deno.test("focus.json: adding at the end", () => {
 
 Deno.test("focus.json: putting a task at a place", () => {
   for (const one of file.placeAt) assertEquals(placeAt(tasks(one.tasks), one.task, one.place), one.expect, one.name);
+});
+
+Deno.test("focus.json: what the add picker offers", () => {
+  for (const one of file.candidates) {
+    assertEquals(focusCandidates(tasks(one.tasks), one.query).map((task) => task.id), one.expect, one.name);
+  }
 });

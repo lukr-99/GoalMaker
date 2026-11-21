@@ -1,57 +1,156 @@
 {
   "schema": 1,
-  "description": "The Focus Board (supabase/migrations/0029_focus_board.sql): an ordered list of open tasks the owner keeps an eye on. A task is on the board when its focus position is set; 'focus' below is that position, null when it is off the board. 'board': the tasks on the board in order: open, not deleted, with a position, by position, then oldest first, then id. 'append': the position a task added at the end gets: one more than the last task's on the board, or 1 when the board is empty. 'placeAt': the position a task gets when it is put at 'place' (1 is the top) of the board, with the task itself left out of the board first: halfway between its new neighbours, one less than the first when it goes to the top, one more than the last when it goes to the end, and 1 on an empty board. A place past the end is the end; a place below 1 is the top.",
+  "description": "The Focus Board (supabase/migrations/0029_focus_board.sql): an ordered list of open tasks the owner keeps an eye on. A task is on the board when its focus position is set; 'focus' below is that position, null when it is off the board. 'board': the tasks on the board in order: open, not deleted, with a position, by position, then oldest first, then id. 'append': the position a task added at the end gets: one more than the last task's on the board, or 1 when the board is empty. 'placeAt': the position a task gets when it is put at 'place' (1 is the top) of the board, with the task itself left out of the board first: halfway between its new neighbours, one less than the first when it goes to the top, one more than the last when it goes to the end, and 1 on an empty board. A place past the end is the end; a place below 1 is the top. 'candidates': the tasks the add picker offers for 'query', in order: open, not deleted, not on the board, and every word of the query (split on spaces) found in the title or the notes, ignoring case and accents; an empty query keeps them all. They come by their date, the deadline when there is one and the planned day otherwise, earliest first and those without a date last, then by title ignoring case and accents, then by id. Tasks without a 'title' use their id as the title; 'notes', 'day' and 'deadline' are empty when left out.",
   "board": [
     {
       "name": "by position, then oldest first, then id",
       "tasks": [
-        { "id": "c", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-03T10:00:00.000000Z" },
-        { "id": "b2", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T09:00:00.000000Z" },
-        { "id": "b1", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T09:00:00.000000Z" }
+        {
+          "id": "c",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-03T10:00:00.000000Z"
+        },
+        {
+          "id": "b2",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T09:00:00.000000Z"
+        },
+        {
+          "id": "b1",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T09:00:00.000000Z"
+        }
       ],
-      "expect": ["a", "b1", "b2", "c"]
+      "expect": [
+        "a",
+        "b1",
+        "b2",
+        "c"
+      ]
     },
     {
       "name": "done, dropped, deleted and off-board tasks are not on it",
       "tasks": [
-        { "id": "open", "state": "open", "focus": 3.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "done", "state": "done", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "dropped", "state": "dropped", "focus": 1.5, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "deleted", "state": "open", "focus": 2.0, "deleted": true, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "off", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "open",
+          "state": "open",
+          "focus": 3.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "done",
+          "state": "done",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "dropped",
+          "state": "dropped",
+          "focus": 1.5,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "deleted",
+          "state": "open",
+          "focus": 2.0,
+          "deleted": true,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "off",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
-      "expect": ["open"]
+      "expect": [
+        "open"
+      ]
     },
     {
       "name": "positions can be negative or fractions",
       "tasks": [
-        { "id": "half", "state": "open", "focus": 0.5, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "minus", "state": "open", "focus": -1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "one", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "half",
+          "state": "open",
+          "focus": 0.5,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "minus",
+          "state": "open",
+          "focus": -1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "one",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
-      "expect": ["minus", "half", "one"]
+      "expect": [
+        "minus",
+        "half",
+        "one"
+      ]
     }
   ],
   "append": [
     {
       "name": "an empty board starts at 1",
-      "tasks": [{ "id": "off", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }],
+      "tasks": [
+        {
+          "id": "off",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
+      ],
       "expect": 1.0
     },
     {
       "name": "one more than the last task on the board",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "b", "state": "open", "focus": 2.5, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": 2.5,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "expect": 3.5
     },
     {
       "name": "a done task's position doesn't count",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "done", "state": "done", "focus": 9.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "done",
+          "state": "done",
+          "focus": 9.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "expect": 2.0
     }
@@ -59,7 +158,14 @@
   "placeAt": [
     {
       "name": "the first task on an empty board",
-      "tasks": [{ "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }],
+      "tasks": [
+        {
+          "id": "new",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
+      ],
       "task": "new",
       "place": 1,
       "expect": 1.0
@@ -67,9 +173,24 @@
     {
       "name": "to the top: one less than the first",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "new",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "task": "new",
       "place": 1,
@@ -78,9 +199,24 @@
     {
       "name": "between two: halfway",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "new",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "task": "new",
       "place": 2,
@@ -89,9 +225,24 @@
     {
       "name": "past the end is the end",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "new",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "task": "new",
       "place": 9,
@@ -100,8 +251,18 @@
     {
       "name": "below 1 is the top",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "new",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "task": "new",
       "place": 0,
@@ -110,9 +271,24 @@
     {
       "name": "a task already on the board moves: the top one to second place",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "c", "state": "open", "focus": 3.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "c",
+          "state": "open",
+          "focus": 3.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "task": "a",
       "place": 2,
@@ -121,13 +297,223 @@
     {
       "name": "a task already on the board moves: the last one to the top",
       "tasks": [
-        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
-        { "id": "c", "state": "open", "focus": 3.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+        {
+          "id": "a",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": 2.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "c",
+          "state": "open",
+          "focus": 3.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        }
       ],
       "task": "c",
       "place": 1,
       "expect": 0.0
+    }
+  ],
+  "candidates": [
+    {
+      "name": "by date (deadline before planned day), no date last, then title, then id",
+      "tasks": [
+        {
+          "id": "nodate",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Apple"
+        },
+        {
+          "id": "late",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Zebra",
+          "day": "2026-11-30"
+        },
+        {
+          "id": "deadline",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Mango",
+          "day": "2026-12-20",
+          "deadline": "2026-11-25"
+        },
+        {
+          "id": "early",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Pear",
+          "day": "2026-11-22"
+        },
+        {
+          "id": "same2",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "banana",
+          "day": "2026-11-22"
+        },
+        {
+          "id": "b",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Kiwi"
+        },
+        {
+          "id": "a",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Kiwi"
+        }
+      ],
+      "query": "",
+      "expect": [
+        "same2",
+        "early",
+        "deadline",
+        "late",
+        "nodate",
+        "a",
+        "b"
+      ]
+    },
+    {
+      "name": "tasks on the board, done, dropped or deleted are not offered",
+      "tasks": [
+        {
+          "id": "open",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "on",
+          "state": "open",
+          "focus": 1.0,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "done",
+          "state": "done",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "dropped",
+          "state": "dropped",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "gone",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "deleted": true
+        }
+      ],
+      "query": "",
+      "expect": [
+        "open"
+      ]
+    },
+    {
+      "name": "every word, in the title or the notes, ignoring case and accents",
+      "tasks": [
+        {
+          "id": "isic",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Studijní: prodloužit ISIC"
+        },
+        {
+          "id": "thesis",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Studijní: zrušit dipl. práci"
+        },
+        {
+          "id": "notes",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Call the office",
+          "notes": "about the ISIC card"
+        },
+        {
+          "id": "other",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Submit the Time Management project"
+        }
+      ],
+      "query": "studijni  ZRUSIT",
+      "expect": [
+        "thesis"
+      ]
+    },
+    {
+      "name": "a word in the notes counts",
+      "tasks": [
+        {
+          "id": "isic",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Studijní: prodloužit ISIC"
+        },
+        {
+          "id": "notes",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Call the office",
+          "notes": "about the ISIC card"
+        },
+        {
+          "id": "other",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Submit the Time Management project"
+        }
+      ],
+      "query": "isic",
+      "expect": [
+        "notes",
+        "isic"
+      ]
+    },
+    {
+      "name": "nothing matches",
+      "tasks": [
+        {
+          "id": "a",
+          "state": "open",
+          "focus": null,
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Internship hours"
+        }
+      ],
+      "query": "dentist",
+      "expect": []
     }
   ]
 }

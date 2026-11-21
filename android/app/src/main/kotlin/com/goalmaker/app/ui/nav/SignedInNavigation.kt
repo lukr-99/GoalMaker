@@ -366,7 +366,7 @@ fun SignedInNavigation(graph: AppGraph) {
                                 }
                                 PlaceRules.FOCUS -> {
                                     val focusViewModel = viewModel(key = "focus-tab") {
-                                        FocusViewModel(graph.tasks, graph.areas, graph.io)
+                                        FocusViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.settings, graph.io)
                                     }
                                     FocusScreen(viewModel = focusViewModel, onBack = backToHub, actions = actions)
                                 }

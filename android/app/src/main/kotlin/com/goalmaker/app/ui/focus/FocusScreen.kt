@@ -17,18 +17,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragHandle
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -42,8 +49,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +66,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -66,6 +76,8 @@ import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.ui.components.GoalMakerCheckbox
 import com.goalmaker.app.ui.components.ScreenTitle
+import com.goalmaker.app.ui.lists.FilterChoices
+import com.goalmaker.app.ui.lists.ListFilterRow
 import com.goalmaker.app.ui.nav.PlaceNavigationIcon
 import com.goalmaker.app.ui.theme.AppTheme
 import java.time.LocalDate
@@ -74,9 +86,11 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * The Focus Board: a short, manually-ordered watchlist of tasks or upcoming events. Items are
- * dragged (long-press the handle) to reprioritise, swiped off to remove from the board without
- * deleting, and tapped on the checkbox to complete. The FAB opens the add sheet.
+ * The Focus Board (docs/focus.md): a short, manually-ordered watchlist of tasks or upcoming events.
+ * Items are dragged (long-press the handle) to reprioritise, swiped off to remove from the board
+ * without deleting, and tapped on the checkbox to complete. The field at the top makes a task
+ * straight onto the board, the area and tag filter narrows the board and the add sheet, and the FAB
+ * opens the add sheet, which searches the open tasks.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,10 +111,16 @@ fun FocusScreen(
             sheetState = sheetState,
         ) {
             AddSheet(
+                query = state.query,
+                choices = state.choices,
                 candidates = state.candidates,
                 areas = state.areas,
                 dateFormat = dateFormat,
+                onQuery = viewModel::setQuery,
+                onArea = viewModel::filterByArea,
+                onTag = viewModel::filterByTag,
                 onAdd = viewModel::addToBoard,
+                onCreate = { viewModel.create(state.query) },
                 onDismiss = viewModel::dismissAddSheet,
             )
         }
@@ -122,23 +142,6 @@ fun FocusScreen(
             }
         },
     ) { padding ->
-        if (state.items.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = AppTheme.density.pagePadding.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    stringResource(R.string.focus_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = AppTheme.colors.textMuted,
-                )
-            }
-            return@Scaffold
-        }
-
         DraggableBoard(
             items = state.items,
             areas = state.areas,
@@ -148,8 +151,48 @@ fun FocusScreen(
             onRemove = viewModel::removeFromBoard,
             onMove = viewModel::move,
             contentPadding = padding,
+            header = {
+                item(key = "quick-add") { QuickAdd(onCreate = viewModel::create) }
+                item(key = "filter") {
+                    ListFilterRow(state.choices, onArea = viewModel::filterByArea, onTag = viewModel::filterByTag)
+                }
+                if (state.items.isEmpty()) {
+                    item(key = "empty") {
+                        Text(
+                            stringResource(if (state.onBoard == 0) R.string.focus_empty else R.string.focus_filtered_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = AppTheme.colors.textMuted,
+                            modifier = Modifier.padding(vertical = 24.dp),
+                        )
+                    }
+                }
+            },
         )
     }
+}
+
+/**
+ * The field at the top of the board: what is typed becomes a task at the end of the board, with the
+ * composer's shortcuts read from it. The text stays when there is nothing to save.
+ */
+@Composable
+private fun QuickAdd(onCreate: (String) -> Boolean) {
+    var line by rememberSaveable { mutableStateOf("") }
+    val submit: () -> Unit = { if (onCreate(line)) line = "" }
+    OutlinedTextField(
+        value = line,
+        onValueChange = { line = it },
+        label = { Text(stringResource(R.string.focus_quick_add)) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { submit() }),
+        trailingIcon = {
+            IconButton(onClick = submit, enabled = line.isNotBlank()) {
+                Icon(Icons.Outlined.Add, contentDescription = stringResource(R.string.focus_quick_add_button))
+            }
+        },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 /** A LazyColumn whose rows reorder on drag. Long-press the handle at the row's right end. */
@@ -163,6 +206,7 @@ private fun DraggableBoard(
     onRemove: (String) -> Unit,
     onMove: (Int, Int) -> Unit,
     contentPadding: PaddingValues,
+    header: LazyListScope.() -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -183,6 +227,7 @@ private fun DraggableBoard(
         verticalArrangement = Arrangement.spacedBy(AppTheme.density.rowGap.dp),
         modifier = modifier.fillMaxSize(),
     ) {
+        header()
         itemsIndexed(items, key = { _, item -> item.id }) { index, task ->
             val area = areas.find { it.id == task.areaId }
             val isDragging = dragIndex == index
@@ -356,13 +401,23 @@ private fun FocusRow(
     }
 }
 
-/** Bottom sheet showing all open tasks not on the board. Tap one to add it. */
+/**
+ * Bottom sheet that finds a task to add: a search box (every word, ignoring case and accents), the area
+ * and tag filter, and the open tasks not on the board that match, earliest date first. Tap one to add
+ * it; with something typed, the first row makes a new task from it straight onto the board.
+ */
 @Composable
 private fun AddSheet(
+    query: String,
+    choices: FilterChoices,
     candidates: List<TaskItem>,
     areas: List<AreaItem>,
     dateFormat: DateTimeFormatter,
+    onQuery: (String) -> Unit,
+    onArea: (String?) -> Unit,
+    onTag: (String?) -> Unit,
     onAdd: (TaskItem) -> Unit,
+    onCreate: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val today = LocalDate.now()
@@ -377,44 +432,86 @@ private fun AddSheet(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
         )
-        if (candidates.isEmpty()) {
-            Text(
-                stringResource(R.string.focus_add_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                color = AppTheme.colors.textMuted,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            )
-        } else {
-            LazyColumn {
-                itemsIndexed(candidates, key = { _, item -> item.id }) { _, task ->
-                    val area = areas.find { it.id == task.areaId }
-                    val date = task.deadline ?: task.plannedDate
-                    val isLate = date != null && date < today
-                    val dateLabel = date?.let { if (isLate) "!! ${it.format(dateFormat)}" else it.format(dateFormat) }
-
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+            label = { Text(stringResource(R.string.focus_search)) },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+        )
+        ListFilterRow(
+            choices.filter,
+            choices.areas,
+            choices.tags,
+            onArea = onArea,
+            onTag = onTag,
+            modifier = Modifier.padding(vertical = 8.dp),
+            edge = 20.dp,
+        )
+        LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+            if (query.isNotBlank()) {
+                item(key = "create") {
                     TextButton(
-                        onClick = { onAdd(task) },
+                        onClick = onCreate,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Outlined.Add, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.focus_create, query.trim()),
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+            if (candidates.isEmpty()) {
+                item(key = "none") {
+                    Text(
+                        stringResource(
+                            if (query.isBlank() && choices.filter.isEmpty) R.string.focus_add_empty else R.string.focus_add_no_match,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = AppTheme.colors.textMuted,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    )
+                }
+            }
+            items(candidates, key = { it.id }) { task ->
+                val area = areas.find { it.id == task.areaId }
+                val date = task.deadline ?: task.plannedDate
+                val isLate = date != null && date < today
+                val dateLabel = date?.let { if (isLate) "!! ${it.format(dateFormat)}" else it.format(dateFormat) }
+
+                TextButton(
+                    onClick = { onAdd(task) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp),
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            task.title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = AppTheme.colors.text,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        if (dateLabel != null || area != null) {
                             Text(
-                                task.title,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = AppTheme.colors.text,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                                listOfNotNull(dateLabel, area?.name).joinToString(" · "),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = if (isLate) AppTheme.colors.danger else AppTheme.colors.textMuted,
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            if (dateLabel != null || area != null) {
-                                Text(
-                                    listOfNotNull(dateLabel, area?.name).joinToString(" · "),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isLate) AppTheme.colors.danger else AppTheme.colors.textMuted,
-                                    modifier = Modifier.fillMaxWidth(),
-                                )
-                            }
                         }
                     }
                 }

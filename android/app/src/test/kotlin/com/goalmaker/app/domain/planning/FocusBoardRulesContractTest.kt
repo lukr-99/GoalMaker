@@ -3,7 +3,9 @@ package com.goalmaker.app.domain.planning
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
 import com.goalmaker.app.contracts.ContractFiles
+import java.time.LocalDate
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.boolean
 import kotlinx.serialization.json.double
 import kotlinx.serialization.json.doubleOrNull
@@ -19,6 +21,7 @@ class FocusBoardRulesContractTest {
     private val vectors = ContractFiles.load("vectors/focus.json")
 
     private fun JsonObject.text(name: String) = getValue(name).jsonPrimitive.content
+    private fun JsonObject.optional(name: String) = (this[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
     private fun JsonObject.cases(name: String) = getValue(name).jsonArray.map { it.jsonObject }
 
     private fun state(name: String) = when (name) {
@@ -31,12 +34,15 @@ class FocusBoardRulesContractTest {
         val task = element.jsonObject
         TaskItem(
             id = task.text("id"),
-            title = task.text("id"),
+            title = task.optional("title") ?: task.text("id"),
             state = state(task.text("state")),
             topPriority = false,
             createdAt = task.text("createdAt"),
             deleted = task["deleted"]?.jsonPrimitive?.boolean ?: false,
             focusPosition = task.getValue("focus").jsonPrimitive.doubleOrNull,
+            notes = task.optional("notes") ?: "",
+            plannedDate = task.optional("day")?.let(LocalDate::parse),
+            deadline = task.optional("deadline")?.let(LocalDate::parse),
         )
     }
 
@@ -71,6 +77,17 @@ class FocusBoardRulesContractTest {
                 case.getValue("expect").jsonPrimitive.double,
                 FocusBoardRules.placeAt(tasks(case), case.text("task"), case.getValue("place").jsonPrimitive.int),
                 0.0,
+            )
+        }
+    }
+
+    @Test
+    fun `what the add picker offers`() {
+        vectors.cases("candidates").forEach { case ->
+            assertEquals(
+                case.text("name"),
+                case.getValue("expect").jsonArray.map { it.jsonPrimitive.content },
+                FocusBoardRules.candidates(tasks(case), case.text("query")).map(TaskItem::id),
             )
         }
     }

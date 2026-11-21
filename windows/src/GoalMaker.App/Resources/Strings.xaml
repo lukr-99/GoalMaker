@@ -1371,7 +1371,7 @@
     <sys:String x:Key="Places.FocusLine">{0} on the board</sys:String>
 
     <sys:String x:Key="Focus.Title">Focus</sys:String>
-    <sys:String x:Key="Focus.Empty">Nothing on your board yet. Add a task with the button below.</sys:String>
+    <sys:String x:Key="Focus.Empty">Nothing on your board yet. Type a task below, or pick one with Add.</sys:String>
     <sys:String x:Key="Focus.AddTitle">Add to Focus Board</sys:String>
     <sys:String x:Key="Focus.AddEmpty">All open tasks are already on the board.</sys:String>
     <sys:String x:Key="Focus.Add">Add</sys:String>
@@ -1379,7 +1379,11 @@
     <sys:String x:Key="Focus.Complete">Complete</sys:String>
     <sys:String x:Key="Focus.MoveUp">Move up</sys:String>
     <sys:String x:Key="Focus.MoveDown">Move down</sys:String>
-    <sys:String x:Key="Focus.QuickAddPlaceholder">New task...</sys:String>
+    <sys:String x:Key="Focus.QuickAddPlaceholder">Add a task to the board, like "Hand in the form @School friday"</sys:String>
+    <sys:String x:Key="Focus.Search">Search open tasks</sys:String>
+    <sys:String x:Key="Focus.NoMatch">No open task matches.</sys:String>
+    <sys:String x:Key="Focus.FilteredEmpty">Nothing on the board matches the filter.</sys:String>
+    <sys:String x:Key="Focus.Create">Create "{0}" on the board</sys:String>
 
     <!-- About (docs/about.md) -->
     <sys:String x:Key="About.Open">About GoalMaker</sys:String>

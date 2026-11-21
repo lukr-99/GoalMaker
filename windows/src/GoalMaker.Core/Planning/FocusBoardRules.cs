@@ -40,4 +40,26 @@ public static class FocusBoardRules
             index > 0 ? others[index - 1].FocusPosition : null,
             index < others.Count ? others[index].FocusPosition : null);
     }
+
+    /// <summary>
+    /// The tasks the add picker offers for <paramref name="query"/>: open, not deleted and not on the board,
+    /// with every word of the query in the title or the notes, ignoring case and accents. By their date (the
+    /// deadline, else the planned day), earliest first and undated last, then by title, then by id.
+    /// </summary>
+    public static IReadOnlyList<TaskItem> Candidates(IEnumerable<TaskItem> tasks, string query)
+    {
+        var words = query.Split(' ').Select(ArchiveRules.Fold).Where(word => word.Length > 0).ToList();
+        return tasks
+            .Where(task => !task.Deleted && task.State == TaskState.Open && !task.FocusPosition.HasValue)
+            .Where(task =>
+            {
+                var text = ArchiveRules.Fold(task.Title) + "\n" + ArchiveRules.Fold(task.Notes);
+                return words.All(word => text.Contains(word, StringComparison.Ordinal));
+            })
+            .OrderBy(task => (task.Deadline ?? task.PlannedDate).HasValue ? 0 : 1)
+            .ThenBy(task => task.Deadline ?? task.PlannedDate)
+            .ThenBy(task => ArchiveRules.Fold(task.Title), StringComparer.Ordinal)
+            .ThenBy(task => task.Id, StringComparer.Ordinal)
+            .ToList();
+    }
 }
