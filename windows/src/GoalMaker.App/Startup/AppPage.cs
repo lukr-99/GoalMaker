@@ -22,7 +22,7 @@ public enum AppPage
     Calendar,
 
     /// <summary>Every open task, grouped by area (docs/all-tasks.md).</summary>
-    Tasks,
+    AllTasks,
 
     /// <summary>One period's guided review; opened from the Reviews page.</summary>
     Review,

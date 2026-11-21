@@ -15,7 +15,7 @@ public sealed class PlacesViewModelTests
 
         Assert.Equal(["today", "tomorrow", "inbox", "projects"], places.Pinned.Select(entry => entry.Id));
         Assert.Equal(["tasks", "calendar", "habits", "goals", "life-goals", "wants", "tally", "reviews", "stats", "archive", "focus"], places.Others.Select(entry => entry.Id));
-        Assert.Equal("Nav.Calendar", places.Others[0].Label);
+        Assert.Equal("Nav.Tasks", places.Others[0].Label);
     }
 
     [Fact]

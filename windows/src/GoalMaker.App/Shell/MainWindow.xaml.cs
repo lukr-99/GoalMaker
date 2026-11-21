@@ -230,7 +230,7 @@ public partial class MainWindow
             AppPage.Tally => typeof(TallyPage),
             AppPage.Projects => typeof(ProjectsPage),
             AppPage.Calendar => typeof(CalendarPage),
-            AppPage.Tasks => typeof(AllTasksPage),
+            AppPage.AllTasks => typeof(AllTasksPage),
             AppPage.Review => typeof(ReviewPage),
             AppPage.Task => typeof(TaskPage),
             AppPage.About => typeof(AboutPage),

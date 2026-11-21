@@ -404,7 +404,7 @@ public sealed class AppGraph : IDisposable
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings, Projects, CopyText);
         Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive), OpenProject);
         AllTasks = new AllTasksViewModel(
-            Tasks, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, runOnUi, id => OpenTask(id, AppPage.Tasks), OpenProject);
+            Tasks, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, runOnUi, id => OpenTask(id, AppPage.AllTasks), OpenProject);
         Focus = new FocusViewModel(Tasks, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, runOnUi);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
