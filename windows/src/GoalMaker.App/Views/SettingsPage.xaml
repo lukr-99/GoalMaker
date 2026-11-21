@@ -9,10 +9,12 @@
       Background="{DynamicResource GM.BackgroundBrush}"
       FontFamily="{DynamicResource GM.BodyFont}"
       Foreground="{DynamicResource GM.TextBrush}">
-    <!-- Settings on the dotnetlib settings kit (docs/design/spec.md, Settings): one scrolling page of
+    <!-- Settings on the dotnetlib settings kit (docs/design/spec.md, Settings): a scrolling page of
          section cards, a title and a one-line description each, rows split by thin dividers, the
          section list on the left (chips on a narrow window), the jump and scroll hints, and "Saved"
-         next to each control. The order is SettingsSectionsViewModel.Order. -->
+         next to each control. The order is SettingsSectionsViewModel.Order. Appearance, Planning and
+         Your data and updates are pages of their own (GM-106): the main page holds one row for each,
+         and the kit page that holds them in full shows in its place. -->
     <Page.Resources>
         <Style x:Key="Hint" TargetType="TextBlock">
             <Setter Property="Margin" Value="0,2,0,0" />
@@ -46,6 +48,7 @@
         </DataTemplate>
     </Page.Resources>
 
+    <Grid>
     <tray:SettingsPage x:Name="Kit"
                        Title="{DynamicResource Settings.Title}"
                        ReduceMotion="{Binding PageReduceMotion}"
@@ -157,68 +160,14 @@
             </tray:SettingsDangerZone>
         </tray:SettingsSection>
 
+        <!-- A page of its own (GM-106): one row here opens it. -->
         <tray:SettingsSection SectionId="appearance" Title="{DynamicResource Settings.Appearance}" Description="{DynamicResource Settings.AppearanceDescription}">
-            <tray:ChoiceCardsRow Label="{DynamicResource Settings.Theme}" Options="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"
-                                 OptionTemplate="{StaticResource ThemeCard}" />
-            <!-- The mark takes on the theme's colors, and draws itself again when the theme changes. -->
-            <tray:SettingsRow Label="{DynamicResource Settings.Logo}" Hint="{DynamicResource Settings.LogoHint}">
-                <controls:GoalMakerLogo Width="44" Height="44" />
-            </tray:SettingsRow>
-            <tray:SegmentedRow Label="{DynamicResource Settings.Mode}" Options="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode}"
-                               DisplayMemberPath="Text" />
-            <tray:ToggleRow Label="{DynamicResource Settings.PureBlack}" Hint="{DynamicResource Settings.PureBlackHint}"
-                            DisabledReason="{DynamicResource Settings.PureBlackDisabled}"
-                            IsOn="{Binding PureBlack}" IsEnabled="{Binding IsPureBlackAvailable}" />
-            <tray:SegmentedRow Label="{DynamicResource Settings.ReduceMotion}" Hint="{DynamicResource Settings.ReduceMotionHint}"
-                               Options="{Binding MotionOptions}" SelectedItem="{Binding SelectedMotion}" DisplayMemberPath="Text" />
-            <tray:ToggleRow Label="{DynamicResource Settings.CompletionSound}" Hint="{DynamicResource Settings.CompletionSoundHint}"
-                            IsOn="{Binding CompletionSound}" />
+            <tray:LinkRow x:Name="OpenAppearanceRow" Label="{DynamicResource Settings.AppearanceOpen}" Hint="{DynamicResource Settings.AppearanceOpenHint}" />
         </tray:SettingsSection>
 
+        <!-- A page of its own (GM-106): one row here opens it. -->
         <tray:SettingsSection SectionId="planning" Title="{DynamicResource Settings.Planning}" Description="{DynamicResource Settings.PlanningDescription}">
-            <tray:DropdownRow Label="{DynamicResource Settings.DayStart}" Hint="{DynamicResource Settings.DayStartHint}"
-                              Options="{Binding DayStartOptions}" SelectedItem="{Binding SelectedDayStart}" DisplayMemberPath="Text" />
-
-            <!-- Each reminder: a switch, and while it is on its time in half hours, saved when the slider is let go. -->
-            <tray:ToggleRow Label="{DynamicResource Settings.PlanReminder}" Hint="{Binding PlanReminderSummary}" IsOn="{Binding PlanReminderOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
-                            Value="{Binding PlanReminderHalf}"
-                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
-                            Visibility="{Binding PlanReminderOn, Converter={StaticResource BoolToVisibility}}" />
-
-            <tray:ToggleRow Label="{DynamicResource Settings.WeeklyReview}" Hint="{Binding WeeklyReviewSummary}" IsOn="{Binding WeeklyReviewOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
-                            Value="{Binding WeeklyReviewHalf}"
-                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
-                            Visibility="{Binding WeeklyReviewOn, Converter={StaticResource BoolToVisibility}}" />
-            <tray:DropdownRow Label="{DynamicResource Settings.WeeklyReviewDay}" Options="{Binding WeekdayOptions}"
-                              SelectedItem="{Binding SelectedWeeklyReviewDay}" DisplayMemberPath="Text"
-                              Visibility="{Binding WeeklyReviewOn, Converter={StaticResource BoolToVisibility}}" />
-
-            <tray:ToggleRow Label="{DynamicResource Settings.MonthlyReview}" Hint="{Binding MonthlyReviewSummary}" IsOn="{Binding MonthlyReviewOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
-                            Value="{Binding MonthlyReviewHalf}"
-                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
-                            Visibility="{Binding MonthlyReviewOn, Converter={StaticResource BoolToVisibility}}" />
-
-            <tray:ToggleRow Label="{DynamicResource Settings.WantsReady}" Hint="{Binding WantsReadySummary}" IsOn="{Binding WantsReadyOn}" />
-            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
-                            Value="{Binding WantsReadyHalf}"
-                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
-                            Visibility="{Binding WantsReadyOn, Converter={StaticResource BoolToVisibility}}" />
-            <!-- The why reminder (docs/life-goals.md): how often, at a moment worked out the same on both devices. -->
-            <tray:DropdownRow Label="{DynamicResource Settings.Why}" Hint="{DynamicResource Settings.WhyHint}"
-                              Options="{Binding WhyOptions}" SelectedItem="{Binding SelectedWhy}" DisplayMemberPath="Text" />
-
-            <!-- Quiet hours (docs/reminders.md): typed times, saved on Enter or when the field is left. -->
-            <tray:ButtonRow Label="{DynamicResource Settings.QuietHours}" Hint="{Binding QuietHoursSummary}"
-                            ButtonText="{DynamicResource Settings.QuietHoursClear}" Command="{Binding TurnOffQuietHoursCommand}" />
-            <tray:TextFieldRow Label="{DynamicResource Settings.QuietHoursStart}" Hint="{DynamicResource Settings.QuietHoursStartHint}"
-                               Value="{Binding QuietHoursStartText}" Validate="{Binding ValidateTime}" Placeholder="22:00"
-                               LastGoodValueText="{DynamicResource Settings.FieldKept}" />
-            <tray:TextFieldRow Label="{DynamicResource Settings.QuietHoursEnd}" Hint="{DynamicResource Settings.QuietHoursEndHint}"
-                               Value="{Binding QuietHoursEndText}" Validate="{Binding ValidateTime}" Placeholder="07:00"
-                               LastGoodValueText="{DynamicResource Settings.FieldKept}" />
+            <tray:LinkRow x:Name="OpenPlanningRow" Label="{DynamicResource Settings.PlanningOpen}" Hint="{DynamicResource Settings.PlanningOpenHint}" />
         </tray:SettingsSection>
 
         <!-- Areas and tags: the areas in use and the tags (AreasViewModel, set in code), and the way to the full manager. -->
@@ -319,6 +268,161 @@
             <tray:LinkRow Label="{DynamicResource Tray.MiniHabits}" Hint="{DynamicResource Settings.MiniWindowHint}" Command="{Binding OpenHabitsMiniCommand}" />
         </tray:SettingsSection>
 
+        <!-- A page of its own (GM-106): one row here opens it. -->
+        <tray:SettingsSection SectionId="data" Title="{DynamicResource Settings.DataPage}" Description="{DynamicResource Settings.DataPageDescription}">
+            <tray:LinkRow x:Name="OpenDataRow" Label="{DynamicResource Settings.DataOpen}" Hint="{DynamicResource Settings.DataOpenHint}" />
+        </tray:SettingsSection>
+
+
+        <tray:SettingsSection SectionId="about" Title="{DynamicResource Settings.About}" Description="{DynamicResource Settings.AboutDescription}">
+            <tray:LinkRow Label="{DynamicResource About.Open}" Hint="{DynamicResource About.OpenHint}" Command="{Binding OpenAboutCommand}" />
+            <tray:InfoRow Label="{DynamicResource Settings.Version}" Value="{Binding VersionValue}" />
+            <tray:InfoRow Label="{DynamicResource Settings.Backend}" Value="{Binding BackendValue}" IsMonospace="True" />
+        </tray:SettingsSection>
+
+        <tray:SettingsSection SectionId="developer" Title="{DynamicResource Settings.Developer}" Description="{DynamicResource Settings.DeveloperDescription}"
+                              Visibility="{Binding IsDevBuild, Converter={StaticResource BoolToVisibility}}">
+            <tray:TextFieldRow Label="{DynamicResource Settings.BackendUrl}" Hint="{DynamicResource Settings.BackendHint}"
+                               Value="{Binding BackendUrlDraft}" Validate="{Binding ValidateBackendUrl}"
+                               LastGoodValueText="{DynamicResource Settings.FieldKept}" />
+            <tray:TextFieldRow Label="{DynamicResource Settings.BackendKey}" Hint="{DynamicResource Settings.BackendKeyHint}"
+                               Value="{Binding BackendKeyDraft}" Validate="{Binding ValidateBackendKey}" LastGoodValueText="" />
+            <tray:ButtonRow Label="{DynamicResource Settings.BackendSaveTitle}" Hint="{DynamicResource Settings.BackendSaveHint}"
+                            ButtonText="{DynamicResource Settings.BackendSave}" IsPrimary="True" Command="{Binding SaveBackendCommand}" />
+            <tray:ButtonRow Label="{DynamicResource Settings.BackendResetTitle}" Hint="{DynamicResource Settings.BackendResetHint}"
+                            ButtonText="{DynamicResource Settings.BackendReset}" Command="{Binding ResetBackendCommand}" />
+        </tray:SettingsSection>
+    </tray:SettingsPage>
+    <!-- Settings > Appearance: the same cards in full, with a way back (GM-106). -->
+    <tray:SettingsPage x:Name="AppearanceKit" Visibility="Collapsed"
+                       Title="{DynamicResource Settings.Appearance}"
+                       ReduceMotion="{Binding PageReduceMotion}"
+                       SavedText="{DynamicResource Settings.Saved}"
+                       NavigationLabel="{DynamicResource Settings.Sections}"
+                       SearchPlaceholder="{DynamicResource Settings.SearchPlaceholder}"
+                       OneResultText="{DynamicResource Settings.OneResult}"
+                       ResultCountFormat="{DynamicResource Settings.ResultCount}"
+                       NoResultsTitle="{DynamicResource Settings.NoResultsTitle}"
+                       NoResultsFormat="{DynamicResource Settings.NoResults}"
+                       ClearSearchText="{DynamicResource Settings.ClearSearch}"
+                       Background="{DynamicResource GM.BackgroundBrush}">
+        <tray:SettingsPage.HeaderContent>
+            <ui:Button Margin="0,12,0,0" Appearance="Transparent" Click="OnBackToSettings"
+                       AutomationProperties.Name="{DynamicResource Settings.BackToSettings}">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="ArrowLeft24" Margin="0,0,8,0" />
+                    <TextBlock Text="{DynamicResource Settings.BackToSettings}" />
+                </StackPanel>
+            </ui:Button>
+        </tray:SettingsPage.HeaderContent>
+        <tray:SettingsSection SectionId="appearance" Title="{DynamicResource Settings.Appearance}" Description="{DynamicResource Settings.AppearanceDescription}">
+            <tray:ChoiceCardsRow Label="{DynamicResource Settings.Theme}" Options="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"
+                                 OptionTemplate="{StaticResource ThemeCard}" />
+            <!-- The mark takes on the theme's colors, and draws itself again when the theme changes. -->
+            <tray:SettingsRow Label="{DynamicResource Settings.Logo}" Hint="{DynamicResource Settings.LogoHint}">
+                <controls:GoalMakerLogo Width="44" Height="44" />
+            </tray:SettingsRow>
+            <tray:SegmentedRow Label="{DynamicResource Settings.Mode}" Options="{Binding ModeOptions}" SelectedItem="{Binding SelectedMode}"
+                               DisplayMemberPath="Text" />
+            <tray:ToggleRow Label="{DynamicResource Settings.PureBlack}" Hint="{DynamicResource Settings.PureBlackHint}"
+                            DisabledReason="{DynamicResource Settings.PureBlackDisabled}"
+                            IsOn="{Binding PureBlack}" IsEnabled="{Binding IsPureBlackAvailable}" />
+            <tray:SegmentedRow Label="{DynamicResource Settings.ReduceMotion}" Hint="{DynamicResource Settings.ReduceMotionHint}"
+                               Options="{Binding MotionOptions}" SelectedItem="{Binding SelectedMotion}" DisplayMemberPath="Text" />
+            <tray:ToggleRow Label="{DynamicResource Settings.CompletionSound}" Hint="{DynamicResource Settings.CompletionSoundHint}"
+                            IsOn="{Binding CompletionSound}" />
+        </tray:SettingsSection>
+    </tray:SettingsPage>
+    <!-- Settings > Planning: the same cards in full, with a way back (GM-106). -->
+    <tray:SettingsPage x:Name="PlanningKit" Visibility="Collapsed"
+                       Title="{DynamicResource Settings.Planning}"
+                       ReduceMotion="{Binding PageReduceMotion}"
+                       SavedText="{DynamicResource Settings.Saved}"
+                       NavigationLabel="{DynamicResource Settings.Sections}"
+                       SearchPlaceholder="{DynamicResource Settings.SearchPlaceholder}"
+                       OneResultText="{DynamicResource Settings.OneResult}"
+                       ResultCountFormat="{DynamicResource Settings.ResultCount}"
+                       NoResultsTitle="{DynamicResource Settings.NoResultsTitle}"
+                       NoResultsFormat="{DynamicResource Settings.NoResults}"
+                       ClearSearchText="{DynamicResource Settings.ClearSearch}"
+                       Background="{DynamicResource GM.BackgroundBrush}">
+        <tray:SettingsPage.HeaderContent>
+            <ui:Button Margin="0,12,0,0" Appearance="Transparent" Click="OnBackToSettings"
+                       AutomationProperties.Name="{DynamicResource Settings.BackToSettings}">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="ArrowLeft24" Margin="0,0,8,0" />
+                    <TextBlock Text="{DynamicResource Settings.BackToSettings}" />
+                </StackPanel>
+            </ui:Button>
+        </tray:SettingsPage.HeaderContent>
+        <tray:SettingsSection SectionId="planning" Title="{DynamicResource Settings.Planning}" Description="{DynamicResource Settings.PlanningDescription}">
+            <tray:DropdownRow Label="{DynamicResource Settings.DayStart}" Hint="{DynamicResource Settings.DayStartHint}"
+                              Options="{Binding DayStartOptions}" SelectedItem="{Binding SelectedDayStart}" DisplayMemberPath="Text" />
+
+            <!-- Each reminder: a switch, and while it is on its time in half hours, saved when the slider is let go. -->
+            <tray:ToggleRow Label="{DynamicResource Settings.PlanReminder}" Hint="{Binding PlanReminderSummary}" IsOn="{Binding PlanReminderOn}" />
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
+                            Value="{Binding PlanReminderHalf}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
+                            Visibility="{Binding PlanReminderOn, Converter={StaticResource BoolToVisibility}}" />
+
+            <tray:ToggleRow Label="{DynamicResource Settings.WeeklyReview}" Hint="{Binding WeeklyReviewSummary}" IsOn="{Binding WeeklyReviewOn}" />
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
+                            Value="{Binding WeeklyReviewHalf}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
+                            Visibility="{Binding WeeklyReviewOn, Converter={StaticResource BoolToVisibility}}" />
+            <tray:DropdownRow Label="{DynamicResource Settings.WeeklyReviewDay}" Options="{Binding WeekdayOptions}"
+                              SelectedItem="{Binding SelectedWeeklyReviewDay}" DisplayMemberPath="Text"
+                              Visibility="{Binding WeeklyReviewOn, Converter={StaticResource BoolToVisibility}}" />
+
+            <tray:ToggleRow Label="{DynamicResource Settings.MonthlyReview}" Hint="{Binding MonthlyReviewSummary}" IsOn="{Binding MonthlyReviewOn}" />
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
+                            Value="{Binding MonthlyReviewHalf}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
+                            Visibility="{Binding MonthlyReviewOn, Converter={StaticResource BoolToVisibility}}" />
+
+            <tray:ToggleRow Label="{DynamicResource Settings.WantsReady}" Hint="{Binding WantsReadySummary}" IsOn="{Binding WantsReadyOn}" />
+            <tray:SliderRow Label="{DynamicResource Settings.ReminderTime}" Minimum="0" Maximum="47" Step="1"
+                            Value="{Binding WantsReadyHalf}"
+                            ValueFormatter="{x:Static vm:SettingsViewModel.HalfHourFormatter}"
+                            Visibility="{Binding WantsReadyOn, Converter={StaticResource BoolToVisibility}}" />
+            <!-- The why reminder (docs/life-goals.md): how often, at a moment worked out the same on both devices. -->
+            <tray:DropdownRow Label="{DynamicResource Settings.Why}" Hint="{DynamicResource Settings.WhyHint}"
+                              Options="{Binding WhyOptions}" SelectedItem="{Binding SelectedWhy}" DisplayMemberPath="Text" />
+
+            <!-- Quiet hours (docs/reminders.md): typed times, saved on Enter or when the field is left. -->
+            <tray:ButtonRow Label="{DynamicResource Settings.QuietHours}" Hint="{Binding QuietHoursSummary}"
+                            ButtonText="{DynamicResource Settings.QuietHoursClear}" Command="{Binding TurnOffQuietHoursCommand}" />
+            <tray:TextFieldRow Label="{DynamicResource Settings.QuietHoursStart}" Hint="{DynamicResource Settings.QuietHoursStartHint}"
+                               Value="{Binding QuietHoursStartText}" Validate="{Binding ValidateTime}" Placeholder="22:00"
+                               LastGoodValueText="{DynamicResource Settings.FieldKept}" />
+            <tray:TextFieldRow Label="{DynamicResource Settings.QuietHoursEnd}" Hint="{DynamicResource Settings.QuietHoursEndHint}"
+                               Value="{Binding QuietHoursEndText}" Validate="{Binding ValidateTime}" Placeholder="07:00"
+                               LastGoodValueText="{DynamicResource Settings.FieldKept}" />
+        </tray:SettingsSection>
+    </tray:SettingsPage>
+    <!-- Settings > DataPage: the same cards in full, with a way back (GM-106). -->
+    <tray:SettingsPage x:Name="DataKit" Visibility="Collapsed"
+                       Title="{DynamicResource Settings.DataPage}"
+                       ReduceMotion="{Binding PageReduceMotion}"
+                       SavedText="{DynamicResource Settings.Saved}"
+                       NavigationLabel="{DynamicResource Settings.Sections}"
+                       SearchPlaceholder="{DynamicResource Settings.SearchPlaceholder}"
+                       OneResultText="{DynamicResource Settings.OneResult}"
+                       ResultCountFormat="{DynamicResource Settings.ResultCount}"
+                       NoResultsTitle="{DynamicResource Settings.NoResultsTitle}"
+                       NoResultsFormat="{DynamicResource Settings.NoResults}"
+                       ClearSearchText="{DynamicResource Settings.ClearSearch}"
+                       Background="{DynamicResource GM.BackgroundBrush}">
+        <tray:SettingsPage.HeaderContent>
+            <ui:Button Margin="0,12,0,0" Appearance="Transparent" Click="OnBackToSettings"
+                       AutomationProperties.Name="{DynamicResource Settings.BackToSettings}">
+                <StackPanel Orientation="Horizontal">
+                    <ui:SymbolIcon Symbol="ArrowLeft24" Margin="0,0,8,0" />
+                    <TextBlock Text="{DynamicResource Settings.BackToSettings}" />
+                </StackPanel>
+            </ui:Button>
+        </tray:SettingsPage.HeaderContent>
         <!-- Your data (docs/backup.md): one file with everything, the weekly one, and Restore in the danger zone at the end. -->
         <tray:SettingsSection SectionId="data" Title="{DynamicResource Settings.Backup}" Description="{DynamicResource Settings.DataDescription}">
             <tray:ButtonRow Label="{DynamicResource Settings.BackupExportTitle}" Hint="{DynamicResource Settings.BackupExportHint}"
@@ -336,7 +440,6 @@
                                 Result="{Binding RestoreResult}" ResultKind="{Binding RestoreResultKind}" />
             </tray:SettingsDangerZone>
         </tray:SettingsSection>
-
         <tray:SettingsSection SectionId="updates" Title="{DynamicResource Settings.Updates}" Description="{DynamicResource Settings.UpdatesDescription}">
             <!-- An update the check found: the accent row, as the mark on the Settings item promised. -->
             <Grid Margin="0,10,0,10" AutomationProperties.Name="{Binding AvailableText}"
@@ -370,24 +473,6 @@
                           IsExternal="True" Command="{Binding OpenReleasesPageCommand}"
                           Visibility="{Binding HasReleasesPage, Converter={StaticResource BoolToVisibility}}" />
         </tray:SettingsSection>
-
-        <tray:SettingsSection SectionId="about" Title="{DynamicResource Settings.About}" Description="{DynamicResource Settings.AboutDescription}">
-            <tray:LinkRow Label="{DynamicResource About.Open}" Hint="{DynamicResource About.OpenHint}" Command="{Binding OpenAboutCommand}" />
-            <tray:InfoRow Label="{DynamicResource Settings.Version}" Value="{Binding VersionValue}" />
-            <tray:InfoRow Label="{DynamicResource Settings.Backend}" Value="{Binding BackendValue}" IsMonospace="True" />
-        </tray:SettingsSection>
-
-        <tray:SettingsSection SectionId="developer" Title="{DynamicResource Settings.Developer}" Description="{DynamicResource Settings.DeveloperDescription}"
-                              Visibility="{Binding IsDevBuild, Converter={StaticResource BoolToVisibility}}">
-            <tray:TextFieldRow Label="{DynamicResource Settings.BackendUrl}" Hint="{DynamicResource Settings.BackendHint}"
-                               Value="{Binding BackendUrlDraft}" Validate="{Binding ValidateBackendUrl}"
-                               LastGoodValueText="{DynamicResource Settings.FieldKept}" />
-            <tray:TextFieldRow Label="{DynamicResource Settings.BackendKey}" Hint="{DynamicResource Settings.BackendKeyHint}"
-                               Value="{Binding BackendKeyDraft}" Validate="{Binding ValidateBackendKey}" LastGoodValueText="" />
-            <tray:ButtonRow Label="{DynamicResource Settings.BackendSaveTitle}" Hint="{DynamicResource Settings.BackendSaveHint}"
-                            ButtonText="{DynamicResource Settings.BackendSave}" IsPrimary="True" Command="{Binding SaveBackendCommand}" />
-            <tray:ButtonRow Label="{DynamicResource Settings.BackendResetTitle}" Hint="{DynamicResource Settings.BackendResetHint}"
-                            ButtonText="{DynamicResource Settings.BackendReset}" Command="{Binding ResetBackendCommand}" />
-        </tray:SettingsSection>
     </tray:SettingsPage>
+    </Grid>
 </Page>

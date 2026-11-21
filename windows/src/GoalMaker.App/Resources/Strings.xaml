@@ -387,6 +387,15 @@
     <sys:String x:Key="Sync.NeedsAttention">Not everything is on the server yet</sys:String>
 
     <sys:String x:Key="Settings.Title">Settings</sys:String>
+    <sys:String x:Key="Settings.DataPage">Your data and updates</sys:String>
+    <sys:String x:Key="Settings.DataPageDescription">Export everything, bring it back, and new versions.</sys:String>
+    <sys:String x:Key="Settings.AppearanceOpen">Open Appearance</sys:String>
+    <sys:String x:Key="Settings.AppearanceOpenHint">Theme, the mark, mode, pure black, reduce motion and the completion sound.</sys:String>
+    <sys:String x:Key="Settings.PlanningOpen">Open Planning day and reminders</sys:String>
+    <sys:String x:Key="Settings.PlanningOpenHint">When your day starts, the plan, review, wants and why reminders, and quiet hours.</sys:String>
+    <sys:String x:Key="Settings.DataOpen">Open Your data and updates</sys:String>
+    <sys:String x:Key="Settings.DataOpenHint">Export and restore everything, the weekly export, and how new versions arrive.</sys:String>
+    <sys:String x:Key="Settings.BackToSettings">Back to Settings</sys:String>
     <sys:String x:Key="Settings.Appearance">Appearance</sys:String>
     <!-- The Settings page (docs/design/spec.md, Settings): the kit's own copy, then one line per section. -->
     <sys:String x:Key="Settings.Sections">Settings sections</sys:String>
