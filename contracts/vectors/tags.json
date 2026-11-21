@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "description": "Tags that belong to an area or a project (GM-107, supabase/migrations/0030_tag_scope.sql, docs/lists.md 'Tags'). A tag has at most one of 'area' and 'project'; with neither it is for everything. A tag whose area or project is not in 'areas' or 'projects' (deleted or unknown) counts as for everything. 'offered': the tags a filter's tag picker offers, in the tags' order: with no area and no project chosen, every tag; with an 'area' chosen, the tags for everything and that area's; on a project's board ('project'), the tags for everything, that project's and its area's ('projects' maps each project to its area, or null). 'groups': how Settings lists the tags: the tags for everything first ('place' null), then each area in the areas' order ('place' 'area:<id>'), then each project in the projects' order ('place' 'project:<id>'), tags in their order inside a group, and an empty group left out.",
+  "offered": [
+    {
+      "name": "nothing chosen offers every tag",
+      "areas": [
+        "school",
+        "home"
+      ],
+      "projects": {
+        "thesis": "school"
+      },
+      "tags": [
+        {
+          "id": "forms",
+          "area": "school"
+        },
+        {
+          "id": "urgent"
+        },
+        {
+          "id": "chapter",
+          "project": "thesis"
+        },
+        {
+          "id": "garden",
+          "area": "home"
+        }
+      ],
+      "chosen": {},
+      "expect": [
+        "forms",
+        "urgent",
+        "chapter",
+        "garden"
+      ]
+    },
+    {
+      "name": "an area offers its own tags and the ones for everything",
+      "areas": [
+        "school",
+        "home"
+      ],
+      "projects": {
+        "thesis": "school"
+      },
+      "tags": [
+        {
+          "id": "forms",
+          "area": "school"
+        },
+        {
+          "id": "urgent"
+        },
+        {
+          "id": "chapter",
+          "project": "thesis"
+        },
+        {
+          "id": "garden",
+          "area": "home"
+        }
+      ],
+      "chosen": {
+        "area": "school"
+      },
+      "expect": [
+        "forms",
+        "urgent"
+      ]
+    },
+    {
+      "name": "a project's board offers the project's, its area's and the ones for everything",
+      "areas": [
+        "school",
+        "home"
+      ],
+      "projects": {
+        "thesis": "school",
+        "garden-shed": null
+      },
+      "tags": [
+        {
+          "id": "forms",
+          "area": "school"
+        },
+        {
+          "id": "urgent"
+        },
+        {
+          "id": "chapter",
+          "project": "thesis"
+        },
+        {
+          "id": "garden",
+          "area": "home"
+        },
+        {
+          "id": "wood",
+          "project": "garden-shed"
+        }
+      ],
+      "chosen": {
+        "project": "thesis"
+      },
+      "expect": [
+        "forms",
+        "urgent",
+        "chapter"
+      ]
+    },
+    {
+      "name": "a project without an area offers its own and the ones for everything",
+      "areas": [
+        "school"
+      ],
+      "projects": {
+        "garden-shed": null
+      },
+      "tags": [
+        {
+          "id": "forms",
+          "area": "school"
+        },
+        {
+          "id": "urgent"
+        },
+        {
+          "id": "wood",
+          "project": "garden-shed"
+        }
+      ],
+      "chosen": {
+        "project": "garden-shed"
+      },
+      "expect": [
+        "urgent",
+        "wood"
+      ]
+    },
+    {
+      "name": "a tag whose area is gone counts as for everything",
+      "areas": [
+        "home"
+      ],
+      "projects": {},
+      "tags": [
+        {
+          "id": "orphan",
+          "area": "deleted"
+        },
+        {
+          "id": "garden",
+          "area": "home"
+        },
+        {
+          "id": "lost",
+          "project": "deleted-project"
+        }
+      ],
+      "chosen": {
+        "area": "home"
+      },
+      "expect": [
+        "orphan",
+        "garden",
+        "lost"
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "name": "everything first, then areas, then projects, empty ones left out",
+      "areas": [
+        "school",
+        "home",
+        "work"
+      ],
+      "projects": {
+        "thesis": "school",
+        "shed": null
+      },
+      "tags": [
+        {
+          "id": "forms",
+          "area": "school"
+        },
+        {
+          "id": "urgent"
+        },
+        {
+          "id": "chapter",
+          "project": "thesis"
+        },
+        {
+          "id": "garden",
+          "area": "home"
+        },
+        {
+          "id": "later"
+        },
+        {
+          "id": "exam",
+          "area": "school"
+        }
+      ],
+      "expect": [
+        {
+          "place": null,
+          "tags": [
+            "urgent",
+            "later"
+          ]
+        },
+        {
+          "place": "area:school",
+          "tags": [
+            "forms",
+            "exam"
+          ]
+        },
+        {
+          "place": "area:home",
+          "tags": [
+            "garden"
+          ]
+        },
+        {
+          "place": "project:thesis",
+          "tags": [
+            "chapter"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a tag whose project is gone is listed for everything",
+      "areas": [],
+      "projects": {},
+      "tags": [
+        {
+          "id": "lost",
+          "project": "deleted"
+        }
+      ],
+      "expect": [
+        {
+          "place": null,
+          "tags": [
+            "lost"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no tags, no groups",
+      "areas": [
+        "school"
+      ],
+      "projects": {},
+      "tags": [],
+      "expect": []
+    }
+  ]
+}

@@ -8,6 +8,8 @@ public sealed class TagList
 {
     private const string Table = "tags";
     private const string Links = "task_tags";
+    private const string AreaId = "area_id";
+    private const string ProjectId = "project_id";
     private const int MaxName = 40;
     private readonly IReplica replica;
     private readonly NewRows rows;
@@ -30,7 +32,29 @@ public sealed class TagList
     public event EventHandler? Changed;
 
     /// <summary>Every tag that isn't deleted, oldest first.</summary>
-    public IReadOnlyList<TagItem> All() => [.. Live().Select(row => new TagItem((string?)row[SyncedTable.Id] ?? string.Empty, (string?)row["name"] ?? string.Empty))];
+    public IReadOnlyList<TagItem> All() => [.. Live().Select(row => new TagItem(
+        (string?)row[SyncedTable.Id] ?? string.Empty,
+        (string?)row["name"] ?? string.Empty,
+        (string?)row[AreaId],
+        (string?)row[ProjectId]))];
+
+    /// <summary>
+    /// Gives a tag to one area or one project, or to everything with both null (docs/lists.md, "Tags"). An area wins
+    /// over a project. False for a gone tag.
+    /// </summary>
+    public bool Place(string id, string? areaId, string? projectId)
+    {
+        if (replica.Get(Table, id) is not { } row || row[SyncedTable.DeletedAt] is not null)
+        {
+            return false;
+        }
+
+        row[AreaId] = areaId;
+        row[ProjectId] = areaId is null ? projectId : null;
+        replica.Queue(Table, row);
+        requestSync();
+        return true;
+    }
 
     /// <summary>Tag names, oldest first.</summary>
     public IReadOnlyList<string> Names() => [.. All().Select(tag => tag.Name)];
