@@ -1,12 +1,14 @@
 name: Release
 
-# Push a tag vX.Y.Z that matches version.properties. The workflow builds the signed APK and the
-# Windows installer and publishes both with a signed manifest as the GitHub Release, which is the
-# update channel (ADR 0010). Setup: docs/setup/signing-and-releases.md.
+# Push a tag vX.Y.Z that matches version.properties, or press "Run workflow" on main. The workflow
+# builds the signed APK and the Windows installer and publishes both with a signed manifest as the
+# GitHub Release, which is the update channel (ADR 0010). A run started by hand makes the tag itself
+# on the commit it built. Setup: docs/setup/signing-and-releases.md.
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,20 +25,34 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       version-code: ${{ steps.version.outputs.code }}
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
 
+      # A tag push must match version.properties. A run by hand must start on main, and the version
+      # must not have a tag yet, so it never moves a released tag.
       - name: Tag matches version.properties
         id: version
         run: |
           name=$(sed -n 's/^versionName=//p' version.properties | tr -d '\r')
           code=$(sed -n 's/^versionCode=//p' version.properties | tr -d '\r')
-          if [ "v$name" != "$GITHUB_REF_NAME" ]; then
+          tag="v$name"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::Run the release by hand from main, not $GITHUB_REF"
+              exit 1
+            fi
+            if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+              echo "::error::Tag $tag already exists; raise versionName and versionCode in version.properties"
+              exit 1
+            fi
+          elif [ "$tag" != "$GITHUB_REF_NAME" ]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match versionName $name in version.properties"
             exit 1
           fi
           echo "version=$name" >> "$GITHUB_OUTPUT"
           echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
       - name: The update channel key is committed
         run: |
@@ -175,6 +191,7 @@ jobs:
       contents: write
     env:
       VERSION: ${{ needs.check.outputs.version }}
+      TAG: ${{ needs.check.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
 
@@ -204,11 +221,12 @@ jobs:
           rm -f "$RUNNER_TEMP/manifest-key.pem"
 
       # Published, not drafted: the apps read the latest release's manifest.json and manifest.sig.
+      # On a run by hand the tag does not exist yet, so the release makes it on the built commit.
       - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp release-out/manifest.json release-out/manifest.sig artifacts/
           (cd artifacts && sha256sum GoalMaker-* manifest.json manifest.sig > SHA256SUMS)
-          gh release create "$GITHUB_REF_NAME" --latest --title "GoalMaker $VERSION" --generate-notes \
+          gh release create "$TAG" --target "$GITHUB_SHA" --latest --title "GoalMaker $VERSION" --generate-notes \
             artifacts/GoalMaker-* artifacts/manifest.json artifacts/manifest.sig artifacts/SHA256SUMS
