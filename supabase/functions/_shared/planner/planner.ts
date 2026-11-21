@@ -63,6 +63,9 @@ export interface Area {
 export interface Tag {
   id: string;
   name: string;
+  /** The area or the project it belongs to, or neither for everything (docs/lists.md, "Tags"). */
+  areaId?: string | null;
+  projectId?: string | null;
 }
 
 export interface Step {
@@ -350,8 +353,19 @@ export class Planner {
   }
 
   async tags(): Promise<Tag[]> {
-    const rows = await this.db`select id::text, name from public.tags where deleted_at is null order by created_at, id`;
-    return rows.map((row) => ({ id: row.id, name: row.name }));
+    const rows = await this.db`
+      select id::text, name, area_id::text, project_id::text
+      from public.tags where deleted_at is null order by created_at, id`;
+    return rows.map((row) => ({ id: row.id, name: row.name, areaId: row.area_id, projectId: row.project_id }));
+  }
+
+  /** Gives a tag to one area or one project, or to everything with both null; an area wins over a project. */
+  async placeTag(id: string, areaId: string | null, projectId: string | null): Promise<Tag> {
+    const tag = (await this.tags()).find((one) => one.id === id);
+    if (tag === undefined) throw new PlannerError(`No tag with id ${id}.`);
+    await this.db`
+      update public.tags set area_id = ${areaId}, project_id = ${areaId === null ? projectId : null} where id = ${id}`;
+    return (await this.tags()).find((one) => one.id === id)!;
   }
 
   /** Each task's tag ids. */

@@ -516,6 +516,32 @@ Deno.test({
         );
       });
 
+      await t.step("a tag belongs to an area or a project, and Settings' groups read back", async () => {
+        await client.tool("add_area", { name: "School", color: "teal" });
+        await client.tool("create_project", { name: "Thesis" });
+        const forms = await client.tool("add_tag", { name: "forms", area: "School" });
+        assert(!forms.isError, forms.text);
+        const formsId = /\(tag id ([0-9a-f-]{36})\)/.exec(forms.text)![1];
+        const chapter = await client.tool("add_tag", { name: "chapter", project: "Thesis" });
+        const chapterId = /\(tag id ([0-9a-f-]{36})\)/.exec(chapter.text)![1];
+        await client.tool("add_tag", { name: "everywhere-tag" });
+
+        const listed = (await client.tool("list_areas_and_tags")).text;
+        assert(listed.indexOf("Tags for everything:") < listed.indexOf("Tags in @School:"), listed);
+        assert(listed.indexOf("Tags in @School:") < listed.indexOf("#forms"), listed);
+        assert(listed.indexOf("Tags in +Thesis:") < listed.indexOf("#chapter"), listed);
+
+        const [row] = await sql`select area_id::text, project_id::text from public.tags where id = ${chapterId}`;
+        assertEquals(row.area_id, null);
+        assert(row.project_id !== null, "the tag belongs to the project");
+
+        await client.tool("update_tag", { id: formsId, area: "", project: "" });
+        const [moved] = await sql`select area_id, project_id from public.tags where id = ${formsId}`;
+        assertEquals(moved, { area_id: null, project_id: null }, "empty takes a tag back to everything");
+        const missing = await client.tool("update_tag", { id: formsId, area: "Nowhere" });
+        assert(missing.isError, "an area that isn't there is refused");
+      });
+
       await t.step("tasks go on the Focus Board, move on it and come off it", async () => {
         const idOf = (text: string) => /\(id ([0-9a-f-]{36})\)/.exec(text)![1];
         const isic = idOf((await client.tool("add_task", { title: "Extend the ISIC card", focus: true })).text);

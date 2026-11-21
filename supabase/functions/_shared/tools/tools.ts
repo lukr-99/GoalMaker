@@ -13,6 +13,7 @@ import {
 import { AREA_COLORS } from "../planner/palette.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
 import { taskGroups } from "../rules/allTasks.ts";
+import { tagGroups } from "../rules/tagRules.ts";
 import { focusBoard, placeAt } from "../rules/focus.ts";
 import { addDays, type Day, daysBetween, mondayOf } from "../rules/day.ts";
 import { eventDays, ongoingEvents } from "../rules/events.ts";
@@ -155,6 +156,39 @@ function columnName(column: string | null | undefined): string {
 /** A project's milestones, for the board and for the item lines. */
 async function milestonesOf(planner: Planner, project: ProjectItem) {
   return (await planner.milestones()).filter((milestone) => milestone.projectId === project.id);
+}
+
+const tagArea = z.string().describe(
+  "An area's name: the tag belongs to that area, so filtering by it offers the tag. Empty takes the tag off its area.",
+);
+const tagProject = z.string().describe(
+  "A project's name or id: the tag belongs to that project. Empty takes it off. An area wins over a project.",
+);
+
+/**
+ * Where add_tag or update_tag puts a tag (docs/lists.md, "Tags"): undefined leaves it, both null makes it
+ * a tag for everything.
+ */
+async function tagPlace(
+  planner: Planner,
+  args: Record<string, unknown>,
+): Promise<{ areaId: string | null; projectId: string | null } | undefined> {
+  const area = args.area as string | undefined;
+  const project = args.project as string | undefined;
+  if (area === undefined && project === undefined) return undefined;
+  let areaId: string | null = null;
+  if (area !== undefined && area.trim() !== "") {
+    const found = (await planner.areas()).find((one) => fold(one.name) === fold(area));
+    if (found === undefined) throw new PlannerError(`No area called "${area}".`);
+    areaId = found.id;
+  }
+  let projectId: string | null = null;
+  if (areaId === null && project !== undefined && project.trim() !== "") {
+    const found = (await planner.projects()).find((one) => one.id === project || fold(one.name) === fold(project));
+    if (found === undefined) throw new PlannerError(`No project called "${project}".`);
+    projectId = found.id;
+  }
+  return { areaId, projectId };
 }
 
 const areaId = z.string().describe("The area's id, from list_areas_and_tags.");
@@ -585,20 +619,33 @@ export const tools: Tool[] = [
   {
     name: "list_areas_and_tags",
     title: "Areas and tags",
-    description: "The owner's areas (life areas like Health or Work; archived ones marked) and tags.",
+    description: "The owner's areas (life areas like Health or Work; archived ones marked) and tags, grouped the way " +
+      "Settings lists them: the tags for everything, then each area's, then each project's.",
     input: {},
     readOnly: true,
     destructive: false,
     run: async (planner) => {
       const areas = await planner.areas();
       const tags = await planner.tags();
+      const projects = await planner.projects();
+      const heading = (place: string | null) => {
+        if (place === null) return "Tags for everything:";
+        const [kind, id] = place.split(":");
+        const name = kind === "area"
+          ? areas.find((area) => area.id === id)?.name
+          : projects.find((project) => project.id === id)?.name;
+        return kind === "area" ? `Tags in @${name}:` : `Tags in +${name}:`;
+      };
+      const groups = tagGroups(tags, areas.map((area) => area.id), projects.map((project) => project.id));
       return [
         areas.length === 0 ? "No areas yet." : "Areas:",
         ...areas.map((area) =>
           `- ${area.emoji ? `${area.emoji} ` : ""}${area.name}${area.archived ? " (archived)" : ""}`
         ),
-        tags.length === 0 ? "No tags yet." : "Tags:",
-        ...tags.map((tag) => `- #${tag.name}`),
+        ...(tags.length === 0 ? ["No tags yet."] : groups.flatMap((group) => [
+          heading(group.place),
+          ...group.tags.map((tag) => `- #${tag.name} (tag id ${tag.id})`),
+        ])),
       ].join("\n");
     },
   },
@@ -653,24 +700,43 @@ export const tools: Tool[] = [
     title: "Add a tag",
     description:
       "Adds a tag. Naming one that is already there brings that one back, so tags never double up. Tags are also " +
-      "made by naming them on a task.",
-    input: { name: z.string().describe("The tag's name, without #.") },
+      "made by naming them on a task. A tag can belong to one area or one project; without either it is for " +
+      "everything.",
+    input: {
+      name: z.string().describe("The tag's name, without #."),
+      area: tagArea.optional(),
+      project: tagProject.optional(),
+    },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
-      const tag = await planner.findOrCreateTag(args.name);
+      let tag = await planner.findOrCreateTag(args.name);
+      const place = await tagPlace(planner, args);
+      if (place !== undefined) tag = await planner.placeTag(tag.id, place.areaId, place.projectId);
       return `Tag #${tag.name} (tag id ${tag.id}).`;
     },
   },
   {
     name: "update_tag",
-    title: "Rename a tag",
-    description: "Renames a tag everywhere it is used, so every task that carries it reads the new name.",
-    input: { id: tagId, name: z.string().describe("The new name, without #.") },
+    title: "Rename or move a tag",
+    description:
+      "Renames a tag everywhere it is used, so every task that carries it reads the new name, and gives it to an " +
+      "area or a project, or to everything with both empty.",
+    input: {
+      id: tagId,
+      name: z.string().optional().describe("The new name, without #."),
+      area: tagArea.optional(),
+      project: tagProject.optional(),
+    },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
-      const tag = await planner.updateTag(args.id, args.name);
+      let tag = args.name === undefined
+        ? (await planner.tags()).find((one) => one.id === args.id)
+        : await planner.updateTag(args.id, args.name);
+      if (tag === undefined) throw new PlannerError(`No tag with id ${args.id}.`);
+      const place = await tagPlace(planner, args);
+      if (place !== undefined) tag = await planner.placeTag(tag.id, place.areaId, place.projectId);
       return `Tag #${tag.name} (tag id ${tag.id}).`;
     },
   },
