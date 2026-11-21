@@ -53,10 +53,7 @@ public sealed partial class FocusViewModel : ObservableObject
     {
         var all = tasks.All();
         var areaMap = areas.All().ToDictionary(a => a.Id);
-        var board = all
-            .Where(t => !t.Deleted && t.State == TaskState.Open && t.FocusPosition.HasValue)
-            .OrderBy(t => t.FocusPosition)
-            .ThenBy(t => t.CreatedAt)
+        var board = FocusBoardRules.Board(all)
             .Select(t => new FocusRowViewModel(t, areaMap.GetValueOrDefault(t.AreaId ?? "")))
             .ToList();
 
@@ -107,9 +104,7 @@ public sealed partial class FocusViewModel : ObservableObject
     private void AddToBoard(FocusAddRowViewModel? candidate)
     {
         if (candidate is null) return;
-        var current = Items.ToList();
-        double pos = current.Count == 0 ? 1.0 : (current[^1].FocusPosition ?? 1.0) + 1.0;
-        tasks.SetFocusPosition(candidate.Id, pos);
+        tasks.SetFocusPosition(candidate.Id, FocusBoardRules.AppendPosition(tasks.All()));
     }
 
     [RelayCommand]
@@ -117,8 +112,7 @@ public sealed partial class FocusViewModel : ObservableObject
     {
         var title = QuickAddTitle.Trim();
         if (string.IsNullOrEmpty(title)) return;
-        var current = Items.ToList();
-        var pos = current.Count == 0 ? 1.0 : (current[^1].FocusPosition ?? 1.0) + 1.0;
+        var pos = FocusBoardRules.AppendPosition(tasks.All());
         var item = tasks.Add(title);
         if (item is null) return;
         tasks.SetFocusPosition(item.Id, pos);
@@ -145,16 +139,7 @@ public sealed partial class FocusViewModel : ObservableObject
 
     private void Move(int fromIndex, int toIndex)
     {
-        var current = Items.ToList();
-        var task = current[fromIndex];
-        current.RemoveAt(fromIndex);
-        var before = toIndex > 0 ? current[toIndex - 1] : null;
-        var after = toIndex < current.Count ? current[toIndex] : null;
-        double newPos;
-        if (before is null && after is null) newPos = 1.0;
-        else if (before is null) newPos = (after!.FocusPosition ?? 1.0) - 1.0;
-        else if (after is null) newPos = (before.FocusPosition ?? 1.0) + 1.0;
-        else newPos = ((before.FocusPosition ?? 0.0) + (after.FocusPosition ?? 0.0)) / 2.0;
-        tasks.SetFocusPosition(task.Id, newPos);
+        var id = Items[fromIndex].Id;
+        tasks.SetFocusPosition(id, FocusBoardRules.PlaceAt(tasks.All(), id, toIndex + 1));
     }
 }

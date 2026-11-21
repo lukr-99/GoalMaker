@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "description": "The Focus Board (supabase/migrations/0029_focus_board.sql): an ordered list of open tasks the owner keeps an eye on. A task is on the board when its focus position is set; 'focus' below is that position, null when it is off the board. 'board': the tasks on the board in order: open, not deleted, with a position, by position, then oldest first, then id. 'append': the position a task added at the end gets: one more than the last task's on the board, or 1 when the board is empty. 'placeAt': the position a task gets when it is put at 'place' (1 is the top) of the board, with the task itself left out of the board first: halfway between its new neighbours, one less than the first when it goes to the top, one more than the last when it goes to the end, and 1 on an empty board. A place past the end is the end; a place below 1 is the top.",
+  "board": [
+    {
+      "name": "by position, then oldest first, then id",
+      "tasks": [
+        { "id": "c", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-03T10:00:00.000000Z" },
+        { "id": "b2", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T09:00:00.000000Z" },
+        { "id": "b1", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T09:00:00.000000Z" }
+      ],
+      "expect": ["a", "b1", "b2", "c"]
+    },
+    {
+      "name": "done, dropped, deleted and off-board tasks are not on it",
+      "tasks": [
+        { "id": "open", "state": "open", "focus": 3.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "done", "state": "done", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "dropped", "state": "dropped", "focus": 1.5, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "deleted", "state": "open", "focus": 2.0, "deleted": true, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "off", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "expect": ["open"]
+    },
+    {
+      "name": "positions can be negative or fractions",
+      "tasks": [
+        { "id": "half", "state": "open", "focus": 0.5, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "minus", "state": "open", "focus": -1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "one", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "expect": ["minus", "half", "one"]
+    }
+  ],
+  "append": [
+    {
+      "name": "an empty board starts at 1",
+      "tasks": [{ "id": "off", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }],
+      "expect": 1.0
+    },
+    {
+      "name": "one more than the last task on the board",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "b", "state": "open", "focus": 2.5, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "expect": 3.5
+    },
+    {
+      "name": "a done task's position doesn't count",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "done", "state": "done", "focus": 9.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "expect": 2.0
+    }
+  ],
+  "placeAt": [
+    {
+      "name": "the first task on an empty board",
+      "tasks": [{ "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }],
+      "task": "new",
+      "place": 1,
+      "expect": 1.0
+    },
+    {
+      "name": "to the top: one less than the first",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "task": "new",
+      "place": 1,
+      "expect": 0.0
+    },
+    {
+      "name": "between two: halfway",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "task": "new",
+      "place": 2,
+      "expect": 1.5
+    },
+    {
+      "name": "past the end is the end",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "task": "new",
+      "place": 9,
+      "expect": 3.0
+    },
+    {
+      "name": "below 1 is the top",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "new", "state": "open", "focus": null, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "task": "new",
+      "place": 0,
+      "expect": 0.0
+    },
+    {
+      "name": "a task already on the board moves: the top one to second place",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "c", "state": "open", "focus": 3.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "task": "a",
+      "place": 2,
+      "expect": 2.5
+    },
+    {
+      "name": "a task already on the board moves: the last one to the top",
+      "tasks": [
+        { "id": "a", "state": "open", "focus": 1.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "b", "state": "open", "focus": 2.0, "createdAt": "2026-11-01T10:00:00.000000Z" },
+        { "id": "c", "state": "open", "focus": 3.0, "createdAt": "2026-11-01T10:00:00.000000Z" }
+      ],
+      "task": "c",
+      "place": 1,
+      "expect": 0.0
+    }
+  ]
+}

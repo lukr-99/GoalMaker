@@ -25,6 +25,7 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat; a new task also says who made it |
+| `get_focus_board`, `place_on_focus_board` | The [Focus Board](focus.md) top first; put a task at a place on it. `add_task` and `update_task` take `focus` to put a task at the end of the board or take it off, and task lines say "on Focus" |
 | `add_area`, `update_area`, `delete_area` | An area with its palette color and emoji; archive it or bring it back |
 | `add_tag`, `update_tag`, `delete_tag` | A tag; renaming one reaches every task that carries it |
 | `complete_task`, `drop_task`, `reopen_task`, `move_task` | A repeating task moves on and back like in the apps |

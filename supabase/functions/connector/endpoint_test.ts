@@ -516,6 +516,43 @@ Deno.test({
         );
       });
 
+      await t.step("tasks go on the Focus Board, move on it and come off it", async () => {
+        const idOf = (text: string) => /\(id ([0-9a-f-]{36})\)/.exec(text)![1];
+        const isic = idOf((await client.tool("add_task", { title: "Extend the ISIC card", focus: true })).text);
+        const thesis = idOf((await client.tool("add_task", { title: "Cancel the thesis", focus: true })).text);
+        const hours = idOf((await client.tool("add_task", { title: "See internship hours" })).text);
+        assertStringIncludes((await client.tool("get_task", { id: hours })).text, "See internship hours");
+
+        const joined = await client.tool("update_task", { id: hours, focus: true });
+        assertStringIncludes(joined.text, "See internship hours · on Focus");
+        let board = await client.tool("get_focus_board");
+        assertStringIncludes(board.text, "1. [ ] Extend the ISIC card");
+        assertStringIncludes(board.text, "2. [ ] Cancel the thesis");
+        assertStringIncludes(board.text, "3. [ ] See internship hours");
+        assert(!board.text.includes("on Focus"), "the board's own lines don't repeat it");
+
+        const moved = await client.tool("place_on_focus_board", { id: hours, place: 1 });
+        assertStringIncludes(moved.text, "On the Focus Board at 1 of 3");
+        board = await client.tool("get_focus_board");
+        assert(board.text.indexOf("See internship hours") < board.text.indexOf("Extend the ISIC card"), board.text);
+
+        const again = await client.tool("update_task", { id: isic, focus: true });
+        assert(!again.isError, again.text);
+        const [kept] = await sql`select focus_position from public.tasks where id = ${isic}`;
+        assertEquals(kept.focus_position, 1, "a task already on the board keeps its place");
+
+        await client.tool("complete_task", { id: thesis });
+        const off = await client.tool("update_task", { id: isic, focus: false });
+        assert(!off.text.includes("on Focus"), off.text);
+        board = await client.tool("get_focus_board");
+        assertStringIncludes(board.text, "1. [ ] See internship hours");
+        assert(!board.text.includes("ISIC") && !board.text.includes("thesis"), "done and taken off leave the board");
+        const closed = await client.tool("place_on_focus_board", { id: thesis, place: 1 });
+        assert(closed.isError, "a done task can't go on the board");
+        await client.tool("update_task", { id: hours, focus: false });
+        assertEquals((await client.tool("get_focus_board")).text, "The Focus Board is empty.");
+      });
+
       await t.step("habits are made, edited, paused and deleted through the connector", async () => {
         const gym = await client.tool("add_habit", {
           name: "Gym",
