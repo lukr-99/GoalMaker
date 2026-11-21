@@ -12,6 +12,7 @@ import {
 } from "../planner/planner.ts";
 import { AREA_COLORS } from "../planner/palette.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
+import { focusBoard, placeAt } from "../rules/focus.ts";
 import { addDays, type Day, daysBetween, mondayOf } from "../rules/day.ts";
 import { eventDays, ongoingEvents } from "../rules/events.ts";
 import {
@@ -114,8 +115,14 @@ async function taskFields(planner: Planner, args: Record<string, unknown>): Prom
     repeat: args.repeat as string | null | undefined,
     priority: args.priority as string | undefined,
     madeBy: args.made_by as "owner" | "claude" | undefined,
+    focus: args.focus as boolean | undefined,
   };
 }
+
+const focus = z.boolean().describe(
+  "true puts it at the end of the Focus Board, the owner's short list of tasks to keep an eye on (one already " +
+    "on it stays where it is); false takes it off the board. Neither changes its day or list.",
+);
 
 const projectRef = z.string().describe(
   "The project: its id, its repository URL, a folder inside it (the one you are working in), or its name.",
@@ -468,6 +475,54 @@ export const tools: Tool[] = [
     },
   },
   {
+    name: "get_focus_board",
+    title: "Focus Board",
+    description:
+      "The Focus Board: the open tasks the owner keeps an eye on, in the owner's order, 1 at the top. A done or " +
+      "dropped task leaves it. Put a task on it with add_task or update_task (focus true), reorder it with " +
+      "place_on_focus_board, and take one off with update_task (focus false).",
+    input: {},
+    readOnly: true,
+    destructive: false,
+    run: async (planner) => {
+      const board = focusBoard(await planner.tasks());
+      if (board.length === 0) return "The Focus Board is empty.";
+      const names = await namesOf(planner);
+      return [
+        "Focus Board, top first:",
+        ...board.map((task, index) =>
+          `${index + 1}. ${format.taskLine(task, names, { showDay: true, showFocus: false }).slice(2)}`
+        ),
+      ].join("\n");
+    },
+  },
+  {
+    name: "place_on_focus_board",
+    title: "Put a task at a place on the Focus Board",
+    description:
+      "Puts a task at a place on the Focus Board, 1 being the top, and moves the others down; a task not on the " +
+      "board yet joins it there. A place past the end is the end. Without a place it goes to the end.",
+    input: {
+      id,
+      place: z.number().int().optional().describe("Its place on the board, 1 at the top; the end when left out."),
+    },
+    readOnly: false,
+    destructive: false,
+    run: async (planner, args) => {
+      const task = await planner.task(args.id);
+      if (task === null || task.deleted) throw new PlannerError(`No task with id ${args.id}.`);
+      if (task.state !== "open") {
+        throw new PlannerError("Only an open task can be on the Focus Board: reopen it first.");
+      }
+      const tasks = await planner.tasks();
+      const place = args.place ?? Number.MAX_SAFE_INTEGER;
+      await planner.setFocus(task.id, placeAt(tasks, task.id, place));
+      const board = focusBoard(await planner.tasks());
+      const at = board.findIndex((one) => one.id === task.id) + 1;
+      return `On the Focus Board at ${at} of ${board.length}:\n${await line(planner, task.id)}`;
+    },
+  },
+  {
     name: "get_task",
     title: "One task",
     description: "One task in full: its day, time, area, tags, repeat, deadline, notes, steps and reminders.",
@@ -673,6 +728,7 @@ export const tools: Tool[] = [
       notes: z.string().optional().describe("Notes; light Markdown: **bold**, *italic*, - lists, links."),
       repeat: repeat.optional(),
       priority: priority.optional().describe("low, normal, high or urgent; normal by default."),
+      focus: focus.optional(),
       made_by: madeBy.optional(),
     },
     readOnly: false,
@@ -700,6 +756,7 @@ export const tools: Tool[] = [
       notes: z.string().optional(),
       repeat: repeat.optional(),
       priority: priority.optional().describe("low, normal, high or urgent."),
+      focus: focus.optional(),
     },
     readOnly: false,
     destructive: false,

@@ -39,6 +39,8 @@ export interface TaskItem {
   boardArchived?: boolean;
   /** Its number in its project, given by the server (docs/projects.md, "Item ids"); null outside one. */
   itemNumber?: number | null;
+  /** Its place on the Focus Board, or null when it is off the board (contracts/vectors/focus.json). */
+  focusPosition?: number | null;
 }
 
 /** Text order, the way Kotlin and C# compare strings (UTF-16 code units). */

@@ -14,9 +14,10 @@ export function deletes(tool: Tool): boolean {
 
 /**
  * Inputs the chat fills in itself rather than letting the model choose. A task the owner asks for in
- * the chat is the owner's, so `made_by` is never offered.
+ * the chat is the owner's, so `made_by` is never offered. The Focus Board stays with the apps and the
+ * connector: its `focus` input would push every round over its size (docs/assistant.md, "Speed").
  */
-export const HIDDEN_INPUTS = new Set(["made_by"]);
+export const HIDDEN_INPUTS = new Set(["made_by", "focus"]);
 
 /**
  * The connector's tools the chat offers: the everyday ones only. Every model round carries all the

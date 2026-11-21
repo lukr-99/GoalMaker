@@ -62,7 +62,13 @@ export function longDay(day: Day): string {
 export function taskLine(
   task: TaskItem,
   names: Names,
-  options: { showDay?: boolean; showProject?: boolean; milestone?: string; showMaker?: boolean } = {},
+  options: {
+    showDay?: boolean;
+    showProject?: boolean;
+    milestone?: string;
+    showMaker?: boolean;
+    showFocus?: boolean;
+  } = {},
 ): string {
   const box = task.state === "done" ? "[x]" : task.state === "dropped" ? "[-]" : "[ ]";
   const itemId = itemIdOf(task, names);
@@ -82,6 +88,7 @@ export function taskLine(
   if (task.recurrence) parts.push(`repeats ${task.recurrence}`);
   if (task.deadline) parts.push(`due ${task.deadline}`);
   if (options.showMaker && task.madeBy === "claude") parts.push("by Claude");
+  if (options.showFocus !== false && task.state === "open" && task.focusPosition != null) parts.push("on Focus");
   return `- ${parts.join(" · ")} (id ${task.id})`;
 }
 

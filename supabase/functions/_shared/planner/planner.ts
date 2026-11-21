@@ -2,6 +2,7 @@ import type { Db } from "../owner.ts";
 import { addDays, type Day, isDay, localNow } from "../rules/day.ts";
 import { nameBasedUuid } from "../rules/nameBasedUuid.ts";
 import { moves } from "../rules/planRules.ts";
+import { appendPosition } from "../rules/focus.ts";
 import { seriesOf, successorId, tagLinkId } from "../rules/occurrences.ts";
 import { DEFAULT_START_HOUR, planningDay } from "../rules/planningDay.ts";
 import { nextOccurrence, parseRecurrence } from "../rules/recurrence.ts";
@@ -100,6 +101,11 @@ export interface TaskFields {
    * actor, which through the connector is Claude; an edit never changes it.
    */
   madeBy?: "owner" | "claude";
+  /**
+   * true puts the task at the end of the Focus Board (one already on it stays where it is), false takes
+   * it off (contracts/vectors/focus.json).
+   */
+  focus?: boolean;
 }
 
 /** What a new goal or an edit says. Undefined leaves a field alone; null clears it. */
@@ -400,6 +406,14 @@ export class Planner {
          ${cleanPriority(fields.priority)}, ${projectId === null ? null : fields.milestoneId ?? null},
          ${fields.madeBy ?? null})`;
     for (const tag of fields.tags ?? []) await this.link(id, (await this.findOrCreateTag(tag)).id);
+    if (fields.focus === true) await this.setFocus(id, appendPosition(await this.tasks()));
+    return (await this.task(id))!;
+  }
+
+  /** Puts a task on the Focus Board at `position`, or takes it off with null. */
+  async setFocus(id: string, position: number | null): Promise<TaskItem> {
+    id = (await this.live(id)).id;
+    await this.db`update public.tasks set focus_position = ${position} where id = ${id}`;
     return (await this.task(id))!;
   }
 
@@ -447,6 +461,10 @@ export class Planner {
         milestone_id = ${milestoneId}
       where id = ${id}`;
     if (fields.tags !== undefined) await this.setTags(id, fields.tags);
+    if (fields.focus === false && task.focusPosition != null) await this.setFocus(id, null);
+    if (fields.focus === true && task.focusPosition == null) {
+      await this.setFocus(id, appendPosition(await this.tasks()));
+    }
     return (await this.task(id))!;
   }
 
@@ -1452,7 +1470,7 @@ export class Planner {
              to_char(planned_time, 'HH24:MI') as planned_time, deadline::text, area_id::text, recurrence,
              series_id::text, goal_id::text, moved_count, position,
              project_id::text, item_type, board_column, priority, milestone_id::text, made_by,
-             board_archived_at is not null as board_archived, item_number,
+             board_archived_at is not null as board_archived, item_number, focus_position,
              to_char(created_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as created_at,
              to_char(completed_at at time zone 'UTC', ${this.db.unsafe(TIMESTAMP)}) as completed_at,
              deleted_at is not null as deleted
@@ -1652,6 +1670,7 @@ function toTask(row: any): TaskItem {
     position: row.position ?? 0,
     madeBy: row.made_by ?? "owner",
     boardArchived: row.board_archived ?? false,
+    focusPosition: row.focus_position ?? null,
     itemNumber: row.item_number ?? null,
   };
 }
