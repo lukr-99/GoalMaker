@@ -1,4 +1,4 @@
-import { fold } from "./archiveRules.ts";
+import { byDate, matches, searchWords } from "./allTasks.ts";
 import { compareText, type TaskItem } from "./task.ts";
 
 /**
@@ -42,21 +42,8 @@ export function placeAt(tasks: TaskItem[], taskId: string, place: number): numbe
  * else the planned day), earliest first and undated last, then by title, then by id.
  */
 export function focusCandidates(tasks: TaskItem[], query: string): TaskItem[] {
-  const words = query.split(" ").map(fold).filter((word) => word !== "");
-  const dateOf = (task: TaskItem) => task.deadline ?? task.plannedDate;
+  const words = searchWords(query);
   return tasks
-    .filter((task) => !task.deleted && task.state === "open" && task.focusPosition == null)
-    .filter((task) => {
-      const text = `${fold(task.title)}\n${fold(task.notes)}`;
-      return words.every((word) => text.includes(word));
-    })
-    .sort((a, b) => {
-      const [x, y] = [dateOf(a), dateOf(b)];
-      if (x !== y) {
-        if (x === null) return 1;
-        if (y === null) return -1;
-        return compareText(x, y);
-      }
-      return compareText(fold(a.title), fold(b.title)) || compareText(a.id, b.id);
-    });
+    .filter((task) => !task.deleted && task.state === "open" && task.focusPosition == null && matches(task, words))
+    .sort(byDate);
 }

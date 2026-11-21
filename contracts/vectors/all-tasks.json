@@ -1,0 +1,306 @@
+{
+  "schema": 1,
+  "description": "The All tasks place (docs/all-tasks.md): every open task in one list, so a task filed into an area without a day can always be found. 'groups': the tasks it shows for 'query', grouped by area. A task shows when it is open and not deleted, and every word of the query (split on spaces) is in its title or notes, ignoring case and accents; an empty query keeps them all. A project item (a task with a 'project') shows only when 'projectItems' is true. A task's group is its own area, else its project's area ('projects' maps a project id to its area), else no area. Groups come in the order of 'areas' (the order the area pickers use), with the no-area group (area null) last; an area whose id is not in 'areas' counts as no area, and an empty group is left out. Inside a group, tasks come by their date (the deadline, else the planned day), earliest first and undated last, then by title ignoring case and accents, then by id. Tasks without a 'title' use their id; 'notes', 'day', 'deadline', 'area' and 'project' are empty when left out. The area and tag filter (lists.json, 'filter') runs before these rules.",
+  "groups": [
+    {
+      "name": "grouped by area in the areas' order, no area last, dates first inside a group",
+      "areas": [
+        "school",
+        "home"
+      ],
+      "tasks": [
+        {
+          "id": "loose",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Call mum"
+        },
+        {
+          "id": "isic",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Extend the ISIC card",
+          "area": "school"
+        },
+        {
+          "id": "thesis",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Cancel the thesis",
+          "area": "school",
+          "deadline": "2026-11-25"
+        },
+        {
+          "id": "hours",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "See internship hours",
+          "area": "school",
+          "day": "2026-11-30"
+        },
+        {
+          "id": "plants",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Water the plants",
+          "area": "home"
+        },
+        {
+          "id": "bins",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Bins out",
+          "area": "home"
+        }
+      ],
+      "projects": {},
+      "projectItems": false,
+      "query": "",
+      "expect": [
+        {
+          "area": "school",
+          "tasks": [
+            "thesis",
+            "hours",
+            "isic"
+          ]
+        },
+        {
+          "area": "home",
+          "tasks": [
+            "bins",
+            "plants"
+          ]
+        },
+        {
+          "area": null,
+          "tasks": [
+            "loose"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "done, dropped and deleted tasks are left out, and so is an empty group",
+      "areas": [
+        "school",
+        "home"
+      ],
+      "tasks": [
+        {
+          "id": "open",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "area": "home"
+        },
+        {
+          "id": "done",
+          "state": "done",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "area": "school"
+        },
+        {
+          "id": "dropped",
+          "state": "dropped",
+          "createdAt": "2026-11-01T10:00:00.000000Z"
+        },
+        {
+          "id": "gone",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "deleted": true,
+          "area": "school"
+        }
+      ],
+      "projects": {},
+      "projectItems": false,
+      "query": "",
+      "expect": [
+        {
+          "area": "home",
+          "tasks": [
+            "open"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "project items stay out unless asked for, then take their project's area",
+      "areas": [
+        "work"
+      ],
+      "tasks": [
+        {
+          "id": "mine",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Book a room",
+          "area": "work"
+        },
+        {
+          "id": "item",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Fix the build",
+          "project": "gm"
+        },
+        {
+          "id": "bare",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Write docs",
+          "project": "loose"
+        }
+      ],
+      "projects": {
+        "gm": "work",
+        "loose": null
+      },
+      "projectItems": false,
+      "query": "",
+      "expect": [
+        {
+          "area": "work",
+          "tasks": [
+            "mine"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "with project items, an item without its own area goes to its project's",
+      "areas": [
+        "work"
+      ],
+      "tasks": [
+        {
+          "id": "mine",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Book a room",
+          "area": "work"
+        },
+        {
+          "id": "item",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Fix the build",
+          "project": "gm"
+        },
+        {
+          "id": "bare",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Write docs",
+          "project": "loose"
+        }
+      ],
+      "projects": {
+        "gm": "work",
+        "loose": null
+      },
+      "projectItems": true,
+      "query": "",
+      "expect": [
+        {
+          "area": "work",
+          "tasks": [
+            "mine",
+            "item"
+          ]
+        },
+        {
+          "area": null,
+          "tasks": [
+            "bare"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an unknown area counts as no area",
+      "areas": [
+        "home"
+      ],
+      "tasks": [
+        {
+          "id": "lost",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Lost",
+          "area": "deleted-area"
+        },
+        {
+          "id": "kept",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Kept",
+          "area": "home"
+        }
+      ],
+      "projects": {},
+      "projectItems": false,
+      "query": "",
+      "expect": [
+        {
+          "area": "home",
+          "tasks": [
+            "kept"
+          ]
+        },
+        {
+          "area": null,
+          "tasks": [
+            "lost"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the search finds every word in the title or notes, ignoring case and accents",
+      "areas": [
+        "school"
+      ],
+      "tasks": [
+        {
+          "id": "thesis",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Studijní: zrušit dipl. práci",
+          "area": "school"
+        },
+        {
+          "id": "isic",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Studijní: prodloužit ISIC",
+          "area": "school"
+        },
+        {
+          "id": "note",
+          "state": "open",
+          "createdAt": "2026-11-01T10:00:00.000000Z",
+          "title": "Office",
+          "notes": "zrušit later"
+        }
+      ],
+      "projects": {},
+      "projectItems": false,
+      "query": "ZRUSIT",
+      "expect": [
+        {
+          "area": "school",
+          "tasks": [
+            "thesis"
+          ]
+        },
+        {
+          "area": null,
+          "tasks": [
+            "note"
+          ]
+        }
+      ]
+    }
+  ]
+}

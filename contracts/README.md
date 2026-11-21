@@ -5,8 +5,8 @@ here as data. Both test suites load the same files, so a disagreement fails CI i
 wrong. The Claude connector's TypeScript rules (`supabase/functions/_shared/rules/rules_test.ts`) run
 the planning files too: lists, plan, recurrence, archive, the ritual ids in reminders, reviews, goals,
 habits and projects, and `wants_test.ts`, `digest_test.ts`, `tally_test.ts`, `quickAdd_test.ts`,
-`lifeGoals_test.ts` and `focus_test.ts` run wants, the review digest, Tally, the bottom bar's lines,
-life goals and the Focus Board.
+`lifeGoals_test.ts`, `focus_test.ts` and `allTasks_test.ts` run wants, the review digest, Tally, the
+bottom bar's lines, life goals, the Focus Board and All tasks.
 
 | File | Rule | Kotlin test | C# test |
 | --- | --- | --- | --- |
@@ -27,6 +27,7 @@ life goals and the Focus Board.
 | `vectors/goals.json` | Goal periods, the cascade, progress, copying, pace and its order, the chain a picked goal lights, and the quick log amount ([goals](../docs/goals.md)) | `GoalRulesContractTest` | `GoalRulesContractTests` |
 | `vectors/habits.json` | Habit cadences, periods, streaks, the heatmap, rings, check-in ids, check-ins toward goals, which habits are due today and on Today, the Habits page's groups, where a habit stands today, the week's dots and Today's all done card ([habits](../docs/habits.md)) | `HabitRulesContractTest` | `HabitRulesContractTests` |
 | `vectors/stats.json` | The stats numbers, project work apart and per project, and the review look back ([stats](../docs/stats.md)) | `StatsRulesContractTest` | `StatsRulesContractTests` |
+| `vectors/all-tasks.json` | The All tasks place: which open tasks show, their groups by area and their order ([all tasks](../docs/all-tasks.md)) | `AllTasksRulesContractTest` | `AllTasksRulesContractTests` |
 | `vectors/focus.json` | The Focus Board's order, adding at the end, putting a task at a place, and what its add panel's search offers ([focus](../docs/focus.md)) | `FocusBoardRulesContractTest` | `FocusBoardRulesContractTests` |
 | `vectors/projects.json` | Project boards: new items, moves, order ([projects](../docs/projects.md)) | `ProjectRulesContractTest` | `ProjectRulesContractTests` |
 | `vectors/backup.json` | The export's format, what a restore refuses, and which row wins ([backup](../docs/backup.md)) | `BackupRulesContractTest` | `BackupRulesContractTests` |
