@@ -22,7 +22,12 @@ public sealed class SettingsPageRulesContractTests
         var contract = Vector.GetProperty("order").EnumerateArray().Select(id => id.GetString()!).ToList();
 
         Assert.Equal(contract, SettingsSectionsViewModel.Order.Except(SettingsSectionsViewModel.PcOnly));
-        Assert.Equal(SettingsSectionsViewModel.Order, PageSectionIds());
+        // The main page holds every section but Updates, which sits with Your data on its page (GM-106); the
+        // pages of their own hold Appearance, Planning, and Your data with Updates, in the same order.
+        Assert.Equal(SettingsSectionsViewModel.Order.Where(id => id != SettingsSectionsViewModel.Updates), PageSectionIds("Kit"));
+        Assert.Equal(
+            [SettingsSectionsViewModel.Appearance, SettingsSectionsViewModel.Planning, SettingsSectionsViewModel.Data, SettingsSectionsViewModel.Updates],
+            PageSectionIds("AppearanceKit").Concat(PageSectionIds("PlanningKit")).Concat(PageSectionIds("DataKit")));
     }
 
     [Fact]
@@ -140,10 +145,13 @@ public sealed class SettingsPageRulesContractTests
     private static string Name(JsonElement check) => check.GetProperty("name").GetString()!;
 
     // The SectionId of every card in SettingsPage.xaml, in the order the page shows them.
-    private static List<string> PageSectionIds()
+    // The section ids of one of the kit pages in SettingsPage.xaml, by its x:Name.
+    private static List<string> PageSectionIds(string kit)
     {
         var page = XDocument.Load(Path.Combine(Root(), "windows", "src", "GoalMaker.App", "Views", "SettingsPage.xaml"));
-        return [.. page.Descendants().Where(element => element.Name.LocalName == "SettingsSection").Select(element => (string)element.Attribute("SectionId")!)];
+        var x = XNamespace.Get("http://schemas.microsoft.com/winfx/2006/xaml");
+        var host = page.Descendants().Single(element => element.Name.LocalName == "SettingsPage" && (string?)element.Attribute(x + "Name") == kit);
+        return [.. host.Descendants().Where(element => element.Name.LocalName == "SettingsSection").Select(element => (string)element.Attribute("SectionId")!)];
     }
 
     private static JsonElement Load()
