@@ -113,8 +113,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Settings (docs/design/spec.md, Settings): one scrolling page of section cards, each a title, a
- * one-line description and rows from the row kit, with a sticky chip row to jump between them.
+ * Settings (docs/design/spec.md, Settings): a scrolling page of section cards, each a title, a
+ * one-line description and rows from the row kit, with a sticky chip row to jump between them. The
+ * crowded groups are pages of their own ([SettingsPage]): on the main page their card is one row
+ * that opens the page, which shows the same cards in full.
  * Every change saves at once and says so next to its control. A jump (a chip, or the update
  * notification landing on Updates) scrolls there and lights the card up; scrolling into a section
  * by hand gives a quieter hint once the page is still.
@@ -123,6 +125,10 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     viewModel: SettingsViewModel,
     onBack: () -> Unit,
+    /** Which page of Settings this is; the main one by default. */
+    page: SettingsPage = SettingsPage.MAIN,
+    /** Opens one of the pages a main-page card links to. */
+    onOpenPage: (SettingsPage) -> Unit = {},
     onOpenAreas: () -> Unit,
     onOpenConnector: () -> Unit = {},
     onOpenPcSignIn: () -> Unit = {},
@@ -143,7 +149,7 @@ fun SettingsScreen(
     val saved by viewModel.saved.counts.collectAsStateWithLifecycle()
     // Opening Settings is reading them, so the mark on the gear goes (docs/problems.md).
     LaunchedEffect(Unit) { onProblemsRead() }
-    val sections = SettingsSections.visible(hasProblems = problems.isNotEmpty(), devBuild = state.appInfo.isDevBuild)
+    val sections = SettingsSections.visible(hasProblems = problems.isNotEmpty(), devBuild = state.appInfo.isDevBuild, page = page)
     val scroll = rememberScrollState()
     // Where each section's card starts in the scrolling column, measured as it is placed.
     val tops = remember { mutableStateMapOf<SettingsSection, Int>() }
@@ -183,7 +189,8 @@ fun SettingsScreen(
     }
 
     LaunchedEffect(updateRequest) {
-        val target = SettingsSections.target(updateRequest) ?: return@LaunchedEffect
+        // Only the page that holds Updates answers the update notification.
+        val target = SettingsSections.target(updateRequest)?.takeIf { it in sections } ?: return@LaunchedEffect
         jump(target)
         if (updateRequest == UpdateRequest.INSTALL) viewModel.installRequested()
         onUpdateRequestHandled()
@@ -210,7 +217,7 @@ fun SettingsScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { ScreenTitle(stringResource(R.string.settings_title)) },
+                title = { ScreenTitle(stringResource(page.title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.settings_back))
@@ -242,7 +249,10 @@ fun SettingsScreen(
                 sections.forEach { section ->
                     key(section) {
                         SettingsCard(section, hint, titleFocus.getValue(section), Modifier.section(section)) {
-                            when (section) {
+                            val opens = SettingsPage.opens(section).takeIf { page == SettingsPage.MAIN }
+                            if (opens != null) {
+                                PageLink(opens, onOpenPage)
+                            } else when (section) {
                                 SettingsSection.PROBLEMS -> problems.forEachIndexed { index, problem ->
                                     if (index > 0) RowDivider()
                                     ProblemRow(problem)
@@ -288,6 +298,18 @@ fun SettingsScreen(
             }
         }
     }
+}
+
+/** The one row a main-page card holds for a group that has a page of its own. */
+@Composable
+private fun PageLink(page: SettingsPage, onOpenPage: (SettingsPage) -> Unit) {
+    val (title, hint) = when (page) {
+        SettingsPage.APPEARANCE -> R.string.settings_appearance_open to R.string.settings_appearance_open_hint
+        SettingsPage.PLANNING -> R.string.settings_planning_open to R.string.settings_planning_open_hint
+        SettingsPage.DATA -> R.string.settings_data_open to R.string.settings_data_open_hint
+        SettingsPage.MAIN -> return
+    }
+    LinkRow(stringResource(title), stringResource(hint), external = false, onClick = { onOpenPage(page) })
 }
 
 /**

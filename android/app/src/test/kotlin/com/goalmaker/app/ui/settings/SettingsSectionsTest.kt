@@ -20,13 +20,16 @@ class SettingsSectionsTest {
         SettingsSection.ABOUT,
     )
 
+    // The main page: Updates sits on the Your data and updates page (SettingsPage.DATA).
+    private val main = everyday - SettingsSection.UPDATES
+
     // Cards 500 px apart, and the 80 dp line at 200 px (2.5x).
     private val tops = everyday.mapIndexed { index, section -> section to index * 500 }.toMap()
     private val line = 200
 
     @Test
     fun `a release build lists the everyday sections in screen order`() {
-        assertEquals(everyday, SettingsSections.visible(hasProblems = false, devBuild = false))
+        assertEquals(main, SettingsSections.visible(hasProblems = false, devBuild = false))
     }
 
     @Test
@@ -38,7 +41,7 @@ class SettingsSectionsTest {
     @Test
     fun `problems come first while there are some, and developer last in a dev build`() {
         val sections = SettingsSections.visible(hasProblems = true, devBuild = true)
-        assertEquals(listOf(SettingsSection.PROBLEMS) + everyday + SettingsSection.DEVELOPER, sections)
+        assertEquals(listOf(SettingsSection.PROBLEMS) + main + SettingsSection.DEVELOPER, sections)
     }
 
     @Test
@@ -56,10 +59,10 @@ class SettingsSectionsTest {
     }
 
     @Test
-    fun `Updates is always in the jump list, so the deep link has somewhere to land`() {
+    fun `Updates is always on the page the deep link opens, so it has somewhere to land`() {
         for (problems in listOf(false, true)) {
             for (dev in listOf(false, true)) {
-                assertTrue(SettingsSection.UPDATES in SettingsSections.visible(problems, dev))
+                assertTrue(SettingsSection.UPDATES in SettingsSections.visible(problems, dev, SettingsSections.UPDATE_PAGE))
             }
         }
     }

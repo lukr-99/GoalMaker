@@ -9,9 +9,12 @@ import com.goalmaker.app.domain.settings.SettingsPageRules
  * themselves are [SettingsPageRules], shared with Windows through contracts/vectors/settings.json.
  */
 object SettingsSections {
-    /** The sections in screen order: Problems only while there are some, Developer only in a dev build. */
-    fun visible(hasProblems: Boolean, devBuild: Boolean): List<SettingsSection> =
-        SettingsSection.entries.filter { section ->
+    /**
+     * The sections of [page] in screen order: Problems only while there are some, Developer only in a
+     * dev build.
+     */
+    fun visible(hasProblems: Boolean, devBuild: Boolean, page: SettingsPage = SettingsPage.MAIN): List<SettingsSection> =
+        page.sections.filter { section ->
             when (section) {
                 SettingsSection.PROBLEMS -> hasProblems
                 SettingsSection.DEVELOPER -> devBuild
@@ -24,6 +27,9 @@ object SettingsSections {
 
     /** Where the update notification or the mark on the gear lands: the Updates section, with the jump hint. */
     fun target(request: UpdateRequest?): SettingsSection? = request?.let { SettingsSection.UPDATES }
+
+    /** The page the update notification opens: the one that holds Updates. */
+    val UPDATE_PAGE: SettingsPage = SettingsPage.DATA
 
     /**
      * The section being read at [scroll] (px), with [line] the 80 dp line in px: see
