@@ -383,6 +383,9 @@
     <string name="settings_backend_save_hint">Saves the address and the key, and restarts the app.</string>
     <string name="settings_jump_to">Jump to %1$s</string>
     <string name="areas_areas">Areas</string>
+    <string name="areas_tag_everywhere">Everywhere</string>
+    <string name="areas_tag_project">%1$s (project)</string>
+    <string name="areas_tag_belongs">Belongs to: %1$s</string>
     <string name="areas_tags">Tags</string>
     <string name="areas_no_tags">No tags yet. Type #name in the composer or add one here.</string>
     <string name="areas_add_area">Add an area</string>

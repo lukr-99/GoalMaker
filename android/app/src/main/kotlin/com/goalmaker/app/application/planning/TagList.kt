@@ -19,7 +19,7 @@ class TagList(
     fun all(): List<TagItem> = replica.all(TABLE)
         .filter { it.isLive() }
         .sortedBy { it.text(SyncedTable.CREATED_AT) }
-        .map { TagItem(it.text(SyncedTable.ID), it.text("name")) }
+        .map { TagItem(it.text(SyncedTable.ID), it.text("name"), it.idOrNull(AREA_ID), it.idOrNull(PROJECT_ID)) }
 
     /** [all], again after every change to the tags table. Collect it off the main thread. */
     fun watch(): Flow<List<TagItem>> = replica.watch(TABLE).map { all() }
@@ -45,6 +45,21 @@ class TagList(
         if (trimmed.isEmpty() || (clash != null && clash.id != id)) return false
         val row = replica.get(TABLE, id)?.takeIf { it.isLive() } ?: return false
         replica.queue(TABLE, JsonObject(row + ("name" to JsonPrimitive(trimmed))))
+        requestSync()
+        return true
+    }
+
+    /**
+     * Gives a tag to one area or one project, or to everything with both null (docs/lists.md, "Tags").
+     * Giving it an area takes it from its project, and the other way round. False for a gone tag.
+     */
+    fun place(id: String, areaId: String?, projectId: String?): Boolean {
+        val row = replica.get(TABLE, id)?.takeIf { it.isLive() } ?: return false
+        val project = projectId.takeIf { areaId == null }
+        replica.queue(
+            TABLE,
+            JsonObject(row + (AREA_ID to (areaId?.let(::JsonPrimitive) ?: JsonNull)) + (PROJECT_ID to (project?.let(::JsonPrimitive) ?: JsonNull))),
+        )
         requestSync()
         return true
     }
@@ -89,6 +104,10 @@ class TagList(
         const val TABLE = "tags"
         const val LINKS = "task_tags"
         const val MAX_NAME = 40
+        const val AREA_ID = "area_id"
+        const val PROJECT_ID = "project_id"
+
+        fun JsonObject.idOrNull(name: String) = (this[name] as? JsonPrimitive)?.takeUnless { it == JsonNull }?.content
 
         fun JsonObject.isLive() = this[SyncedTable.DELETED_AT].let { value -> value == null || value == JsonNull }
 

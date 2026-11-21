@@ -40,7 +40,7 @@ class FocusViewModel(
 
     private val showAddSheet = MutableStateFlow(false)
     private val search = MutableStateFlow("")
-    private val filter = PlaceFilter(areas, tags, io)
+    private val filter = PlaceFilter(areas, tags, projects, io)
 
     val uiState = combine(
         combine(tasks.watchAll().flowOn(io), areas.watch().flowOn(io), ::Pair),

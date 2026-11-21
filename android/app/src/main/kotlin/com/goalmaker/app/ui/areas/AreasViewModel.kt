@@ -3,6 +3,7 @@ package com.goalmaker.app.ui.areas
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.goalmaker.app.application.planning.AreaList
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.TagList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,10 +22,15 @@ import kotlinx.coroutines.withContext
 class AreasViewModel(
     private val areas: AreaList,
     private val tags: TagList,
+    projects: ProjectList,
     private val io: CoroutineDispatcher,
 ) : ViewModel() {
-    val uiState: StateFlow<AreasUiState> = combine(areas.watch().flowOn(io), tags.watch().flowOn(io)) { areaList, tagList ->
-        AreasUiState(areaList, tagList, areas.palette())
+    val uiState: StateFlow<AreasUiState> = combine(
+        areas.watch().flowOn(io),
+        tags.watch().flowOn(io),
+        projects.watch().flowOn(io),
+    ) { areaList, tagList, data ->
+        AreasUiState(areaList, tagList, areas.palette(), data.projects)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AreasUiState(palette = areas.palette()))
 
     /** Adds an area when [id] is null, otherwise changes it. */
@@ -61,11 +67,18 @@ class AreasViewModel(
         viewModelScope.launch(io) { areas.delete(id) }
     }
 
-    /** Adds a tag when [id] is null, otherwise renames it. */
-    suspend fun saveTag(id: String?, name: String): Boolean = withContext(io) {
-        if (id != null) return@withContext tags.rename(id, name)
-        val existing = tags.all().map { it.id }.toSet()
-        tags.findOrCreate(name)?.let { it !in existing } ?: false
+    /**
+     * Adds a tag when [id] is null, otherwise renames it, and gives it to [areaId] or [projectId], or to
+     * everything with both null (docs/lists.md, "Tags").
+     */
+    suspend fun saveTag(id: String?, name: String, areaId: String? = null, projectId: String? = null): Boolean = withContext(io) {
+        val saved = if (id != null) {
+            id.takeIf { tags.rename(it, name) }
+        } else {
+            val existing = tags.all().map { it.id }.toSet()
+            tags.findOrCreate(name)?.takeIf { it !in existing }
+        } ?: return@withContext false
+        tags.place(saved, areaId, projectId)
     }
 
     fun deleteTag(id: String) {

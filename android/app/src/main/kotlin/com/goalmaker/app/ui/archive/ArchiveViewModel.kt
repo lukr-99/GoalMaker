@@ -36,7 +36,7 @@ class ArchiveViewModel(
     private val io: CoroutineDispatcher,
 ) : ViewModel() {
     private val search = MutableStateFlow("")
-    private val filter = PlaceFilter(areas, tags, io)
+    private val filter = PlaceFilter(areas, tags, projects, io)
     private val projectData = projects.watch().flowOn(io)
 
     /** What is typed in the search box. */

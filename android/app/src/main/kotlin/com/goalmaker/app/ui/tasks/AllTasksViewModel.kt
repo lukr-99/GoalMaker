@@ -31,7 +31,7 @@ class AllTasksViewModel(
 ) : ViewModel() {
     private val search = MutableStateFlow("")
     private val withProjectItems = MutableStateFlow(false)
-    private val filter = PlaceFilter(areas, tags, io)
+    private val filter = PlaceFilter(areas, tags, projects, io)
 
     val uiState = combine(
         combine(tasks.watchAll().flowOn(io), areas.watch().flowOn(io), ::Pair),

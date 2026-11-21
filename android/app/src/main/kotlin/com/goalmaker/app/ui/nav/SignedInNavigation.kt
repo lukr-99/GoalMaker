@@ -212,7 +212,7 @@ fun SignedInNavigation(graph: AppGraph) {
             )
         }
         // The Areas and tags section shows the areas in use and the tags, read as the manager reads them.
-        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.io) }
+        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.projects, graph.io) }
         val areasState by areasViewModel.uiState.collectAsStateWithLifecycle()
         SettingsScreen(
             viewModel = settingsViewModel,
@@ -590,7 +590,7 @@ fun SignedInNavigation(graph: AppGraph) {
                         )
                     }
                     entry<AreasKey> {
-                        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.io) }
+                        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.projects, graph.io) }
                         AreasScreen(viewModel = areasViewModel, onBack = { backStack.removeLastOrNull() })
                     }
                 },

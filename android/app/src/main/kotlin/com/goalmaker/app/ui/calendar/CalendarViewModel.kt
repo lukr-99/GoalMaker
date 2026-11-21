@@ -72,7 +72,7 @@ class CalendarViewModel(
 ) : ViewModel() {
     private val view = MutableStateFlow(View(CalendarRules.MONTH, null, null))
     private val viewAndChoice = combine(view, settings.pickedDaysAdd, ::Pair)
-    private val filter = PlaceFilter(areas, tags, io)
+    private val filter = PlaceFilter(areas, tags, projects, io)
     private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
 
     private val data = combine(
