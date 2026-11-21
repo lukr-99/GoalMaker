@@ -69,7 +69,7 @@ The script refuses to replace an existing key. From the next build on, both apps
    On the phone, a check that finds a newer trusted release also posts one quiet notification for
    that version, "GoalMaker X.Y.Z is ready", on its own channel (App updates: low importance, no
    sound). It only shows when the owner has allowed notifications; the app asks once, for
-   reminders, and never again for this. Tapping it opens Settings at the update. Its Install opens
+   reminders, and never again for this. Tapping it opens Settings at the update (on the phone, Settings > Your data and updates). Its Install opens
    the installer from there, and Later puts the version off. The same check asks WorkManager to
    fetch the APK in the background, on an unmetered network with the battery not low, into the
    app's private cache. The file is kept only when its size and SHA-256 match the signed manifest,
