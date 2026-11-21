@@ -1535,12 +1535,18 @@
 
     <!-- Focus Board -->
     <string name="focus_title">Focus</string>
-    <string name="focus_empty">Nothing on your board yet. Tap + to add a task.</string>
+    <string name="focus_empty">Nothing on your board yet. Type a task above, or tap + to pick one.</string>
     <string name="focus_add">Add to board</string>
     <string name="focus_drag">Drag to reorder</string>
     <string name="focus_add_title">Add to Focus Board</string>
     <string name="focus_add_empty">All open tasks are already on the board.</string>
     <string name="focus_add_cancel">Cancel</string>
+    <string name="focus_quick_add">Add a task to the board</string>
+    <string name="focus_quick_add_button">Add to the board</string>
+    <string name="focus_search">Search open tasks</string>
+    <string name="focus_add_no_match">No open task matches.</string>
+    <string name="focus_create">Create “%1$s” on the board</string>
+    <string name="focus_filtered_empty">Nothing on the board matches the filter.</string>
     <!-- Focus widget (docs/widgets.md) -->
     <string name="widget_focus_label">Focus Board</string>
     <string name="widget_focus_description">Your prioritised watchlist: the tasks and deadlines you want in view.</string>
