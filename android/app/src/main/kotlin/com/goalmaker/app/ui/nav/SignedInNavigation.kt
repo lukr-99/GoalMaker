@@ -84,6 +84,8 @@ import com.goalmaker.app.ui.lifegoals.LifeGoalsViewModel
 import com.goalmaker.app.ui.wants.WantsScreen
 import com.goalmaker.app.ui.wants.WantsViewModel
 import com.goalmaker.app.ui.focus.FocusScreen
+import com.goalmaker.app.ui.tasks.AllTasksScreen
+import com.goalmaker.app.ui.tasks.AllTasksViewModel
 import com.goalmaker.app.ui.focus.FocusViewModel
 import com.goalmaker.app.ui.theme.AppTheme
 
@@ -369,6 +371,18 @@ fun SignedInNavigation(graph: AppGraph) {
                                         FocusViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.settings, graph.io)
                                     }
                                     FocusScreen(viewModel = focusViewModel, onBack = backToHub, actions = actions)
+                                }
+                                PlaceRules.TASKS -> {
+                                    val tasksViewModel = viewModel(key = "tasks-tab") {
+                                        AllTasksViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.io)
+                                    }
+                                    AllTasksScreen(
+                                        viewModel = tasksViewModel,
+                                        onBack = backToHub,
+                                        onOpenTask = { id -> backStack.add(TaskKey(id)) },
+                                        actions = actions,
+                                        onOpenProject = openProject,
+                                    )
                                 }
                                 PlaceRules.ARCHIVE -> {
                                     val archiveViewModel = viewModel(key = "archive-tab") { ArchiveViewModel(graph.tasks, graph.areas, graph.tags, graph.projects, graph.io) }

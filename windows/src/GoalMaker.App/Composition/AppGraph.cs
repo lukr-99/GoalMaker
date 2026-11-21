@@ -403,6 +403,8 @@ public sealed class AppGraph : IDisposable
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings, Projects, CopyText);
         Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive), OpenProject);
+        AllTasks = new AllTasksViewModel(
+            Tasks, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, runOnUi, id => OpenTask(id, AppPage.AllTasks), OpenProject);
         Focus = new FocusViewModel(Tasks, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, runOnUi);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
@@ -598,6 +600,9 @@ public sealed class AppGraph : IDisposable
 
     /// <summary>The Focus Board: a manually-ordered watchlist of open tasks.</summary>
     public FocusViewModel Focus { get; private set; } = null!;
+
+    /// <summary>Every open task, grouped by area (docs/all-tasks.md).</summary>
+    public AllTasksViewModel AllTasks { get; private set; } = null!;
 
     public StepList Steps { get; private set; } = null!;
 

@@ -48,18 +48,8 @@ public static class FocusBoardRules
     /// </summary>
     public static IReadOnlyList<TaskItem> Candidates(IEnumerable<TaskItem> tasks, string query)
     {
-        var words = query.Split(' ').Select(ArchiveRules.Fold).Where(word => word.Length > 0).ToList();
-        return tasks
-            .Where(task => !task.Deleted && task.State == TaskState.Open && !task.FocusPosition.HasValue)
-            .Where(task =>
-            {
-                var text = ArchiveRules.Fold(task.Title) + "\n" + ArchiveRules.Fold(task.Notes);
-                return words.All(word => text.Contains(word, StringComparison.Ordinal));
-            })
-            .OrderBy(task => (task.Deadline ?? task.PlannedDate).HasValue ? 0 : 1)
-            .ThenBy(task => task.Deadline ?? task.PlannedDate)
-            .ThenBy(task => ArchiveRules.Fold(task.Title), StringComparer.Ordinal)
-            .ThenBy(task => task.Id, StringComparer.Ordinal)
-            .ToList();
+        var words = AllTasksRules.Words(query);
+        return [.. AllTasksRules.ByDate(tasks.Where(task =>
+            !task.Deleted && task.State == TaskState.Open && !task.FocusPosition.HasValue && AllTasksRules.Matches(task, words)))];
     }
 }

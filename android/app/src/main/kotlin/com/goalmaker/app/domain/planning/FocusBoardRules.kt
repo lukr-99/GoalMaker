@@ -1,9 +1,7 @@
 package com.goalmaker.app.domain.planning
 
-import com.goalmaker.app.application.planning.ArchiveRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
-import java.time.LocalDate
 
 /**
  * The Focus Board: a manually curated, ordered list of tasks the owner wants to keep an eye on,
@@ -56,17 +54,9 @@ object FocusBoardRules {
      * deadline, else the planned day), earliest first and undated last, then by title, then by id.
      */
     fun candidates(tasks: List<TaskItem>, query: String): List<TaskItem> {
-        val words = query.split(' ').map(ArchiveRules::fold).filter(String::isNotEmpty)
+        val words = AllTasksRules.words(query)
         return tasks
-            .filter { !it.deleted && it.state == TaskState.OPEN && it.focusPosition == null }
-            .filter { task ->
-                val text = ArchiveRules.fold(task.title) + "\n" + ArchiveRules.fold(task.notes)
-                words.all { it in text }
-            }
-            .sortedWith(
-                compareBy<TaskItem, LocalDate?>(nullsLast()) { it.deadline ?: it.plannedDate }
-                    .thenBy { ArchiveRules.fold(it.title) }
-                    .thenBy(TaskItem::id),
-            )
+            .filter { !it.deleted && it.state == TaskState.OPEN && it.focusPosition == null && AllTasksRules.matches(it, words) }
+            .sortedWith(AllTasksRules.BY_DATE)
     }
 }

@@ -65,6 +65,7 @@ public partial class MainWindow
             [typeof(AreasPage)] = () => new AreasPage(graph.AreasPage),
             [typeof(ArchivePage)] = () => new ArchivePage(graph.Archive),
             [typeof(FocusPage)] = () => new FocusPage(graph.Focus),
+            [typeof(AllTasksPage)] = () => new AllTasksPage(graph.AllTasks),
             [typeof(TaskPage)] = () => new TaskPage(graph.TaskDetail),
             [typeof(PlacesPage)] = () => new PlacesPage(graph.PlacesHub),
         }));
@@ -229,6 +230,7 @@ public partial class MainWindow
             AppPage.Tally => typeof(TallyPage),
             AppPage.Projects => typeof(ProjectsPage),
             AppPage.Calendar => typeof(CalendarPage),
+            AppPage.AllTasks => typeof(AllTasksPage),
             AppPage.Review => typeof(ReviewPage),
             AppPage.Task => typeof(TaskPage),
             AppPage.About => typeof(AboutPage),

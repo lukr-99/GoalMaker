@@ -124,6 +124,7 @@
     <sys:String x:Key="Nav.AreasAndTags">Areas and tags</sys:String>
     <sys:String x:Key="Nav.Archive">Archive</sys:String>
     <sys:String x:Key="Nav.Focus">Focus</sys:String>
+    <sys:String x:Key="Nav.Tasks">All tasks</sys:String>
     <sys:String x:Key="Nav.Activity">Activity</sys:String>
 
     <!-- Claude connector (docs/connector.md) -->
@@ -1369,6 +1370,14 @@
     <sys:String x:Key="Places.LifeGoals">{0} life goals</sys:String>
     <sys:String x:Key="Places.LifeGoalsNone">What do you want in life?</sys:String>
     <sys:String x:Key="Places.FocusLine">{0} on the board</sys:String>
+    <sys:String x:Key="Places.TasksLine">{0} open</sys:String>
+    <sys:String x:Key="AllTasks.Title">All tasks</sys:String>
+    <sys:String x:Key="AllTasks.Search">Search open tasks</sys:String>
+    <sys:String x:Key="AllTasks.ProjectItems">Project items</sys:String>
+    <sys:String x:Key="AllTasks.NoArea">No area</sys:String>
+    <sys:String x:Key="AllTasks.Due">Due {0}</sys:String>
+    <sys:String x:Key="AllTasks.Empty">No open tasks. Everything is done.</sys:String>
+    <sys:String x:Key="AllTasks.NoMatch">No open task matches.</sys:String>
 
     <sys:String x:Key="Focus.Title">Focus</sys:String>
     <sys:String x:Key="Focus.Empty">Nothing on your board yet. Type a task below, or pick one with Add.</sys:String>

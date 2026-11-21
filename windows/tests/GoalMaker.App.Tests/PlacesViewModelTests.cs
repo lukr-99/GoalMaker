@@ -14,8 +14,8 @@ public sealed class PlacesViewModelTests
         var places = Create();
 
         Assert.Equal(["today", "tomorrow", "inbox", "projects"], places.Pinned.Select(entry => entry.Id));
-        Assert.Equal(["calendar", "habits", "goals", "life-goals", "wants", "tally", "reviews", "stats", "archive", "focus"], places.Others.Select(entry => entry.Id));
-        Assert.Equal("Nav.Calendar", places.Others[0].Label);
+        Assert.Equal(["tasks", "calendar", "habits", "goals", "life-goals", "wants", "tally", "reviews", "stats", "archive", "focus"], places.Others.Select(entry => entry.Id));
+        Assert.Equal("Nav.Tasks", places.Others[0].Label);
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class PlacesViewModelTests
 
         places.OpenPaletteCommand.Execute(null);
         Assert.True(places.IsPaletteOpen);
-        Assert.Equal(18, places.Matches.Count);
+        Assert.Equal(19, places.Matches.Count);
 
         places.Query = "nav.s";
         Assert.Equal(["stats", "settings"], places.Matches.Select(entry => entry.Id));

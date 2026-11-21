@@ -18,7 +18,7 @@ Only open tasks appear; done, dropped and deleted ones leave every list.
 | Inbox | no planned day, no area and no project | creation |
 
 Tasks planned after tomorrow, and undated tasks with an area, wait in their area (M2-11) and the
-calendar (M5). An undated item of a project waits on that project's board (M5), because the board is
+calendar (M5); [All tasks](all-tasks.md) lists every open task by area, so they can always be found. An undated item of a project waits on that project's board (M5), because the board is
 where it was filed; it reaches the Inbox only once it is taken out of the project. Ties always break
 by id, so both apps agree.
 

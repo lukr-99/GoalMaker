@@ -20,7 +20,8 @@ says otherwise:
   tomorrow, repeating tasks ([docs/repeating.md](docs/repeating.md)), reminders with quiet hours and
   snooze ([docs/reminders.md](docs/reminders.md)), areas and tags with filters, a task's detail view
   with notes in light Markdown that save on their own and a checklist, the searchable archive
-  ([docs/archive.md](docs/archive.md)), the four switchable themes, and on Windows the tray's Today
+  ([docs/archive.md](docs/archive.md)), every open task by area in All tasks
+  ([docs/all-tasks.md](docs/all-tasks.md)), the four switchable themes, and on Windows the tray's Today
   flyout and a global quick-add shortcut.
 - **Claude (M3):** the connector, an MCP Edge Function Claude reaches through a secret link, with
   the activity log and undo ([docs/connector.md](docs/connector.md)).

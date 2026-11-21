@@ -116,6 +116,15 @@ space, while the advance width stays the same. Check with `Typeface.TryGetGlyphT
 has one (`tools/build_windows_fonts.py`), and leave room after a slanted word when it doesn't
 (`GM.ItalicGap`).
 
+## An AppPage value must be named after its page
+
+2026-11-21, adding the All tasks place (GM-108). `StartupSmokeTests.ADevBuildStartsAndOpensEveryPage`
+opens every `AppPage` value and waits for a page type called `<value>Page`. `AppPage.Tasks` opened
+`AllTasksPage`, so the test waited 30 s and failed, though the page itself worked. Name the enum value
+after the page class (`AppPage.AllTasks` for `AllTasksPage`). When adding a place on Windows, also
+update every place list in `PlacesViewModelTests` and `PlacesHubViewModelTests`, including the
+first label under All places.
+
 ## A missing place case in Label() falls through to Nav.Settings
 
 2026-11-11, adding the focus place. `PlacesViewModel.Label()` has a switch that maps each place
