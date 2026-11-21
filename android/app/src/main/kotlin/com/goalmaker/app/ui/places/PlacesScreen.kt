@@ -335,6 +335,7 @@ private fun Live(place: String, digest: PlacesDigest, hero: Boolean) {
             }
         PlaceRules.STATS -> Line(stringResource(R.string.places_stats, digest.doneThisWeek), muted)
         PlaceRules.ARCHIVE -> Line(stringResource(R.string.places_archive, digest.archived), muted)
+        PlaceRules.TASKS -> Line(stringResource(R.string.places_all_tasks, digest.allOpen), muted)
         PlaceRules.WANTS ->
             if (digest.wantsReady > 0) BigNumber(digest.wantsReady, stringResource(R.string.wants_status_ready), muted)
             else Line(stringResource(R.string.places_wants_cooling, digest.wantsCooling), muted)

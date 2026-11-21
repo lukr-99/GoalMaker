@@ -24,6 +24,8 @@ data class PlacesDigest(
     val tallyToday: List<TallySlice> = emptyList(),
     val doneThisWeek: Int = 0,
     val archived: Int = 0,
+    /** Open tasks outside projects, on the All tasks tile. */
+    val allOpen: Int = 0,
 ) {
     /** What waits in each place, which the Places tab counts for the places that are not pinned. */
     val waiting: Map<String, Int>

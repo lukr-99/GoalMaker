@@ -1535,6 +1535,14 @@
 
     <!-- Focus Board -->
     <string name="focus_title">Focus</string>
+    <string name="all_tasks_title">All tasks</string>
+    <string name="all_tasks_search">Search open tasks</string>
+    <string name="all_tasks_project_items">Project items</string>
+    <string name="all_tasks_no_area">No area</string>
+    <string name="all_tasks_due">Due %1$s</string>
+    <string name="all_tasks_empty">No open tasks. Everything is done.</string>
+    <string name="all_tasks_no_match">No open task matches.</string>
+    <string name="places_all_tasks">%1$d open</string>
     <string name="focus_empty">Nothing on your board yet. Type a task above, or tap + to pick one.</string>
     <string name="focus_add">Add to board</string>
     <string name="focus_drag">Drag to reorder</string>
