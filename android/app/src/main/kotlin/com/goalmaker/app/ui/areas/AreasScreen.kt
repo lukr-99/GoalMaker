@@ -43,6 +43,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.goalmaker.app.domain.planning.TagPlace
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -112,7 +115,9 @@ fun AreasScreen(viewModel: AreasViewModel, onBack: () -> Unit) {
             if (state.tags.isEmpty()) {
                 item { Text(stringResource(R.string.areas_no_tags), style = MaterialTheme.typography.bodyMedium, color = AppTheme.colors.textMuted) }
             }
-            itemsIndexed(state.tags, key = { _, tag -> tag.id }) { _, tag ->
+            state.tagGroups.forEach { group ->
+                item(key = "tag-group-${group.place}") { TagGroupHeading(group.place, state) }
+                itemsIndexed(group.tags, key = { _, tag -> tag.id }) { _, tag ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -123,6 +128,7 @@ fun AreasScreen(viewModel: AreasViewModel, onBack: () -> Unit) {
                         .padding(horizontal = 16.dp),
                 ) {
                     Text("#${tag.name}", style = MaterialTheme.typography.bodyLarge)
+                }
                 }
             }
             item { AddButton(stringResource(R.string.areas_add_tag)) { editingTag = TagItem("", "") } }
@@ -146,7 +152,15 @@ fun AreasScreen(viewModel: AreasViewModel, onBack: () -> Unit) {
     editingTag?.let { tag ->
         TagDialog(
             tag = tag,
-            onSave = { name -> viewModel.saveTag(tag.id.ifEmpty { null }, name) },
+            places = tagPlaces(state),
+            onSave = { name, place ->
+                viewModel.saveTag(
+                    tag.id.ifEmpty { null },
+                    name,
+                    areaId = (place as? TagPlace.Area)?.id,
+                    projectId = (place as? TagPlace.Project)?.id,
+                )
+            },
             onDelete = if (tag.id.isEmpty()) null else ({ viewModel.deleteTag(tag.id) }),
             onDismiss = { editingTag = null },
         )
@@ -313,15 +327,52 @@ private fun AreaDialog(
     )
 }
 
+/** What a tag can belong to, with its label: everything, each area in use, each project. */
 @Composable
-private fun TagDialog(tag: TagItem, onSave: suspend (String) -> Boolean, onDelete: (() -> Unit)?, onDismiss: () -> Unit) {
+private fun tagPlaces(state: AreasUiState): List<Pair<TagPlace?, String>> =
+    listOf<Pair<TagPlace?, String>>(null to stringResource(R.string.areas_tag_everywhere)) +
+        state.active.map { TagPlace.Area(it.id) to listOfNotNull(it.emoji, it.name).joinToString(" ") } +
+        state.projects.map { TagPlace.Project(it.id) to stringResource(R.string.areas_tag_project, it.name) }
+
+/** The heading over one group of tags: for everything, an area's, or a project's. */
+@Composable
+private fun TagGroupHeading(place: TagPlace?, state: AreasUiState) {
+    val label = when (place) {
+        null -> stringResource(R.string.areas_tag_everywhere)
+        is TagPlace.Area -> state.areas.firstOrNull { it.id == place.id }?.let { listOfNotNull(it.emoji, it.name).joinToString(" ") }.orEmpty()
+        is TagPlace.Project -> stringResource(R.string.areas_tag_project, state.projects.firstOrNull { it.id == place.id }?.name.orEmpty())
+    }
+    Text(
+        label,
+        style = MaterialTheme.typography.labelLarge,
+        color = AppTheme.colors.textMuted,
+        modifier = Modifier.padding(top = 8.dp, start = 4.dp),
+    )
+}
+
+@Composable
+private fun TagDialog(
+    tag: TagItem,
+    places: List<Pair<TagPlace?, String>>,
+    onSave: suspend (String, TagPlace?) -> Boolean,
+    onDelete: (() -> Unit)?,
+    onDismiss: () -> Unit,
+) {
     var name by remember { mutableStateOf(tag.name) }
+    var place by remember {
+        mutableStateOf<TagPlace?>(
+            places.firstOrNull { (it.first as? TagPlace.Area)?.id == tag.areaId && tag.areaId != null }?.first
+                ?: places.firstOrNull { (it.first as? TagPlace.Project)?.id == tag.projectId && tag.projectId != null }?.first,
+        )
+    }
+    var choosing by remember { mutableStateOf(false) }
     var refused by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (tag.id.isEmpty()) R.string.areas_new_tag else R.string.areas_edit_tag)) },
         text = {
+            Column {
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -333,9 +384,24 @@ private fun TagDialog(tag: TagItem, onSave: suspend (String) -> Boolean, onDelet
                 supportingText = if (refused) ({ Text(stringResource(R.string.areas_name_taken)) }) else null,
                 singleLine = true,
             )
+            // Where the tag belongs: everything, one area or one project (docs/lists.md, "Tags").
+            Box(Modifier.padding(top = 8.dp)) {
+                TextButton(onClick = { choosing = true }) {
+                    Text(stringResource(R.string.areas_tag_belongs, places.firstOrNull { it.first == place }?.second.orEmpty()))
+                }
+                DropdownMenu(expanded = choosing, onDismissRequest = { choosing = false }) {
+                    places.forEach { (option, label) ->
+                        DropdownMenuItem(text = { Text(label) }, onClick = {
+                            place = option
+                            choosing = false
+                        })
+                    }
+                }
+            }
+            }
         },
         confirmButton = {
-            TextButton(onClick = { scope.launch { if (onSave(name)) onDismiss() else refused = true } }) {
+            TextButton(onClick = { scope.launch { if (onSave(name, place)) onDismiss() else refused = true } }) {
                 Text(stringResource(R.string.areas_save))
             }
         },

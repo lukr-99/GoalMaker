@@ -17,6 +17,7 @@ public sealed partial class AreasViewModel : ObservableObject
 {
     private readonly AreaList areas;
     private readonly TagList tags;
+    private readonly ProjectList? projects;
     private readonly IStrings strings;
     private readonly Func<string, Brush?> areaBrush;
 
@@ -37,15 +38,27 @@ public sealed partial class AreasViewModel : ObservableObject
     [ObservableProperty]
     private bool hasArchived;
 
-    public AreasViewModel(AreaList areas, TagList tags, IStrings strings, Func<string, Brush?> areaBrush, Action<Action> runOnUi)
+    public AreasViewModel(
+        AreaList areas,
+        TagList tags,
+        IStrings strings,
+        Func<string, Brush?> areaBrush,
+        Action<Action> runOnUi,
+        ProjectList? projects = null)
     {
         this.areas = areas;
         this.tags = tags;
+        this.projects = projects;
         this.strings = strings;
         this.areaBrush = areaBrush;
         Colors = [.. areas.Palette().Select(id => new ColorOptionViewModel(id, CultureInfo.CurrentCulture.TextInfo.ToTitleCase(id.Replace('-', ' ')), areaBrush(id)))];
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
@@ -88,7 +101,17 @@ public sealed partial class AreasViewModel : ObservableObject
 
         HasArchived = ArchivedAreas.Count > 0;
 
-        var tagList = tags.All();
+        // The tags in Settings' groups: for everything, then by area, then by project (docs/lists.md, "Tags").
+        var projectList = projects?.All() ?? [];
+        var groups = TagRules.Groups(tags.All(), [.. all.Select(area => area.Id)], [.. projectList.Select(project => project.Id)]);
+        var tagList = groups.SelectMany(group => group.Tags).ToList();
+        var placeOf = groups.SelectMany(group => group.Tags.Select(tag => (tag.Id, group.Place))).ToDictionary(pair => pair.Id, pair => pair.Place);
+        List<TagPlaceOptionViewModel> options =
+        [
+            new(null, strings.Get("Areas.TagEverywhere")),
+            .. areaList.Select(area => new TagPlaceOptionViewModel(TagPlace.Area(area.Id), area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name)),
+            .. projectList.Select(project => new TagPlaceOptionViewModel(TagPlace.Project(project.Id), strings.Get("Areas.TagProject", project.Name))),
+        ];
         if (!Tags.Select(row => row.Id).SequenceEqual(tagList.Select(tag => tag.Id)))
         {
             Tags.Clear();
@@ -101,6 +124,7 @@ public sealed partial class AreasViewModel : ObservableObject
         for (var index = 0; index < tagList.Count; index++)
         {
             Tags[index].Update(tagList[index]);
+            Tags[index].ShowPlace(options, placeOf.GetValueOrDefault(tagList[index].Id));
         }
 
         HasTags = Tags.Count > 0;
@@ -128,6 +152,8 @@ public sealed partial class AreasViewModel : ObservableObject
     internal bool RenameTag(string id, string name) => Report(tags.Rename(id, name));
 
     internal void DeleteTag(string id) => tags.Delete(id);
+
+    internal bool PlaceTag(string id, TagPlace? place) => tags.Place(id, place?.AreaId, place?.ProjectId);
 
     partial void OnStatusChanged(string value) => OnPropertyChanged(nameof(HasStatus));
 

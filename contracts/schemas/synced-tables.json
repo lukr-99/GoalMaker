@@ -76,6 +76,16 @@
           "required": true
         },
         {
+          "name": "area_id",
+          "kind": "text",
+          "required": false
+        },
+        {
+          "name": "project_id",
+          "kind": "text",
+          "required": false
+        },
+        {
           "name": "created_at",
           "kind": "timestamp",
           "required": true

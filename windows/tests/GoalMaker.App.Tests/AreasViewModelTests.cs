@@ -1,4 +1,5 @@
 using GoalMaker.App.ViewModels;
+using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.Tests;
 
@@ -106,4 +107,29 @@ public sealed class AreasViewModelTests : IDisposable
     }
 
     private AreasViewModel Manager() => new(planner.Areas, planner.Tags, planner.Strings, _ => null, action => action());
+
+    [Fact]
+    public void ATagCanBelongToAnAreaOrAProjectAndTheListKeepsTheirGroups()
+    {
+        var school = planner.Areas.Create("School")!;
+        var thesis = planner.Projects.Add(new ProjectDraft("Thesis"))!;
+        var manager = new AreasViewModel(planner.Areas, planner.Tags, planner.Strings, _ => null, action => action(), planner.Projects);
+        manager.NewTagName = "chapter";
+        manager.AddTagCommand.Execute(null);
+        manager.NewTagName = "forms";
+        manager.AddTagCommand.Execute(null);
+        manager.NewTagName = "urgent";
+        manager.AddTagCommand.Execute(null);
+
+        var chapter = manager.Tags.Single(row => row.Name == "chapter");
+        Assert.Equal(["Areas.TagEverywhere", "School", "Areas.TagProject(Thesis)"], chapter.Places.Select(option => option.Label));
+        chapter.SelectedPlace = chapter.Places.Single(option => option.Place == TagPlace.Project(thesis.Id));
+        var forms = manager.Tags.Single(row => row.Name == "forms");
+        forms.SelectedPlace = forms.Places.Single(option => option.Place == TagPlace.Area(school.Id));
+
+        Assert.Equal(thesis.Id, planner.Tags.All().Single(tag => tag.Name == "chapter").ProjectId);
+        Assert.Equal(school.Id, planner.Tags.All().Single(tag => tag.Name == "forms").AreaId);
+        Assert.Equal(["urgent", "forms", "chapter"], manager.Tags.Select(row => row.Name));
+        Assert.Equal(TagPlace.Area(school.Id), manager.Tags.Single(row => row.Name == "forms").SelectedPlace!.Place);
+    }
 }

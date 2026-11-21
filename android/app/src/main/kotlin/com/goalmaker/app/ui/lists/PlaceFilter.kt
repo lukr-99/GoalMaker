@@ -2,7 +2,9 @@ package com.goalmaker.app.ui.lists
 
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.ListFilter
+import com.goalmaker.app.application.planning.ProjectList
 import com.goalmaker.app.application.planning.TagList
+import com.goalmaker.app.domain.planning.TagRules
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,9 +16,11 @@ import kotlinx.coroutines.flow.update
  * The area and tag filter one place keeps while the app runs (docs/lists.md): the lists share one,
  * and Projects, the calendar and the archive each have their own, so narrowing one never hides
  * anything in another. An area that was archived or deleted, or a tag that was deleted, falls away
- * instead of hiding everything. Disk work runs on [io].
+ * instead of hiding everything. With an area chosen, the tag picker offers that area's tags and the
+ * ones for everything (docs/lists.md, "Tags"), and a chosen tag it no longer offers falls away too.
+ * Disk work runs on [io].
  */
-class PlaceFilter(areas: AreaList, tags: TagList, io: CoroutineDispatcher) {
+class PlaceFilter(areas: AreaList, tags: TagList, projects: ProjectList, io: CoroutineDispatcher) {
     private val chosen = MutableStateFlow(ListFilter.NONE)
 
     /** The filter in force, what it can be set to, and the tag links it reads. */
@@ -25,15 +29,23 @@ class PlaceFilter(areas: AreaList, tags: TagList, io: CoroutineDispatcher) {
         areas.watch().flowOn(io),
         tags.watch().flowOn(io),
         tags.watchLinks().flowOn(io),
-    ) { picked, areaList, tagList, links ->
+        projects.watch().flowOn(io),
+    ) { picked, areaList, tagList, links, data ->
         val active = areaList.filterNot { it.archived }
+        val areaId = picked.areaId?.takeIf { id -> active.any { it.id == id } }
+        val offered = TagRules.offered(
+            tagList,
+            areaList.map { it.id }.toSet(),
+            data.projects.associate { it.id to it.areaId },
+            areaId = areaId,
+        )
         FilterChoices(
             filter = ListFilter(
-                areaId = picked.areaId?.takeIf { id -> active.any { it.id == id } },
-                tagId = picked.tagId?.takeIf { id -> tagList.any { it.id == id } },
+                areaId = areaId,
+                tagId = picked.tagId?.takeIf { id -> offered.any { it.id == id } },
             ),
             areas = active,
-            tags = tagList,
+            tags = offered,
             links = links,
         )
     }

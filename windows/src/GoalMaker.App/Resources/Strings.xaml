@@ -259,6 +259,9 @@
     <sys:String x:Key="Areas.Archived">Archived</sys:String>
     <sys:String x:Key="Areas.Restore">Restore</sys:String>
     <sys:String x:Key="Areas.ArchivedHint">Archived areas keep their tasks but leave the pickers and filters. Naming one in the composer brings it back.</sys:String>
+    <sys:String x:Key="Areas.TagEverywhere">Everywhere</sys:String>
+    <sys:String x:Key="Areas.TagProject">{0} (project)</sys:String>
+    <sys:String x:Key="Areas.TagBelongs">Belongs to</sys:String>
     <sys:String x:Key="Areas.DeleteTag">Delete the tag</sys:String>
     <sys:String x:Key="Areas.AddArea">Add area</sys:String>
     <sys:String x:Key="Areas.AddTag">Add tag</sys:String>

@@ -140,6 +140,10 @@
                                                ToolTip="{DynamicResource Areas.DeleteTag}" AutomationProperties.Name="{DynamicResource Areas.DeleteTag}">
                                         <ui:SymbolIcon Symbol="Delete24" />
                                     </ui:Button>
+                                    <!-- Where the tag belongs: everything, an area or a project (docs/lists.md, "Tags"). -->
+                                    <ComboBox DockPanel.Dock="Right" Margin="8,0,0,0" MinWidth="160" ItemsSource="{Binding Places}"
+                                              SelectedItem="{Binding SelectedPlace}" DisplayMemberPath="Label"
+                                              ToolTip="{DynamicResource Areas.TagBelongs}" AutomationProperties.Name="{DynamicResource Areas.TagBelongs}" />
                                     <TextBlock DockPanel.Dock="Left" Margin="0,0,4,0" VerticalAlignment="Center" Text="#" Foreground="{DynamicResource GM.TextMutedBrush}" />
                                     <TextBox TabIndex="0" MaxLength="40" Text="{Binding Name}" AutomationProperties.Name="{DynamicResource Areas.Name}" />
                                 </DockPanel>

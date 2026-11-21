@@ -29,6 +29,7 @@
     "0026_calendar_events.sql": "bb5412b95ed36ca956993bf30bd85ef205e571c678dc89b747453f50745deb71",
     "0027_project_item_ids.sql": "bdaab234d2679fe4e3ccf0f6fbf16cf60521ee13f54c1922516c41be97281cf8",
     "0028_pc_sign_ins.sql": "6fed69ef4b10b9b2efeeaebaa7eadc5819ca6747605506922d24ec1a7c9be081",
-    "0029_focus_board.sql": "1cee3e472e2a6e2bbffd8016ac82751d0a0f9cd0b9be5e7ce0c53761cbf3482e"
+    "0029_focus_board.sql": "1cee3e472e2a6e2bbffd8016ac82751d0a0f9cd0b9be5e7ce0c53761cbf3482e",
+    "0030_tag_scope.sql": "4ccb9efbffc57272f4b29c1606eea45a4e0ba38dec5396c1f93d8f75bbb7c935"
   }
 }

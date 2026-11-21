@@ -4,6 +4,9 @@ import android.app.Application
 import com.goalmaker.app.application.planning.AreaItem
 import com.goalmaker.app.application.planning.AreaList
 import com.goalmaker.app.application.planning.NewRows
+import com.goalmaker.app.application.planning.ProjectDraft
+import com.goalmaker.app.application.planning.ProjectList
+import com.goalmaker.app.domain.planning.TagPlace
 import com.goalmaker.app.application.planning.TagList
 import com.goalmaker.app.data.replica.TestReplica
 import java.time.Instant
@@ -26,6 +29,7 @@ class AreasViewModelTest {
     private lateinit var test: TestReplica
     private lateinit var areas: AreaList
     private lateinit var tags: TagList
+    private lateinit var projects: ProjectList
     private lateinit var viewModel: AreasViewModel
 
     @Before
@@ -34,7 +38,8 @@ class AreasViewModelTest {
         val rows = NewRows(test.catalog, { TestReplica.OWNER }, { Instant.parse("2026-09-18T12:00:00Z") })
         areas = AreaList(test.replica, rows, listOf("violet", "blue", "cyan"), {})
         tags = TagList(test.replica, rows, {})
-        viewModel = AreasViewModel(areas, tags, Dispatchers.Unconfined)
+        projects = ProjectList(test.replica, rows, {})
+        viewModel = AreasViewModel(areas, tags, projects, Dispatchers.Unconfined)
     }
 
     @After
@@ -78,5 +83,37 @@ class AreasViewModelTest {
 
         assertFalse(viewModel.saveTag(call.id, "ERRAND"))
         assertEquals(listOf("errand", "call"), tags.all().map { it.name })
+    }
+
+    @Test
+    fun `a tag can belong to an area or a project, and back to everything`() = runTest {
+        val school = areas.create("School")!!
+        val thesis = projects.add(ProjectDraft("Thesis"))!!
+        assertTrue(viewModel.saveTag(null, "forms", areaId = school.id))
+        val forms = tags.all().single()
+        assertEquals(school.id, forms.areaId)
+
+        assertTrue(viewModel.saveTag(forms.id, "forms", projectId = thesis.id))
+        assertEquals(null to thesis.id, tags.all().single().let { it.areaId to it.projectId })
+
+        assertTrue(viewModel.saveTag(forms.id, "forms", areaId = school.id, projectId = thesis.id))
+        assertEquals("an area wins over a project", school.id to null, tags.all().single().let { it.areaId to it.projectId })
+
+        assertTrue(viewModel.saveTag(forms.id, "forms"))
+        assertEquals(null to null, tags.all().single().let { it.areaId to it.projectId })
+    }
+
+    @Test
+    fun `the manager groups the tags for everything, by area and by project`() = runTest {
+        val school = areas.create("School")!!
+        val thesis = projects.add(ProjectDraft("Thesis"))!!
+        viewModel.saveTag(null, "urgent")
+        viewModel.saveTag(null, "forms", areaId = school.id)
+        viewModel.saveTag(null, "chapter", projectId = thesis.id)
+        val state = AreasUiState(areas.all(), tags.all(), areas.palette(), projects.all())
+        assertEquals(
+            listOf(null to listOf("urgent"), TagPlace.Area(school.id) to listOf("forms"), TagPlace.Project(thesis.id) to listOf("chapter")),
+            state.tagGroups.map { group -> group.place to group.tags.map { it.name } },
+        )
     }
 }

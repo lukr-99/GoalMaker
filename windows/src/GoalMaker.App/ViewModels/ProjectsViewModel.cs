@@ -156,7 +156,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);
         filter.Changed += (_, _) => runOnUi(Refresh);
-        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
+        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi, projects);
         var folded = settings.FoldedBoardColumns;
         Columns =
         [

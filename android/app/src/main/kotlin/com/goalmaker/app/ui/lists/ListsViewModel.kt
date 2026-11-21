@@ -84,7 +84,7 @@ class ListsViewModel(
 
     // The filter the owner chose, kept while they switch lists (docs/lists.md); one whose area or tag
     // was deleted meanwhile falls away instead of hiding everything.
-    private val filter = PlaceFilter(areas, tags, io)
+    private val filter = PlaceFilter(areas, tags, projects, io)
 
     // A project item without an area of its own counts as being in its project's area.
     private val projectAreas = projects.watch().flowOn(io).map { data -> data.projects.associate { it.id to it.areaId } }

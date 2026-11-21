@@ -22,13 +22,13 @@ a new link and kills the old one; **Revoke** kills it without a new one. Both wo
 | Tool | What it does |
 |---|---|
 | `get_today`, `get_tomorrow`, `get_inbox` | The lists as the apps show them, from the same rules; Today also lists its habits with where each stands, says how many are left, and counts the ones kept off it; the events going on come first ("Prague · day 2 of 4") |
-| `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas and tags |
+| `get_task`, `search_tasks`, `list_areas_and_tags` | One task in full; search open and done tasks; areas, and the tags grouped for everything, by area and by project |
 | `get_completed_tasks` | What was completed between two days (this week by default) |
 | `add_task`, `update_task` | Day, time, deadline, area, tags, top priority, notes, repeat; a new task also says who made it |
 | `get_all_tasks` | Every open task grouped by area, as the [All tasks](all-tasks.md) place shows it; one area, words, and project items when asked |
 | `get_focus_board`, `place_on_focus_board` | The [Focus Board](focus.md) top first; put a task at a place on it. `add_task` and `update_task` take `focus` to put a task at the end of the board or take it off, and task lines say "on Focus" |
 | `add_area`, `update_area`, `delete_area` | An area with its palette color and emoji; archive it or bring it back |
-| `add_tag`, `update_tag`, `delete_tag` | A tag; renaming one reaches every task that carries it |
+| `add_tag`, `update_tag`, `delete_tag` | A tag; renaming one reaches every task that carries it. `area` or `project` gives it to one area or one project ([tags](lists.md#tags)), and empty takes it back to everything |
 | `complete_task`, `drop_task`, `reopen_task`, `move_task` | A repeating task moves on and back like in the apps |
 | `delete_task`, `restore_task` | Deletes are soft and need the owner's yes in the conversation first |
 | `add_reminder`, `remove_reminder` | At a local time, or minutes before the task's time |

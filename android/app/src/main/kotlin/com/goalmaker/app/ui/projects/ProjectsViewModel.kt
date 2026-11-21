@@ -60,7 +60,7 @@ class ProjectsViewModel(
 ) : ViewModel() {
     private val chosen = MutableStateFlow<String?>(null)
     private val madeBy = MutableStateFlow(ProjectRules.EVERYONE)
-    private val filter = PlaceFilter(areas, tags, io)
+    private val filter = PlaceFilter(areas, tags, projects, io)
     private val undoEvents = MutableSharedFlow<UndoEvent>(extraBufferCapacity = 4)
     private val search = MutableStateFlow("")
     private val copyEvents = MutableSharedFlow<String>(extraBufferCapacity = 4)

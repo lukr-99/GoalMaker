@@ -326,8 +326,8 @@ public sealed class AppGraph : IDisposable
             PageRequested?.Invoke(this, AppPage.Calendar);
         }
 
-        Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi);
-        AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi);
+        Filters = new ListFiltersViewModel(Areas, Tags, Filter, strings, Theme.AreaBrush, runOnUi, Projects);
+        AreasPage = new AreasViewModel(Areas, Tags, strings, Theme.AreaBrush, runOnUi, Projects);
         Steps = new StepList(replica, newRows, Sync.Request);
         Goals = new GoalList(replica, newRows, Sync.Request);
         GoalsPage = new GoalsViewModel(Goals, Tasks, Settings, strings, TimeProvider.System, () => Theme.MotionReduced, runOnUi, Habits, Chat);
