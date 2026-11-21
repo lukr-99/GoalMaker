@@ -67,3 +67,19 @@ Inbox. Deleting a tag takes it off every task.
 color and name. It only leaves the pickers and the filters, and a filter on it falls away. Naming it
 again (`@Garden` in the composer) brings it back, and so does Restore in the areas manager, where
 archived areas are listed apart. The synced `areas.archived_at` says when it was archived.
+
+## Tags
+
+A tag is for everything unless it belongs to **one area** or **one project** (GM-107,
+[`0030_tag_scope.sql`](../supabase/migrations/0030_tag_scope.sql)); never both. The rules are pinned by
+[`contracts/vectors/tags.json`](../contracts/vectors/tags.json) and run by both apps and the connector.
+
+- **The filter's tag picker** offers every tag while no area is chosen. With an area chosen it offers that
+  area's tags and the tags for everything, and a chosen tag it no longer offers lets go. On a project's
+  board the offer is the project's tags, its area's and those for everything.
+- **Settings** (Areas and tags, and the manager it opens) lists the tags for everything first, then each
+  area's, then each project's. In the manager a tag's Belongs to picker moves it.
+- A tag whose area or project is deleted counts as for everything again; nothing is lost.
+- Any task can carry any tag. Where a tag belongs only decides which tags a picker offers.
+- Through Claude, `add_tag` and `update_tag` take `area` or `project`, and `list_areas_and_tags` reads the
+  groups ([connector](connector.md)).
