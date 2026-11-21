@@ -44,8 +44,13 @@ The script refuses to replace an existing key. From the next build on, both apps
 
 ## 4. Cut a release
 
-1. Raise `versionName` (X.Y.Z) and `versionCode` (+1) in `version.properties`; commit.
-2. Tag and push: `git tag vX.Y.Z` then `git push origin main vX.Y.Z`.
+1. Raise `versionName` (X.Y.Z) and `versionCode` (+1) in `version.properties`; commit to `main`.
+2. Start the release one of two ways:
+   - Tag and push: `git tag vX.Y.Z` then `git push origin main vX.Y.Z`.
+   - Or, with no git at hand (from the phone, or from a Claude session that can only push its own
+     branch): GitHub → Actions → **Release** → Run workflow, on `main`. The run refuses any other
+     branch and a version that already has a tag, and makes the `vX.Y.Z` tag itself on the commit it
+     built when it publishes. A failed run leaves no tag, so fix `main` and run it again.
 3. The **Release** workflow checks the tag and the secrets, builds and tests the signed APK and the
    installer, and publishes them with the signed manifest and `SHA256SUMS` as the GitHub Release
    (ADR 0010).

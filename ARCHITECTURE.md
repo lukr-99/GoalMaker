@@ -269,8 +269,8 @@ template. `tools/supabase_migrations.py` runs the full chain, pgTAP and isolated
   side; the release key is described in [docs/setup/signing-and-releases.md](docs/setup/signing-and-releases.md).
 - Windows: framework-dependent publish and a per-user Inno Setup installer with a stable AppId, an
   optional sign-in start (`--tray`), and a separate side-by-side "GoalMaker Dev" flavor.
-- Release workflow: tag → tests → signed APK + installer → signed manifest → published GitHub
-  Release.
+- Release workflow: tag (or a run by hand on `main`, which tags when it publishes) → tests →
+  signed APK + installer → signed manifest → published GitHub Release.
 
 ## Known constraints
 

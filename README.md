@@ -134,8 +134,8 @@ roots, data flow and delivery. Decisions are recorded in [docs/adr/](docs/adr/).
   `com.goalmaker.app`.
 - **Windows:** a per-user Inno Setup installer (framework-dependent, about 9 MB) that can start
   GoalMaker in the tray at sign-in.
-- **Updates:** tag `vX.Y.Z` and the release workflow publishes the APK, the installer and a signed
-  manifest as a GitHub Release. Apps read the latest release and trust it only through the manifest's
+- **Updates:** tag `vX.Y.Z` (or run the Release workflow on `main`) and the release workflow
+  publishes the APK, the installer and a signed manifest as a GitHub Release. Apps read the latest release and trust it only through the manifest's
   signature (ADR 0010). Settings opens the same release for a manual download.
 
 Setup: [docs/setup/signing-and-releases.md](docs/setup/signing-and-releases.md).
