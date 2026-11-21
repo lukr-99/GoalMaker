@@ -134,7 +134,7 @@ public sealed partial class CalendarViewModel : ObservableObject
         tags.Changed += (_, _) => runOnUi(Refresh);
         projects.Changed += (_, _) => runOnUi(Refresh);
         filter.Changed += (_, _) => runOnUi(Refresh);
-        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
+        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi, projects);
         Weekdays = [.. Enumerable.Range(0, 7).Select(day => CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames[(day + 1) % 7])];
         Bar = new CalendarComposerViewModel(
             tasks,

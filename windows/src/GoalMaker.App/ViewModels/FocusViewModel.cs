@@ -92,7 +92,7 @@ public sealed partial class FocusViewModel : ObservableObject
         this.settings = settings;
         this.time = time;
         this.strings = strings;
-        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
+        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi, projects);
         tasks.Changed += (_, _) => runOnUi(Refresh);
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);

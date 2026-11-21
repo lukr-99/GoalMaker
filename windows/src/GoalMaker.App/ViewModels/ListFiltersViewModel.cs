@@ -9,12 +9,15 @@ namespace GoalMaker.App.ViewModels;
 /// <summary>
 /// The area and tag pickers above the lists, one filter for every list (M2-11, spec story 9, docs/lists.md).
 /// Rebuilt when areas, tags or the filter change; a filter whose area or tag was deleted or archived is let
-/// go. A chosen area or tag is marked (<see cref="IsAreaChosen"/>, <see cref="IsTagChosen"/>) so it stands out.
+/// go. A chosen area or tag is marked (<see cref="IsAreaChosen"/>, <see cref="IsTagChosen"/>) so it stands out. With
+/// an area chosen the tag picker offers that area's tags and the ones for everything (docs/lists.md, "Tags"), and a
+/// chosen tag it no longer offers is let go too.
 /// </summary>
 public sealed partial class ListFiltersViewModel : ObservableObject
 {
     private readonly AreaList areas;
     private readonly TagList tags;
+    private readonly ProjectList? projects;
     private readonly ListFilterState filter;
     private readonly IStrings strings;
     private readonly Func<string, Brush?> areaBrush;
@@ -47,10 +50,18 @@ public sealed partial class ListFiltersViewModel : ObservableObject
     [ObservableProperty]
     private bool isTagChosen;
 
-    public ListFiltersViewModel(AreaList areas, TagList tags, ListFilterState filter, IStrings strings, Func<string, Brush?> areaBrush, Action<Action> runOnUi)
+    public ListFiltersViewModel(
+        AreaList areas,
+        TagList tags,
+        ListFilterState filter,
+        IStrings strings,
+        Func<string, Brush?> areaBrush,
+        Action<Action> runOnUi,
+        ProjectList? projects = null)
     {
         this.areas = areas;
         this.tags = tags;
+        this.projects = projects;
         this.filter = filter;
         this.strings = strings;
         this.areaBrush = areaBrush;
@@ -58,6 +69,11 @@ public sealed partial class ListFiltersViewModel : ObservableObject
         areas.Changed += (_, _) => runOnUi(Refresh);
         tags.Changed += (_, _) => runOnUi(Refresh);
         filter.Changed += (_, _) => runOnUi(Refresh);
+        if (projects is not null)
+        {
+            projects.Changed += (_, _) => runOnUi(Refresh);
+        }
+
         Refresh();
     }
 
@@ -93,7 +109,13 @@ public sealed partial class ListFiltersViewModel : ObservableObject
     {
         // Archived areas leave the filters, and a filter on one falls away.
         var areaList = areas.Active();
-        var tagList = tags.All();
+        var allTags = tags.All();
+        filter.Forget([.. areaList.Select(area => area.Id)], [.. allTags.Select(tag => tag.Id)]);
+        // Without the projects every tag a project holds counts as that project's, so an area leaves it out.
+        var projectAreas = projects?.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal)
+            ?? allTags.Where(tag => tag.ProjectId is not null).Select(tag => tag.ProjectId!).Distinct()
+                .ToDictionary(id => id, _ => (string?)null, StringComparer.Ordinal);
+        var tagList = TagRules.Offered(allTags, areas.All().Select(area => area.Id).ToHashSet(StringComparer.Ordinal), projectAreas, filter.Current.AreaId);
         filter.Forget([.. areaList.Select(area => area.Id)], [.. tagList.Select(tag => tag.Id)]);
         var current = filter.Current;
         refreshing = true;
