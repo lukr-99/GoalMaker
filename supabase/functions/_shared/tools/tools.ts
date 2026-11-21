@@ -12,6 +12,7 @@ import {
 } from "../planner/planner.ts";
 import { AREA_COLORS } from "../planner/palette.ts";
 import { fold, searchArchive } from "../rules/archiveRules.ts";
+import { taskGroups } from "../rules/allTasks.ts";
 import { focusBoard, placeAt } from "../rules/focus.ts";
 import { addDays, type Day, daysBetween, mondayOf } from "../rules/day.ts";
 import { eventDays, ongoingEvents } from "../rules/events.ts";
@@ -472,6 +473,46 @@ export const tools: Tool[] = [
     run: async (planner) => {
       const { today } = await planner.now();
       return format.inbox(lists(await planner.tasks(), today), await namesOf(planner));
+    },
+  },
+  {
+    name: "get_all_tasks",
+    title: "All tasks",
+    description:
+      "Every open task, grouped by area with the tasks without an area last, earliest date first: the All tasks " +
+      "place. This is where an undated task with an area shows, which Today, Tomorrow and the Inbox leave out. " +
+      "Narrow it to one area by name, or to words in the title or notes. Project items only with " +
+      "include_project_items (their boards list them already).",
+    input: {
+      area: z.string().optional().describe("An area's name; only its tasks."),
+      query: z.string().optional().describe("Words that must all be in the title or notes, ignoring case and accents."),
+      include_project_items: z.boolean().optional().describe("Also list project items; false by default."),
+    },
+    readOnly: true,
+    destructive: false,
+    run: async (planner, args) => {
+      const areas = await planner.areas();
+      const projectAreas = new Map((await planner.projects()).map((project) => [project.id, project.areaId ?? null]));
+      let areaIds = areas.map((area) => area.id);
+      if (args.area !== undefined) {
+        const wanted = areas.find((area) => fold(area.name) === fold(args.area));
+        if (wanted === undefined) throw new PlannerError(`No area called "${args.area}".`);
+        areaIds = [wanted.id];
+      }
+      const groups = taskGroups(
+        await planner.tasks(),
+        areas.map((area) => area.id),
+        projectAreas,
+        args.query ?? "",
+        args.include_project_items ?? false,
+      ).filter((group) => args.area === undefined || (group.areaId !== null && areaIds.includes(group.areaId)));
+      if (groups.length === 0) return "No open task matches.";
+      const names = await namesOf(planner);
+      return groups.map((group) => {
+        const area = areas.find((one) => one.id === group.areaId);
+        const heading = area === undefined ? "No area:" : `@${area.name}:`;
+        return [heading, ...group.tasks.map((task) => format.taskLine(task, names, { showDay: true }))].join("\n");
+      }).join("\n\n");
     },
   },
   {
