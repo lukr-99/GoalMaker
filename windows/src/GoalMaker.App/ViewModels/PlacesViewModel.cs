@@ -103,6 +103,7 @@ public sealed partial class PlacesViewModel : ObservableObject
         PlaceRules.Tally => "Nav.Tally",
         PlaceRules.Archive => "Nav.Archive",
         PlaceRules.Focus => "Nav.Focus",
+        PlaceRules.Tasks => "Nav.Tasks",
         Activity => "Nav.Activity",
         Areas => "Nav.AreasAndTags",
         AllPlaces => "Places.All",
