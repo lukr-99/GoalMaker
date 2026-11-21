@@ -28,7 +28,9 @@ import java.time.LocalDateTime
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.goalmaker.app.composition.AppGraph
 import com.goalmaker.app.domain.navigation.PlaceRules
+import com.goalmaker.app.ui.settings.SettingsPage
 import com.goalmaker.app.ui.settings.SettingsScreen
+import com.goalmaker.app.ui.settings.SettingsSections
 import com.goalmaker.app.ui.settings.SettingsViewModel
 import com.goalmaker.app.ui.about.AboutKey
 import com.goalmaker.app.ui.about.AboutScreen
@@ -129,7 +131,12 @@ fun SignedInNavigation(graph: AppGraph) {
     // The update notification opens Settings at the update, on top of whatever was open.
     val updateRequested by graph.updateRequested.collectAsState()
     LaunchedEffect(updateRequested) {
-        if (updateRequested != null && backStack.lastOrNull() != SettingsKey) backStack.add(SettingsKey)
+        // It lands on the page that holds Updates, with Settings under it for Back.
+        val updates = SettingsPageKey(SettingsSections.UPDATE_PAGE.id)
+        if (updateRequested != null && backStack.lastOrNull() != updates) {
+            if (backStack.lastOrNull() != SettingsKey) backStack.add(SettingsKey)
+            backStack.add(updates)
+        }
     }
     // The evening Plan tomorrow reminder opens the ritual on top of whatever was open.
     val planRequested by graph.planRequested.collectAsState()
@@ -181,6 +188,51 @@ fun SignedInNavigation(graph: AppGraph) {
     val reduced = AppTheme.reduceMotion
     val transitions = remember(motion, reduced) { NavTransitions(motion, reduced) }
     val context = LocalContext.current
+    // One page of Settings; the main one and each page it links to share it.
+    val settingsPage: @Composable (SettingsPage) -> Unit = { page ->
+        val settingsViewModel = viewModel {
+            SettingsViewModel(
+                auth = graph.auth,
+                sync = graph.sync,
+                settings = graph.settings,
+                reminders = graph.reminders,
+                io = graph.io,
+                design = graph.design,
+                updates = graph.updates,
+                updateChecks = graph.updateChecks,
+                updateAlerts = graph.updateAlerts,
+                releasesPage = graph.releaseChannel?.releasesPage,
+                appInfo = graph.appInfo,
+                backup = graph.backup,
+                requestSync = graph.sync::request,
+                restartApp = graph.restartApp,
+                unlockAvailability = graph.deviceUnlock::availability,
+                appLockTurned = graph.appLock::turned,
+                importantDnd = graph.reminderNotifications::importantThroughDnd,
+            )
+        }
+        // The Areas and tags section shows the areas in use and the tags, read as the manager reads them.
+        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.io) }
+        val areasState by areasViewModel.uiState.collectAsStateWithLifecycle()
+        SettingsScreen(
+            viewModel = settingsViewModel,
+            page = page,
+            onOpenPage = { opened -> backStack.add(SettingsPageKey(opened.id)) },
+            areas = areasState.active,
+            tags = areasState.tags,
+            onBack = { backStack.removeLastOrNull() },
+            onOpenAreas = { backStack.add(AreasKey) },
+            onOpenConnector = { backStack.add(ConnectorKey) },
+            onOpenPcSignIn = { backStack.add(PcSignInKey) },
+            onOpenActivity = { backStack.add(ActivityKey) },
+            onOpenAbout = { backStack.add(AboutKey) },
+            problems = problems,
+            onProblemsRead = graph.problems::read,
+            updateRequest = updateRequested,
+            onUpdateRequestHandled = graph::updateRequestHandled,
+            onOpenDndSettings = { state -> openSystemPage(context, graph.reminderNotifications.dndSettings(state)) },
+        )
+    }
     // The bottom bar's quick chat (docs/composer.md). Goals and Habits opened on top of Today keep a
     // thread of their own, for as long as they are open.
     val newChat = {
@@ -506,48 +558,8 @@ fun SignedInNavigation(graph: AppGraph) {
                         }
                         PlanScreen(viewModel = planViewModel, onClose = { backStack.removeLastOrNull() })
                     }
-                    entry<SettingsKey> {
-                        val settingsViewModel = viewModel {
-                            SettingsViewModel(
-                                auth = graph.auth,
-                                sync = graph.sync,
-                                settings = graph.settings,
-                                reminders = graph.reminders,
-                                io = graph.io,
-                                design = graph.design,
-                                updates = graph.updates,
-                                updateChecks = graph.updateChecks,
-                                updateAlerts = graph.updateAlerts,
-                                releasesPage = graph.releaseChannel?.releasesPage,
-                                appInfo = graph.appInfo,
-                                backup = graph.backup,
-                                requestSync = graph.sync::request,
-                                restartApp = graph.restartApp,
-                                unlockAvailability = graph.deviceUnlock::availability,
-                                appLockTurned = graph.appLock::turned,
-                                importantDnd = graph.reminderNotifications::importantThroughDnd,
-                            )
-                        }
-                        // The Areas and tags section shows the areas in use and the tags, read as the manager reads them.
-                        val areasViewModel = viewModel { AreasViewModel(graph.areas, graph.tags, graph.io) }
-                        val areasState by areasViewModel.uiState.collectAsStateWithLifecycle()
-                        SettingsScreen(
-                            viewModel = settingsViewModel,
-                            areas = areasState.active,
-                            tags = areasState.tags,
-                            onBack = { backStack.removeLastOrNull() },
-                            onOpenAreas = { backStack.add(AreasKey) },
-                            onOpenConnector = { backStack.add(ConnectorKey) },
-                            onOpenPcSignIn = { backStack.add(PcSignInKey) },
-                            onOpenActivity = { backStack.add(ActivityKey) },
-                            onOpenAbout = { backStack.add(AboutKey) },
-                            problems = problems,
-                            onProblemsRead = graph.problems::read,
-                            updateRequest = updateRequested,
-                            onUpdateRequestHandled = graph::updateRequestHandled,
-                            onOpenDndSettings = { state -> openSystemPage(context, graph.reminderNotifications.dndSettings(state)) },
-                        )
-                    }
+                    entry<SettingsKey> { settingsPage(SettingsPage.MAIN) }
+                    entry<SettingsPageKey> { key -> settingsPage(SettingsPage.of(key.page)) }
                     entry<ConnectorKey> {
                         val connectorViewModel = viewModel { ConnectorViewModel(graph.connectorLinks, graph.appInfo.backend.url, graph.io) }
                         ConnectorScreen(viewModel = connectorViewModel, onBack = { backStack.removeLastOrNull() })

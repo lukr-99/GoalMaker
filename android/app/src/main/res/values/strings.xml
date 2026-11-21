@@ -218,6 +218,13 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_data_page">Your data and updates</string>
+    <string name="settings_appearance_open">Open Appearance</string>
+    <string name="settings_appearance_open_hint">Theme, mode, pure black, reduce motion and the completion sound.</string>
+    <string name="settings_planning_open">Open Planning day and reminders</string>
+    <string name="settings_planning_open_hint">When your day starts, the plan and review reminders, the why reminder, Do Not Disturb and quiet hours.</string>
+    <string name="settings_data_open">Open Your data and updates</string>
+    <string name="settings_data_open_hint">Export and restore everything, and how new versions arrive.</string>
     <string name="settings_back">Back</string>
     <string name="settings_appearance">Appearance</string>
     <string name="settings_theme">Theme</string>
