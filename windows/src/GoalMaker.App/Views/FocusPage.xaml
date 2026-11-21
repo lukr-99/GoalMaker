@@ -8,7 +8,8 @@
       Background="{DynamicResource GM.BackgroundBrush}"
       FontFamily="{DynamicResource GM.BodyFont}"
       Foreground="{DynamicResource GM.TextBrush}">
-    <!-- The Focus Board: a manually-ordered watchlist of open tasks with deadlines. -->
+    <!-- The Focus Board (docs/focus.md): a manually-ordered watchlist of open tasks, narrowed by an area and
+         tag filter of its own; the add panel searches the open tasks, and a typed line becomes a task on it. -->
     <Grid>
         <!-- Main board (hidden while add panel is open) -->
         <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -16,8 +17,14 @@
             <StackPanel>
                 <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
                     <controls:HeadlineText Margin="0,0,0,16" Title="{DynamicResource Focus.Title}" FontSize="40" />
+                    <!-- The area and tag filter narrows the board and the add panel, as on the lists. -->
+                    <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                                    Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                    Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
                     <TextBlock Text="{DynamicResource Focus.Empty}" Foreground="{DynamicResource GM.TextMutedBrush}"
                                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{DynamicResource Focus.FilteredEmpty}" Foreground="{DynamicResource GM.TextMutedBrush}"
+                               Visibility="{Binding IsFilteredEmpty, Converter={StaticResource BoolToVisibility}}" />
                     <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:FocusRowViewModel}">
@@ -85,8 +92,33 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
                     <controls:HeadlineText Margin="0,0,0,16" Title="{DynamicResource Focus.AddTitle}" FontSize="32" />
+                    <ui:TextBox Margin="0,0,0,12" PlaceholderText="{DynamicResource Focus.Search}"
+                                Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                                AutomationProperties.Name="{DynamicResource Focus.Search}">
+                        <ui:TextBox.Icon>
+                            <ui:SymbolIcon Symbol="Search24" />
+                        </ui:TextBox.Icon>
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Enter" Command="{Binding CreateFromQueryCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                    <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                                    Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                    Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- With something typed, the first row makes it a new task straight onto the board. -->
+                    <ui:Button Margin="{DynamicResource GM.RowGap}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                               Appearance="Secondary" Command="{Binding CreateFromQueryCommand}"
+                               AutomationProperties.Name="{Binding CreateText}"
+                               Visibility="{Binding HasQuery, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Add24" Margin="0,0,8,0" />
+                            <TextBlock Text="{Binding CreateText}" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </ui:Button>
                     <TextBlock Text="{DynamicResource Focus.AddEmpty}" Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding IsCandidatesEmpty, Converter={StaticResource BoolToVisibility}}" />
+                               Visibility="{Binding IsAllOnBoard, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{DynamicResource Focus.NoMatch}" Foreground="{DynamicResource GM.TextMutedBrush}"
+                               Visibility="{Binding IsNoMatch, Converter={StaticResource BoolToVisibility}}" />
                     <ItemsControl ItemsSource="{Binding Candidates}" Focusable="False">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:FocusAddRowViewModel}">

@@ -1,25 +1,40 @@
 using System.Collections.ObjectModel;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using GoalMaker.App.Localization;
+using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Settings;
 
 namespace GoalMaker.App.ViewModels;
 
 /// <summary>
-/// The Focus Board: a manually-ordered watchlist of open tasks. Items are reordered with Up/Down,
-/// completed or removed from the board without deleting.
+/// The Focus Board (docs/focus.md): a manually-ordered watchlist of open tasks. Items are reordered with
+/// Up/Down, completed or removed from the board without deleting. An area and tag filter of its own narrows
+/// the board and the add panel, the add panel searches the open tasks as you type, and a typed line becomes
+/// a task straight onto the board, with the composer's shortcuts read from it (docs/composer.md).
 /// </summary>
 public sealed partial class FocusViewModel : ObservableObject
 {
     private readonly TaskList tasks;
     private readonly AreaList areas;
-    private readonly Action<Action> runOnUi;
+    private readonly TagList tags;
+    private readonly ProjectList projects;
+    private readonly ISettingsStore settings;
+    private readonly TimeProvider time;
+    private readonly IStrings strings;
+    private readonly ListFilterState filter = new();
 
     [ObservableProperty]
     private ObservableCollection<FocusRowViewModel> items = [];
 
     [ObservableProperty]
     private bool isEmpty = true;
+
+    /// <summary>Whether the board has tasks but the filter hides them all.</summary>
+    [ObservableProperty]
+    private bool isFilteredEmpty;
 
     [ObservableProperty]
     private FocusRowViewModel? selected;
@@ -36,42 +51,93 @@ public sealed partial class FocusViewModel : ObservableObject
     [ObservableProperty]
     private bool isCandidatesEmpty;
 
+    /// <summary>Whether the add panel is empty with nothing searched or filtered: every open task is on the board.</summary>
+    [ObservableProperty]
+    private bool isAllOnBoard;
+
+    /// <summary>Whether the add panel is empty for what is searched or filtered.</summary>
+    [ObservableProperty]
+    private bool isNoMatch;
+
     [ObservableProperty]
     private string quickAddTitle = string.Empty;
 
-    public FocusViewModel(TaskList tasks, AreaList areas, Action<Action> runOnUi)
+    /// <summary>What is typed in the add panel's search box.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasQuery))]
+    [NotifyPropertyChangedFor(nameof(CreateText))]
+    [NotifyCanExecuteChangedFor(nameof(CreateFromQueryCommand))]
+    private string query = string.Empty;
+
+    public bool HasQuery => Query.Trim().Length > 0;
+
+    /// <summary>The add panel's first row with something typed: make it a new task on the board.</summary>
+    public string CreateText => strings.Get("Focus.Create", Query.Trim());
+
+    public FocusViewModel(
+        TaskList tasks,
+        AreaList areas,
+        TagList tags,
+        ProjectList projects,
+        ISettingsStore settings,
+        IStrings strings,
+        Func<string, Brush?> areaBrush,
+        TimeProvider time,
+        Action<Action> runOnUi)
     {
         this.tasks = tasks;
         this.areas = areas;
-        this.runOnUi = runOnUi;
+        this.tags = tags;
+        this.projects = projects;
+        this.settings = settings;
+        this.time = time;
+        this.strings = strings;
+        Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi);
         tasks.Changed += (_, _) => runOnUi(Refresh);
         areas.Changed += (_, _) => runOnUi(Refresh);
+        tags.Changed += (_, _) => runOnUi(Refresh);
+        projects.Changed += (_, _) => runOnUi(Refresh);
+        filter.Changed += (_, _) => runOnUi(Refresh);
         Refresh();
     }
+
+    /// <summary>The area and tag pickers the board and the add panel share.</summary>
+    public ListFiltersViewModel Filters { get; }
 
     private void Refresh()
     {
         var all = tasks.All();
         var areaMap = areas.All().ToDictionary(a => a.Id);
-        var board = FocusBoardRules.Board(all)
-            .Select(t => new FocusRowViewModel(t, areaMap.GetValueOrDefault(t.AreaId ?? "")))
-            .ToList();
-
-        Items = new ObservableCollection<FocusRowViewModel>(board);
+        var board = FocusBoardRules.Board(all);
+        var shown = Narrow(board);
+        Items = new ObservableCollection<FocusRowViewModel>(
+            shown.Select(t => new FocusRowViewModel(t, areaMap.GetValueOrDefault(t.AreaId ?? ""))));
         IsEmpty = board.Count == 0;
+        IsFilteredEmpty = board.Count > 0 && shown.Count == 0;
 
         if (IsAddOpen) RefreshCandidates(all, areaMap);
     }
 
+    private IReadOnlyList<TaskItem> Narrow(IReadOnlyList<TaskItem> found) =>
+        filter.Current.IsEmpty
+            ? found
+            : filter.Current.Apply(found, tags.TagLinks(), projects.All().ToDictionary(project => project.Id, project => project.AreaId, StringComparer.Ordinal));
+
     private void RefreshCandidates(IReadOnlyList<TaskItem> all, Dictionary<string, AreaItem> areaMap)
     {
-        var boardIds = Items.Select(i => i.Id).ToHashSet(StringComparer.Ordinal);
-        var rows = all
-            .Where(t => !t.Deleted && t.State == TaskState.Open && !t.FocusPosition.HasValue && !boardIds.Contains(t.Id))
+        var rows = Narrow(FocusBoardRules.Candidates(all, Query))
             .Select(t => new FocusAddRowViewModel(t, areaMap.GetValueOrDefault(t.AreaId ?? "")))
             .ToList();
         Candidates = new ObservableCollection<FocusAddRowViewModel>(rows);
         IsCandidatesEmpty = rows.Count == 0;
+        var searching = HasQuery || !filter.Current.IsEmpty;
+        IsAllOnBoard = IsCandidatesEmpty && !searching;
+        IsNoMatch = IsCandidatesEmpty && searching;
+    }
+
+    partial void OnQueryChanged(string value)
+    {
+        if (IsAddOpen) RefreshCandidates(tasks.All(), areas.All().ToDictionary(a => a.Id));
     }
 
     [RelayCommand]
@@ -91,14 +157,17 @@ public sealed partial class FocusViewModel : ObservableObject
     [RelayCommand]
     private void ShowAddDialog()
     {
-        var all = tasks.All();
-        var areaMap = areas.All().ToDictionary(a => a.Id);
-        RefreshCandidates(all, areaMap);
+        Query = string.Empty;
         IsAddOpen = true;
+        RefreshCandidates(tasks.All(), areas.All().ToDictionary(a => a.Id));
     }
 
     [RelayCommand]
-    private void CloseAddDialog() => IsAddOpen = false;
+    private void CloseAddDialog()
+    {
+        IsAddOpen = false;
+        Query = string.Empty;
+    }
 
     [RelayCommand]
     private void AddToBoard(FocusAddRowViewModel? candidate)
@@ -110,13 +179,29 @@ public sealed partial class FocusViewModel : ObservableObject
     [RelayCommand]
     private void QuickAdd()
     {
-        var title = QuickAddTitle.Trim();
-        if (string.IsNullOrEmpty(title)) return;
-        var pos = FocusBoardRules.AppendPosition(tasks.All());
-        var item = tasks.Add(title);
-        if (item is null) return;
-        tasks.SetFocusPosition(item.Id, pos);
-        QuickAddTitle = string.Empty;
+        if (Create(QuickAddTitle)) QuickAddTitle = string.Empty;
+    }
+
+    /// <summary>Makes a task from what is typed in the add panel's search box, onto the board, and closes the panel.</summary>
+    [RelayCommand(CanExecute = nameof(HasQuery))]
+    private void CreateFromQuery()
+    {
+        if (Create(Query)) CloseAddDialog();
+    }
+
+    /// <summary>
+    /// Makes a task from <paramref name="line"/> at the end of the board, with the composer's shortcuts read
+    /// from it, so "@School #forms friday" sets the area, a tag and the day. False when there is nothing to save.
+    /// </summary>
+    private bool Create(string line)
+    {
+        var draft = ComposerParser.Parse(line, time.GetLocalNow().DateTime, settings.DayStartHour);
+        if (draft.Title.Trim().Length == 0 || draft.Command is not null) return false;
+        var position = FocusBoardRules.AppendPosition(tasks.All());
+        var item = tasks.Add(draft);
+        if (item is null) return false;
+        tasks.SetFocusPosition(item.Id, position);
+        return true;
     }
 
     [RelayCommand]
@@ -137,9 +222,17 @@ public sealed partial class FocusViewModel : ObservableObject
         Move(index, index + 1);
     }
 
+    /// <summary>
+    /// Moves a row to a place in the board as shown. While the filter hides part of the board, the task lands
+    /// next to its shown neighbours, so the hidden tasks keep their places.
+    /// </summary>
     private void Move(int fromIndex, int toIndex)
     {
-        var id = Items[fromIndex].Id;
-        tasks.SetFocusPosition(id, FocusBoardRules.PlaceAt(tasks.All(), id, toIndex + 1));
+        var shown = Items.ToList();
+        var row = shown[fromIndex];
+        shown.RemoveAt(fromIndex);
+        var before = toIndex > 0 ? shown[toIndex - 1].FocusPosition : null;
+        var after = toIndex < shown.Count ? shown[toIndex].FocusPosition : null;
+        tasks.SetFocusPosition(row.Id, FocusBoardRules.Between(before, after));
     }
 }

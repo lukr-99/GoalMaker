@@ -403,7 +403,7 @@ public sealed class AppGraph : IDisposable
         TaskDetail = new TaskDetailViewModel(
             Tasks, Areas, Tags, Steps, strings, TimeProvider.System, runOnUi, page => PageRequested?.Invoke(this, page), Goals, Settings, Projects, CopyText);
         Archive = new ArchiveViewModel(Tasks, Areas, Tags, Projects, strings, Theme.AreaBrush, runOnUi, id => OpenTask(id, AppPage.Archive), OpenProject);
-        Focus = new FocusViewModel(Tasks, Areas, runOnUi);
+        Focus = new FocusViewModel(Tasks, Areas, Tags, Projects, Settings, strings, Theme.AreaBrush, TimeProvider.System, runOnUi);
         QuickAdd = Composer(_ => null);
         TrayFlyout = new TrayFlyoutViewModel(
             Tasks,
