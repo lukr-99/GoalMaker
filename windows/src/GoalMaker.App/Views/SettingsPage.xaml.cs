@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.Input;
 using GoalMaker.App.ViewModels;
 
 namespace GoalMaker.App.Views;
@@ -10,7 +11,9 @@ namespace GoalMaker.App.Views;
 /// <see cref="SettingsNoticesViewModel"/>, <see cref="ProblemsViewModel"/>,
 /// <see cref="AreasViewModel"/> and <see cref="ConnectorViewModel"/>; this hands each section its view
 /// model, reads the keys for the quick-add shortcut, and lands on Updates when the mark on the
-/// Settings item stood for an update (<see cref="SettingsSectionsViewModel.Landing"/>).
+/// Settings item stood for an update (<see cref="SettingsSectionsViewModel.Landing"/>). Appearance, Planning and
+/// Your data and updates are pages of their own (GM-106): three more kit pages in this view, one of which
+/// shows in the main one's place.
 /// </summary>
 public partial class SettingsPage
 {
@@ -33,6 +36,9 @@ public partial class SettingsPage
         ClaudeSection.DataContext = connector;
         AreasSection.DataContext = areas;
         OpenAreasRow.DataContext = sections;
+        OpenAppearanceRow.Command = new RelayCommand(() => ShowPage(AppearanceKit));
+        OpenPlanningRow.Command = new RelayCommand(() => ShowPage(PlanningKit));
+        OpenDataRow.Command = new RelayCommand(() => ShowPage(DataKit));
 
         // The danger row's confirmation wears the app's body font, as its other windows do.
         SignOutAnywayRow.PrepareConfirm = prepareConfirm;
@@ -76,11 +82,40 @@ public partial class SettingsPage
         };
     }
 
-    /// <summary>The settings kit's page inside, for its sections, jumps and snapshots.</summary>
-    public DotNetLib.Tray.SettingsPage KitPage => Kit;
+    /// <summary>The settings kit's page on screen, for its sections, jumps and snapshots.</summary>
+    public DotNetLib.Tray.SettingsPage KitPage => Kits.First(kit => kit.Visibility == Visibility.Visible);
 
-    /// <summary>Scrolls to a section and plays the jump hint; false for an unknown or hidden one.</summary>
-    public bool JumpTo(string sectionId) => Kit.JumpTo(sectionId);
+    private DotNetLib.Tray.SettingsPage[] Kits => [Kit, AppearanceKit, PlanningKit, DataKit];
+
+    /// <summary>
+    /// Scrolls to a section and plays the jump hint, on the page that holds it in full: Appearance, Planning,
+    /// and Your data and Updates on the Your data and updates page. False for an unknown or hidden one.
+    /// </summary>
+    public bool JumpTo(string sectionId)
+    {
+        var kit = sectionId switch
+        {
+            SettingsSectionsViewModel.Appearance => AppearanceKit,
+            SettingsSectionsViewModel.Planning => PlanningKit,
+            SettingsSectionsViewModel.Data or SettingsSectionsViewModel.Updates => DataKit,
+            _ => Kit,
+        };
+        ShowPage(kit);
+        kit.UpdateLayout();
+        return kit.JumpTo(sectionId);
+    }
+
+    /// <summary>Shows one of the kit pages in place of the others.</summary>
+    private void ShowPage(DotNetLib.Tray.SettingsPage shown)
+    {
+        foreach (var kit in Kits)
+        {
+            kit.Visibility = kit == shown ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    // The Back button on a page of its own goes back to the main page.
+    private void OnBackToSettings(object sender, RoutedEventArgs e) => ShowPage(Kit);
 
     // Keys pressed together in the shortcut box become the shortcut; Tab still moves on.
     private void OnQuickAddShortcutKeyDown(object sender, KeyEventArgs e)
