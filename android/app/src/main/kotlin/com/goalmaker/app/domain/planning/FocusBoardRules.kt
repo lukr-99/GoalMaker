@@ -1,7 +1,9 @@
 package com.goalmaker.app.domain.planning
 
+import com.goalmaker.app.application.planning.ArchiveRules
 import com.goalmaker.app.application.planning.TaskItem
 import com.goalmaker.app.application.planning.TaskState
+import java.time.LocalDate
 
 /**
  * The Focus Board: a manually curated, ordered list of tasks the owner wants to keep an eye on,
@@ -46,5 +48,25 @@ object FocusBoardRules {
         val others = board(tasks).filter { it.id != taskId }
         val index = (place - 1).coerceIn(0, others.size)
         return between(others.getOrNull(index - 1), others.getOrNull(index))
+    }
+
+    /**
+     * The tasks the add picker offers for [query]: open, not deleted and not on the board, with every
+     * word of the query in the title or the notes, ignoring case and accents. By their date (the
+     * deadline, else the planned day), earliest first and undated last, then by title, then by id.
+     */
+    fun candidates(tasks: List<TaskItem>, query: String): List<TaskItem> {
+        val words = query.split(' ').map(ArchiveRules::fold).filter(String::isNotEmpty)
+        return tasks
+            .filter { !it.deleted && it.state == TaskState.OPEN && it.focusPosition == null }
+            .filter { task ->
+                val text = ArchiveRules.fold(task.title) + "\n" + ArchiveRules.fold(task.notes)
+                words.all { it in text }
+            }
+            .sortedWith(
+                compareBy<TaskItem, LocalDate?>(nullsLast()) { it.deadline ?: it.plannedDate }
+                    .thenBy { ArchiveRules.fold(it.title) }
+                    .thenBy(TaskItem::id),
+            )
     }
 }

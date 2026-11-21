@@ -44,12 +44,27 @@ public sealed class FocusBoardRulesContractTests
         }
     }
 
+    [Fact]
+    public void WhatTheAddPickerOffers()
+    {
+        foreach (var testCase in vectors.GetProperty("candidates").EnumerateArray())
+        {
+            Assert.True(
+                testCase.GetProperty("expect").EnumerateArray().Select(id => id.GetString()!)
+                    .SequenceEqual(FocusBoardRules.Candidates(Tasks(testCase), testCase.GetProperty("query").GetString()!).Select(task => task.Id)),
+                Name(testCase));
+        }
+    }
+
+    private static string? Optional(JsonElement task, string name) =>
+        task.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
     private static string Name(JsonElement testCase) => testCase.GetProperty("name").GetString()!;
 
     private static List<TaskItem> Tasks(JsonElement testCase) =>
         testCase.GetProperty("tasks").EnumerateArray().Select(task => new TaskItem(
             Id: task.GetProperty("id").GetString()!,
-            Title: task.GetProperty("id").GetString()!,
+            Title: Optional(task, "title") ?? task.GetProperty("id").GetString()!,
             State: task.GetProperty("state").GetString() switch
             {
                 "done" => TaskState.Done,
@@ -58,6 +73,9 @@ public sealed class FocusBoardRulesContractTests
             },
             TopPriority: false,
             CreatedAt: task.GetProperty("createdAt").GetString()!,
+            PlannedDate: Optional(task, "day") is { } day ? DateOnly.Parse(day, System.Globalization.CultureInfo.InvariantCulture) : null,
+            Notes: Optional(task, "notes") ?? string.Empty,
+            Deadline: Optional(task, "deadline") is { } deadline ? DateOnly.Parse(deadline, System.Globalization.CultureInfo.InvariantCulture) : null,
             Deleted: task.TryGetProperty("deleted", out var deleted) && deleted.GetBoolean(),
             FocusPosition: task.GetProperty("focus").ValueKind == JsonValueKind.Null
                 ? null
