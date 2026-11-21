@@ -16,7 +16,7 @@ object FocusBoardRules {
     fun board(tasks: List<TaskItem>): List<TaskItem> =
         tasks
             .filter { !it.deleted && it.state == TaskState.OPEN && it.focusPosition != null }
-            .sortedWith(compareBy({ it.focusPosition }, { it.createdAt }))
+            .sortedWith(compareBy({ it.focusPosition }, { it.createdAt }, { it.id }))
 
     /**
      * The position for a task added at the end: one more than the current highest, or 1.0 when
@@ -35,5 +35,16 @@ object FocusBoardRules {
         before == null -> (after!!.focusPosition ?: 1.0) - 1.0
         after == null -> (before.focusPosition ?: 1.0) + 1.0
         else -> ((before.focusPosition ?: 0.0) + (after.focusPosition ?: 0.0)) / 2.0
+    }
+
+    /**
+     * The position that puts [taskId] at [place] on the board, 1 being the top, with the task itself
+     * left out first. A place past the end is the end, and one below 1 is the top
+     * (contracts/vectors/focus.json).
+     */
+    fun placeAt(tasks: List<TaskItem>, taskId: String, place: Int): Double {
+        val others = board(tasks).filter { it.id != taskId }
+        val index = (place - 1).coerceIn(0, others.size)
+        return between(others.getOrNull(index - 1), others.getOrNull(index))
     }
 }
