@@ -217,13 +217,14 @@ and tags shows the areas in use with their colors and the tags, and opens the fu
 opens its own page: the hero, the author card, your data, this build and the credits
 ([about](../about.md)).
 
-**Pages (GM-106, Android first).** The crowded groups have pages of their own, the way Tarot2Go
+**Pages (GM-106).** The crowded groups have pages of their own, the way Tarot2Go
 splits off its Appearance: Appearance, Planning day and reminders, and Your data and updates (Your
 data and Updates together). On the main page each is a card with one row that opens its page, and
 the page shows the same cards in full, with the same kit and hints; a page of one or two cards has no
 chip row. The update notification and the mark on the gear open Your data and updates, with the main
-page under it for Back, and land on Updates. Areas and tags already opens its own manager. The PC
-keeps one page with its section list for now.
+page under it for Back, and land on Updates. Areas and tags already opens its own manager. On the
+PC each page is a kit page of its own in Settings' place, with Back to Settings at its top; a banner
+button or the update mark that points at one of their sections opens that page and jumps there.
 
 **Jump navigation.** Only with 4 or more visible sections; with 3 or fewer the page is short enough.
 On the phone a row of chips under the app bar that stays put (chips 32 dp, 8 dp apart, the current
