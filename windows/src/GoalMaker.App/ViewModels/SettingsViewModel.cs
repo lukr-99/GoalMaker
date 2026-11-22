@@ -62,7 +62,7 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SelectedMode), nameof(IsPureBlackAvailable), nameof(PureBlack))]
-    [NotifyPropertyChangedFor(nameof(SelectedMotion), nameof(PageReduceMotion), nameof(CompletionSound), nameof(SelectedTheme))]
+    [NotifyPropertyChangedFor(nameof(SelectedMotion), nameof(PageReduceMotion), nameof(CompletionSound), nameof(CompactHabits), nameof(SelectedTheme))]
     private Appearance appearance;
 
     [ObservableProperty]
@@ -306,6 +306,12 @@ public sealed partial class SettingsViewModel : ObservableObject
     {
         get => Appearance.CompletionSound;
         set => Appearance = Appearance with { CompletionSound = value };
+    }
+
+    public bool CompactHabits
+    {
+        get => Appearance.CompactHabits;
+        set => Appearance = Appearance with { CompactHabits = value };
     }
 
     // ---------------------------------------------------------------- Planning day and reminders

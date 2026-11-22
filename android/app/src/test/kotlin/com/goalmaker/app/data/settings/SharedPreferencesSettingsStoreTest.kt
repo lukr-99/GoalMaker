@@ -121,10 +121,10 @@ class SharedPreferencesSettingsStoreTest {
         val store = SharedPreferencesSettingsStore(preferences)
 
         store.updateAppearance {
-            it.copy(themeId = "night", mode = ThemeMode.DARK, pureBlack = true, reduceMotion = ReduceMotion.ON, completionSound = true)
+            it.copy(themeId = "night", mode = ThemeMode.DARK, pureBlack = true, reduceMotion = ReduceMotion.ON, completionSound = true, compactHabits = true)
         }
 
-        val expected = Appearance("night", ThemeMode.DARK, pureBlack = true, reduceMotion = ReduceMotion.ON, completionSound = true)
+        val expected = Appearance("night", ThemeMode.DARK, pureBlack = true, reduceMotion = ReduceMotion.ON, completionSound = true, compactHabits = true)
         assertEquals(expected, store.appearance.value)
         assertEquals(expected, SharedPreferencesSettingsStore(preferences).appearance.value)
     }

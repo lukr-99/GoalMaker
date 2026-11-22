@@ -56,6 +56,17 @@ class WantRulesContractTest {
     }
 
     @Test
+    fun `every prolonged wait`() {
+        vectors.cases("prolong").forEach { case ->
+            assertEquals(
+                case.text("name"),
+                case["expect"]?.takeUnless { it is JsonNull }?.jsonPrimitive?.int,
+                WantRules.prolongDays(want(case.getValue("want").jsonObject), case.day("to")!!),
+            )
+        }
+    }
+
+    @Test
     fun `the defaults are the ones the contract names`() {
         assertEquals(cooldowns(vectors.getValue("defaults").jsonObject), WantCooldowns.DEFAULT)
     }

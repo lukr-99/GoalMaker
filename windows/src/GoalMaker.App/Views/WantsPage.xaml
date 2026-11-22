@@ -233,6 +233,14 @@
                         </TextBlock>
                         <ui:Button Margin="0,6,0,0" Appearance="Transparent" Content="{DynamicResource Wants.EditOne}" Command="{Binding EditCommand}"
                                    Visibility="{Binding IsUndecided, Converter={StaticResource BoolToVisibility}}" />
+                        <!-- Wait longer: a day or a week more, or until a day picked. -->
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Visibility="{Binding CanProlong, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource SectionLabel}" VerticalAlignment="Center" Margin="0,0,8,0" Text="{DynamicResource Wants.WaitLonger}" />
+                            <ui:Button Appearance="Secondary" Command="{Binding ProlongDayCommand}" Margin="0,0,6,0" Content="{DynamicResource Wants.WaitDay}" />
+                            <ui:Button Appearance="Secondary" Command="{Binding ProlongWeekCommand}" Margin="0,0,6,0" Content="{DynamicResource Wants.WaitWeek}" />
+                            <DatePicker SelectedDate="{Binding ProlongTo, Mode=TwoWay}" DisplayDateStart="{Binding FirstProlongDay, Mode=OneWay}"
+                                        AutomationProperties.Name="{DynamicResource Wants.WaitUntil}" ToolTip="{DynamicResource Wants.WaitUntil}" />
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </Border>

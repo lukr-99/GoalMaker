@@ -26,7 +26,7 @@ public sealed class JsonSettingsStore : ISettingsStore
 
     public Appearance Appearance
     {
-        get => new(document.ThemeId, document.ThemeMode, document.PureBlack, document.ReduceMotion, document.CompletionSound);
+        get => new(document.ThemeId, document.ThemeMode, document.PureBlack, document.ReduceMotion, document.CompletionSound, document.CompactHabits);
         set => Save(document with
         {
             ThemeId = value.ThemeId,
@@ -34,6 +34,7 @@ public sealed class JsonSettingsStore : ISettingsStore
             PureBlack = value.PureBlack,
             ReduceMotion = value.ReduceMotion,
             CompletionSound = value.CompletionSound,
+            CompactHabits = value.CompactHabits,
         });
     }
 

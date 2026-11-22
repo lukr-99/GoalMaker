@@ -25,7 +25,7 @@ public sealed class JsonSettingsStoreTests : IDisposable
     [Fact]
     public void TheAppearanceSurvivesARestart()
     {
-        var chosen = new Appearance("night", ThemeMode.Dark, PureBlack: true, ReduceMotion.On, CompletionSound: true);
+        var chosen = new Appearance("night", ThemeMode.Dark, PureBlack: true, ReduceMotion.On, CompletionSound: true, CompactHabits: true);
 
         var store = new JsonSettingsStore(SettingsFile);
         store.Appearance = chosen;

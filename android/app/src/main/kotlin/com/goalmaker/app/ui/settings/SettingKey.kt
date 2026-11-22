@@ -8,6 +8,7 @@ enum class SettingKey {
     PURE_BLACK,
     REDUCE_MOTION,
     COMPLETION_SOUND,
+    COMPACT_HABITS,
     DAY_START,
     PLAN_REMINDER,
     PLAN_REMINDER_TIME,

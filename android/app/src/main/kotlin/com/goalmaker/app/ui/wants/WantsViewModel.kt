@@ -163,6 +163,11 @@ class WantsViewModel(
         }
     }
 
+    /** Makes an open want wait until [to], a day after it cools now. */
+    fun prolong(want: WantItem, to: java.time.LocalDate) {
+        viewModelScope.launch(io) { wants.prolong(want.id, to) }
+    }
+
     fun reopen(want: WantItem) {
         viewModelScope.launch(io) { wants.reopen(want.id) }
     }

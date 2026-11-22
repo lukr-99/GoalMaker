@@ -37,6 +37,17 @@ public sealed class WantRulesContractTests
     }
 
     [Fact]
+    public void EveryProlongedWait()
+    {
+        foreach (var testCase in vectors.GetProperty("prolong").EnumerateArray())
+        {
+            var expect = testCase.GetProperty("expect");
+            int? actual = WantRules.ProlongDays(Want(testCase.GetProperty("want")), Day(testCase, "to")!.Value);
+            Assert.True((expect.ValueKind == JsonValueKind.Null ? null : expect.GetInt32()) == actual, Name(testCase));
+        }
+    }
+
+    [Fact]
     public void EveryState()
     {
         foreach (var testCase in vectors.GetProperty("state").EnumerateArray())

@@ -128,6 +128,7 @@ public sealed class ThemeApplier : IDisposable
             _ => !SystemParameters.ClientAreaAnimation,
         };
         resources["GM.ReduceMotion"] = MotionReduced;
+        resources["GM.HabitDetails"] = appearance.CompactHabits ? Visibility.Collapsed : Visibility.Visible;
         SetMotion(Tokens.Motion);
         SetHighlight(IsDark ? theme.Highlight.Dark : theme.Highlight.Light, palette);
         SetLogo(theme.Logo);

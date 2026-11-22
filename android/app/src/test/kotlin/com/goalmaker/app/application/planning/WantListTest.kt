@@ -46,6 +46,31 @@ class WantListTest {
     }
 
     @Test
+    fun `an open want can wait longer and keeps its added on day`() {
+        val shoes = wants.add(WantDraft(title = "Trail shoes", reason = "Holes", price = 450.0))!!
+        day = LocalDate.parse("2026-10-06")
+
+        assertTrue(wants.prolong(shoes.id, LocalDate.parse("2026-10-12")))
+        val longer = wants.get(shoes.id)!!
+
+        assertEquals(LocalDate.parse("2026-09-28"), longer.addedOn)
+        assertEquals(LocalDate.parse("2026-10-12"), longer.coolsUntil)
+        assertEquals(14, longer.cooldownDays)
+        assertEquals(WantState.COOLING, WantRules.state(longer, day))
+        assertFalse(wants.prolong(shoes.id, LocalDate.parse("2026-10-12")))
+        assertFalse(wants.prolong(shoes.id, LocalDate.parse("2030-01-01")))
+        assertTrue(wants.decide(shoes.id, WantRules.BOUGHT))
+        assertFalse(wants.prolong(shoes.id, LocalDate.parse("2026-11-01")))
+    }
+
+    @Test
+    fun `a need cannot wait longer`() {
+        val tyres = wants.add(WantDraft(title = "Tyres", reason = "", kind = WantRules.NEED))!!
+
+        assertFalse(wants.prolong(tyres.id, LocalDate.parse("2026-10-12")))
+    }
+
+    @Test
     fun `the owner's own thresholds give new wants their days and leave the old ones`() {
         val before = wants.add(WantDraft(title = "Lamp", reason = "Dark desk", price = 1500.0))!!
         assertTrue(wants.setCooldowns(WantCooldowns.DEFAULT.copy(smallUnder = 2000.0, smallDays = 3)))

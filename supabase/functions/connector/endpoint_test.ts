@@ -1017,6 +1017,16 @@ Deno.test({
         assertStringIncludes(edited.text, "@Home");
         assertEquals((await rowOf(cheapId)).cooldown_days, 7, "an edit never moves the cooldown");
 
+        const longer = await client.tool("update_want", { id: cheapId, extend_days: 7 });
+        assert(!longer.isError, longer.text);
+        assertEquals(await rowOf(cheapId), { ...(await rowOf(cheapId)), cooldown_days: 14, waits: 14 });
+        const later = await client.tool("update_want", { id: cheapId, wait_until: "2999-01-01" });
+        assert(later.isError, "more than 365 days from when it was added is refused");
+        const earlier = await client.tool("update_want", { id: cheapId, wait_until: "2000-01-01" });
+        assert(earlier.isError, "a day that is not later is refused");
+        const both = await client.tool("update_want", { id: cheapId, wait_until: "2999-01-01", extend_days: 2 });
+        assert(both.isError, "wait_until and extend_days together are refused");
+
         const checked = await client.tool("record_price_check", {
           id: cheapId,
           price: 390,

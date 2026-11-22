@@ -43,6 +43,17 @@ object WantRules {
 
     fun coolsUntil(addedOn: LocalDate, days: Int): LocalDate = addedOn.plusDays(days.toLong())
 
+    /**
+     * The days [want] waits in all once the owner moves the day it cools to [to], counted from the day
+     * it was added; null when that is not allowed: a need, a decided or deleted want, a day that is not
+     * later than today's, or more than [MAX_DAYS] days in all.
+     */
+    fun prolongDays(want: WantItem, to: LocalDate): Int? {
+        if (want.deleted || want.kind == NEED || want.decision != null || !to.isAfter(want.coolsUntil)) return null
+        val days = ChronoUnit.DAYS.between(want.addedOn, to)
+        return if (days > MAX_DAYS) null else days.toInt()
+    }
+
     /** Where [want] stands on the planning day [today]; null for a deleted want. */
     fun state(want: WantItem, today: LocalDate): WantState? = when {
         want.deleted -> null

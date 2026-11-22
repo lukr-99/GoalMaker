@@ -18,6 +18,8 @@ public sealed record SettingsDocument
 
     public bool CompletionSound { get; init; }
 
+    public bool CompactHabits { get; init; }
+
     public int DayStartHour { get; init; } = PlanningDay.DefaultStartHour;
 
     public TimeOnly QuietHoursStart { get; init; }

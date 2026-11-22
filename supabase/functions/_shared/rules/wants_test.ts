@@ -10,6 +10,7 @@ import {
   needLate,
   openNeeds,
   progress,
+  prolongDays,
   readyWants,
   type WantCooldowns,
   type WantItem,
@@ -56,6 +57,10 @@ Deno.test("wants.json: every cooldown", () => {
 
 Deno.test("wants.json: every day it cools", () => {
   for (const c of file.coolsUntil) assertEquals(coolsUntil(c.addedOn, c.days), c.expect, c.name);
+});
+
+Deno.test("wants.json: every prolonged wait", () => {
+  for (const c of file.prolong) assertEquals(prolongDays(want(c.want), c.to), c.expect, c.name);
 });
 
 Deno.test("wants.json: every state", () => {

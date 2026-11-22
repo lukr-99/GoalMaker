@@ -7,6 +7,7 @@ import {
   DEFAULT_COOLDOWNS,
   MAX_DAYS,
   NEED,
+  prolongDays,
   WANT,
   type WantCooldowns,
   type WantItem,
@@ -42,6 +43,8 @@ export interface WantFields {
   kind?: WantKind;
   /** For a need: the day it is needed by, as YYYY-MM-DD. */
   needBy?: string | null;
+  /** Makes an open want wait until this day, YYYY-MM-DD; it has to be later than the day it cools now. */
+  waitUntil?: string;
 }
 
 const MAX_TITLE = 200;
@@ -131,8 +134,24 @@ export class WantList {
       : required(fields.title, MAX_TITLE, `A ${want.kind} needs a title.`);
     const reason = fields.reason === undefined ? want.reason : reasonOf(fields.reason, want.kind);
     const needBy = fields.needBy === undefined ? want.needBy : needByOf(fields.needBy, want.kind);
+    let days = want.cooldownDays;
+    let until = want.coolsUntil;
+    if (fields.waitUntil !== undefined) {
+      if (!isDay(fields.waitUntil)) throw new PlannerError("wait_until is a day, YYYY-MM-DD.");
+      const prolonged = prolongDays(want, fields.waitUntil);
+      if (prolonged === null) {
+        throw new PlannerError(
+          want.kind === NEED || want.decision !== null
+            ? "Only a want that is still open can wait longer."
+            : `A want waits until a day later than ${want.coolsUntil}, and at most ${MAX_DAYS} days from ${want.addedOn}.`,
+        );
+      }
+      days = prolonged;
+      until = fields.waitUntil;
+    }
     await this.db`
       update public.wants set title = ${title}, reason = ${reason}, need_by = ${needBy},
+        cooldown_days = ${days}, cools_until = ${until},
         link = ${fields.link === undefined ? want.link : cleanLink(fields.link)},
         price = ${fields.price === undefined ? want.price : cleanPrice(fields.price)},
         currency = ${fields.currency === undefined ? want.currency : cleanCurrency(fields.currency, want.currency)},

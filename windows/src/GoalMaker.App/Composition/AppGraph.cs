@@ -537,8 +537,7 @@ public sealed class AppGraph : IDisposable
     }
 
     // A web page the owner asked for opens in their default browser.
-    private static void OpenInBrowser(string url) =>
-        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
+    private static void OpenInBrowser(string url) => GoalMaker.App.Shell.LinkOpener.Open(url);
 
     /// <summary>Reading the owner's data out to a file and back in (docs/backup.md).</summary>
     public BackupService Backup { get; private set; } = null!;

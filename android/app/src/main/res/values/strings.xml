@@ -236,6 +236,8 @@
     <string name="settings_reduce_motion_off">Off</string>
     <string name="settings_completion_sound">Completion sound</string>
     <string name="settings_completion_sound_hint">A soft tick when you finish something.</string>
+    <string name="settings_compact_habits">Compact habits</string>
+    <string name="settings_compact_habits_hint">Shows each habit as a short row, without its progress, the week\'s dots and the map.</string>
     <string name="settings_theme_selected">%1$s, selected</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>
@@ -1289,6 +1291,11 @@
     <string name="needs_placeholder">Something you need: Winter tyres 4000 Kč</string>
     <string name="wants_add">Add a want</string>
     <string name="wants_edit">Edit</string>
+    <string name="wants_wait_longer">Wait longer</string>
+    <string name="wants_wait_day">+1 day</string>
+    <string name="wants_wait_week">+1 week</string>
+    <string name="wants_wait_pick">Pick a day</string>
+    <string name="wants_wait_ok">Wait until</string>
     <string name="wants_ready">Ready</string>
     <string name="wants_cooling">Cooling</string>
     <string name="wants_decided">Decided</string>
