@@ -1,6 +1,7 @@
 import { z } from "../deps.ts";
 import { type Planner, PlannerError } from "../planner/planner.ts";
 import type { Want, WantFields } from "../planner/wantList.ts";
+import { addDays } from "../rules/day.ts";
 import { readWantLine } from "../rules/quickAdd.ts";
 import { MAX_DAYS, NEED, openNeeds, type WantState, wantState } from "../rules/wants.ts";
 import * as format from "./format.ts";
@@ -138,7 +139,8 @@ export const wantTools: Tool[] = [
     title: "Edit a want",
     description:
       "Changes a want's or need's title, reason, price, currency, link or area, or a need's need_by. What is " +
-      "left out stays as it was, and so does its cooldown. An empty link, area or need_by clears it, and so " +
+      "left out stays as it was, and so does its cooldown. To make an open want wait longer, give wait_until (a " +
+      "later day) or extend_days (days added to the day it cools now); ask the owner first. An empty link, area or need_by clears it, and so " +
       "does an empty reason on a need. A price found by a check goes through record_price_check instead.",
     input: {
       id: wantId,
@@ -149,11 +151,24 @@ export const wantTools: Tool[] = [
       currency: currency.optional(),
       link: z.string().optional(),
       area: z.string().optional(),
+      wait_until: z.string().optional().describe(
+        "Make an open want wait until this day, YYYY-MM-DD; it must be later than the day it cools now.",
+      ),
+      extend_days: z.number().int().min(1).max(MAX_DAYS).optional().describe(
+        "Make an open want wait this many days longer than it does now. Not together with wait_until.",
+      ),
     },
     readOnly: false,
     destructive: false,
     run: async (planner, args) => {
+      if (args.wait_until !== undefined && args.extend_days !== undefined) {
+        throw new PlannerError("Give wait_until or extend_days, not both.");
+      }
+      const waitUntil = args.extend_days === undefined
+        ? args.wait_until
+        : addDays((await planner.wants().want(args.id)).coolsUntil, args.extend_days);
       const fields: WantFields = {
+        waitUntil,
         title: args.title,
         reason: args.reason,
         price: args.price,

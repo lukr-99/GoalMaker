@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 'notify': the one notification a day for wants (M8-05): at the owner's time on a planning day, the wants that became ready since the day of the last notification's moment at or before 'since' (the device's last look), up to today; nothing before the time, nothing once shown, nothing when switched off (time null). Quiet hours don't move it: the owner picked the time, like the review reminders. 'notifyNext': the moment the alarm waits for, the time on the first day an undecided want cools that is still to come. 'notifyStale': a notification on screen goes once none of the wants it named is still waiting (decided, deleted or gone). 2026-09-28 is a Monday. Needs (supabase/migrations/0025_wants_needs.sql): a want's 'kind' is 'want' (the default when the field is left out) or 'need', something to buy rather than wait out. 'cooldown' with 'kind' need is 0 whatever the price. A need is ready the day it is added and stays out of 'ready' (the notification) and 'stats'. 'needs': the open needs of a list (not decided, not deleted, wants left out), by 'needBy' (none last), then 'addedOn', then title ignoring case. 'needLate': whether an open need's 'needBy' is before the planning day 'today'; a need without one, or a decided one, is never late.",
+  "description": "Wants (docs/wants.md, supabase/migrations/0016_wants.sql). A want waits out a cooldown before it is decided. 'defaults': the cooldown thresholds a new owner starts with, in their currency: under smallUnder takes smallDays, under mediumUnder takes mediumDays, anything more largeDays, and a want with no price or in another currency unpricedDays. 'cooldown': the days a new want gets from its price and currency, unless the owner picked a number of days (picked wins, 0 to 365). 'coolsUntil': the planning day it becomes ready, the day it was added plus its days. 'state': cooling before coolsUntil, ready on and after it, decided once bought or dropped whatever the day; the day is the planning day, so 'now' is local time and before 'dayStartHour' it is still the day before. A deleted want has no state (null). 'progress': how far the cooldown has run on a day, 0 to 1, for the ring; 1 once ready or decided, and 1 for a want with no days. 'ready': the wants a day's notification names: not decided, not deleted, and ready on a day after the last notification's day up to this one, oldest first then by title; with no earlier notification only those that became ready this day. 'stats': bought and dropped counts, and the money not spent, the total of dropped prices in the owner's currency (other currencies and wants without a price are left out); deleted wants never count. 'cooldownsId': the id of an owner's one row of thresholds, a UUID version 5 of 'want-cooldowns/<owner, lowercase>' in 'namespace' (the reviews' namespace), so two devices that make it offline make the same row. 'notify': the one notification a day for wants (M8-05): at the owner's time on a planning day, the wants that became ready since the day of the last notification's moment at or before 'since' (the device's last look), up to today; nothing before the time, nothing once shown, nothing when switched off (time null). Quiet hours don't move it: the owner picked the time, like the review reminders. 'notifyNext': the moment the alarm waits for, the time on the first day an undecided want cools that is still to come. 'notifyStale': a notification on screen goes once none of the wants it named is still waiting (decided, deleted or gone). 2026-09-28 is a Monday. Needs (supabase/migrations/0025_wants_needs.sql): a want's 'kind' is 'want' (the default when the field is left out) or 'need', something to buy rather than wait out. 'cooldown' with 'kind' need is 0 whatever the price. A need is ready the day it is added and stays out of 'ready' (the notification) and 'stats'. 'needs': the open needs of a list (not decided, not deleted, wants left out), by 'needBy' (none last), then 'addedOn', then title ignoring case. 'needLate': whether an open need's 'needBy' is before the planning day 'today'; a need without one, or a decided one, is never late. 'prolong': the days a want then waits, counted from its added on, when the owner moves the day it cools later; null when it may not (a need, a decided or deleted want, a day that is not later, more than 365 days).",
   "defaults": {
     "smallUnder": 1000,
     "smallDays": 7,
@@ -1029,6 +1029,101 @@
       },
       "today": "2026-10-21",
       "expect": false
+    }
+  ],
+  "prolong": [
+    {
+      "name": "a week later",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05"
+      },
+      "to": "2026-10-12",
+      "expect": 14
+    },
+    {
+      "name": "one day later",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05"
+      },
+      "to": "2026-10-06",
+      "expect": 8
+    },
+    {
+      "name": "the same day is not later",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05"
+      },
+      "to": "2026-10-05",
+      "expect": null
+    },
+    {
+      "name": "an earlier day is not later",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05"
+      },
+      "to": "2026-10-01",
+      "expect": null
+    },
+    {
+      "name": "a ready want can wait again",
+      "want": {
+        "addedOn": "2026-09-01",
+        "coolsUntil": "2026-09-08"
+      },
+      "to": "2026-09-30",
+      "expect": 29
+    },
+    {
+      "name": "exactly 365 days is the most",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05"
+      },
+      "to": "2027-09-28",
+      "expect": 365
+    },
+    {
+      "name": "366 days is too many",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05"
+      },
+      "to": "2027-09-29",
+      "expect": null
+    },
+    {
+      "name": "a need has no cooldown",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05",
+        "kind": "need"
+      },
+      "to": "2026-10-12",
+      "expect": null
+    },
+    {
+      "name": "a decided want stays decided",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05",
+        "decision": "bought"
+      },
+      "to": "2026-10-12",
+      "expect": null
+    },
+    {
+      "name": "a deleted want is gone",
+      "want": {
+        "addedOn": "2026-09-28",
+        "coolsUntil": "2026-10-05",
+        "deleted": true
+      },
+      "to": "2026-10-12",
+      "expect": null
     }
   ]
 }

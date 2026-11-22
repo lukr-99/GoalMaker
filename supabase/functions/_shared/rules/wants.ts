@@ -79,6 +79,17 @@ export function coolsUntil(addedOn: Day, days: number): Day {
   return addDays(addedOn, days);
 }
 
+/**
+ * The days a want waits in all once the owner moves the day it cools to `to`, counted from the day it was
+ * added; null when that is not allowed: a need, a decided or deleted want, a day that is not later than
+ * today's, or more than MAX_DAYS days in all.
+ */
+export function prolongDays(want: WantItem, to: Day): number | null {
+  if (want.deleted || want.kind === NEED || want.decision !== null || to <= want.coolsUntil) return null;
+  const days = daysBetween(want.addedOn, to);
+  return days > MAX_DAYS ? null : days;
+}
+
 /** Where a want stands on the planning day `today`; null for a deleted want. */
 export function wantState(want: WantItem, today: Day): WantState | null {
   if (want.deleted) return null;
