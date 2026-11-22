@@ -42,6 +42,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
                     putBoolean(PURE_BLACK, after.pureBlack)
                     putString(REDUCE_MOTION, after.reduceMotion.name)
                     putBoolean(COMPLETION_SOUND, after.completionSound)
+                    putBoolean(COMPACT_HABITS, after.compactHabits)
                 }
             }
         }
@@ -312,6 +313,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         pureBlack = preferences.getBoolean(PURE_BLACK, Appearance.DEFAULT.pureBlack),
         reduceMotion = enumOrDefault(preferences.getString(REDUCE_MOTION, null), Appearance.DEFAULT.reduceMotion),
         completionSound = preferences.getBoolean(COMPLETION_SOUND, Appearance.DEFAULT.completionSound),
+        compactHabits = preferences.getBoolean(COMPACT_HABITS, Appearance.DEFAULT.compactHabits),
     )
 
     private companion object {
@@ -320,6 +322,7 @@ class SharedPreferencesSettingsStore(private val preferences: SharedPreferences)
         const val PURE_BLACK = "pure_black"
         const val REDUCE_MOTION = "reduce_motion"
         const val COMPLETION_SOUND = "completion_sound"
+        const val COMPACT_HABITS = "compact_habits"
         const val DAY_START_HOUR = "day_start_hour"
         const val QUIET_START = "quiet_hours_start"
         const val QUIET_END = "quiet_hours_end"

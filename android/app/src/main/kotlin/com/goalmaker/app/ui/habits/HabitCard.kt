@@ -65,6 +65,8 @@ fun HabitCard(
     val more = stringResource(R.string.habits_more, habit.name)
     val skipLabel = stringResource(skipText(habit))
     val canSkip = !habit.archived && row.canCheckIn && !row.skipped && !row.failed
+    // The compact setting (Settings > Appearance) drops the progress, the week's dots, the goal and the map.
+    val compact = AppTheme.compactHabits
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -77,7 +79,7 @@ fun HabitCard(
                     CustomAccessibilityAction(more) { onMenu(); true },
                 )
             }
-            .padding(start = 12.dp, end = 0.dp, top = 10.dp, bottom = 10.dp),
+            .padding(start = 12.dp, end = 0.dp, top = if (compact) 4.dp else 10.dp, bottom = if (compact) 4.dp else 10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             EmojiTile(row)
@@ -108,14 +110,16 @@ fun HabitCard(
                         fontStyle = if (row.skipped) FontStyle.Italic else FontStyle.Normal,
                         color = if (row.isOver || row.failed) colors.danger else colors.textMuted,
                     )
-                    if (full) {
+                    if (full && !compact) {
                         row.goalTitle?.let { Text(stringResource(R.string.habits_serves, it), style = MaterialTheme.typography.bodySmall, color = colors.textMuted) }
                     }
                 }
-                if (row.canCheckIn && !row.skipped && !row.failed) HabitProgress(row)
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
-                    HabitWeekDots(row.dots, today, Modifier.weight(1f, fill = false))
-                    if (full && !habit.showOnToday && !habit.archived) NotOnToday(Modifier.padding(start = 8.dp))
+                if (!compact) {
+                    if (row.canCheckIn && !row.skipped && !row.failed) HabitProgress(row)
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                        HabitWeekDots(row.dots, today, Modifier.weight(1f, fill = false))
+                        if (full && !habit.showOnToday && !habit.archived) NotOnToday(Modifier.padding(start = 8.dp))
+                    }
                 }
             }
             if (!habit.archived) HabitCheckInButton(row, onCheckIn)
@@ -124,7 +128,7 @@ fun HabitCard(
             }
         }
         // The Habits screen keeps each habit's map of the months behind it (story 42).
-        if (full && row.heat.isNotEmpty()) HabitHeatmap(row, Modifier.padding(top = 10.dp, end = 12.dp))
+        if (full && !compact && row.heat.isNotEmpty()) HabitHeatmap(row, Modifier.padding(top = 10.dp, end = 12.dp))
     }
 }
 

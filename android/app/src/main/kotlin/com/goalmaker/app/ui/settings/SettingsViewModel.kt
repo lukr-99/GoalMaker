@@ -248,6 +248,11 @@ class SettingsViewModel(
         saved.mark(SettingKey.COMPLETION_SOUND)
     }
 
+    fun setCompactHabits(enabled: Boolean) {
+        settings.updateAppearance { it.copy(compactHabits = enabled) }
+        saved.mark(SettingKey.COMPACT_HABITS)
+    }
+
     /**
      * Pushes what is still local, empties this device's copy, then signs out (docs/sync.md). When
      * changes can't be pushed, stops and asks, unless [discardUnsynced].

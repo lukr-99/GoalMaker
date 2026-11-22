@@ -236,6 +236,8 @@
     <string name="settings_reduce_motion_off">Off</string>
     <string name="settings_completion_sound">Completion sound</string>
     <string name="settings_completion_sound_hint">A soft tick when you finish something.</string>
+    <string name="settings_compact_habits">Compact habits</string>
+    <string name="settings_compact_habits_hint">Shows each habit as a short row, without its progress, the week\'s dots and the map.</string>
     <string name="settings_theme_selected">%1$s, selected</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>

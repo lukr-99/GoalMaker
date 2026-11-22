@@ -496,6 +496,14 @@ private fun AppearanceRows(state: SettingsUiState, saved: Map<SettingKey, Int>, 
         onCheckedChange = viewModel::setCompletionSound,
         saved = saved[SettingKey.COMPLETION_SOUND],
     )
+    RowDivider()
+    ToggleRow(
+        title = stringResource(R.string.settings_compact_habits),
+        hint = stringResource(R.string.settings_compact_habits_hint),
+        checked = state.appearance.compactHabits,
+        onCheckedChange = viewModel::setCompactHabits,
+        saved = saved[SettingKey.COMPACT_HABITS],
+    )
 }
 
 @Composable

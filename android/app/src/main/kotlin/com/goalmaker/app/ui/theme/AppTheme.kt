@@ -16,6 +16,7 @@ internal val LocalMotionTokens = staticCompositionLocalOf<MotionTokens> { error(
 internal val LocalAreaColors = staticCompositionLocalOf<List<AreaColor>> { emptyList() }
 internal val LocalReduceMotion = staticCompositionLocalOf { false }
 internal val LocalCompletionSound = staticCompositionLocalOf { false }
+internal val LocalCompactHabits = staticCompositionLocalOf { false }
 internal val LocalThemeLogo = staticCompositionLocalOf<ThemeLogo?> { null }
 
 /**
@@ -61,6 +62,11 @@ object AppTheme {
     val completionSound: Boolean
         @Composable @ReadOnlyComposable
         get() = LocalCompletionSound.current
+
+    /** Whether habits show as short rows (Settings > Appearance). */
+    val compactHabits: Boolean
+        @Composable @ReadOnlyComposable
+        get() = LocalCompactHabits.current
 
     /** True when animations should become short fades (the system setting or the in-app switch). */
     val reduceMotion: Boolean

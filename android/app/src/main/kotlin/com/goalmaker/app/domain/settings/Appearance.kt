@@ -11,6 +11,8 @@ data class Appearance(
     val pureBlack: Boolean,
     val reduceMotion: ReduceMotion,
     val completionSound: Boolean,
+    /** Habits show as short rows, without the progress, the week's dots and the map. */
+    val compactHabits: Boolean = false,
 ) {
     companion object {
         /** A fresh install: the default theme, following the system's light or dark. */
@@ -20,6 +22,7 @@ data class Appearance(
             pureBlack = false,
             reduceMotion = ReduceMotion.SYSTEM,
             completionSound = false,
+            compactHabits = false,
         )
     }
 }

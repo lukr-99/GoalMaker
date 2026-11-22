@@ -85,6 +85,7 @@ fun GoalMakerTheme(tokens: DesignTokens, appearance: Appearance, logo: LogoMark?
         LocalAreaColors provides tokens.areaColors,
         LocalReduceMotion provides reduceMotion,
         LocalCompletionSound provides appearance.completionSound,
+        LocalCompactHabits provides appearance.compactHabits,
         LocalThemeLogo provides logo?.let { mark -> ThemeLogo(mark, theme.logo) },
     ) {
         MaterialExpressiveTheme(
