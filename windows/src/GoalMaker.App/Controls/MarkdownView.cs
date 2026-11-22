@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -26,7 +25,7 @@ public sealed class MarkdownView : StackPanel
 
     private static void Open(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
     {
-        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true })?.Dispose();
+        Shell.LinkOpener.Open(e.Uri.AbsoluteUri);
         e.Handled = true;
     }
 

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows.Navigation;
 using GoalMaker.App.ViewModels;
 
@@ -29,7 +28,7 @@ public partial class WantsPage
     {
         if (e.Uri.Scheme is "http" or "https")
         {
-            Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+            Shell.LinkOpener.Open(e.Uri.AbsoluteUri);
         }
 
         e.Handled = true;

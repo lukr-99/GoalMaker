@@ -1142,6 +1142,7 @@
     <sys:String x:Key="Wants.Price">PRICE</sys:String>
     <sys:String x:Key="Wants.Currency">CURRENCY</sys:String>
     <sys:String x:Key="Wants.Link">LINK</sys:String>
+    <sys:String x:Key="Link.OpenFailed">This link could not be opened: {0}</sys:String>
     <sys:String x:Key="Wants.CoolsFor">COOLS FOR</sys:String>
     <sys:String x:Key="Wants.Day">{0} day</sys:String>
     <sys:String x:Key="Wants.Days">{0} days</sys:String>
