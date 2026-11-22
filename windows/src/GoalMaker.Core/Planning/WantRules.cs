@@ -53,6 +53,22 @@ public static class WantRules
 
     public static DateOnly CoolsUntil(DateOnly addedOn, int days) => addedOn.AddDays(days);
 
+    /// <summary>
+    /// The days <paramref name="want"/> waits in all once the owner moves the day it cools to <paramref name="to"/>,
+    /// counted from the day it was added; null when that is not allowed: a need, a decided or deleted want, a
+    /// day that is not later than today's, or more than <see cref="MaxDays"/> days in all.
+    /// </summary>
+    public static int? ProlongDays(WantItem want, DateOnly to)
+    {
+        if (want.Deleted || want.Kind == Need || want.Decision is not null || to <= want.CoolsUntil)
+        {
+            return null;
+        }
+
+        var days = to.DayNumber - want.AddedOn.DayNumber;
+        return days > MaxDays ? null : days;
+    }
+
     /// <summary>Where a want stands on the planning day <paramref name="today"/>; null for a deleted want.</summary>
     public static WantState? State(WantItem want, DateOnly today) =>
         want.Deleted ? null

@@ -86,6 +86,31 @@ public sealed partial class WantRowViewModel : ObservableObject
     [RelayCommand]
     private void Reopen() => page.Reopen(this);
 
+    /// <summary>A want that is still open can wait longer; a need or a decided want cannot.</summary>
+    public bool CanProlong => Want.Kind != WantRules.Need && !IsDecided;
+
+    /// <summary>The first day a later wait can be picked.</summary>
+    public DateTime FirstProlongDay => Want.CoolsUntil.AddDays(1).ToDateTime(TimeOnly.MinValue);
+
+    /// <summary>Picking a day in the date box makes the want wait until then.</summary>
+    public DateTime? ProlongTo
+    {
+        get => null;
+        set
+        {
+            if (value is { } day)
+            {
+                page.Prolong(this, DateOnly.FromDateTime(day));
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void ProlongDay() => page.ProlongBy(this, 1);
+
+    [RelayCommand]
+    private void ProlongWeek() => page.ProlongBy(this, 7);
+
     [RelayCommand]
     private void Delete() => page.Delete(this);
 

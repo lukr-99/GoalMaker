@@ -330,6 +330,12 @@ public sealed partial class WantsViewModel : ObservableObject
 
     public void Reopen(WantRowViewModel row) => wants.Reopen(row.Want.Id);
 
+    /// <summary>Makes an open want wait until <paramref name="to"/>, a day later than it cools now.</summary>
+    public void Prolong(WantRowViewModel row, DateOnly to) => wants.Prolong(row.Want.Id, to);
+
+    /// <summary>Makes an open want wait <paramref name="days"/> days longer than it does now.</summary>
+    public void ProlongBy(WantRowViewModel row, int days) => wants.Prolong(row.Want.Id, row.Want.CoolsUntil.AddDays(days));
+
     public void Delete(WantRowViewModel row)
     {
         if (wants.Delete(row.Want.Id))

@@ -164,6 +164,17 @@ public sealed partial class WantList
         }
     });
 
+    /// <summary>
+    /// Makes an open want wait until <paramref name="to"/> (the owner's "wait longer"), keeping its added-on day;
+    /// false when <see cref="WantRules.ProlongDays"/> says no.
+    /// </summary>
+    public bool Prolong(string id, DateOnly to) =>
+        Get(id) is { } want && WantRules.ProlongDays(want, to) is { } days && Change(id, row =>
+        {
+            row["cooldown_days"] = days;
+            row["cools_until"] = to.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        });
+
     /// <summary>Marks a want bought or dropped, with an optional note.</summary>
     public bool Decide(string id, string decision, string note = "") =>
         decision is WantRules.Bought or WantRules.Dropped && Change(id, row =>

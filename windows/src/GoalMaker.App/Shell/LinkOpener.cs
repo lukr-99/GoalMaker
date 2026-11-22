@@ -1,8 +1,9 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using DotNetLib.Tray;
-using GoalMaker.App.Theming;
 
 namespace GoalMaker.App.Shell;
 
@@ -40,6 +41,6 @@ public static class LinkOpener
         var app = Application.Current;
         var title = app?.TryFindResource("App.Name") as string ?? "GoalMaker";
         var template = app?.TryFindResource("Link.OpenFailed") as string ?? "This link could not be opened: {0}";
-        TrayMessageWindow.Inform(title, string.Format(System.Globalization.CultureInfo.CurrentCulture, template, url), Theme.Attach);
+        TrayMessageWindow.Inform(title, string.Format(System.Globalization.CultureInfo.CurrentCulture, template, url), window => window.SetResourceReference(Control.FontFamilyProperty, "GM.BodyFont"));
     }
 }

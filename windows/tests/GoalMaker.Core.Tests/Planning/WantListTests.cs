@@ -35,6 +35,33 @@ public sealed class WantListTests : IDisposable
     }
 
     [Fact]
+    public void AnOpenWantCanWaitLongerAndKeepsItsAddedOnDay()
+    {
+        var shoes = wants.Add(new WantDraft("Trail shoes", "Holes", Price: 450))!;
+        day = new DateOnly(2026, 10, 6);
+
+        Assert.True(wants.Prolong(shoes.Id, new DateOnly(2026, 10, 12)));
+        var longer = wants.Get(shoes.Id)!;
+
+        Assert.Equal(new DateOnly(2026, 9, 28), longer.AddedOn);
+        Assert.Equal(new DateOnly(2026, 10, 12), longer.CoolsUntil);
+        Assert.Equal(14, longer.CooldownDays);
+        Assert.Equal(WantState.Cooling, WantRules.State(longer, day));
+        Assert.False(wants.Prolong(shoes.Id, new DateOnly(2026, 10, 12)));
+        Assert.False(wants.Prolong(shoes.Id, new DateOnly(2030, 1, 1)));
+        Assert.True(wants.Decide(shoes.Id, WantRules.Bought));
+        Assert.False(wants.Prolong(shoes.Id, new DateOnly(2026, 11, 1)));
+    }
+
+    [Fact]
+    public void ANeedCannotWaitLonger()
+    {
+        var tyres = wants.Add(new WantDraft("Tyres", string.Empty, Kind: WantRules.Need))!;
+
+        Assert.False(wants.Prolong(tyres.Id, new DateOnly(2026, 10, 12)));
+    }
+
+    [Fact]
     public void TheOwnersOwnThresholdsGiveNewWantsTheirDaysAndLeaveTheOldOnes()
     {
         var before = wants.Add(new WantDraft("Lamp", "Dark desk", Price: 1500))!;
