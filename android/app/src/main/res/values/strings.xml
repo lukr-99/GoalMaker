@@ -1289,6 +1289,11 @@
     <string name="needs_placeholder">Something you need: Winter tyres 4000 Kč</string>
     <string name="wants_add">Add a want</string>
     <string name="wants_edit">Edit</string>
+    <string name="wants_wait_longer">Wait longer</string>
+    <string name="wants_wait_day">+1 day</string>
+    <string name="wants_wait_week">+1 week</string>
+    <string name="wants_wait_pick">Pick a day</string>
+    <string name="wants_wait_ok">Wait until</string>
     <string name="wants_ready">Ready</string>
     <string name="wants_cooling">Cooling</string>
     <string name="wants_decided">Decided</string>

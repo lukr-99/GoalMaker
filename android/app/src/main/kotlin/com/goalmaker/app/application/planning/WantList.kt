@@ -106,6 +106,19 @@ class WantList(
         return change(id) { values -> values.putAll(values(clean)) }
     }
 
+    /**
+     * Makes an open want wait until [to] (the owner's "wait longer"), keeping its added-on day; false
+     * when [WantRules.prolongDays] says no.
+     */
+    fun prolong(id: String, to: LocalDate): Boolean {
+        val want = get(id) ?: return false
+        val days = WantRules.prolongDays(want, to) ?: return false
+        return change(id) { values ->
+            values["cooldown_days"] = JsonPrimitive(days)
+            values["cools_until"] = JsonPrimitive(to.toString())
+        }
+    }
+
     /** Marks a want bought or dropped, with an optional note. */
     fun decide(id: String, decision: String, note: String = ""): Boolean {
         if (decision != WantRules.BOUGHT && decision != WantRules.DROPPED) return false

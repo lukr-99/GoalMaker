@@ -29,6 +29,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -38,12 +40,14 @@ import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +81,9 @@ import com.goalmaker.app.application.planning.WantDraft
 import com.goalmaker.app.ui.chat.ChatViewModel
 import com.goalmaker.app.ui.composer.BottomComposer
 import com.goalmaker.app.ui.composer.LineOutcome
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlinx.coroutines.launch
 import com.goalmaker.app.application.planning.ProjectRules
 import com.goalmaker.app.application.planning.WantItem
@@ -311,6 +318,7 @@ fun WantsScreen(
                         viewModel.decide(row.want, decision, note)
                     },
                     onReopen = { viewModel.reopen(row.want) },
+                    onProlong = { viewModel.prolong(row.want, it) },
                     onEdit = { editing = row.want },
                     onDelete = {
                         open = null
@@ -352,6 +360,7 @@ private fun WantCard(
     onToggle: () -> Unit,
     onDecide: (String, String) -> Unit,
     onReopen: () -> Unit,
+    onProlong: (LocalDate) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -360,6 +369,7 @@ private fun WantCard(
     val colors = AppTheme.colors
     val locale = LocalConfiguration.current.locales[0]
     val uri = LocalUriHandler.current
+    var picking by rememberSaveable(want.id) { mutableStateOf(false) }
     var note by rememberSaveable(want.id) { mutableStateOf("") }
     val status = when (row.state) {
         WantState.READY -> stringResource(R.string.wants_status_ready)
@@ -368,6 +378,10 @@ private fun WantCard(
     }
     val price = want.price?.let { WantMoney.format(it, want.currency, locale) }
     val maker = if (want.madeBy == ProjectRules.CLAUDE) stringResource(R.string.wants_by_claude) else null
+
+    if (picking) {
+        WaitPicker(want, onPick = { picking = false; onProlong(it) }, onDismiss = { picking = false })
+    }
 
     Surface(
         shape = AppTheme.shapes.row,
@@ -440,6 +454,13 @@ private fun WantCard(
                             OutlinedButton(onClick = { onDecide(WantRules.DROPPED, note) }) { Text(stringResource(R.string.wants_drop)) }
                             Spacer(Modifier.weight(1f))
                             TextButton(onClick = onEdit) { Text(stringResource(R.string.wants_edit)) }
+                        }
+                        // Wait longer: a day or a week more than now, or until a day picked.
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.wants_wait_longer), style = MaterialTheme.typography.labelMedium, color = colors.textMuted)
+                            OutlinedButton(onClick = { onProlong(want.coolsUntil.plusDays(1)) }) { Text(stringResource(R.string.wants_wait_day)) }
+                            OutlinedButton(onClick = { onProlong(want.coolsUntil.plusDays(7)) }) { Text(stringResource(R.string.wants_wait_week)) }
+                            TextButton(onClick = { picking = true }) { Text(stringResource(R.string.wants_wait_pick)) }
                         }
                     }
                 }
@@ -538,5 +559,32 @@ private fun NeedCard(
                 }
             }
         }
+    }
+}
+
+/** The calendar for a want's new wait; only days after the day it cools now can be picked. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WaitPicker(want: WantItem, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
+    fun day(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
+    val first = want.coolsUntil.plusDays(1)
+    val last = want.addedOn.plusDays(WantRules.MAX_DAYS.toLong())
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = first.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long): Boolean = day(utcTimeMillis).let { !it.isBefore(first) && !it.isAfter(last) }
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(
+                onClick = { state.selectedDateMillis?.let { onPick(day(it)) } },
+                enabled = state.selectedDateMillis != null,
+            ) { Text(stringResource(R.string.wants_wait_ok)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.needs_cancel)) } },
+    ) {
+        DatePicker(state = state)
     }
 }
