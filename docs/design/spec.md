@@ -206,7 +206,7 @@ widgets.
 ## Settings
 
 Appearance holds: theme (four cards with a small preview), mode (system, light, dark), pure black,
-reduce motion (default: follow the system), completion sound.
+reduce motion (default: follow the system), completion sound, compact habits (a short row for each habit).
 
 Settings is one page that scrolls, with no Save button: every change saves at once. It is grouped
 into sections, each one card with a title, a one-line description, then rows split by thin

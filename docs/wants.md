@@ -41,6 +41,16 @@ apply:
 
 A want can have its own number of days. Changing the thresholds never moves wants already cooling.
 
+### Waiting longer
+
+The owner can make an open want wait longer (GM-101): from its detail on both apps, **+1 day**, **+1 week**
+or a day picked, and through the connector's `update_want` with `wait_until` or `extend_days`. It
+moves `cools_until` later and sets `cooldown_days` to the days from `added_on`, so the server's rule
+that a want cools exactly its days after it was added still holds and no migration is needed. A
+want can only wait longer, never less, up to 365 days in all, and only while it is open: a need or a
+decided want cannot. A ready want that waits longer is cooling again. Pinned by the `prolong` cases
+of `wants.json`.
+
 ## States
 
 - **Cooling:** before `cools_until`.

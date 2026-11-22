@@ -147,6 +147,10 @@ nothing; a limit's clean day is met.
   the skip, and while it is failed it is a danger outline with a cross whose click undoes the fail. Every check-in writes the day's one check-in, so three then five is eight. A streak
   reaching 7, 14, 30, 50, 100, 200, 365, 500 or 1000 periods gets confetti, skipped under reduce
   motion.
+- **Compact habits** (Settings, Appearance, on each device; off by default) shows each habit as a
+  short row: the emoji, the name with its streak, where it stands, the check-in button and the menu.
+  The pips or bar, the week's dots, the goal line and the heatmap are left out. It applies on the
+  Habits screen, Today and the calendar's day. It is a look only, not synced and not in the contracts.
 - **The menu** holds the rest: check in or add one, log an amount (with ready taps), skip today (this week, this
   month) or undo the skip, fail today (this week, this month) or undo the fail, clear today, pause or resume, edit, archive and delete; on Today also
   Open Habits. On the phone a long press on the card or its menu button opens it as a sheet, and a
