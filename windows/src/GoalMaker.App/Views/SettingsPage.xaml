@@ -331,6 +331,8 @@
                                Options="{Binding MotionOptions}" SelectedItem="{Binding SelectedMotion}" DisplayMemberPath="Text" />
             <tray:ToggleRow Label="{DynamicResource Settings.CompletionSound}" Hint="{DynamicResource Settings.CompletionSoundHint}"
                             IsOn="{Binding CompletionSound}" />
+            <tray:ToggleRow Label="{DynamicResource Settings.CompactHabits}" Hint="{DynamicResource Settings.CompactHabitsHint}"
+                            IsOn="{Binding CompactHabits}" />
         </tray:SettingsSection>
     </tray:SettingsPage>
     <!-- Settings > Planning: the same cards in full, with a way back (GM-106). -->

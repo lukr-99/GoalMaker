@@ -279,6 +279,8 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
+                        <!-- The compact setting (Settings, Appearance) leaves the goal, the progress and the week's dots out. -->
+                        <StackPanel Visibility="{DynamicResource GM.HabitDetails}">
                         <TextBlock Text="{Binding Serves}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" TextTrimming="CharacterEllipsis"
                                    Visibility="{Binding ShowsServes, Converter={StaticResource BoolToVisibility}}" />
                         <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding Pips}" ItemTemplate="{StaticResource HabitPip}" Focusable="False"
@@ -323,6 +325,7 @@
                                 <TextBlock Text="{DynamicResource Habits.NotOnToday}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
                             </Border>
                         </StackPanel>
+                        </StackPanel>
                     </StackPanel>
                     <Button Grid.Column="2"
                             VerticalAlignment="Center"
@@ -354,8 +357,10 @@
                         <ui:SymbolIcon Symbol="MoreVertical24" Foreground="{DynamicResource GM.TextMutedBrush}" />
                     </ui:Button>
                 </Grid>
-                <controls:HabitHeatmap Margin="46,10,8,0" HorizontalAlignment="Left" Heat="{Binding Heat}"
-                                       Visibility="{Binding IsFull, Converter={StaticResource BoolToVisibility}}" />
+                <StackPanel Visibility="{DynamicResource GM.HabitDetails}">
+                    <controls:HabitHeatmap Margin="46,10,8,0" HorizontalAlignment="Left" Heat="{Binding Heat}"
+                                           Visibility="{Binding IsFull, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
             </StackPanel>
         </Border>
     </DataTemplate>

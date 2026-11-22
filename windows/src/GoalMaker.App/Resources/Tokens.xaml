@@ -23,4 +23,7 @@
 
     <!-- Whether a list shows its big headline; a mini window, whose title already names the list, sets its own. -->
     <Visibility x:Key="GM.ListHeadlineVisibility">Visible</Visibility>
+
+    <!-- Whether a habit card shows its progress, the week's dots and the map; the compact setting turns it off (ThemeApplier). -->
+    <Visibility x:Key="GM.HabitDetails">Visible</Visibility>
 </ResourceDictionary>

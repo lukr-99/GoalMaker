@@ -53,6 +53,22 @@ public sealed class ThemeApplierTests
         Assert.Equal(onPrimary, ((SolidColorBrush)resources["AccentButtonForeground"]).Color);
     });
 
+    [Fact]
+    public void TheCompactHabitsSettingHidesTheHabitDetailsAndBackAgain() => OnStaThread(() =>
+    {
+        var resources = WpfUiResources();
+        using var theme = new ThemeApplier(ContractResources.Themes(), resources);
+
+        theme.Apply(Appearance.Default);
+        Assert.Equal(Visibility.Visible, resources["GM.HabitDetails"]);
+
+        theme.Apply(Appearance.Default with { CompactHabits = true });
+        Assert.Equal(Visibility.Collapsed, resources["GM.HabitDetails"]);
+
+        theme.Apply(Appearance.Default);
+        Assert.Equal(Visibility.Visible, resources["GM.HabitDetails"]);
+    });
+
     [Theory]
     [MemberData(nameof(Looks))]
     public void APrimaryButtonMadeUnderAnotherThemeTakesThisOnesPrimary(string id, ThemeMode mode, bool pureBlack) => OnStaThread(() =>
