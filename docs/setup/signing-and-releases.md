@@ -39,16 +39,22 @@ The script refuses to replace an existing key. From the next build on, both apps
 - The cloud backend step (section 4) needs two **environments** and one variable. Do them in this
   order, in GitHub → Settings → Environments:
   1. **New environment** `production`: tick **Required reviewers** and add yourself; under
-     **Deployment branches and tags** pick selected branches and tags and add `main` and `v*`. Add
+     **Deployment branches and tags** pick selected branches and tags, then add a **branch** rule
+     `main` and a **tag** rule `v*` (choose "Tag" in the rule's type; a branch rule named `v*` would
+     match nothing). Add
      the environment secrets `SUPABASE_ACCESS_TOKEN` (a personal access token from the Supabase
      dashboard, Account → Access Tokens) and `SUPABASE_DB_PASSWORD` (the database password from
      [cloud-supabase.md](cloud-supabase.md), step 1).
-  2. **New environment** `production-check`, with no reviewer, and the same two secrets. The last job
-     of a release (a read-only check) uses it, so it needs no second approval.
+  2. **New environment** `production-check`, with no reviewer, restricted to a **tag** rule `v*`, and
+     the same two secrets. The last job of a release (a read-only check) uses it, so it needs no
+     second approval.
   3. Settings → Secrets and variables → Actions → Variables → **New repository variable**
      `BACKEND_GATE_CONFIRMED` = `true`. GitHub creates a missing environment on first use with no
-     reviewer, and the workflow cannot read an environment's rules, so without this variable the
+     reviewer. The release first tries to read the `production` rules and needs a required reviewer
+     there; when the job's token may not read them, it relies on this variable, and without it the
      release stops in its first job. Set it only after step 1.
+  4. Delete any old repository-level `SUPABASE_ACCESS_TOKEN` or `SUPABASE_DB_PASSWORD` secret, so
+     only the environments hold them: `gh secret list` should show neither (none exist today).
   The workflow reads the two secrets only inside those environments, so a missing secret is found by
   the backend job right after you approve it, before anything changes. On a private repository,
   environments with reviewers need a paid plan.
@@ -72,8 +78,7 @@ elease-backend.ps1 -Check
    ```
 
    It is read only. It compares the cloud's migrations with `supabase/migrations`, finds Edge
-   Functions that changed since the last release tag and were deployed before their code last
-   changed, and exits 1 when anything is behind (2 when it could not tell).
+   Functions that are not deployed or were deployed before their code last changed, and exits 1 when anything is behind (2 when it could not tell).
    It needs the Supabase CLI logged in (`npx supabase login`). It works on the production project
    `wkjnauxqwlqhsqrqnkhg` only and refuses any other link. The release workflow does this step too
    (next point), so doing it by hand first is for a look, or when the workflow cannot do it.
@@ -87,10 +92,10 @@ elease-backend.ps1 -Check
    then the **backend** job waits for your approval in the `production`
    environment (GitHub → the run → **Review deployments** → tick `production` → Approve and deploy).
    After that it checks that its two secrets exist and runs `tools/release-backend.ps1 -Apply -Yes`:
-   `supabase db push` for the pending migrations, a deploy of each Edge Function whose code changed
-   since the last release tag and is not deployed yet (all of them when there is no tag), and the
-   check again. `-Apply` refuses to run unless HEAD is on `origin/main` or is a `v*` tag, unless
-   `-AllowBranch` is given. Only when that
+   `supabase db push` for the pending migrations, a deploy of each Edge Function that is behind or whose
+   code changed since the last release tag (all of them when there is no tag), and the check again.
+   `-Apply` refuses to run unless HEAD is on `origin/main`, unless `-AllowBranch` is given. The
+   `check` job also refuses a tag whose commit is not on `main`. Only when that
    passes does it build and test the signed APK and the installer and publish them with the signed
    manifest and `SHA256SUMS` as the GitHub Release (ADR 0010). A last job, **Check the cloud backend
    after the release**, runs `-Check` again, so a release whose cloud is behind ends red.

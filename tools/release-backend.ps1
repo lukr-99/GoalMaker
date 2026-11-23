@@ -12,13 +12,14 @@
           is, 2 when it refused or something failed.
   -Apply  Runs `supabase db push` for the pending migrations (after you confirm, or with -Yes),
           deploys the Edge Functions that are behind, then runs -Check again. Safe to run again: with
-          nothing behind it does nothing. It refuses to run unless HEAD is on origin/main or is a
-          release tag (v*), unless you pass -AllowBranch.
+          nothing behind it does little (see below). It refuses to run unless HEAD is on origin/main
+          (a release tag counts when its commit is), unless you pass -AllowBranch.
 
-  An Edge Function is a candidate when its code (or _shared, or deno.json) changed since the last
-  release tag (git diff), or every function when there is no tag. A candidate is behind when it is
-  not deployed, or was deployed before the last commit that changed it, so a run again deploys
-  nothing. A function that changed before the last tag and was never deployed is not found.
+  Every Edge Function is checked. One is behind when it is not deployed, or was deployed before the
+  last commit that changed it or _shared or deno.json. -Apply deploys the ones that are behind and
+  also the ones whose code changed since the last release tag by git diff (all of them when there
+  is no tag), because commit times alone can be wrong across merges. So a run right after a
+  release deploys those again, which does no harm.
 
   It only ever works on the production project from docs/setup/cloud-supabase.md. It needs the
   Supabase CLI logged in (`npx supabase login`) or SUPABASE_ACCESS_TOKEN set, and the database
@@ -171,28 +172,31 @@ function Get-BackendState {
         Stop-Refused "could not read the output of supabase functions list: $($_.Exception.Message)"
     }
 
-    # Candidates: changed since the last release tag, or everything when there is no tag.
+    # Every function is checked. The git diff since the last release tag only adds functions to the
+    # deploy set; it never limits the check.
     $baseline = Get-ReleaseBaseline
-    $candidates = @($names)
     $changedSince = @()
     if ($baseline) {
         $diff = Invoke-Git @('diff', '--name-only', $baseline, 'HEAD', '--', 'supabase/functions')
         if ($diff.Code -ne 0) { Stop-Refused "git diff against $baseline failed." }
         $changedSince = @(Get-FunctionsForPaths -Paths $diff.Lines -AllNames $names)
-        $candidates = $changedSince
+    } else {
+        $changedSince = @($names)
     }
 
     $sourceTimes = @{}
-    foreach ($name in $candidates) {
+    foreach ($name in $names) {
         $when = (Invoke-Git @('log', '-1', '--format=%cI', '--', "supabase/functions/$name", 'supabase/functions/_shared', 'supabase/functions/deno.json')).Lines |
             Select-Object -First 1
         if ($when) { $sourceTimes[$name] = $when }
     }
-    $behind = Get-FunctionsBehind -Names $candidates -Deployed $deployed -SourceTimes $sourceTimes
+    $behind = @(Get-FunctionsBehind -Names $names -Deployed $deployed -SourceTimes $sourceTimes)
+    $deploySet = Get-FunctionDeploySet -Behind $behind -ChangedSince $changedSince -Baseline $baseline
 
     return [pscustomobject]@{
         Migrations   = $migrations
         FunctionsBehind = @($behind)
+        DeploySet    = @($deploySet)
         ChangedSince = @($changedSince)
         Baseline     = $baseline
     }
@@ -255,9 +259,8 @@ if ($Check) {
 
 # -Apply
 $onMain = ((Invoke-Git @('merge-base', '--is-ancestor', 'HEAD', 'origin/main')).Code -eq 0)
-$exactTag = [bool]((Invoke-Git @('describe', '--exact-match', '--tags', '--match', 'v*', 'HEAD')).Lines | Select-Object -First 1)
-if (-not (Test-ApplyAllowed -HeadOnMain $onMain -ExactReleaseTag $exactTag -AllowBranch $AllowBranch.IsPresent)) {
-    Stop-Refused 'HEAD is not on origin/main and is not a release tag, so -Apply would deploy unreleased code. Check out main, or pass -AllowBranch on purpose.'
+if (-not (Test-ApplyAllowed -HeadOnMain $onMain -AllowBranch $AllowBranch.IsPresent)) {
+    Stop-Refused 'HEAD is not on origin/main (a release tag counts only when its commit is), so -Apply would deploy unreleased code. Check out main, or pass -AllowBranch on purpose.'
 }
 $state = Get-BackendState
 Show-BackendState $state | Out-Null
@@ -283,14 +286,14 @@ if ($state.Migrations.Pending.Count) {
     if ($push.Code -ne 0) { Stop-AfterFailure 'supabase db push failed. Nothing else was deployed.' }
 }
 
-foreach ($item in $state.FunctionsBehind) {
+foreach ($item in $state.DeploySet) {
     Write-Line "Deploying function $($item.Name) ..."
     $deploy = Invoke-Supabase @('functions', 'deploy', $item.Name, '--project-ref', $projectRef, '--use-api')
     Write-Line $deploy.Text
     if ($deploy.Code -ne 0) { Stop-AfterFailure "deploying function $($item.Name) failed." }
 }
 
-if (-not $state.Migrations.Pending.Count -and -not $state.FunctionsBehind.Count) {
+if (-not $state.Migrations.Pending.Count -and -not $state.DeploySet.Count) {
     Write-Line 'Nothing to apply.'
 }
 

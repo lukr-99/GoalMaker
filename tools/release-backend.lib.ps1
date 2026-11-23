@@ -17,11 +17,28 @@ function Test-LinkedProjectRef {
     return ($Linked.Trim() -ceq $Expected)
 }
 
-# -Apply changes production, so it only runs from code that is released or on its way: HEAD is on
-# origin/main, or it is exactly a release tag (v*). -AllowBranch overrides that on purpose.
+# -Apply changes production, so it only runs from code that is on origin/main. A release tag counts
+# only when its commit is on main too. -AllowBranch overrides that on purpose.
 function Test-ApplyAllowed {
-    param([bool]$HeadOnMain, [bool]$ExactReleaseTag, [bool]$AllowBranch)
-    return ($HeadOnMain -or $ExactReleaseTag -or $AllowBranch)
+    param([bool]$HeadOnMain, [bool]$AllowBranch)
+    return ($HeadOnMain -or $AllowBranch)
+}
+
+# The functions -Apply deploys: the ones that are behind, plus the ones the git diff since the last
+# release tag names. Returns objects with Name and Reason, sorted by name.
+function Get-FunctionDeploySet {
+    param(
+        [Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Behind,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$ChangedSince,
+        [string]$Baseline
+    )
+    $set = @{}
+    foreach ($item in $Behind) { $set[$item.Name] = $item.Reason }
+    $why = if ($Baseline) { "changed since $Baseline" } else { 'no release tag yet' }
+    foreach ($name in $ChangedSince) {
+        if (-not $set.ContainsKey($name)) { $set[$name] = $why }
+    }
+    return @($set.Keys | Sort-Object | ForEach-Object { [pscustomobject]@{ Name = $_; Reason = $set[$_] } })
 }
 
 # Version numbers of the migrations in the repository: 0029_focus_board.sql gives 0029.

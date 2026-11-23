@@ -96,6 +96,18 @@ try {
     $fine = Get-FunctionsBehind -Names @('connector') -Deployed $deployed -SourceTimes $sourceTimes
     Assert-Equal 'deployed after the change' 0 @($fine).Count
 
+    # Changed before the last release tag and never deployed: the check still flags it, and the
+    # tag diff (which does not name it) leaves it in the deploy set.
+    $oldDeployed = @{ 'assistant' = $after; 'connector' = $after }
+    $oldTimes = @{ 'assistant' = '2026-01-01T00:00:00+00:00'; 'connector' = '2026-01-01T00:00:00+00:00'; 'pc-sign-in' = '2026-01-01T00:00:00+00:00' }
+    $oldBehind = @(Get-FunctionsBehind -Names $names -Deployed $oldDeployed -SourceTimes $oldTimes)
+    Assert-Equal 'never deployed is flagged although unchanged since the tag' @('pc-sign-in') ($oldBehind | ForEach-Object { $_.Name })
+    $set = @(Get-FunctionDeploySet -Behind $oldBehind -ChangedSince @('connector') -Baseline 'v1.17.0')
+    Assert-Equal 'deploy set is behind plus tag diff' @('connector', 'pc-sign-in') ($set | ForEach-Object { $_.Name })
+    Assert-Equal 'deploy set keeps the behind reason' 'not deployed' (($set | Where-Object { $_.Name -eq 'pc-sign-in' }).Reason)
+    Assert-Equal 'deploy set names the tag' 'changed since v1.17.0' (($set | Where-Object { $_.Name -eq 'connector' }).Reason)
+    Assert-Equal 'deploy set without a tag takes the diff list' @('assistant') (@(Get-FunctionDeploySet -Behind @() -ChangedSince @('assistant') -Baseline '') | ForEach-Object { $_.Name })
+
     # The functions list.
     $functionList = "notice`n[{`"slug`":`"assistant`",`"updated_at`":1795389077416,`"version`":14},{`"slug`":`"connector`",`"updated_at`":1795389071946}]`ntrailing"
     $parsedFunctions = ConvertFrom-FunctionListOutput $functionList
@@ -123,10 +135,10 @@ try {
     Assert-Equal 'ref guard refuses another project' $false (Test-LinkedProjectRef -Linked 'abcdefghijklmnopqrst' -Expected (Get-ProductionProjectRef))
     Assert-Equal 'ref guard refuses empty' $false (Test-LinkedProjectRef -Linked '' -Expected (Get-ProductionProjectRef))
     Assert-Equal 'ref guard refuses a different case' $false (Test-LinkedProjectRef -Linked 'WKJNAUXQWLQHSQRQNKHG' -Expected (Get-ProductionProjectRef))
-    Assert-Equal 'apply on main' $true (Test-ApplyAllowed -HeadOnMain $true -ExactReleaseTag $false -AllowBranch $false)
-    Assert-Equal 'apply on a release tag' $true (Test-ApplyAllowed -HeadOnMain $false -ExactReleaseTag $true -AllowBranch $false)
-    Assert-Equal 'apply on a branch is refused' $false (Test-ApplyAllowed -HeadOnMain $false -ExactReleaseTag $false -AllowBranch $false)
-    Assert-Equal 'apply on a branch with -AllowBranch' $true (Test-ApplyAllowed -HeadOnMain $false -ExactReleaseTag $false -AllowBranch $true)
+    Assert-Equal 'apply on main' $true (Test-ApplyAllowed -HeadOnMain $true -AllowBranch $false)
+    Assert-Equal 'apply on a tag whose commit is not on main is refused' $false (Test-ApplyAllowed -HeadOnMain $false -AllowBranch $false)
+    Assert-Equal 'apply on a branch is refused' $false (Test-ApplyAllowed -HeadOnMain $false -AllowBranch $false)
+    Assert-Equal 'apply on a branch with -AllowBranch' $true (Test-ApplyAllowed -HeadOnMain $false -AllowBranch $true)
 
     # The guarded project is the one the docs name.
     $docs = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../docs/setup/cloud-supabase.md') -Raw
