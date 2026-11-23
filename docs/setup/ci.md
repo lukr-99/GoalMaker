@@ -77,6 +77,22 @@ crowd the 10 GB cache.
 `version.properties`, that every secret is set, runs the unit tests, verifies the APK signature and
 signs the manifest. A tag run can read caches saved on `main`, never a pull request's.
 
+## Local CI in Kiln
+
+`.kiln/workflows/` holds the Kiln versions of these workflows, for runs on the owner's PC
+(`kiln run .kiln/workflows/<file>.yml --repo .`). Kiln runs Linux containers only, with no Docker
+inside a job and no Windows runner yet, so:
+
+- `codeprint.yml` is the whole baseline: the Python checks and the PowerShell syntax check.
+- `ci.yml` holds the connector unit tests, the Android build, and `windows-core`, a Linux build of
+  the non-UI Windows projects. There is no "What changed" job: every job always runs.
+- `ci-github-only.yml` holds the jobs Kiln cannot run: the Supabase stack and isolated steps, and
+  the full Windows solution with its tests. It is opt-in and fails in Kiln today. GitHub Actions
+  runs these jobs and stays the check that gates a merge.
+
+When a workflow in `.github/workflows/` changes a command, a version or a filter, change the Kiln
+file in the same pull request.
+
 ## Timings
 
 Measured over the last 30 runs before the change (2026-10-01), median:

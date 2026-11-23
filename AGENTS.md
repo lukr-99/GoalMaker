@@ -42,6 +42,25 @@
   `windows/GoalMaker.local.props`, or private signing keys. The manifest public key in
   `contracts/keys/` is the only key material in the repository.
 
+## CI with Kiln
+
+Run CI in local Kiln first, as the workspace rules say (daemon at http://127.0.0.1:7878/):
+
+```powershell
+kiln run .kiln/workflows/codeprint.yml --repo .
+kiln run .kiln/workflows/ci.yml --repo .
+```
+
+- Kiln runs the baseline, the connector tests, the Android build and a Linux build of the Windows
+  core. Name the Kiln run ids in the hand-over.
+- GitHub only: the Supabase stack and isolated-step jobs (need Docker inside the job) and the full
+  Windows solution (needs a Windows runner and the private feed token). They are in
+  `.kiln/workflows/ci-github-only.yml`, which is opt-in and fails in Kiln today. Do not run it by
+  default. For these changes also run the local commands under Verification, and wait for GitHub CI.
+- GitHub Actions stays the gate for merging. Do not delete or disable `.github/workflows/`.
+- Keep `.kiln/workflows/` in step with `.github/workflows/`: same commands, versions and filters.
+- Details and the reasons: `CONTRIBUTING.md` ("CI with Kiln") and `docs/setup/ci.md`.
+
 ## Verification
 
 ```powershell
