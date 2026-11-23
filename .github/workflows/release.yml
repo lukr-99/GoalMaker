@@ -72,6 +72,20 @@ jobs:
             exit 1
           fi
 
+      # GitHub makes a missing "production" environment on first use with no reviewer, which would let
+      # the backend job change the cloud unasked. The workflow cannot read an environment's rules with
+      # its own token, so the owner confirms the gate with a repository variable once the environment
+      # has its reviewer (docs/setup/signing-and-releases.md, section 3). Fails closed.
+      - name: The backend approval gate is confirmed
+        if: ${{ !inputs.skip_backend }}
+        env:
+          GATE_CONFIRMED: ${{ vars.BACKEND_GATE_CONFIRMED }}
+        run: |
+          if [ "$GATE_CONFIRMED" != "true" ]; then
+            echo "::error::The backend approval gate is not confirmed. Create the 'production' environment with a required reviewer, then set the repository variable BACKEND_GATE_CONFIRMED to true (docs/setup/signing-and-releases.md, section 3)."
+            exit 1
+          fi
+
       - name: Every release secret is set
         env:
           GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
@@ -93,9 +107,10 @@ jobs:
             exit 1
           fi
 
-  # The cloud first. The "production" environment holds a required reviewer, so this job waits for
-  # the owner's approval. It stops the release when it fails or when the secrets are missing (the
-  # check job already refuses that), so the apps never go out ahead of their backend.
+  # The cloud first. The "production" environment holds a required reviewer (the check job refuses
+  # to start without the owner confirming that), so this job waits for the owner's approval. It
+  # stops the release when it fails or when its two secrets, which live in that environment and so
+  # can be read only here, are missing, so the apps never go out ahead of their backend.
   backend:
     name: Cloud backend (migrations and Edge Functions)
     needs: check
@@ -103,21 +118,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: production
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
-      # The whole history, so the script knows when each function's code last changed.
+      # The whole history, so the script knows what changed since the last release tag.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: supabase/setup-cli@v1
+      - name: The two backend secrets are set
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          missing=""
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secrets in the production environment:$missing"
+            exit 1
+          fi
+
+      # supabase/setup-cli v3.2.0
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
         with:
           version: 2.119.0
 
       - name: Apply the migrations, deploy the Edge Functions that are behind, check again
         shell: pwsh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: ./tools/release-backend.ps1 -Apply -Yes
 
   android:
@@ -282,18 +312,22 @@ jobs:
     if: ${{ !cancelled() && needs.publish.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    # Its own environment with no reviewer, holding its own copies of the two secrets, so they are
+    # scoped to environments and this read-only check runs without a second approval.
+    environment: production-check
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: supabase/setup-cli@v1
+      # supabase/setup-cli v3.2.0
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
         with:
           version: 2.119.0
 
       - name: The cloud matches the repository
         shell: pwsh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: ./tools/release-backend.ps1 -Check

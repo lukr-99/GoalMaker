@@ -11,6 +11,19 @@ function Get-ProductionProjectRef {
     return $script:ProductionProjectRef
 }
 
+# True when the folder is linked to exactly the production project.
+function Test-LinkedProjectRef {
+    param([AllowEmptyString()][string]$Linked, [Parameter(Mandatory)][string]$Expected)
+    return ($Linked.Trim() -ceq $Expected)
+}
+
+# -Apply changes production, so it only runs from code that is released or on its way: HEAD is on
+# origin/main, or it is exactly a release tag (v*). -AllowBranch overrides that on purpose.
+function Test-ApplyAllowed {
+    param([bool]$HeadOnMain, [bool]$ExactReleaseTag, [bool]$AllowBranch)
+    return ($HeadOnMain -or $ExactReleaseTag -or $AllowBranch)
+}
+
 # Version numbers of the migrations in the repository: 0029_focus_board.sql gives 0029.
 function Get-LocalMigrationVersions {
     param([Parameter(Mandatory)][string]$Directory)

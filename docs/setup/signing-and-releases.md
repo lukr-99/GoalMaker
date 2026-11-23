@@ -36,17 +36,24 @@ The script refuses to replace an existing key. From the next build on, both apps
 - `DOTNETLIB_PACKAGES_TOKEN`: a classic PAT with only `read:packages`, so CI and the release
   workflow can restore `DotNetLib.Tray` from the private `dotnetlib` feed
   ([local development](local-development.md#windows)). Set it with `gh secret set DOTNETLIB_PACKAGES_TOKEN`.
-- The cloud backend step (section 4) needs two more repository secrets: `SUPABASE_ACCESS_TOKEN` (a
-  personal access token from the Supabase dashboard, Account → Access Tokens) and
-  `SUPABASE_DB_PASSWORD` (the database password from [cloud-supabase.md](cloud-supabase.md), step 1).
-  Set them with `gh secret set SUPABASE_ACCESS_TOKEN` and `gh secret set SUPABASE_DB_PASSWORD`, or in
-  GitHub → Settings → Secrets and variables → Actions → New repository secret.
-- A GitHub **environment** named `production` with yourself as a required reviewer: GitHub →
-  Settings → Environments → New environment → `production` → tick **Required reviewers**, add
-  yourself, save. The release's backend job waits there until you approve it. (On a private
-  repository, environments with reviewers need a paid plan.)
-- `gh secret list` should show eight `GOALMAKER_*` secrets, `DOTNETLIB_PACKAGES_TOKEN`,
-  `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`.
+- The cloud backend step (section 4) needs two **environments** and one variable. Do them in this
+  order, in GitHub → Settings → Environments:
+  1. **New environment** `production`: tick **Required reviewers** and add yourself; under
+     **Deployment branches and tags** pick selected branches and tags and add `main` and `v*`. Add
+     the environment secrets `SUPABASE_ACCESS_TOKEN` (a personal access token from the Supabase
+     dashboard, Account → Access Tokens) and `SUPABASE_DB_PASSWORD` (the database password from
+     [cloud-supabase.md](cloud-supabase.md), step 1).
+  2. **New environment** `production-check`, with no reviewer, and the same two secrets. The last job
+     of a release (a read-only check) uses it, so it needs no second approval.
+  3. Settings → Secrets and variables → Actions → Variables → **New repository variable**
+     `BACKEND_GATE_CONFIRMED` = `true`. GitHub creates a missing environment on first use with no
+     reviewer, and the workflow cannot read an environment's rules, so without this variable the
+     release stops in its first job. Set it only after step 1.
+  The workflow reads the two secrets only inside those environments, so a missing secret is found by
+  the backend job right after you approve it, before anything changes. On a private repository,
+  environments with reviewers need a paid plan.
+- `gh secret list` should show eight `GOALMAKER_*` secrets and `DOTNETLIB_PACKAGES_TOKEN`; the two
+  Supabase secrets are environment secrets and show under `gh secret list --env production`.
 - In the GitHub repository settings, protect `main` and require the CI checks: "Supabase migrations,
   row security and the connector", "Android build, unit tests and lint", "Windows format, build and
   tests" and "validate". Only these four: the helper jobs are explained in [ci.md](ci.md). Branch
@@ -60,11 +67,13 @@ The script refuses to replace an existing key. From the next build on, both apps
    an older backend (GM-110: 1.17.0 went out without migrations 0029 and 0030):
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File toolselease-backend.ps1 -Check
+   powershell -ExecutionPolicy Bypass -File tools
+elease-backend.ps1 -Check
    ```
 
    It is read only. It compares the cloud's migrations with `supabase/migrations`, finds Edge
-   Functions that were deployed before their code last changed, and exits 1 when anything is behind.
+   Functions that changed since the last release tag and were deployed before their code last
+   changed, and exits 1 when anything is behind (2 when it could not tell).
    It needs the Supabase CLI logged in (`npx supabase login`). It works on the production project
    `wkjnauxqwlqhsqrqnkhg` only and refuses any other link. The release workflow does this step too
    (next point), so doing it by hand first is for a look, or when the workflow cannot do it.
@@ -74,11 +83,14 @@ The script refuses to replace an existing key. From the next build on, both apps
      branch): GitHub → Actions → **Release** → Run workflow, on `main`. The run refuses any other
      branch and a version that already has a tag, and makes the `vX.Y.Z` tag itself on the commit it
      built when it publishes. A failed run leaves no tag, so fix `main` and run it again.
-4. The **Release** workflow checks the tag and the secrets (including `SUPABASE_ACCESS_TOKEN` and
-   `SUPABASE_DB_PASSWORD`), then the **backend** job waits for your approval in the `production`
+4. The **Release** workflow checks the tag, the secrets and that `BACKEND_GATE_CONFIRMED` is set,
+   then the **backend** job waits for your approval in the `production`
    environment (GitHub → the run → **Review deployments** → tick `production` → Approve and deploy).
-   After that it runs `tools/release-backend.ps1 -Apply -Yes`: `supabase db push` for the pending
-   migrations, a deploy of each Edge Function that is behind, and the check again. Only when that
+   After that it checks that its two secrets exist and runs `tools/release-backend.ps1 -Apply -Yes`:
+   `supabase db push` for the pending migrations, a deploy of each Edge Function whose code changed
+   since the last release tag and is not deployed yet (all of them when there is no tag), and the
+   check again. `-Apply` refuses to run unless HEAD is on `origin/main` or is a `v*` tag, unless
+   `-AllowBranch` is given. Only when that
    passes does it build and test the signed APK and the installer and publish them with the signed
    manifest and `SHA256SUMS` as the GitHub Release (ADR 0010). A last job, **Check the cloud backend
    after the release**, runs `-Check` again, so a release whose cloud is behind ends red.
@@ -93,7 +105,8 @@ The script refuses to replace an existing key. From the next build on, both apps
    and the last job fails, so the run cannot look complete. Run `-Apply` by hand afterwards:
 
    ```powershell
-   powershell -ExecutionPolicy Bypass -File toolselease-backend.ps1 -Apply
+   powershell -ExecutionPolicy Bypass -File tools
+elease-backend.ps1 -Apply
    ```
 
    It lists the pending migrations and asks you to type `yes` before it touches the cloud (`-Yes`

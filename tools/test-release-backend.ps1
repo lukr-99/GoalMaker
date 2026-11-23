@@ -109,6 +109,25 @@ try {
     Assert-Equal 'jwt hidden' 'key eyJ***' (Hide-Secrets 'key eyJhbGciOiJIUzI1NiJ9.abc_def.ghi-jkl')
     Assert-Equal 'plain text kept' 'Migrations are up to date.' (Hide-Secrets 'Migrations are up to date.')
 
+    # Real output of the installed CLI, read only, from the production project (tools/fixtures).
+    $fixtures = Join-Path $PSScriptRoot 'fixtures/release-backend'
+    $realRows = ConvertFrom-MigrationListOutput (Get-Content -LiteralPath (Join-Path $fixtures 'migration-list.txt') -Raw)
+    Assert-Equal 'real migration list has rows' $true ($realRows.Count -ge 30)
+    $realCompare = Compare-Migrations -Rows $realRows -RepositoryVersions @($realRows | ForEach-Object { $_.Local })
+    Assert-Equal 'real migration list matches itself' $true $realCompare.UpToDate
+    $realFunctions = ConvertFrom-FunctionListOutput (Get-Content -LiteralPath (Join-Path $fixtures 'functions-list.txt') -Raw)
+    Assert-Equal 'real function list names' @('assistant', 'connector', 'pc-sign-in') ($realFunctions.Keys | Sort-Object)
+
+    # The project guard and the branch guard.
+    Assert-Equal 'ref guard accepts production' $true (Test-LinkedProjectRef -Linked "wkjnauxqwlqhsqrqnkhg`n" -Expected (Get-ProductionProjectRef))
+    Assert-Equal 'ref guard refuses another project' $false (Test-LinkedProjectRef -Linked 'abcdefghijklmnopqrst' -Expected (Get-ProductionProjectRef))
+    Assert-Equal 'ref guard refuses empty' $false (Test-LinkedProjectRef -Linked '' -Expected (Get-ProductionProjectRef))
+    Assert-Equal 'ref guard refuses a different case' $false (Test-LinkedProjectRef -Linked 'WKJNAUXQWLQHSQRQNKHG' -Expected (Get-ProductionProjectRef))
+    Assert-Equal 'apply on main' $true (Test-ApplyAllowed -HeadOnMain $true -ExactReleaseTag $false -AllowBranch $false)
+    Assert-Equal 'apply on a release tag' $true (Test-ApplyAllowed -HeadOnMain $false -ExactReleaseTag $true -AllowBranch $false)
+    Assert-Equal 'apply on a branch is refused' $false (Test-ApplyAllowed -HeadOnMain $false -ExactReleaseTag $false -AllowBranch $false)
+    Assert-Equal 'apply on a branch with -AllowBranch' $true (Test-ApplyAllowed -HeadOnMain $false -ExactReleaseTag $false -AllowBranch $true)
+
     # The guarded project is the one the docs name.
     $docs = Get-Content -LiteralPath (Join-Path $PSScriptRoot '../docs/setup/cloud-supabase.md') -Raw
     Assert-Equal 'production ref is in cloud-supabase.md' $true $docs.Contains((Get-ProductionProjectRef))

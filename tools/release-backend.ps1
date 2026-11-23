@@ -12,7 +12,13 @@
           is, 2 when it refused or something failed.
   -Apply  Runs `supabase db push` for the pending migrations (after you confirm, or with -Yes),
           deploys the Edge Functions that are behind, then runs -Check again. Safe to run again: with
-          nothing behind it does nothing.
+          nothing behind it does nothing. It refuses to run unless HEAD is on origin/main or is a
+          release tag (v*), unless you pass -AllowBranch.
+
+  An Edge Function is a candidate when its code (or _shared, or deno.json) changed since the last
+  release tag (git diff), or every function when there is no tag. A candidate is behind when it is
+  not deployed, or was deployed before the last commit that changed it, so a run again deploys
+  nothing. A function that changed before the last tag and was never deployed is not found.
 
   It only ever works on the production project from docs/setup/cloud-supabase.md. It needs the
   Supabase CLI logged in (`npx supabase login`) or SUPABASE_ACCESS_TOKEN set, and the database
@@ -32,7 +38,9 @@ param(
     [switch]$Yes,
     # Name the release tag (or any git ref) to list changed functions against. Default: the newest
     # v* tag that is not the commit being released.
-    [string]$Since
+    [string]$Since,
+    # Let -Apply run from a commit that is not on origin/main and not a release tag.
+    [switch]$AllowBranch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,6 +48,12 @@ $ErrorActionPreference = 'Stop'
 
 $repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $projectRef = Get-ProductionProjectRef
+
+# Any error the script did not expect is a failure (exit 2), never "behind" (exit 1).
+trap {
+    Write-Host (Hide-Secrets "Failed: $($_.Exception.Message)") -ForegroundColor Red
+    exit 2
+}
 
 function Write-Line {
     param([string]$Text, [string]$Color)
@@ -50,6 +64,15 @@ function Write-Line {
 function Stop-Refused {
     param([string]$Message)
     Write-Line "Refused: $Message" 'Red'
+    exit 2
+}
+
+# After a failed step: say what failed, show where the cloud stands now, and exit 2.
+function Stop-AfterFailure {
+    param([string]$Message)
+    Write-Line "FAILED: $Message" 'Red'
+    Write-Line 'The cloud now:'
+    Show-BackendState (Get-BackendState) | Out-Null
     exit 2
 }
 
@@ -97,7 +120,7 @@ function Confirm-ProductionLink {
         }
     }
     $linked = (Get-Content -LiteralPath $refFile -Raw).Trim()
-    if ($linked -ne $projectRef) {
+    if (-not (Test-LinkedProjectRef -Linked $linked -Expected $projectRef)) {
         Stop-Refused "this folder is linked to project '$linked', not the production project '$projectRef'."
     }
 }
@@ -125,7 +148,12 @@ function Get-BackendState {
         Write-Line $list.Text
         Stop-Refused 'could not read the cloud migrations (supabase migration list). Check the login and SUPABASE_DB_PASSWORD.'
     }
-    $rows = ConvertFrom-MigrationListOutput $list.Text
+    try {
+        $rows = ConvertFrom-MigrationListOutput $list.Text
+    } catch {
+        Write-Line $list.Text
+        Stop-Refused "could not read the output of supabase migration list: $($_.Exception.Message)"
+    }
     $repositoryVersions = Get-LocalMigrationVersions (Join-Path $repositoryRoot 'supabase/migrations')
     $migrations = Compare-Migrations -Rows $rows -RepositoryVersions $repositoryVersions
 
@@ -136,22 +164,31 @@ function Get-BackendState {
         Write-Line $functionList.Text
         Stop-Refused 'could not read the deployed Edge Functions (supabase functions list).'
     }
-    $deployed = ConvertFrom-FunctionListOutput $functionList.Text
+    try {
+        $deployed = ConvertFrom-FunctionListOutput $functionList.Text
+    } catch {
+        Write-Line $functionList.Text
+        Stop-Refused "could not read the output of supabase functions list: $($_.Exception.Message)"
+    }
+
+    # Candidates: changed since the last release tag, or everything when there is no tag.
+    $baseline = Get-ReleaseBaseline
+    $candidates = @($names)
+    $changedSince = @()
+    if ($baseline) {
+        $diff = Invoke-Git @('diff', '--name-only', $baseline, 'HEAD', '--', 'supabase/functions')
+        if ($diff.Code -ne 0) { Stop-Refused "git diff against $baseline failed." }
+        $changedSince = @(Get-FunctionsForPaths -Paths $diff.Lines -AllNames $names)
+        $candidates = $changedSince
+    }
 
     $sourceTimes = @{}
-    foreach ($name in $names) {
+    foreach ($name in $candidates) {
         $when = (Invoke-Git @('log', '-1', '--format=%cI', '--', "supabase/functions/$name", 'supabase/functions/_shared', 'supabase/functions/deno.json')).Lines |
             Select-Object -First 1
         if ($when) { $sourceTimes[$name] = $when }
     }
-    $behind = Get-FunctionsBehind -Names $names -Deployed $deployed -SourceTimes $sourceTimes
-
-    $baseline = Get-ReleaseBaseline
-    $changedSince = @()
-    if ($baseline) {
-        $paths = (Invoke-Git @('diff', '--name-only', $baseline, 'HEAD', '--', 'supabase/functions')).Lines
-        $changedSince = Get-FunctionsForPaths -Paths $paths -AllNames $names
-    }
+    $behind = Get-FunctionsBehind -Names $candidates -Deployed $deployed -SourceTimes $sourceTimes
 
     return [pscustomobject]@{
         Migrations   = $migrations
@@ -217,6 +254,11 @@ if ($Check) {
 }
 
 # -Apply
+$onMain = ((Invoke-Git @('merge-base', '--is-ancestor', 'HEAD', 'origin/main')).Code -eq 0)
+$exactTag = [bool]((Invoke-Git @('describe', '--exact-match', '--tags', '--match', 'v*', 'HEAD')).Lines | Select-Object -First 1)
+if (-not (Test-ApplyAllowed -HeadOnMain $onMain -ExactReleaseTag $exactTag -AllowBranch $AllowBranch.IsPresent)) {
+    Stop-Refused 'HEAD is not on origin/main and is not a release tag, so -Apply would deploy unreleased code. Check out main, or pass -AllowBranch on purpose.'
+}
 $state = Get-BackendState
 Show-BackendState $state | Out-Null
 if ($state.Migrations.RemoteOnly.Count) {
@@ -238,14 +280,14 @@ if ($state.Migrations.Pending.Count) {
     }
     $push = Invoke-Supabase @('db', 'push', '--linked', '--yes')
     Write-Line $push.Text
-    if ($push.Code -ne 0) { Stop-Refused 'supabase db push failed. Nothing else was deployed.' }
+    if ($push.Code -ne 0) { Stop-AfterFailure 'supabase db push failed. Nothing else was deployed.' }
 }
 
 foreach ($item in $state.FunctionsBehind) {
     Write-Line "Deploying function $($item.Name) ..."
     $deploy = Invoke-Supabase @('functions', 'deploy', $item.Name, '--project-ref', $projectRef, '--use-api')
     Write-Line $deploy.Text
-    if ($deploy.Code -ne 0) { Stop-Refused "deploying function $($item.Name) failed." }
+    if ($deploy.Code -ne 0) { Stop-AfterFailure "deploying function $($item.Name) failed." }
 }
 
 if (-not $state.Migrations.Pending.Count -and -not $state.FunctionsBehind.Count) {
