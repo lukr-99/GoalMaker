@@ -1,0 +1,100 @@
+# The jobs of .github/workflows/ci.yml that Kiln cannot run yet. GitHub Actions runs them on every
+# pull request, so they are covered there. This file is OPT-IN: do not run it as part of the normal
+# local CI, its jobs fail today for the reasons below. It is kept so the steps are ready when Kiln
+# gets the missing feature, and then they move into ci.yml.
+#
+#   supabase-stack, supabase-steps  need Docker inside the job (the Supabase CLI starts containers).
+#                                   Kiln has no Docker in jobs yet: Kiln plan R1 (KLN-44).
+#                                   Even then they must not clash with the owner's local stack on
+#                                   ports 553xx (project id "goalmaker").
+#   windows-full                    needs a Windows runner (WPF tests, smoke test) and the private
+#                                   dotnetlib NuGet feed token: Kiln plan R2 (KLN-45).
+#
+# Run it only to see the failure: kiln run .kiln/workflows/ci-github-only.yml --repo .
+name: CI (GitHub only)
+
+on:
+  workflow_dispatch:
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  supabase-stack:
+    name: Supabase stack, pgTAP, the connector and quick chat (needs Docker in jobs)
+    runs-on: ubuntu-latest
+    container: node:22
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the pinned Supabase CLI and Deno
+        run: npm ci
+
+      - name: Start the local stack
+        run: npx supabase start -x studio,imgproxy,vector,logflare,supavisor,realtime,storage-api,postgres-meta,mailpit
+
+      - name: Full chain from 0001 and pgTAP
+        run: python3 tools/supabase_migrations.py test --part chain --skip-reset
+
+      - name: The synced-tables contract matches the replica and the server
+        run: python3 tools/check_synced_tables.py --server
+
+      - name: Connector, quick chat and PC sign-in end to end
+        working-directory: supabase/functions
+        run: |
+          npx supabase functions serve > /tmp/functions.log 2>&1 &
+          sleep 20
+          GOALMAKER_CONNECTOR_TEST=1 npx deno test --allow-read --allow-env --allow-net connector/endpoint_test.ts
+          GOALMAKER_ASSISTANT_TEST=1 npx deno test --allow-read --allow-env --allow-net assistant/endpoint_test.ts
+          GOALMAKER_PC_SIGN_IN_TEST=1 npx deno test --allow-read --allow-env --allow-net pc-sign-in/endpoint_test.ts
+
+  supabase-steps:
+    name: Supabase isolated migration steps ${{ matrix.shard }} (needs Docker in jobs)
+    runs-on: ubuntu-latest
+    container: node:22
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install the pinned Supabase CLI
+        run: npm ci
+
+      - name: Start Postgres only
+        run: npx supabase db start
+
+      - name: Isolated N-1 -> N steps with their fixtures
+        run: python3 tools/supabase_migrations.py test --part steps --shard "${{ matrix.shard }}/4"
+
+  windows-full:
+    name: Windows format, build and tests (needs a Windows runner and the private feed)
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/dotnet/sdk:10.0
+    timeout-minutes: 25
+    env:
+      EnableWindowsTargeting: "true"
+      # kiln secret set DOTNETLIB_PACKAGES_TOKEN (a read:packages token). Never put a value here.
+      NuGetPackageSourceCredentials_dotnetlib: Username=lukr-99;Password=${{ secrets.DOTNETLIB_PACKAGES_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Restore
+        working-directory: windows
+        run: dotnet restore GoalMaker.slnx
+
+      - name: Check formatting
+        working-directory: windows
+        run: dotnet format whitespace GoalMaker.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        working-directory: windows
+        run: dotnet build GoalMaker.slnx -c Release --no-restore
+
+      - name: Test
+        working-directory: windows
+        run: dotnet test --solution GoalMaker.slnx -c Release --no-build
