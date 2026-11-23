@@ -324,3 +324,13 @@ failed run, and each report made a fresh unread problem, so the dot came back th
 was opened and closed. The same kind with the same detail now keeps the problem as it was
 (`contracts/vectors/problems.json`), and a problem that shows up while Settings is on screen is read
 at once (`ProblemsViewModel.Open`).
+
+## A release does not update the cloud backend
+
+2026-11-23, GM-110 and GM-112. The Release workflow built and published the APK, the installer and the
+manifest, and nothing else. It never ran `supabase db push` or `supabase functions deploy`, so 1.17.0
+went out while the cloud lacked migrations 0029 and 0030 and ran older connector, assistant and
+pc-sign-in functions. The new apps then talked to an old backend. The backend now has its own step:
+`tools/release-backend.ps1 -Check` says what is behind, `-Apply` brings the cloud up to date, and the
+release workflow runs it in a `backend` job (behind the `production` environment's approval) before
+the apps are built, with a check after publishing. See docs/setup/signing-and-releases.md, section 4.

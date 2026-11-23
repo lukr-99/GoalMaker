@@ -55,3 +55,7 @@ jobs:
       - name: Check PowerShell syntax
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1
+
+      - name: The release backend script's checks pass
+        shell: pwsh
+        run: ./tools/test-release-backend.ps1

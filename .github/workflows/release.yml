@@ -5,10 +5,21 @@ name: Release
 # GitHub Release, which is the update channel (ADR 0010). A run started by hand makes the tag itself
 # on the commit it built. Setup: docs/setup/signing-and-releases.md.
 
+# The cloud backend comes first: the "backend" job applies the migrations and deploys the Edge
+# Functions (tools/release-backend.ps1) and waits for the owner's approval in the "production"
+# environment. The apps are built after it, so a client never ships ahead of its backend. Migrations
+# only add things (older apps keep working against a newer schema), so a backend ahead of the apps
+# for a while is safe, and the other way round is not. A final job checks the cloud again.
+
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      skip_backend:
+        description: "Release the apps without deploying the cloud backend (the release notes say so, and the last job fails)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,8 +37,16 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       version-code: ${{ steps.version.outputs.code }}
       tag: ${{ steps.version.outputs.tag }}
+    permissions:
+      contents: read
+      # Reading an environment's protection rules may need more than this token has; the gate step
+      # below falls back to a repository variable when the call is refused.
+      actions: read
     steps:
+      # The whole history, so a tag can be checked against main.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # A tag push must match version.properties. A run by hand must start on main, and the version
       # must not have a tag yet, so it never moves a released tag.
@@ -61,6 +80,44 @@ jobs:
             exit 1
           fi
 
+      # A release tag must sit on main, so a tag on a side branch cannot reach production.
+      - name: The release tag is on main
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME is not on main, so it cannot deploy the backend"
+            exit 1
+          fi
+
+      # GitHub makes a missing "production" environment on first use with no reviewer, which would let
+      # the backend job change the cloud unasked. First try to read the environment's rules: a
+      # reviewer must be there. When the token may not read them (the call is refused), fall back to
+      # the repository variable BACKEND_GATE_CONFIRMED that the owner sets after creating the
+      # environment. A 404 means the environment is missing, which always fails, never the variable (docs/setup/signing-and-releases.md, section 3). It fails closed either way.
+      - name: The backend approval gate is real
+        if: ${{ !inputs.skip_backend }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GATE_CONFIRMED: ${{ vars.BACKEND_GATE_CONFIRMED }}
+        run: |
+          if body=$(gh api "repos/$GITHUB_REPOSITORY/environments/production" 2>gate-error.txt); then
+            reviewers=$(printf '%s' "$body" | jq '[.protection_rules[]? | select(.type == "required_reviewers") | .reviewers[]?] | length')
+            if [ "${reviewers:-0}" -lt 1 ]; then
+              echo "::error::The 'production' environment has no required reviewer. Add one (docs/setup/signing-and-releases.md, section 3)."
+              exit 1
+            fi
+            echo "The production environment has $reviewers required reviewer(s)."
+          elif grep -q "HTTP 404" gate-error.txt; then
+            # Not found: GitHub would create the environment on first use, with no reviewer.
+            echo "::error::The 'production' environment does not exist. Create it with a required reviewer first (docs/setup/signing-and-releases.md, section 3)."
+            exit 1
+          elif [ "$GATE_CONFIRMED" = "true" ]; then
+            echo "::warning::The environment's rules could not be read with the job token (not a 404); relying on BACKEND_GATE_CONFIRMED."
+          else
+            echo "::error::Could not read the 'production' environment's rules, and BACKEND_GATE_CONFIRMED is not true. Create the environment with a required reviewer, then set that repository variable to true (docs/setup/signing-and-releases.md, section 3)."
+            exit 1
+          fi
+
       - name: Every release secret is set
         env:
           GOALMAKER_SUPABASE_URL: ${{ secrets.GOALMAKER_SUPABASE_URL }}
@@ -82,9 +139,53 @@ jobs:
             exit 1
           fi
 
+  # The cloud first. The "production" environment holds a required reviewer (the check job refuses
+  # to start without the owner confirming that), so this job waits for the owner's approval. It
+  # stops the release when it fails or when its two secrets, which live in that environment and so
+  # can be read only here, are missing, so the apps never go out ahead of their backend.
+  backend:
+    name: Cloud backend (migrations and Edge Functions)
+    needs: check
+    if: ${{ !inputs.skip_backend }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      # The whole history, so the script knows what changed since the last release tag.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: The two backend secrets are set
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          missing=""
+          for name in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secrets in the production environment:$missing"
+            exit 1
+          fi
+
+      # supabase/setup-cli v3.2.0
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
+        with:
+          version: 2.119.0
+
+      - name: Apply the migrations, deploy the Edge Functions that are behind, check again
+        shell: pwsh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: ./tools/release-backend.ps1 -Apply -Yes
+
   android:
     name: Signed APK
-    needs: check
+    needs: [check, backend]
+    if: ${{ !cancelled() && needs.check.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -144,7 +245,8 @@ jobs:
 
   windows:
     name: Windows installer
-    needs: check
+    needs: [check, backend]
+    if: ${{ !cancelled() && needs.check.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -184,7 +286,8 @@ jobs:
 
   publish:
     name: Publish the GitHub Release, which is the update channel
-    needs: [check, android, windows]
+    needs: [check, backend, android, windows]
+    if: ${{ !cancelled() && needs.android.result == 'success' && needs.windows.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -192,6 +295,7 @@ jobs:
     env:
       VERSION: ${{ needs.check.outputs.version }}
       TAG: ${{ needs.check.outputs.tag }}
+      BACKEND_RESULT: ${{ needs.backend.result }}
     steps:
       - uses: actions/checkout@v7
 
@@ -230,3 +334,32 @@ jobs:
           (cd artifacts && sha256sum GoalMaker-* manifest.json manifest.sig > SHA256SUMS)
           gh release create "$TAG" --target "$GITHUB_SHA" --latest --title "GoalMaker $VERSION" --generate-notes \
             artifacts/GoalMaker-* artifacts/manifest.json artifacts/manifest.sig artifacts/SHA256SUMS
+
+  # The post-release check: the cloud's newest migration is the repository's newest, and no function
+  # is behind. Read only, and it needs no approval. After a run that skipped the backend it fails, so
+  # that run does not end green.
+  verify-backend:
+    name: Check the cloud backend after the release
+    needs: publish
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Its own environment with no reviewer, holding its own copies of the two secrets, so they are
+    # scoped to environments and this read-only check runs without a second approval.
+    environment: production-check
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # supabase/setup-cli v3.2.0
+      - uses: supabase/setup-cli@689adcfb80d947100a1eab127289b97d1fb07b13
+        with:
+          version: 2.119.0
+
+      - name: The cloud matches the repository
+        shell: pwsh
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: ./tools/release-backend.ps1 -Check
