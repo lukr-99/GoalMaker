@@ -5,10 +5,21 @@ name: Release
 # GitHub Release, which is the update channel (ADR 0010). A run started by hand makes the tag itself
 # on the commit it built. Setup: docs/setup/signing-and-releases.md.
 
+# The cloud backend comes first: the "backend" job applies the migrations and deploys the Edge
+# Functions (tools/release-backend.ps1) and waits for the owner's approval in the "production"
+# environment. The apps are built after it, so a client never ships ahead of its backend. Migrations
+# only add things (older apps keep working against a newer schema), so a backend ahead of the apps
+# for a while is safe, and the other way round is not. A final job checks the cloud again.
+
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      skip_backend:
+        description: "Release the apps without deploying the cloud backend (the release notes say so, and the last job fails)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -82,9 +93,37 @@ jobs:
             exit 1
           fi
 
+  # The cloud first. The "production" environment holds a required reviewer, so this job waits for
+  # the owner's approval. It stops the release when it fails or when the secrets are missing (the
+  # check job already refuses that), so the apps never go out ahead of their backend.
+  backend:
+    name: Cloud backend (migrations and Edge Functions)
+    needs: check
+    if: ${{ !inputs.skip_backend }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      # The whole history, so the script knows when each function's code last changed.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - name: Apply the migrations, deploy the Edge Functions that are behind, check again
+        shell: pwsh
+        run: ./tools/release-backend.ps1 -Apply -Yes
+
   android:
     name: Signed APK
-    needs: check
+    needs: [check, backend]
+    if: ${{ !cancelled() && needs.check.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     defaults:
@@ -144,7 +183,8 @@ jobs:
 
   windows:
     name: Windows installer
-    needs: check
+    needs: [check, backend]
+    if: ${{ !cancelled() && needs.check.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: windows-latest
     timeout-minutes: 30
     env:
@@ -184,7 +224,8 @@ jobs:
 
   publish:
     name: Publish the GitHub Release, which is the update channel
-    needs: [check, android, windows]
+    needs: [check, backend, android, windows]
+    if: ${{ !cancelled() && needs.android.result == 'success' && needs.windows.result == 'success' && (needs.backend.result == 'success' || needs.backend.result == 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -192,6 +233,7 @@ jobs:
     env:
       VERSION: ${{ needs.check.outputs.version }}
       TAG: ${{ needs.check.outputs.tag }}
+      BACKEND_RESULT: ${{ needs.backend.result }}
     steps:
       - uses: actions/checkout@v7
 
@@ -230,3 +272,28 @@ jobs:
           (cd artifacts && sha256sum GoalMaker-* manifest.json manifest.sig > SHA256SUMS)
           gh release create "$TAG" --target "$GITHUB_SHA" --latest --title "GoalMaker $VERSION" --generate-notes \
             artifacts/GoalMaker-* artifacts/manifest.json artifacts/manifest.sig artifacts/SHA256SUMS
+
+  # The post-release check: the cloud's newest migration is the repository's newest, and no function
+  # is behind. Read only, and it needs no approval. After a run that skipped the backend it fails, so
+  # that run does not end green.
+  verify-backend:
+    name: Check the cloud backend after the release
+    needs: publish
+    if: ${{ !cancelled() && needs.publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - name: The cloud matches the repository
+        shell: pwsh
+        run: ./tools/release-backend.ps1 -Check
