@@ -1,5 +1,6 @@
 package com.goalmaker.app.ui.pcsignin
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -43,6 +44,8 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 
+private const val TAG = "PcSignInScreen"
+
 /**
  * Settings, Sign in on a PC (ADR 0020): scan the QR code on the PC's sign-in screen, see which PC
  * asked, and sign it in by picking the number it shows, or not. Google Play services shows the camera, so the app asks for no camera
@@ -62,8 +65,16 @@ fun PcSignInScreen(viewModel: PcSignInViewModel, onBack: () -> Unit) {
             GmsBarcodeScanning.getClient(context, options).startScan()
                 .addOnSuccessListener { code -> viewModel.scanned(code.rawValue.orEmpty()) }
                 .addOnCanceledListener { }
-                .addOnFailureListener { viewModel.scannerUnavailable() }
-        } catch (_: RuntimeException) {
+                .addOnFailureListener { error ->
+                    Log.w(TAG, "The code scanner failed", error)
+                    viewModel.scannerUnavailable()
+                }
+        } catch (error: RuntimeException) {
+            Log.w(TAG, "The code scanner could not start", error)
+            viewModel.scannerUnavailable()
+        } catch (error: LinkageError) {
+            // NoClassDefFoundError and NoSuchMethodError are what a broken R8 setup throws.
+            Log.w(TAG, "The code scanner could not start", error)
             viewModel.scannerUnavailable()
         }
         Unit
