@@ -24,6 +24,19 @@ skipped at the job level counts as passed, so a required job must not depend on 
 and leave it skipped; the Android and Windows jobs run with `!cancelled()` and check everything when
 the changes job failed.
 
+## Scan the code crashed every release build, and debug builds were fine
+
+2026-11-23, 1.17.0. Tapping "Scan the code" in Sign in on a PC threw
+`NullPointerException: Attempt to invoke virtual method 'Class Object.getClass()' on a null object
+reference` inside Play services' code scanner (`zzny.<init>`, behind `GmsBarcodeScanning.getClient`).
+Only release builds run R8, and R8 broke ML Kit's component setup. Fixed with keep rules for
+`com.google.mlkit.**` and `com.google.android.gms.internal.mlkit_**`; `ScannerKeepRulesTest` guards
+them. The phone's own crash log had the stack: `adb shell dumpsys dropbox --print data_app_crash`.
+To reproduce without the phone, build `assembleMinified` (the R8 dev build) and run it on an
+emulator. That build hides this row, because a local-only dev build has no account; to reach the
+screen, remove the `localOnly` early return in `AccountRows` for the test. The scanner call is now
+wrapped, so a failure shows the emailed-code message instead of crashing.
+
 ## The widgets showed a header over an empty card, and taps did nothing
 
 2026-10-02, the first look at the widgets on an emulator (`android/tools/check-widgets.ps1`). Three

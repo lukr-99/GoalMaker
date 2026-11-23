@@ -55,10 +55,17 @@ fun PcSignInScreen(viewModel: PcSignInViewModel, onBack: () -> Unit) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val context = LocalContext.current
     val scan = {
-        val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
-        GmsBarcodeScanning.getClient(context, options).startScan()
-            .addOnSuccessListener { code -> viewModel.scanned(code.rawValue.orEmpty()) }
-            .addOnFailureListener { viewModel.scannerUnavailable() }
+        // Never let the scanner take the app down: a phone without the module, or a start that
+        // throws, shows the "use the emailed code" message instead.
+        try {
+            val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+            GmsBarcodeScanning.getClient(context, options).startScan()
+                .addOnSuccessListener { code -> viewModel.scanned(code.rawValue.orEmpty()) }
+                .addOnCanceledListener { }
+                .addOnFailureListener { viewModel.scannerUnavailable() }
+        } catch (_: RuntimeException) {
+            viewModel.scannerUnavailable()
+        }
         Unit
     }
 
