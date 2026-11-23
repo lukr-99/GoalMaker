@@ -93,22 +93,26 @@ jobs:
       # the backend job change the cloud unasked. First try to read the environment's rules: a
       # reviewer must be there. When the token may not read them (the call is refused), fall back to
       # the repository variable BACKEND_GATE_CONFIRMED that the owner sets after creating the
-      # environment (docs/setup/signing-and-releases.md, section 3). It fails closed either way.
+      # environment. A 404 means the environment is missing, which always fails, never the variable (docs/setup/signing-and-releases.md, section 3). It fails closed either way.
       - name: The backend approval gate is real
         if: ${{ !inputs.skip_backend }}
         env:
           GH_TOKEN: ${{ github.token }}
           GATE_CONFIRMED: ${{ vars.BACKEND_GATE_CONFIRMED }}
         run: |
-          if body=$(gh api "repos/$GITHUB_REPOSITORY/environments/production" 2>/dev/null); then
+          if body=$(gh api "repos/$GITHUB_REPOSITORY/environments/production" 2>gate-error.txt); then
             reviewers=$(printf '%s' "$body" | jq '[.protection_rules[]? | select(.type == "required_reviewers") | .reviewers[]?] | length')
             if [ "${reviewers:-0}" -lt 1 ]; then
               echo "::error::The 'production' environment has no required reviewer. Add one (docs/setup/signing-and-releases.md, section 3)."
               exit 1
             fi
             echo "The production environment has $reviewers required reviewer(s)."
+          elif grep -q "HTTP 404" gate-error.txt; then
+            # Not found: GitHub would create the environment on first use, with no reviewer.
+            echo "::error::The 'production' environment does not exist. Create it with a required reviewer first (docs/setup/signing-and-releases.md, section 3)."
+            exit 1
           elif [ "$GATE_CONFIRMED" = "true" ]; then
-            echo "::warning::The environment's rules could not be read with the job token; relying on BACKEND_GATE_CONFIRMED."
+            echo "::warning::The environment's rules could not be read with the job token (not a 404); relying on BACKEND_GATE_CONFIRMED."
           else
             echo "::error::Could not read the 'production' environment's rules, and BACKEND_GATE_CONFIRMED is not true. Create the environment with a required reviewer, then set that repository variable to true (docs/setup/signing-and-releases.md, section 3)."
             exit 1

@@ -51,7 +51,8 @@ The script refuses to replace an existing key. From the next build on, both apps
   3. Settings → Secrets and variables → Actions → Variables → **New repository variable**
      `BACKEND_GATE_CONFIRMED` = `true`. GitHub creates a missing environment on first use with no
      reviewer. The release first tries to read the `production` rules and needs a required reviewer
-     there; when the job's token may not read them, it relies on this variable, and without it the
+     there; a missing environment (404) always stops the release; when the token is refused for another
+     reason, it relies on this variable, and without it the
      release stops in its first job. Set it only after step 1.
   4. Delete any old repository-level `SUPABASE_ACCESS_TOKEN` or `SUPABASE_DB_PASSWORD` secret, so
      only the environments hold them: `gh secret list` should show neither (none exist today).
