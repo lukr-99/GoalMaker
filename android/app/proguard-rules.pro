@@ -10,3 +10,8 @@
 # (actionRunCallback). Nothing else calls that constructor, so R8 removed it and every tap on a
 # Today or Habits row failed with NoSuchMethodException (docs/pitfalls.md).
 -keep class * implements androidx.glance.appwidget.action.ActionCallback { <init>(); }
+# The PC sign-in scanner (Play services code scanner, ML Kit) builds its parts through reflection-like
+# component registries. Without these rules R8 crashed the app on "Scan the code" in release builds
+# only (docs/pitfalls.md).
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_** { *; }
