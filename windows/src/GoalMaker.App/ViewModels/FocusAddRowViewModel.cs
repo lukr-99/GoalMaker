@@ -26,12 +26,16 @@ public sealed class FocusAddRowViewModel
 
     public bool HasSubtitle => Subtitle.Length > 0;
 
-    public FocusAddRowViewModel(TaskItem task, AreaItem? area, DateOnly today, Brush? areaBrush = null)
+    /// <summary>What Narrator reads after the title: "Late" first for a late task, then the date and area.</summary>
+    public string HelpText { get; }
+
+    public FocusAddRowViewModel(TaskItem task, AreaItem? area, DateOnly today, string lateLabel, Brush? areaBrush = null)
     {
         Id = task.Id;
         Title = task.Title;
         (DateText, IsLate) = FocusDate.For(task, today);
         AreaName = area?.Name;
         AreaBrush = areaBrush;
+        HelpText = FocusDate.HelpText(Subtitle, IsLate, lateLabel);
     }
 }

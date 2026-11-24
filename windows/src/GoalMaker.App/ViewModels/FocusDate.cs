@@ -10,4 +10,8 @@ internal static class FocusDate
         (task.Deadline ?? task.PlannedDate) is { } date
             ? (date.ToString("d MMM", CultureInfo.CurrentCulture), date < today)
             : (string.Empty, false);
+
+    /// <summary>The help text a screen reader gets for a row: the late mark is otherwise only a color and an icon.</summary>
+    public static string HelpText(string subtitle, bool isLate, string lateLabel) =>
+        isLate ? string.Join(" · ", new[] { lateLabel, subtitle }.Where(part => part.Length > 0)) : subtitle;
 }

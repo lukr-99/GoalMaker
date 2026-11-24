@@ -210,4 +210,56 @@ public sealed class FocusViewModelTests : IDisposable
         Assert.False(page.HasNoOpenTasks);
         Assert.True(page.IsAllOnBoard);
     }
+
+    [Fact]
+    public void ALateRowSaysLateToAScreenReaderNotOnlyInColor()
+    {
+        var late = planner.Tasks.Add("Hand in the form @School")!;
+        planner.Tasks.SetDeadline(late.Id, new DateOnly(2026, 9, 16));
+        var other = planner.Tasks.Add("Renew the card")!;
+        planner.Tasks.SetDeadline(other.Id, new DateOnly(2026, 9, 10));
+        var page = Page();
+        page.AddToBoardCommand.Execute(page.Candidates.Single(row => row.Id == late.Id));
+
+        var row = page.Items.Single();
+        Assert.StartsWith("Focus.Late · ", row.HelpText);
+        Assert.EndsWith(row.Subtitle, row.HelpText);
+        Assert.StartsWith("Focus.Late · ", page.Candidates.Single().HelpText);
+    }
+
+    [Fact]
+    public void ARowThatIsNotLateReadsItsDateAndArea()
+    {
+        var page = Page();
+        page.QuickAddTitle = "Hand in the form @School";
+        page.QuickAddCommand.Execute(null);
+        Assert.Equal("School", page.Items.Single().HelpText);
+    }
+
+    [Fact]
+    public void TheDoneBoxUnticksWhenTheTaskStaysOpen()
+    {
+        var page = Page();
+        page.QuickAddTitle = "Hand in the form";
+        page.QuickAddCommand.Execute(null);
+        // A row for a task the store does not know: completing it changes nothing, so the box must not stay ticked.
+        var row = new FocusRowViewModel(planner.Task("Hand in the form") with { Id = "not-in-the-store" }, null, new DateOnly(2026, 9, 18), 1, 1, "Late");
+        row.IsDone = true;
+        page.CompleteCommand.Execute(row);
+        Assert.False(row.IsDone);
+    }
+
+    [Fact]
+    public void TickingTheDoneBoxCompletesTheTaskAndTakesItOffTheBoard()
+    {
+        var page = Page();
+        page.QuickAddTitle = "Hand in the form";
+        page.QuickAddCommand.Execute(null);
+        var row = page.Items.Single();
+
+        row.IsDone = true;
+        page.CompleteCommand.Execute(row);
+        Assert.Empty(page.Items);
+        Assert.Equal(TaskState.Done, planner.Tasks.All().Single().State);
+    }
 }

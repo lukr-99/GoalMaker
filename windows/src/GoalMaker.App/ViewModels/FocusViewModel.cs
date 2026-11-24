@@ -144,13 +144,13 @@ public sealed partial class FocusViewModel : ObservableObject
     private FocusRowViewModel Row(TaskItem task, Dictionary<string, AreaItem> areaMap, DateOnly today, int place, int count)
     {
         var area = areaMap.GetValueOrDefault(task.AreaId ?? "");
-        return new FocusRowViewModel(task, area, today, place, count, area is null ? null : areaBrush(area.ColorId));
+        return new FocusRowViewModel(task, area, today, place, count, strings.Get("Focus.Late"), area is null ? null : areaBrush(area.ColorId));
     }
 
     private FocusAddRowViewModel Candidate(TaskItem task, Dictionary<string, AreaItem> areaMap, DateOnly today)
     {
         var area = areaMap.GetValueOrDefault(task.AreaId ?? "");
-        return new FocusAddRowViewModel(task, area, today, area is null ? null : areaBrush(area.ColorId));
+        return new FocusAddRowViewModel(task, area, today, strings.Get("Focus.Late"), area is null ? null : areaBrush(area.ColorId));
     }
 
     private IReadOnlyList<TaskItem> Narrow(IReadOnlyList<TaskItem> found) =>
@@ -179,6 +179,9 @@ public sealed partial class FocusViewModel : ObservableObject
     {
         if (row is null) return;
         tasks.SetDone(row.Id, true);
+
+        // Not done after all (a repeating task moved on, or nothing changed): the box must not stay ticked.
+        if (!tasks.All().Any(task => task.Id == row.Id && task.State == TaskState.Done)) row.IsDone = false;
     }
 
     [RelayCommand]
