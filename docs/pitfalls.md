@@ -334,3 +334,20 @@ pc-sign-in functions. The new apps then talked to an old backend. The backend no
 `tools/release-backend.ps1 -Check` says what is behind, `-Apply` brings the cloud up to date, and the
 release workflow runs it in a `backend` job (behind the `production` environment's approval) before
 the apps are built, with a check after publishing. See docs/setup/signing-and-releases.md, section 4.
+
+## `goAsync()` returns null the second time
+
+2026-11-24, GM-114. `BroadcastReceiver.goAsync()` hands out the pending result once per broadcast. The
+Life goals widget receiver called it after `super.onUpdate`, and Glance's `onUpdate` had already taken
+it, so the `finish()` in the `finally` ran on null and crashed. Take it through
+`AsyncBroadcast.of(this)` before the coroutine starts and call `finish()` in the `finally`; it ends the
+broadcast once and does nothing when the system gave no result.
+
+## The release backend step found no release tag
+
+2026-11-24, GM-115. In the v1.17.1 run `tools/release-backend.ps1 -Apply` printed "no release tag
+found" and deployed every Edge Function although v1.17.0 existed. A release run is a detached HEAD on
+the tag being released, so the lookup must skip the tag on HEAD and take the next one that is an
+ancestor (`Get-PreviousReleaseTag`, tested on a throwaway repository in `tools/test-release-backend.ps1`).
+The checkout now also asks for tags (`fetch-tags: true`), and when no tag is found the output says how
+many `v*` tags the clone has. With no tag at all, deploying every function stays the safe fallback.
