@@ -25,7 +25,7 @@ class ReminderReceiver : BroadcastReceiver() {
         val planDay = intent.getStringExtra(ReminderAlarm.EXTRA_PLAN_DAY)
             ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
 
-        val finish = goAsync()
+        val finish = AsyncBroadcast.of(this)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
                 // A replica that would not open has nothing to remind of; the app says why (M6-06).
