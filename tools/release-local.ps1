@@ -55,7 +55,10 @@ try {
     $version = ([regex]::Match($versionLine, '\d+\.\d+\.\d+')).Value
     Write-Host "Releasing GoalMaker $version on this PC" -ForegroundColor Cyan
 
-    $kiln = (Get-Command kiln -ErrorAction SilentlyContinue).Source
+    # The library sets strict mode for this whole script, so never read a property of a possibly missing value.
+    $kiln = $null
+    $kilnCommand = Get-Command kiln -ErrorAction SilentlyContinue
+    if ($kilnCommand) { $kiln = $kilnCommand.Source }
     if (-not $kiln) {
         $installed = Join-Path $env:LOCALAPPDATA 'Programs\Kiln\kiln.exe'
         if (Test-Path -LiteralPath $installed -PathType Leaf) { $kiln = $installed }
