@@ -8,149 +8,394 @@
       Background="{DynamicResource GM.BackgroundBrush}"
       FontFamily="{DynamicResource GM.BodyFont}"
       Foreground="{DynamicResource GM.TextBrush}">
-    <!-- The Focus Board (docs/focus.md): a manually-ordered watchlist of open tasks, narrowed by an area and
-         tag filter of its own; the add panel searches the open tasks, and a typed line becomes a task on it. -->
-    <Grid>
-        <!-- Main board (hidden while add panel is open) -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto"
-                      Visibility="{Binding IsAddClosed, Converter={StaticResource BoolToVisibility}}">
-            <StackPanel>
-                <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
-                    <controls:HeadlineText Margin="0,0,0,16" Title="{DynamicResource Focus.Title}" FontSize="40" />
-                    <!-- The area and tag filter narrows the board and the add panel, as on the lists. -->
-                    <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
-                                    Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
-                                    Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
-                    <TextBlock Text="{DynamicResource Focus.Empty}" Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
-                    <TextBlock Text="{DynamicResource Focus.FilteredEmpty}" Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding IsFilteredEmpty, Converter={StaticResource BoolToVisibility}}" />
-                    <ItemsControl ItemsSource="{Binding Items}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:FocusRowViewModel}">
-                                <Border Margin="{DynamicResource GM.RowGap}" Padding="12,8" MinHeight="{DynamicResource GM.RowMinHeight}"
-                                        CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
-                                    <DockPanel VerticalAlignment="Center" KeyboardNavigation.TabNavigation="Local">
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Vertical" VerticalAlignment="Center" Margin="4,0,0,0">
-                                            <ui:Button Padding="4" Appearance="Transparent"
-                                                       Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}"
-                                                       ToolTip="{DynamicResource Focus.MoveUp}"
-                                                       AutomationProperties.Name="{DynamicResource Focus.MoveUp}">
-                                                <ui:SymbolIcon Symbol="ChevronUp20" />
-                                            </ui:Button>
-                                            <ui:Button Padding="4" Appearance="Transparent"
-                                                       Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                       CommandParameter="{Binding}"
-                                                       ToolTip="{DynamicResource Focus.MoveDown}"
-                                                       AutomationProperties.Name="{DynamicResource Focus.MoveDown}">
-                                                <ui:SymbolIcon Symbol="ChevronDown20" />
-                                            </ui:Button>
-                                        </StackPanel>
-                                        <ui:Button DockPanel.Dock="Right" Margin="4,0,0,0" Content="{DynamicResource Focus.Complete}"
-                                                   Command="{Binding DataContext.CompleteCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}" />
-                                        <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Padding="6" Appearance="Transparent"
-                                                   Command="{Binding DataContext.RemoveFromBoardCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}"
-                                                   ToolTip="{DynamicResource Focus.Remove}"
-                                                   AutomationProperties.Name="{DynamicResource Focus.Remove}">
-                                            <ui:SymbolIcon Symbol="PinOff24" />
-                                        </ui:Button>
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding Subtitle}" FontSize="12" Margin="0,2,0,0"
-                                                       Foreground="{DynamicResource GM.TextMutedBrush}"
-                                                       Visibility="{Binding HasSubtitle, Converter={StaticResource BoolToVisibility}}" />
-                                        </StackPanel>
-                                    </DockPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+    <!--
+        The Focus Board (docs/focus.md): a manually-ordered watchlist of open tasks, narrowed by an area and
+        tag filter of its own. The quick add field sits on top of the board, as on the phone. The add panel
+        searches the open tasks: beside the board where the window is wide, in its place (from "Add existing
+        task") where it is narrow. The root's Tag says which.
+    -->
+    <Page.Resources>
+        <!-- Up on the first row and Down on the last are hidden, not greyed, so the arrows stay in line. -->
+        <controls:BoolToHiddenConverter x:Key="BoolToHidden" />
+
+        <!-- A section label (design spec, "Type"): small, strong, letter-spaced, in the accent. -->
+        <Style x:Key="FocusSectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+            <Setter Property="Margin" Value="4,0,0,8" />
+            <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
+        </Style>
+
+        <!-- A row's date and area under its title; a late date is in the danger color with a clock. -->
+        <DataTemplate x:Key="FocusDetails">
+            <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                        Visibility="{Binding HasDetails, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal" Margin="0,0,12,0"
+                            Visibility="{Binding HasDate, Converter={StaticResource BoolToVisibility}}">
+                    <ui:SymbolIcon x:Name="LateIcon" Margin="0,0,4,0" FontSize="12" Symbol="ClockAlarm16" Visibility="Collapsed"
+                                   Foreground="{DynamicResource GM.DangerBrush}" ToolTip="{DynamicResource Focus.Late}" />
+                    <TextBlock x:Name="Date" Text="{Binding DateText}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
                 </StackPanel>
-                <!-- Quick-add: full-width so it stretches on wide windows -->
-                <DockPanel Margin="{DynamicResource GM.PagePadding}" KeyboardNavigation.TabNavigation="Local">
-                    <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Focus.Add}"
-                               Command="{Binding QuickAddCommand}"
-                               AutomationProperties.Name="{DynamicResource Focus.Add}" />
-                    <ui:TextBox TabIndex="0" PlaceholderText="{DynamicResource Focus.QuickAddPlaceholder}"
-                                MaxLength="500"
+                <StackPanel Orientation="Horizontal" Visibility="{Binding HasArea, Converter={StaticResource BoolToVisibility}}">
+                    <Ellipse Width="7" Height="7" Margin="0,0,4,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
+                    <TextBlock Text="{Binding AreaName}" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </StackPanel>
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsLate}" Value="True">
+                    <Setter TargetName="LateIcon" Property="Visibility" Value="Visible" />
+                    <Setter TargetName="Date" Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- A row card: the theme's surface and row corners, with an accent edge while the keyboard is in it. -->
+        <Style x:Key="FocusRowCard" TargetType="Border">
+            <Setter Property="Margin" Value="{DynamicResource GM.RowGap}" />
+            <Setter Property="MinHeight" Value="{DynamicResource GM.RowMinHeight}" />
+            <Setter Property="CornerRadius" Value="{DynamicResource GM.RowCorner}" />
+            <Setter Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <Grid x:Name="Root" Margin="{DynamicResource GM.PagePadding}" MaxWidth="{DynamicResource GM.WidePageWidth}">
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Setter Property="Tag" Value="stacked" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding ActualWidth, RelativeSource={RelativeSource Self}, Converter={StaticResource WidthAtLeast}, ConverterParameter=760}" Value="True">
+                        <Setter Property="Tag" Value="wide" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- The title and how many tasks are on the board, then one toolbar line: the filter on the left,
+             and where the window is narrow, the way to the add panel and back on the right. -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <controls:HeadlineText Title="{DynamicResource Focus.Title}" FontSize="40" />
+            <TextBlock Margin="0,4,0,0" Text="{Binding CountText}" FontSize="14" Foreground="{DynamicResource GM.TextMutedBrush}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ContentControl HorizontalAlignment="Left" VerticalAlignment="Center" Focusable="False"
+                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:Button Content="{DynamicResource Focus.AddExisting}" Command="{Binding ShowAddDialogCommand}"
+                               ToolTip="Ctrl+F">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="Search24" />
+                        </ui:Button.Icon>
+                        <ui:Button.Style>
+                            <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Tag, ElementName=Root}" Value="stacked" />
+                                            <Condition Binding="{Binding IsAddOpen}" Value="False" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                    <ui:Button Content="{DynamicResource Focus.BackToBoard}" Command="{Binding CloseAddDialogCommand}"
+                               ToolTip="Esc">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="ArrowLeft24" />
+                        </ui:Button.Icon>
+                        <ui:Button.Style>
+                            <Style TargetType="{x:Type ui:Button}" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding Tag, ElementName=Root}" Value="stacked" />
+                                            <Condition Binding="{Binding IsAddOpen}" Value="True" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </MultiDataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- The board: the quick add field, then the tasks in the owner's order. -->
+            <DockPanel x:Name="BoardPanel">
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Style.Triggers>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding Tag, ElementName=Root}" Value="stacked" />
+                                    <Condition Binding="{Binding IsAddOpen}" Value="True" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DockPanel.Style>
+
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,16" KeyboardNavigation.TabNavigation="Local">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox x:Name="QuickAddBox" TabIndex="0" MaxLength="500"
+                                PlaceholderText="{DynamicResource Focus.QuickAddPlaceholder}"
                                 Text="{Binding QuickAddTitle, UpdateSourceTrigger=PropertyChanged}"
+                                ToolTip="Ctrl+N"
                                 AutomationProperties.Name="{DynamicResource Focus.QuickAddPlaceholder}">
+                        <ui:TextBox.Icon>
+                            <ui:SymbolIcon Symbol="Add24" />
+                        </ui:TextBox.Icon>
                         <ui:TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding QuickAddCommand}" />
                         </ui:TextBox.InputBindings>
                     </ui:TextBox>
-                </DockPanel>
-            </StackPanel>
-        </ScrollViewer>
+                    <ui:Button Grid.Column="1" TabIndex="1" Margin="8,0,0,0" VerticalAlignment="Stretch" Appearance="Primary"
+                               Content="{DynamicResource Focus.Add}" Command="{Binding QuickAddCommand}"
+                               AutomationProperties.Name="{DynamicResource Focus.AddToBoard}" />
+                </Grid>
 
-        <!-- Add to board panel (shown when IsAddOpen) -->
-        <Grid Background="{DynamicResource GM.BackgroundBrush}"
-              Visibility="{Binding IsAddOpen, Converter={StaticResource BoolToVisibility}}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel MaxWidth="{DynamicResource GM.PageWidth}" HorizontalAlignment="Center" Margin="{DynamicResource GM.PagePadding}">
-                    <controls:HeadlineText Margin="0,0,0,16" Title="{DynamicResource Focus.AddTitle}" FontSize="32" />
-                    <ui:TextBox Margin="0,0,0,12" PlaceholderText="{DynamicResource Focus.Search}"
+                <TextBlock DockPanel.Dock="Top" Text="{Binding BoardLabel}" Style="{StaticResource FocusSectionLabel}" />
+
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                    <StackPanel>
+                        <!-- Empty: what the board is for and the two ways onto it. -->
+                        <Border Padding="16" CornerRadius="{DynamicResource GM.CardCorner}" BorderThickness="1"
+                                BorderBrush="{DynamicResource GM.OutlineBrush}"
+                                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+                            <DockPanel>
+                                <ui:SymbolIcon DockPanel.Dock="Left" Margin="0,0,12,0" VerticalAlignment="Top" FontSize="24"
+                                               Symbol="Pin24" Foreground="{DynamicResource GM.AccentBrush}" />
+                                <StackPanel>
+                                    <TextBlock Text="{DynamicResource Focus.EmptyTitle}" FontSize="15"
+                                               FontFamily="{DynamicResource GM.BodyStrongFont}" />
+                                    <TextBlock Margin="0,4,0,0" Text="{DynamicResource Focus.Empty}" FontSize="14" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource GM.TextMutedBrush}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- The filter hides every task on the board: say so, with the way back. -->
+                        <StackPanel Orientation="Horizontal" Margin="4,4,0,8"
+                                    Visibility="{Binding IsFilteredEmpty, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock VerticalAlignment="Center" Text="{DynamicResource Focus.FilteredEmpty}" FontSize="14"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                            <ui:Button Margin="8,0,0,0" Appearance="Transparent" Content="{DynamicResource Lists.ClearFilter}"
+                                       Command="{Binding Filters.ClearCommand}" />
+                        </StackPanel>
+
+                        <ItemsControl x:Name="BoardRows" ItemsSource="{Binding Items}" Focusable="False">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:FocusRowViewModel}">
+                                    <Border Padding="4,2,4,2" Style="{StaticResource FocusRowCard}">
+                                        <!-- Tab reads the row left to right: the done box, then Up, Down and off the board. -->
+                                        <Grid VerticalAlignment="Center" KeyboardNavigation.TabNavigation="Local">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="32" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center" Text="{Binding Place}"
+                                                       FontSize="16" FontFamily="{DynamicResource GM.NumberFont}"
+                                                       Foreground="{DynamicResource GM.AccentBrush}" />
+                                            <CheckBox x:Name="Done" Grid.Column="1" TabIndex="0" VerticalAlignment="Center"
+                                                      Foreground="{DynamicResource GM.TextBrush}"
+                                                      Command="{Binding DataContext.CompleteCommand, ElementName=BoardRows}"
+                                                      CommandParameter="{Binding}"
+                                                      ToolTip="{DynamicResource Focus.Complete}"
+                                                      AutomationProperties.Name="{Binding Title}"
+                                                      AutomationProperties.HelpText="{Binding Subtitle}">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                                                    <ContentControl Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource FocusDetails}" />
+                                                </StackPanel>
+                                            </CheckBox>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                                                <ui:Button x:Name="Up" TabIndex="1" Padding="6" Appearance="Transparent" BorderThickness="0"
+                                                           Visibility="{Binding CanMoveUp, Converter={StaticResource BoolToHidden}}"
+                                                           Command="{Binding DataContext.MoveUpCommand, ElementName=BoardRows}"
+                                                           CommandParameter="{Binding}"
+                                                           ToolTip="{DynamicResource Focus.MoveUp}"
+                                                           AutomationProperties.Name="{DynamicResource Focus.MoveUp}">
+                                                    <ui:SymbolIcon Symbol="ArrowUp20" />
+                                                </ui:Button>
+                                                <ui:Button x:Name="Down" TabIndex="2" Padding="6" Appearance="Transparent" BorderThickness="0"
+                                                           Visibility="{Binding CanMoveDown, Converter={StaticResource BoolToHidden}}"
+                                                           Command="{Binding DataContext.MoveDownCommand, ElementName=BoardRows}"
+                                                           CommandParameter="{Binding}"
+                                                           ToolTip="{DynamicResource Focus.MoveDown}"
+                                                           AutomationProperties.Name="{DynamicResource Focus.MoveDown}">
+                                                    <ui:SymbolIcon Symbol="ArrowDown20" />
+                                                </ui:Button>
+                                                <ui:Button x:Name="Off" TabIndex="3" Margin="4,0,0,0" Padding="6" Appearance="Transparent" BorderThickness="0"
+                                                           Command="{Binding DataContext.RemoveFromBoardCommand, ElementName=BoardRows}"
+                                                           CommandParameter="{Binding}"
+                                                           ToolTip="{DynamicResource Focus.Remove}"
+                                                           AutomationProperties.Name="{DynamicResource Focus.Remove}">
+                                                    <ui:SymbolIcon Symbol="PinOff24" />
+                                                </ui:Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Margin="4,12,0,0" Text="{DynamicResource Focus.KeyboardHint}" FontSize="12" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource GM.TextMutedBrush}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- The add panel: search the open tasks off the board, with the filter above applied. -->
+            <Border x:Name="AddPanel" Padding="12" CornerRadius="{DynamicResource GM.CardCorner}" BorderThickness="1"
+                    BorderBrush="{DynamicResource GM.OutlineBrush}">
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Grid.Column" Value="0" />
+                        <Setter Property="Grid.ColumnSpan" Value="2" />
+                        <Setter Property="VerticalAlignment" Value="Top" />
+                        <Setter Property="Visibility" Value="{Binding IsAddOpen, Converter={StaticResource BoolToVisibility}}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Tag, ElementName=Root}" Value="wide">
+                                <Setter Property="Grid.Column" Value="1" />
+                                <Setter Property="Grid.ColumnSpan" Value="1" />
+                                <Setter Property="Width" Value="320" />
+                                <Setter Property="Margin" Value="24,0,0,0" />
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding AddLabel}" Style="{StaticResource FocusSectionLabel}" />
+                    <ui:TextBox x:Name="SearchBox" DockPanel.Dock="Top" Margin="0,0,0,8"
+                                controls:FocusWhen.Open="{Binding IsAddOpen}"
+                                PlaceholderText="{DynamicResource Focus.Search}"
                                 Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                                ToolTip="Ctrl+F"
                                 AutomationProperties.Name="{DynamicResource Focus.Search}">
                         <ui:TextBox.Icon>
                             <ui:SymbolIcon Symbol="Search24" />
                         </ui:TextBox.Icon>
                         <ui:TextBox.InputBindings>
                             <KeyBinding Key="Enter" Command="{Binding CreateFromQueryCommand}" />
+                            <KeyBinding Key="Escape" Command="{Binding EscapeSearchCommand}" />
                         </ui:TextBox.InputBindings>
                     </ui:TextBox>
-                    <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
-                                    Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
-                                    Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
-                    <!-- With something typed, the first row makes it a new task straight onto the board. -->
-                    <ui:Button Margin="{DynamicResource GM.RowGap}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                               Appearance="Secondary" Command="{Binding CreateFromQueryCommand}"
-                               AutomationProperties.Name="{Binding CreateText}"
-                               Visibility="{Binding HasQuery, Converter={StaticResource BoolToVisibility}}">
-                        <StackPanel Orientation="Horizontal">
-                            <ui:SymbolIcon Symbol="Add24" Margin="0,0,8,0" />
-                            <TextBlock Text="{Binding CreateText}" TextTrimming="CharacterEllipsis" />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+                        <StackPanel>
+                            <!-- With something typed, the first row makes it a new task straight onto the board (Enter). -->
+                            <ui:Button Margin="{DynamicResource GM.RowGap}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                       Appearance="Primary" Command="{Binding CreateFromQueryCommand}"
+                                       AutomationProperties.Name="{Binding CreateText}"
+                                       Visibility="{Binding HasQuery, Converter={StaticResource BoolToVisibility}}">
+                                <DockPanel>
+                                    <ui:SymbolIcon Symbol="Add24" Margin="0,0,8,0" />
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding CreateText}" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </ui:Button>
+                            <TextBlock Margin="4,4,0,8" FontSize="14" TextWrapping="Wrap" Foreground="{DynamicResource GM.TextMutedBrush}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAllOnBoard}" Value="True">
+                                                <Setter Property="Text" Value="{DynamicResource Focus.AddEmpty}" />
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsNoMatch}" Value="True">
+                                                <Setter Property="Text" Value="{DynamicResource Focus.NoMatch}" />
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding HasNoOpenTasks}" Value="True">
+                                                <Setter Property="Text" Value="{DynamicResource Focus.NoOpenTasks}" />
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <!-- Each open task is one button: a click, Enter or Space puts it at the end of the board. -->
+                            <ItemsControl x:Name="Candidates" ItemsSource="{Binding Candidates}" Focusable="False">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:FocusAddRowViewModel}">
+                                        <ui:Button Margin="{DynamicResource GM.RowGap}" Padding="10,6" MinHeight="{DynamicResource GM.RowMinHeight}"
+                                                   HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                                   Appearance="Secondary"
+                                                   Command="{Binding DataContext.AddToBoardCommand, ElementName=Candidates}"
+                                                   CommandParameter="{Binding}"
+                                                   ToolTip="{DynamicResource Focus.AddToBoard}"
+                                                   AutomationProperties.Name="{Binding Title}"
+                                                   AutomationProperties.HelpText="{DynamicResource Focus.AddToBoard}">
+                                            <DockPanel>
+                                                <ui:SymbolIcon DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center"
+                                                               Symbol="Add24" Foreground="{DynamicResource GM.AccentBrush}" />
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
+                                                    <ContentControl Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource FocusDetails}" />
+                                                </StackPanel>
+                                            </DockPanel>
+                                        </ui:Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                         </StackPanel>
-                    </ui:Button>
-                    <TextBlock Text="{DynamicResource Focus.AddEmpty}" Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding IsAllOnBoard, Converter={StaticResource BoolToVisibility}}" />
-                    <TextBlock Text="{DynamicResource Focus.NoMatch}" Foreground="{DynamicResource GM.TextMutedBrush}"
-                               Visibility="{Binding IsNoMatch, Converter={StaticResource BoolToVisibility}}" />
-                    <ItemsControl ItemsSource="{Binding Candidates}" Focusable="False">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:FocusAddRowViewModel}">
-                                <Border Margin="{DynamicResource GM.RowGap}" Padding="12,8" MinHeight="{DynamicResource GM.RowMinHeight}"
-                                        CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
-                                    <DockPanel VerticalAlignment="Center">
-                                        <ui:Button DockPanel.Dock="Right" Margin="8,0,0,0" Content="{DynamicResource Focus.Add}"
-                                                   Command="{Binding DataContext.AddToBoardCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                   CommandParameter="{Binding}" />
-                                        <StackPanel VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding Subtitle}" FontSize="12" Margin="0,2,0,0"
-                                                       Foreground="{DynamicResource GM.TextMutedBrush}"
-                                                       Visibility="{Binding HasSubtitle, Converter={StaticResource BoolToVisibility}}" />
-                                        </StackPanel>
-                                    </DockPanel>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </ScrollViewer>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
         </Grid>
-
-        <!-- FAB: Add when board is shown; Back when add panel is open -->
-        <ui:Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="24"
-                   Appearance="Primary" Content="{DynamicResource Focus.Add}"
-                   Command="{Binding ShowAddDialogCommand}"
-                   Visibility="{Binding IsAddClosed, Converter={StaticResource BoolToVisibility}}" />
-        <ui:Button HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="24"
-                   Appearance="Secondary" Content="{DynamicResource Task.Back}"
-                   Command="{Binding CloseAddDialogCommand}"
-                   Visibility="{Binding IsAddOpen, Converter={StaticResource BoolToVisibility}}" />
     </Grid>
 </Page>

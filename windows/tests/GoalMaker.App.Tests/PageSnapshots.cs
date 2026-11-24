@@ -56,6 +56,52 @@ public sealed class PageSnapshots
         }
     });
 
+    // The Focus Board (docs/focus.md) at a wide, the normal and a narrow window, light and dark, empty,
+    // and with the add panel searching. A new page per look (docs/pitfalls.md).
+    [Fact(Explicit = true)]
+    public void FocusBoard() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        FocusViewModel Board() => new(
+            planner.Tasks, planner.Areas, planner.Tags, planner.Projects, planner.Settings, strings, theme.AreaBrush, planner.Time, action => action());
+
+        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Light, GoalMaker.Core.Settings.ThemeMode.Dark })
+        {
+            theme.Apply(planner.Settings.Appearance with { Mode = mode });
+            Save(new FocusPage(Board()), folder, $"focus-empty-{mode}".ToLowerInvariant());
+        }
+
+        Add(planner, "Hand in the internship form @School", Today.AddDays(-2));
+        Add(planner, "Renew the ISIC card @School", Today.AddDays(3));
+        Add(planner, "Call the insurance about the bike @Home", null);
+        Add(planner, "Book the dentist", Today.AddDays(9));
+        Add(planner, "Studijní: zrušit dipl. práci @School", null);
+        Add(planner, "Buy a birthday present for Eva @Home", Today.AddDays(5));
+        Add(planner, "Read about sourdough", null);
+        Add(planner, "Fix the bike light", null);
+        foreach (var title in new[] { "Hand in the internship form", "Renew the ISIC card", "Call the insurance about the bike", "Book the dentist", "Studijní: zrušit dipl. práci" })
+        {
+            planner.Tasks.SetFocusPosition(planner.Task(title).Id, FocusBoardRules.AppendPosition(planner.Tasks.All()));
+        }
+
+        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Light, GoalMaker.Core.Settings.ThemeMode.Dark })
+        {
+            theme.Apply(planner.Settings.Appearance with { Mode = mode });
+            var name = mode.ToString().ToLowerInvariant();
+            Save(new FocusPage(Board()), folder, $"focus-wide-{name}", new Size(1280, 760));
+            Save(new FocusPage(Board()), folder, $"focus-normal-{name}");
+            Save(new FocusPage(Board()), folder, $"focus-narrow-{name}", new Size(520, 760));
+        }
+
+        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Light });
+        var searching = Board();
+        searching.ShowAddDialogCommand.Execute(null);
+        searching.Query = "bi";
+        Save(new FocusPage(searching), folder, "focus-narrow-add-panel", new Size(520, 760));
+    });
+
     [Fact(Explicit = true)]
     public void PlanTomorrow() => OnUiThread(folder =>
     {
