@@ -164,6 +164,8 @@ public sealed class SignInWatchTests
 
         public IReadOnlyList<string> RecentProjects { get; set; } = [];
 
+        public IReadOnlyList<string> RecentSearches { get; set; } = [];
+
         public GoalsView GoalsView { get; set; }
 
         public WantsTab WantsTab { get; set; }

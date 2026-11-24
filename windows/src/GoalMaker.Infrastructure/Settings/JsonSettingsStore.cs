@@ -168,6 +168,13 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { RecentProjects = [.. value.Distinct(StringComparer.Ordinal).Take(20)] });
     }
 
+    /// <summary>Each search once, ignoring case, at most eight, the latest first.</summary>
+    public IReadOnlyList<string> RecentSearches
+    {
+        get => document.RecentSearches ?? [];
+        set => Save(document with { RecentSearches = [.. value.Where(search => search.Trim().Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).Take(8)] });
+    }
+
     /// <summary>A value the file doesn't know reads as the ladder.</summary>
     public GoalsView GoalsView
     {

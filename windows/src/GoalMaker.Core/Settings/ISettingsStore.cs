@@ -64,6 +64,9 @@ public interface ISettingsStore
     /// <summary>The projects last opened on this PC, by id, the latest first, which a quick search offers first.</summary>
     IReadOnlyList<string> RecentProjects { get; set; }
 
+    /// <summary>The Projects page's searches run last on this PC, the latest first (docs/projects.md, "Searching items").</summary>
+    IReadOnlyList<string> RecentSearches { get; set; }
+
     /// <summary>How the Goals page shows the goals on this PC (docs/goals.md); the ladder unless changed.</summary>
     GoalsView GoalsView { get; set; }
 
