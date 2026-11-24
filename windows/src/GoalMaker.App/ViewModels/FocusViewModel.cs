@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,6 +25,7 @@ public sealed partial class FocusViewModel : ObservableObject
     private readonly ISettingsStore settings;
     private readonly TimeProvider time;
     private readonly IStrings strings;
+    private readonly Func<string, Brush?> areaBrush;
     private readonly ListFilterState filter = new();
 
     [ObservableProperty]
@@ -36,8 +38,9 @@ public sealed partial class FocusViewModel : ObservableObject
     [ObservableProperty]
     private bool isFilteredEmpty;
 
+    /// <summary>How many tasks are on the board, and how many the filter shows: "5 on the board", "2 of 5 shown".</summary>
     [ObservableProperty]
-    private FocusRowViewModel? selected;
+    private string countText = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsAddClosed))]
@@ -58,6 +61,10 @@ public sealed partial class FocusViewModel : ObservableObject
     /// <summary>Whether the add panel is empty for what is searched or filtered.</summary>
     [ObservableProperty]
     private bool isNoMatch;
+
+    /// <summary>Whether there is no open task at all, on the board or off it, so the add panel has nothing to offer.</summary>
+    [ObservableProperty]
+    private bool hasNoOpenTasks;
 
     [ObservableProperty]
     private string quickAddTitle = string.Empty;
@@ -92,6 +99,7 @@ public sealed partial class FocusViewModel : ObservableObject
         this.settings = settings;
         this.time = time;
         this.strings = strings;
+        this.areaBrush = areaBrush;
         Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi, projects);
         tasks.Changed += (_, _) => runOnUi(Refresh);
         areas.Changed += (_, _) => runOnUi(Refresh);
@@ -100,6 +108,12 @@ public sealed partial class FocusViewModel : ObservableObject
         filter.Changed += (_, _) => runOnUi(Refresh);
         Refresh();
     }
+
+    /// <summary>The board's section label, in capitals as the design spec's section labels are.</summary>
+    public string BoardLabel => strings.Get("Focus.OnBoard").ToUpper(CultureInfo.CurrentUICulture);
+
+    /// <summary>The add panel's section label.</summary>
+    public string AddLabel => strings.Get("Focus.AddTitle").ToUpper(CultureInfo.CurrentUICulture);
 
     /// <summary>The area and tag pickers the board and the add panel share.</summary>
     public ListFiltersViewModel Filters { get; }
@@ -110,12 +124,33 @@ public sealed partial class FocusViewModel : ObservableObject
         var areaMap = areas.All().ToDictionary(a => a.Id);
         var board = FocusBoardRules.Board(all);
         var shown = Narrow(board);
+        var today = Today();
         Items = new ObservableCollection<FocusRowViewModel>(
-            shown.Select(t => new FocusRowViewModel(t, areaMap.GetValueOrDefault(t.AreaId ?? ""))));
+            shown.Select((t, index) => Row(t, areaMap, today, index + 1, shown.Count)));
         IsEmpty = board.Count == 0;
         IsFilteredEmpty = board.Count > 0 && shown.Count == 0;
+        CountText = board.Count == 0
+            ? string.Empty
+            : shown.Count == board.Count
+                ? strings.Get("Focus.Count", board.Count)
+                : strings.Get("Focus.CountFiltered", shown.Count, board.Count);
 
-        if (IsAddOpen) RefreshCandidates(all, areaMap);
+        // The add panel sits beside the board on a wide window, so its rows stay current even while it is closed.
+        RefreshCandidates(all, areaMap);
+    }
+
+    private DateOnly Today() => PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
+
+    private FocusRowViewModel Row(TaskItem task, Dictionary<string, AreaItem> areaMap, DateOnly today, int place, int count)
+    {
+        var area = areaMap.GetValueOrDefault(task.AreaId ?? "");
+        return new FocusRowViewModel(task, area, today, place, count, area is null ? null : areaBrush(area.ColorId));
+    }
+
+    private FocusAddRowViewModel Candidate(TaskItem task, Dictionary<string, AreaItem> areaMap, DateOnly today)
+    {
+        var area = areaMap.GetValueOrDefault(task.AreaId ?? "");
+        return new FocusAddRowViewModel(task, area, today, area is null ? null : areaBrush(area.ColorId));
     }
 
     private IReadOnlyList<TaskItem> Narrow(IReadOnlyList<TaskItem> found) =>
@@ -125,20 +160,19 @@ public sealed partial class FocusViewModel : ObservableObject
 
     private void RefreshCandidates(IReadOnlyList<TaskItem> all, Dictionary<string, AreaItem> areaMap)
     {
+        var today = Today();
         var rows = Narrow(FocusBoardRules.Candidates(all, Query))
-            .Select(t => new FocusAddRowViewModel(t, areaMap.GetValueOrDefault(t.AreaId ?? "")))
+            .Select(t => Candidate(t, areaMap, today))
             .ToList();
         Candidates = new ObservableCollection<FocusAddRowViewModel>(rows);
         IsCandidatesEmpty = rows.Count == 0;
         var searching = HasQuery || !filter.Current.IsEmpty;
         IsAllOnBoard = IsCandidatesEmpty && !searching;
         IsNoMatch = IsCandidatesEmpty && searching;
+        HasNoOpenTasks = !all.Any(task => !task.Deleted && task.State == TaskState.Open);
     }
 
-    partial void OnQueryChanged(string value)
-    {
-        if (IsAddOpen) RefreshCandidates(tasks.All(), areas.All().ToDictionary(a => a.Id));
-    }
+    partial void OnQueryChanged(string value) => RefreshCandidates(tasks.All(), areas.All().ToDictionary(a => a.Id));
 
     [RelayCommand]
     private void Complete(FocusRowViewModel? row)
@@ -167,6 +201,22 @@ public sealed partial class FocusViewModel : ObservableObject
     {
         IsAddOpen = false;
         Query = string.Empty;
+    }
+
+    /// <summary>
+    /// Esc in the add panel's search box: clears what is typed first, then closes the panel where it covers
+    /// the board (a narrow window).
+    /// </summary>
+    [RelayCommand]
+    private void EscapeSearch()
+    {
+        if (Query.Length > 0)
+        {
+            Query = string.Empty;
+            return;
+        }
+
+        if (IsAddOpen) CloseAddDialog();
     }
 
     [RelayCommand]
