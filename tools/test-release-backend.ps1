@@ -179,3 +179,4 @@ if ($script:failures -gt 0) {
     exit 1
 }
 Write-Host "release-backend self-test passed ($script:count checks)." -ForegroundColor Green
+exit 0
