@@ -150,9 +150,12 @@ public sealed class ThemeApplier : IDisposable
 
     /// <summary>
     /// A static face cut by tools/build_windows_fonts.py, by the name FontFaces gives it. The URI names
-    /// the GoalMaker assembly, so the fonts load wherever the resources are used (tests too).
+    /// the GoalMaker assembly, so the fonts load wherever the resources are used (tests too). The scheme
+    /// is named through PackUriHelper, which registers it: before WPF has started an Application, a
+    /// pack URI written out fails with "Invalid port specified" (docs/pitfalls.md).
     /// </summary>
-    public static FontFamily Face(string name) => new(new Uri("pack://application:,,,/GoalMaker;component/"), "./Assets/Fonts/#" + name);
+    public static FontFamily Face(string name) =>
+        new(new Uri(System.IO.Packaging.PackUriHelper.UriSchemePack + "://application:,,,/GoalMaker;component/"), "./Assets/Fonts/#" + name);
 
     /// <summary>Whether the app ships the face FontFaces names (tools/build_windows_fonts.py cuts only some italics).</summary>
     public static bool Ships(string face) => ShippedFonts.Value.Contains("assets/fonts/" + face.Replace(' ', '-').ToLowerInvariant() + ".ttf");

@@ -21,6 +21,23 @@
             <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
         </Style>
 
+        <!-- A line that takes no room while it has nothing to say. -->
+        <Style x:Key="WhenSaid" TargetType="TextBlock">
+            <Style.Triggers>
+                <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A section label, as on the Focus page: small, strong, in the accent. -->
+        <Style x:Key="SectionLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontFamily" Value="{DynamicResource GM.BodyStrongFont}" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+            <Setter Property="AutomationProperties.HeadingLevel" Value="Level2" />
+        </Style>
+
         <!--
           A project's status at a glance, read from the Tag: active plays on in the accent, paused and
           done step back in the muted colour, each with a mark of its own.
@@ -52,50 +69,229 @@
             </Style.Triggers>
         </Style>
 
-        <!-- One project in the list beside the board. -->
-        <DataTemplate x:Key="ProjectRow" DataType="{x:Type vm:ProjectRowViewModel}">
-            <ui:Button Margin="0,0,0,4" Padding="10,6" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                       Appearance="Transparent" Command="{Binding OpenCommand}">
-                <StackPanel>
+        <!--
+          A row in the project list: a flat button on the page's background that takes the surface on
+          hover, and an accent edge for the project on show and for the keyboard, as Focus rows do.
+        -->
+        <Style x:Key="PaneRow" TargetType="Button">
+            <Setter Property="Margin" Value="0,0,0,2" />
+            <Setter Property="Padding" Value="10,6,8,6" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Face" Padding="{TemplateBinding Padding}" Background="Transparent"
+                                CornerRadius="{DynamicResource GM.RowCorner}" BorderThickness="1" BorderBrush="Transparent">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                            </Trigger>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                            </DataTrigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- The menu every project row shares, as the cards share theirs: pin it to the top, or edit it. -->
+        <ContextMenu x:Key="RowMenu">
+            <MenuItem Header="{Binding PinText}" Command="{Binding TogglePinCommand}" />
+            <MenuItem Header="{DynamicResource Projects.Edit}" Command="{Binding EditCommand}" />
+        </ContextMenu>
+
+        <!-- A heading in the project list; Paused and done folds. -->
+        <DataTemplate DataType="{x:Type vm:ProjectGroupViewModel}">
+            <Grid Margin="4,12,0,4">
+                <StackPanel x:Name="Plain" Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="{Binding Title}" />
+                    <TextBlock Margin="6,0,0,0" FontSize="11" Text="{Binding Count}" Foreground="{DynamicResource GM.TextMutedBrush}" />
+                </StackPanel>
+                <ui:Button x:Name="Folding" Visibility="Collapsed" Padding="0,2" Appearance="Transparent" BorderThickness="0"
+                           HorizontalAlignment="Left" Command="{Binding FoldCommand}"
+                           AutomationProperties.Name="{Binding Title}">
                     <StackPanel Orientation="Horizontal">
-                        <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center"
-                                       Tag="{Binding StatusId}" Style="{StaticResource StatusIcon}" />
-                        <TextBlock Text="{Binding Name}" FontSize="14" Tag="{Binding StatusId}" Style="{StaticResource StatusName}" />
+                        <ui:SymbolIcon x:Name="Chevron" Margin="0,0,4,0" FontSize="11" Symbol="ChevronDown16"
+                                       Foreground="{DynamicResource GM.AccentBrush}" />
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{Binding Title}" />
+                        <TextBlock Margin="6,0,0,0" FontSize="11" Text="{Binding Count}" Foreground="{DynamicResource GM.TextMutedBrush}" />
                     </StackPanel>
-                    <!-- The status, then what Backlog, To do and Doing hold, so the load reads at a glance. -->
-                    <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-                        <TextBlock Text="{Binding Status}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                        <TextBlock Margin="8,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Backlog}"
-                                   Foreground="{DynamicResource GM.AccentBrush}"
-                                   ToolTip="{DynamicResource Projects.Backlog}" />
-                        <TextBlock Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Todo}"
-                                   Foreground="{DynamicResource GM.AccentBrush}"
-                                   ToolTip="{DynamicResource Projects.Todo}" />
-                        <TextBlock Margin="6,0,0,0" FontSize="11" FontWeight="SemiBold" Text="{Binding Doing}"
-                                   Foreground="{DynamicResource GM.AccentBrush}"
-                                   ToolTip="{DynamicResource Projects.Doing}" />
-                    </StackPanel>
-                </StackPanel>
-            </ui:Button>
+                </ui:Button>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding CanFold}" Value="True">
+                    <Setter TargetName="Plain" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="Folding" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsFolded}" Value="True">
+                    <Setter TargetName="Chevron" Property="Symbol" Value="ChevronRight16" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
 
-        <!-- A card's type: a plain task stays quiet, an idea takes the accent and a bug the danger colour. -->
-        <Style x:Key="ItemTypeIcon" TargetType="ui:SymbolIcon">
-            <Setter Property="Symbol" Value="TaskListSquareLtr24" />
+        <!--
+          One project in the list: its area's dot, status mark and name, then how much is open with the
+          Doing count in the accent. The menu pins it to the top or edits it.
+        -->
+        <DataTemplate DataType="{x:Type vm:ProjectRowViewModel}">
+            <Button Style="{StaticResource PaneRow}" Command="{Binding OpenCommand}" MouseRightButtonUp="OnRowRightClick"
+                    AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding LoadText}"
+                    ToolTip="{Binding LoadText}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ui:SymbolIcon x:Name="Pin" Margin="0,0,6,0" FontSize="12" Symbol="Pin16" Visibility="Collapsed"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        <TextBlock FontSize="12" Text="{Binding Open}" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Visibility="{Binding HasOpen, Converter={StaticResource BoolToVisibility}}" />
+                        <Border Margin="6,0,0,0" Padding="6,0" CornerRadius="{DynamicResource GM.ChipCorner}"
+                                Background="{DynamicResource GM.AccentBrush}"
+                                Visibility="{Binding HasDoing, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock FontSize="11" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding Doing}"
+                                       Foreground="{DynamicResource GM.OnAccentBrush}" />
+                        </Border>
+                    </StackPanel>
+                    <Ellipse Width="7" Height="7" Margin="0,0,6,0" VerticalAlignment="Center" Fill="{Binding AreaBrush}" />
+                    <ui:SymbolIcon Margin="0,0,6,0" FontSize="14" VerticalAlignment="Center"
+                                   Tag="{Binding StatusId}" Style="{StaticResource StatusIcon}" />
+                    <TextBlock Text="{Binding Name}" FontSize="14" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                               Tag="{Binding StatusId}" Style="{StaticResource StatusName}" />
+                </DockPanel>
+            </Button>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                    <Setter TargetName="Pin" Property="Visibility" Value="Visible" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!-- An item the search found: its id and title with the matched words lit up, then where it is. -->
+        <DataTemplate DataType="{x:Type vm:ItemResultViewModel}">
+            <StackPanel Margin="12,0,0,0">
+                <controls:HighlightedText FontSize="14" TextTrimming="CharacterEllipsis" Lead="{Binding IdLead}" Parts="{Binding TitleParts}" />
+                <TextBlock FontSize="11" Text="{Binding Place}" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- A project in the search results, with how many of its items were found; a column under it, smaller. -->
+        <DataTemplate DataType="{x:Type vm:ResultHeadingViewModel}">
+            <StackPanel x:Name="Line" Orientation="Horizontal" Margin="0,10,0,2">
+                <TextBlock x:Name="Name" FontSize="15" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding Title}" />
+                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Text="{Binding Count}"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsColumn}" Value="True">
+                    <Setter TargetName="Line" Property="Margin" Value="12,4,0,2" />
+                    <Setter TargetName="Name" Property="FontSize" Value="11" />
+                    <Setter TargetName="Name" Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!--
+          The search results: a list that draws only what is in view, walked with Up and Down; a click or
+          Enter on an item takes the board there, on a project's heading opens its board.
+        -->
+        <Style x:Key="ResultList" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+            <Setter Property="KeyboardNavigation.TabNavigation" Value="Once" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <ScrollViewer Focusable="False" CanContentScroll="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <ItemsPresenter Margin="0,0,8,0" />
+                        </ScrollViewer>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                        <EventSetter Event="MouseLeftButtonUp" Handler="OnResultClick" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Face" Padding="8,4" BorderThickness="1" BorderBrush="Transparent" Background="Transparent"
+                                            Cursor="Hand" CornerRadius="{DynamicResource GM.RowCorner}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A chip beside the search box: a small picker that says what it holds. -->
+        <Style x:Key="Chip" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="MinWidth" Value="118" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="DisplayMemberPath" Value="Label" />
+            <Setter Property="SelectedValuePath" Value="Id" />
+        </Style>
+
+        <!--
+          A card's type, as a mark and a word in its second line of text: a plain task stays quiet, an
+          idea takes the accent and a bug the danger colour. The marks are glyphs of the system's icon font,
+          which costs a card far less to draw than icon controls (GM-121).
+        -->
+        <Style x:Key="ItemTypeMark" TargetType="Run">
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="Text" Value="&#xE9D5;" />
             <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding ItemType}" Value="idea">
-                    <Setter Property="Symbol" Value="LightbulbFilament24" />
+                    <Setter Property="Text" Value="&#xEA80;" />
                     <Setter Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding ItemType}" Value="bug">
-                    <Setter Property="Symbol" Value="Bug24" />
+                    <Setter Property="Text" Value="&#xEBE8;" />
                     <Setter Property="Foreground" Value="{DynamicResource GM.DangerBrush}" />
                 </DataTrigger>
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="ItemTypeLabel" TargetType="TextBlock">
+        <Style x:Key="ItemTypeLabel" TargetType="Run">
             <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding ItemType}" Value="idea">
@@ -107,77 +303,162 @@
             </Style.Triggers>
         </Style>
 
-        <!-- One card on the board. -->
+        <!--
+          The one menu every card shares (GM-121): a menu per card cost the board most of its time to
+          draw. The page sets its DataContext to the card it opens for.
+        -->
+        <ContextMenu x:Key="CardMenu">
+            <MenuItem Header="{DynamicResource Projects.OpenItem}" Command="{Binding OpenCommand}" />
+            <Separator />
+            <MenuItem Header="{DynamicResource Projects.Backlog}" Command="{Binding MoveCommand}" CommandParameter="backlog" />
+            <MenuItem Header="{DynamicResource Projects.Todo}" Command="{Binding MoveCommand}" CommandParameter="todo" />
+            <MenuItem Header="{DynamicResource Projects.Doing}" Command="{Binding MoveCommand}" CommandParameter="doing" />
+            <MenuItem Header="{DynamicResource Projects.Done}" Command="{Binding MoveCommand}" CommandParameter="done" />
+            <MenuItem Header="{DynamicResource Projects.Dropped}" Command="{Binding MoveCommand}" CommandParameter="dropped" />
+            <Separator />
+            <MenuItem Header="{DynamicResource Projects.CopyId}" Command="{Binding CopyIdCommand}"
+                      Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}" />
+            <MenuItem Header="{DynamicResource Projects.Archive}" Command="{Binding ArchiveCommand}"
+                      Visibility="{Binding CanArchive, Converter={StaticResource BoolToVisibility}}" />
+            <MenuItem Header="{DynamicResource Projects.RemoveItem}" Command="{Binding RemoveCommand}" />
+        </ContextMenu>
+
+        <!--
+          The dots on a card, which open its menu. A plain button with only its mark: the toolkit's
+          button costs more to draw than the rest of the card (GM-121).
+        -->
+        <Style x:Key="CardDots" TargetType="Button">
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <!-- The words never change while the app runs, so they are looked up once, not once per card. -->
+            <Setter Property="ToolTip" Value="{StaticResource Projects.ItemMenu}" />
+            <Setter Property="AutomationProperties.Name" Value="{StaticResource Projects.ItemMenu}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Face" Padding="4" Background="Transparent" CornerRadius="{DynamicResource GM.ButtonCorner}">
+                            <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="14" Text="&#xE712;"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.BackgroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--
+          One card on the board: its id and title, then its type, priority, day and maker in one line.
+          A click anywhere but the dots opens the item, as a tap does on the phone. The card's face is the
+          list item's (BoardCards), which takes an accent edge when picked or holding the keyboard.
+        -->
         <DataTemplate x:Key="BoardCard" DataType="{x:Type vm:BoardItemViewModel}">
-            <Border Margin="0,0,0,6" Padding="10,8"
-                    CornerRadius="{DynamicResource GM.RowCorner}"
-                    Background="{DynamicResource GM.SurfaceBrush}">
-                <StackPanel>
-                    <DockPanel>
-                        <!-- The menu opens on a left click of the dots, as well as on a right click. -->
-                        <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent" Click="OnItemMenu"
-                                   ToolTip="{DynamicResource Projects.ItemMenu}"
-                                   AutomationProperties.Name="{DynamicResource Projects.ItemMenu}">
-                            <ui:Button.ContextMenu>
-                                <ContextMenu>
-                                    <MenuItem Header="{DynamicResource Projects.Backlog}" Command="{Binding MoveCommand}" CommandParameter="backlog" />
-                                    <MenuItem Header="{DynamicResource Projects.Todo}" Command="{Binding MoveCommand}" CommandParameter="todo" />
-                                    <MenuItem Header="{DynamicResource Projects.Doing}" Command="{Binding MoveCommand}" CommandParameter="doing" />
-                                    <MenuItem Header="{DynamicResource Projects.Done}" Command="{Binding MoveCommand}" CommandParameter="done" />
-                                    <MenuItem Header="{DynamicResource Projects.Dropped}" Command="{Binding MoveCommand}" CommandParameter="dropped" />
-                                    <Separator />
-                                    <MenuItem Header="{DynamicResource Projects.OpenItem}" Command="{Binding OpenCommand}" />
-                                    <MenuItem Header="{DynamicResource Projects.CopyId}" Command="{Binding CopyIdCommand}"
-                                              Visibility="{Binding HasItemId, Converter={StaticResource BoolToVisibility}}" />
-                                    <MenuItem Header="{DynamicResource Projects.Archive}" Command="{Binding ArchiveCommand}"
-                                              Visibility="{Binding CanArchive, Converter={StaticResource BoolToVisibility}}" />
-                                    <MenuItem Header="{DynamicResource Projects.RemoveItem}" Command="{Binding RemoveCommand}" />
-                                </ContextMenu>
-                            </ui:Button.ContextMenu>
-                            <ui:SymbolIcon Symbol="MoreVertical24" />
-                        </ui:Button>
-                        <!--
-                          A dropped item, in Dropped, steps back in the muted colour. The id (GM-12) leads the
-                          title in the same text, small and muted, so a screen reader reads them together.
-                        -->
-                        <TextBlock FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Dropped}" Value="True">
-                                            <Setter Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                            <Run Text="{Binding IdLead, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas, Courier New" FontSize="11"
-                                 Foreground="{DynamicResource GM.TextMutedBrush}" /><Run Text="{Binding Title, Mode=OneWay}" />
-                        </TextBlock>
-                    </DockPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <!-- An idea and a bug wear their own icon and colour, so a board reads at a glance. -->
-                        <ui:SymbolIcon Margin="0,0,4,0" FontSize="12" VerticalAlignment="Center"
-                                       Style="{StaticResource ItemTypeIcon}" />
-                        <TextBlock Text="{Binding Type}" FontSize="11" Style="{StaticResource ItemTypeLabel}" />
-                        <TextBlock Text=" · " FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                        <TextBlock Text="{Binding Priority}" FontSize="11" Foreground="{DynamicResource GM.AccentBrush}" />
-                        <TextBlock Text="{Binding Day}" FontSize="11" Margin="8,0,0,0"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}"
-                                   Visibility="{Binding HasDay, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{DynamicResource Projects.ByClaude}" FontSize="11" Margin="8,0,0,0"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}"
-                                   Visibility="{Binding MadeByClaude, Converter={StaticResource BoolToVisibility}}" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <!--
+                  A dropped item, in Dropped, steps back in the muted colour. The id (GM-12) leads the
+                  title in the same text, small and muted, so a screen reader reads them together.
+                -->
+                <TextBlock x:Name="CardTitle" FontSize="14" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Foreground="{DynamicResource GM.TextBrush}">
+                    <Run Text="{Binding IdLead, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas, Courier New" FontSize="11"
+                         Foreground="{DynamicResource GM.TextMutedBrush}" /><Run Text="{Binding Title, Mode=OneWay}" />
+                </TextBlock>
+                <Button Grid.Column="1" Style="{StaticResource CardDots}" Click="OnItemMenu" AutomationProperties.Name="{StaticResource Projects.ItemMenu}" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Margin="0,4,0,0" FontSize="11" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource GM.TextMutedBrush}">
+                    <Run Style="{StaticResource ItemTypeMark}" /><Run Text=" " /><Run Text="{Binding Type, Mode=OneWay}" Style="{StaticResource ItemTypeLabel}" /><Run Text=" · " /><Run Text="{Binding Priority, Mode=OneWay}" Foreground="{DynamicResource GM.AccentBrush}" /><Run Text="{Binding Extra, Mode=OneWay}" />
+                </TextBlock>
+            </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding Dropped}" Value="True">
+                    <Setter TargetName="CardTitle" Property="Foreground" Value="{DynamicResource GM.TextMutedBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
+
+        <!--
+          A column's cards: a list that scrolls on its own and draws only the cards in view, so a column
+          of hundreds stays quick (GM-121). Up and Down walk the cards, Enter opens one.
+        -->
+        <Style x:Key="BoardCards" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="SelectionMode" Value="Single" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+            <Setter Property="KeyboardNavigation.TabNavigation" Value="Once" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <!-- The scroll bar lies over the content, so the cards keep clear of it. -->
+                        <ScrollViewer Focusable="False" Padding="{TemplateBinding Padding}"
+                                      CanContentScroll="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <ItemsPresenter Margin="0,0,8,0" />
+                        </ScrollViewer>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                        <Setter Property="AutomationProperties.HelpText" Value="{StaticResource Projects.CardHelp}" />
+                        <EventSetter Event="MouseLeftButtonUp" Handler="OnCardClick" />
+                        <EventSetter Event="MouseRightButtonUp" Handler="OnCardRightClick" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Card" Margin="0,0,0,6" Padding="10,8" BorderThickness="1" BorderBrush="Transparent"
+                                            Cursor="Hand" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Card" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <!-- A done item that left the board, with its way back. -->
         <DataTemplate x:Key="ArchivedCard" DataType="{x:Type vm:ArchivedItemViewModel}">
-            <Border Margin="0,0,0,4" Padding="10,6"
-                    CornerRadius="{DynamicResource GM.RowCorner}"
-                    Background="{DynamicResource GM.SurfaceBrush}">
+            <!-- The list item draws the card's face, as for the cards on the board. -->
+            <Border>
                 <DockPanel>
                     <ui:Button DockPanel.Dock="Right" Padding="6,2" VerticalAlignment="Center" Appearance="Transparent"
                                FontSize="12" Command="{Binding PutBackCommand}" Content="{Binding ActionText}" />
@@ -193,7 +474,7 @@
 
         <!--
           One column of the board. Folded, it is a narrow strip with its count and its name down the
-          side, and a click opens it again; open, its header folds it.
+          side, and a click opens it again; open, its header folds it, and its cards scroll on their own.
         -->
         <DataTemplate x:Key="BoardColumn" DataType="{x:Type vm:BoardColumnViewModel}">
             <Grid Margin="0,0,10,0">
@@ -214,8 +495,15 @@
                         </TextBlock>
                     </StackPanel>
                 </ui:Button>
-                <StackPanel MinWidth="200" Visibility="{Binding IsUnfolded, Converter={StaticResource BoolToVisibility}}">
-                    <DockPanel Margin="0,0,0,6" KeyboardNavigation.TabNavigation="Local">
+                <!-- Written in reading order, so Tab goes down the column as the eye does. -->
+                <Grid MinWidth="200" Visibility="{Binding IsUnfolded, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,6" KeyboardNavigation.TabNavigation="Local">
                         <ui:Button DockPanel.Dock="Right" Padding="4" Appearance="Transparent" VerticalAlignment="Center"
                                    Command="{Binding FoldCommand}" ToolTip="{Binding FoldText}"
                                    AutomationProperties.Name="{Binding FoldText}">
@@ -234,103 +522,28 @@
                                        Foreground="{DynamicResource GM.TextMutedBrush}" />
                         </StackPanel>
                     </DockPanel>
-                    <TextBlock Style="{StaticResource Hint}" FontSize="11" Text="{DynamicResource Projects.ColumnEmpty}"
+                    <TextBlock Grid.Row="1" Style="{StaticResource Hint}" FontSize="11" Text="{DynamicResource Projects.ColumnEmpty}"
                                Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
-                    <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource BoardCard}" Focusable="False" />
+                    <ListBox x:Name="Cards" Grid.Row="2" ItemsSource="{Binding Items}" ItemTemplate="{StaticResource BoardCard}"
+                             Style="{StaticResource BoardCards}" AutomationProperties.Name="{Binding Title}"
+                             PreviewKeyDown="OnCardsKey" />
                     <!-- Under Done: how many items left the board, which opens the list of them. -->
-                    <StackPanel Visibility="{Binding HasArchived, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Grid.Row="3" Visibility="{Binding HasArchived, Converter={StaticResource BoolToVisibility}}">
                         <ui:Button Margin="0,2,0,6" Padding="6,2" HorizontalAlignment="Left" Appearance="Transparent" FontSize="12"
                                    Foreground="{DynamicResource GM.TextMutedBrush}"
                                    Command="{Binding ToggleArchivedCommand}" Content="{Binding ArchivedText}" />
-                        <ItemsControl ItemsSource="{Binding Archived}" ItemTemplate="{StaticResource ArchivedCard}" Focusable="False"
-                                      Visibility="{Binding ShowsArchived, Converter={StaticResource BoolToVisibility}}" />
+                        <ListBox MaxHeight="260" ItemsSource="{Binding Archived}" ItemTemplate="{StaticResource ArchivedCard}"
+                                 Style="{StaticResource BoardCards}" Focusable="False"
+                                 Visibility="{Binding ShowsArchived, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Grid>
         </DataTemplate>
 
-        <!-- A board column shares the width while it is open and shrinks to its strip when folded. -->
-        <Style x:Key="BoardColumnWidth" TargetType="ColumnDefinition">
-            <Setter Property="Width" Value="*" />
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsFolded}" Value="True">
-                    <Setter Property="Width" Value="Auto" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
-    </Page.Resources>
-
-    <Page.InputBindings>
-        <!-- The new item window, from anywhere on the page (docs/projects.md). -->
-        <KeyBinding Key="N" Modifiers="Control" Command="{Binding OpenItemWindowCommand}" />
-    </Page.InputBindings>
-
-    <!-- Projects (docs/projects.md): the projects on the left, the board of the one on show beside them. -->
-    <Grid Margin="{DynamicResource GM.PagePaddingToEdge}">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="240" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-
-        <!--
-          The title and New project stay put; only the project rows scroll, so a long list is never
-          cut off at the window's edge (docs/pitfalls.md, "A StackPanel never scrolls").
-        -->
-        <DockPanel Grid.Column="0" Grid.RowSpan="2" Margin="0,0,16,0" LastChildFill="True">
-            <StackPanel DockPanel.Dock="Top">
-                <controls:HeadlineText Title="{DynamicResource Projects.Title}" FontSize="32" />
-                <ui:Button Margin="0,8,0,8" HorizontalAlignment="Left" Appearance="Primary"
-                           Command="{Binding NewCommand}" Content="{DynamicResource Projects.Add}" />
-                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.Empty}"
-                           Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
-                <!-- Every project filtered away: the filter stays over the board, where it can be let go. -->
-                <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.NoneMatch}"
-                           Visibility="{Binding IsFilteredAway, Converter={StaticResource BoolToVisibility}}" />
-            </StackPanel>
-            <ScrollViewer x:Name="ProjectListScroller" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Projects}" ItemTemplate="{StaticResource ProjectRow}" Focusable="False" />
-            </ScrollViewer>
-        </DockPanel>
-
-        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
-            <!-- The scrollbar rides the window's edge, and the page's own gutter keeps the content clear of it. -->
-            <StackPanel Margin="{DynamicResource GM.PageGutter}">
-                <!--
-                  The area and tag filter (docs/projects.md) narrows the project list and the board, so
-                  it sits over both, and stays when it filters every project away.
-                -->
-                <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
-                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
-                                Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
-                <!-- The project on show, or the editor when one is being written. -->
-                <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
-                        Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
-                    <DockPanel>
-                        <!-- The status with its mark and the Edit button share one row, centred on each other. -->
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
-                            <ui:SymbolIcon Margin="0,0,4,0" FontSize="14" VerticalAlignment="Center"
-                                           Tag="{Binding ProjectStatus}" Style="{StaticResource StatusIcon}" />
-                            <TextBlock Margin="0,0,8,0" Text="{Binding ProjectStatusText}" FontSize="12" VerticalAlignment="Center"
-                                       Tag="{Binding ProjectStatus}" Style="{StaticResource StatusName}" />
-                            <ui:Button Appearance="Transparent" VerticalAlignment="Center" Command="{Binding EditCommand}"
-                                       Content="{DynamicResource Projects.Edit}" />
-                        </StackPanel>
-                        <StackPanel>
-                            <TextBlock Text="{Binding ProjectName}" FontSize="18" FontFamily="{DynamicResource GM.BodyStrongFont}" />
-                            <TextBlock Text="{Binding ProjectDescription}" FontSize="12" TextWrapping="Wrap"
-                                       Foreground="{DynamicResource GM.TextMutedBrush}" />
-                            <TextBlock Text="{Binding ProjectRepository}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                            <TextBlock Text="{Binding ProjectFolder}" FontSize="11" Foreground="{DynamicResource GM.TextMutedBrush}" />
-                        </StackPanel>
-                    </DockPanel>
-                </Border>
-
-                <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
-                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+        <!-- The project editor: a new project, or the one on show. -->
+        <DataTemplate x:Key="ProjectEditor" DataType="{x:Type vm:ProjectsViewModel}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Border Padding="12" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}">
                     <StackPanel>
                         <ui:TextBox PlaceholderText="{DynamicResource Projects.Name}" Text="{Binding ProjectName, UpdateSourceTrigger=PropertyChanged}" />
                         <!-- The key its items read by (docs/projects.md, "Item ids"): a new project's name suggests one. -->
@@ -380,94 +593,418 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+            </ScrollViewer>
+        </DataTemplate>
 
-                <StackPanel Visibility="{Binding HasProject, Converter={StaticResource BoolToVisibility}}">
-                    <!--
-                      The quick line: a long title wraps down the box instead of running off to the right,
-                      and Return adds it with its kind. New item opens the window with every field, and
-                      takes what the line holds along.
-                    -->
-                    <Grid Margin="0,12,0,12">
+        <!-- A board column shares the width while it is open and shrinks to its strip when folded. -->
+        <Style x:Key="BoardColumnWidth" TargetType="ColumnDefinition">
+            <Setter Property="Width" Value="*" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsFolded}" Value="True">
+                    <Setter Property="Width" Value="Auto" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Page.Resources>
+
+    <Page.InputBindings>
+        <!-- The new item window, from anywhere on the page (docs/projects.md). -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding OpenItemWindowCommand}" />
+    </Page.InputBindings>
+
+    <!--
+      Projects (docs/projects.md): the project list on the left, the board of the one on show beside it.
+      In a narrow window the list folds to a strip and comes out over the board (GM-122).
+    -->
+    <Grid x:Name="Root" Margin="{DynamicResource GM.PagePaddingToEdge}" Tag="wide">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- The strip the list folds to: bring it out, or straight to its search. -->
+        <StackPanel x:Name="Rail" Grid.Column="0" Grid.RowSpan="2" Margin="0,4,12,0">
+            <StackPanel.Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsPaneOpen}" Value="False">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Tag, ElementName=Root}" Value="narrow">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </StackPanel.Style>
+            <ui:Button Padding="8" Appearance="Transparent" Command="{Binding TogglePaneCommand}"
+                       ToolTip="{DynamicResource Projects.ShowPane}" AutomationProperties.Name="{DynamicResource Projects.ShowPane}">
+                <ui:SymbolIcon Symbol="PanelLeftExpand24" />
+            </ui:Button>
+            <ui:Button Margin="0,4,0,0" Padding="8" Appearance="Transparent" Click="OnFindProject"
+                       ToolTip="{DynamicResource Projects.FindProjectHelp}" AutomationProperties.Name="{DynamicResource Projects.FindProject}">
+                <ui:SymbolIcon Symbol="Search24" />
+            </ui:Button>
+        </StackPanel>
+
+        <!--
+          The project list: the title, New project and the quick search stay put; only the rows scroll,
+          and only the rows in view are drawn (docs/pitfalls.md, "A StackPanel never scrolls").
+        -->
+        <Border x:Name="Pane" Grid.Column="0" Grid.RowSpan="2" Width="268" Panel.ZIndex="10" HorizontalAlignment="Left">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Margin" Value="0,0,16,0" />
+                    <Setter Property="Visibility" Value="{Binding IsPaneOpen, Converter={StaticResource BoolToVisibility}}" />
+                    <Style.Triggers>
+                        <!-- Narrow: over the board, on the page's background, with a shadow to lift it. -->
+                        <DataTrigger Binding="{Binding Tag, ElementName=Root}" Value="narrow">
+                            <Setter Property="Grid.ColumnSpan" Value="2" />
+                            <Setter Property="Margin" Value="0" />
+                            <Setter Property="Padding" Value="12,0,12,12" />
+                            <Setter Property="Background" Value="{DynamicResource GM.BackgroundBrush}" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource GM.OutlineBrush}" />
+                            <Setter Property="BorderThickness" Value="0,0,1,0" />
+                            <Setter Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.3" />
+                                </Setter.Value>
+                            </Setter>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <DockPanel LastChildFill="True">
+                <controls:HeadlineText DockPanel.Dock="Top" Title="{DynamicResource Projects.Title}" FontSize="32" />
+                <!-- The quick search, then New project and the button that puts the list away, in reading order. -->
+                <Grid DockPanel.Dock="Top" Margin="0,8,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox x:Name="PaneSearch" Grid.Column="0"
+                                PlaceholderText="{DynamicResource Projects.FindProject}"
+                                Icon="{ui:SymbolIcon Search24}"
+                                ToolTip="{DynamicResource Projects.FindProjectHelp}"
+                                AutomationProperties.Name="{DynamicResource Projects.FindProject}"
+                                AutomationProperties.HelpText="{DynamicResource Projects.FindProjectHelp}"
+                                Text="{Binding PaneQuery, UpdateSourceTrigger=PropertyChanged}"
+                                PreviewKeyDown="OnPaneSearchKey">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding PickFirstCommand}" />
+                            <KeyBinding Key="Escape" Command="{Binding ClearPaneQueryCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                    <ui:Button Grid.Column="1" Margin="4,0,0,0" Padding="8" VerticalAlignment="Center" Appearance="Primary"
+                               Command="{Binding NewCommand}"
+                               ToolTip="{DynamicResource Projects.Add}" AutomationProperties.Name="{DynamicResource Projects.Add}">
+                        <ui:SymbolIcon Symbol="Add24" />
+                    </ui:Button>
+                    <ui:Button Grid.Column="2" Margin="4,0,0,0" Padding="8" VerticalAlignment="Center" Appearance="Transparent"
+                               Command="{Binding TogglePaneCommand}"
+                               ToolTip="{DynamicResource Projects.HidePane}" AutomationProperties.Name="{DynamicResource Projects.HidePane}">
+                        <ui:SymbolIcon Symbol="PanelLeftContract24" />
+                    </ui:Button>
+                </Grid>
+                <StackPanel DockPanel.Dock="Top">
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.Empty}"
+                               Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}" />
+                    <!-- Every project filtered away: the filter stays over the board, where it can be let go. -->
+                    <TextBlock Style="{StaticResource Hint}" Text="{DynamicResource Projects.NoneMatch}"
+                               Visibility="{Binding IsFilteredAway, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Style="{StaticResource Hint}" Margin="4,8,0,8" Text="{DynamicResource Projects.NothingFound}"
+                               Visibility="{Binding IsNothingFound, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+                <ItemsControl x:Name="ProjectList" ItemsSource="{Binding PaneEntries}" Focusable="False"
+                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel"
+                              ScrollViewer.CanContentScroll="True"
+                              KeyboardNavigation.DirectionalNavigation="Contained"
+                              PreviewKeyDown="OnPaneListKey" PreviewTextInput="OnPaneListText">
+                    <ItemsControl.Template>
+                        <ControlTemplate TargetType="ItemsControl">
+                            <ScrollViewer x:Name="ProjectListScroller" Focusable="False" CanContentScroll="True"
+                                          HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter Margin="0,0,8,0" />
+                            </ScrollViewer>
+                        </ControlTemplate>
+                    </ItemsControl.Template>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
+        <!-- The board side: what stays put on top, and the board, whose columns scroll on their own. -->
+        <Grid Grid.Column="1" Margin="{DynamicResource GM.PageGutter}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <!--
+                  The area and tag filter (docs/projects.md) narrows the project list and the board, so
+                  it sits over both, and stays when it filters every project away.
+                -->
+                <!-- While the search shows, the filter sits with its chips; otherwise it stays here. -->
+                <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
+                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
+                            <Setter Property="Visibility" Value="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanSearch}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentControl.Style>
+                </ContentControl>
+                <!-- The project on show. -->
+                <Border Padding="12,10" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
+                        Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <!-- The status with its mark and the Edit button share one row, centred on each other. -->
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                            <ui:SymbolIcon Margin="0,0,4,0" FontSize="14" VerticalAlignment="Center"
+                                           Tag="{Binding ProjectStatus}" Style="{StaticResource StatusIcon}" />
+                            <TextBlock Margin="0,0,8,0" Text="{Binding ProjectStatusText}" FontSize="12" VerticalAlignment="Center"
+                                       Tag="{Binding ProjectStatus}" Style="{StaticResource StatusName}" />
+                            <ui:Button Appearance="Transparent" VerticalAlignment="Center" Command="{Binding EditCommand}"
+                                       Content="{DynamicResource Projects.Edit}" />
+                        </StackPanel>
+                        <!-- The name, then the description and where the project lives, each only when it has one. -->
+                        <StackPanel>
+                            <TextBlock Text="{Binding ProjectName}" FontSize="18" FontFamily="{DynamicResource GM.BodyStrongFont}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding ProjectDescription}" FontSize="12" TextWrapping="Wrap" MaxHeight="34"
+                                       TextTrimming="CharacterEllipsis" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                       Style="{StaticResource WhenSaid}" />
+                            <TextBlock Text="{Binding ProjectPlace}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" Style="{StaticResource WhenSaid}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
+            </StackPanel>
+
+            <!--
+              The editor takes the board's place while a project is being written. Its boxes are made
+              only then, so the page opens quicker and switching projects doesn't fill boxes nobody sees (GM-121).
+            -->
+            <ContentControl Grid.Row="1" Grid.RowSpan="2" Focusable="False">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="Content" Value="{x:Null}" />
+                        <Setter Property="ContentTemplate" Value="{x:Null}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                <Setter Property="Content" Value="{Binding}" />
+                                <Setter Property="ContentTemplate" Value="{StaticResource ProjectEditor}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+
+            <StackPanel Grid.Row="1">
+                <!--
+                  The quick line: a long title wraps down the box instead of running off to the right,
+                  and Return adds it with its kind. New item opens the window with every field, and
+                  takes what the line holds along.
+                -->
+                <Grid Margin="0,12,0,8" Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Grid.Column="0" MinWidth="200" MaxHeight="140" TextWrapping="Wrap"
+                                VerticalAlignment="Top" VerticalScrollBarVisibility="Auto"
+                                PlaceholderText="{DynamicResource Projects.ItemTitle}"
+                                AutomationProperties.Name="{DynamicResource Projects.ItemTitle}"
+                                Text="{Binding NewItemTitle, UpdateSourceTrigger=PropertyChanged}">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Return" Command="{Binding AddItemCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+                    <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="110" VerticalAlignment="Top"
+                              ItemsSource="{Binding ItemTypes}"
+                              DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemType}"
+                              AutomationProperties.Name="{DynamicResource Projects.ItemType}" />
+                    <ui:Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Top" Appearance="Primary"
+                               Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
+                    <ui:Button Grid.Column="3" Margin="8,0,0,0" VerticalAlignment="Top"
+                               Command="{Binding OpenItemWindowCommand}" Content="{DynamicResource Projects.NewItem}"
+                               ToolTip="{DynamicResource Projects.NewItemHelp}"
+                               AutomationProperties.Name="{DynamicResource Projects.NewItem}"
+                               AutomationProperties.HelpText="{DynamicResource Projects.NewItemHelp}">
+                        <ui:Button.Icon>
+                            <ui:SymbolIcon Symbol="WindowNew24" />
+                        </ui:Button.Icon>
+                    </ui:Button>
+                </Grid>
+
+                <!--
+                  The search (docs/projects.md, "Searching items"): one box, Ctrl+F, over every project
+                  unless narrowed to this one; words in any order, an id, or filter words. Then the chips,
+                  the area and tag filter and who made the items, and the recent searches while the box
+                  is empty and has the keyboard.
+                -->
+                <StackPanel x:Name="SearchArea" Margin="0,0,0,8" IsKeyboardFocusWithinChanged="OnSearchFocus"
+                            Visibility="{Binding CanSearch, Converter={StaticResource BoolToVisibility}}">
+                    <!-- The box, the scope switch, then who made the items, in reading order. -->
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <ui:TextBox Grid.Column="0" MinWidth="280" MaxHeight="140" TextWrapping="Wrap"
-                                    VerticalAlignment="Top" VerticalScrollBarVisibility="Auto"
-                                    PlaceholderText="{DynamicResource Projects.ItemTitle}"
-                                    AutomationProperties.Name="{DynamicResource Projects.ItemTitle}"
-                                    Text="{Binding NewItemTitle, UpdateSourceTrigger=PropertyChanged}">
-                            <ui:TextBox.InputBindings>
-                                <KeyBinding Key="Return" Command="{Binding AddItemCommand}" />
-                            </ui:TextBox.InputBindings>
-                        </ui:TextBox>
-                        <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="110" VerticalAlignment="Top"
-                                  ItemsSource="{Binding ItemTypes}"
-                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding NewItemType}"
-                                  AutomationProperties.Name="{DynamicResource Projects.ItemType}" />
-                        <ui:Button Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Top" Appearance="Primary"
-                                   Command="{Binding AddItemCommand}" Content="{DynamicResource Projects.AddItem}" />
-                        <ui:Button Grid.Column="3" Margin="8,0,0,0" VerticalAlignment="Top"
-                                   Command="{Binding OpenItemWindowCommand}" Content="{DynamicResource Projects.NewItem}"
-                                   ToolTip="{DynamicResource Projects.NewItemHelp}"
-                                   AutomationProperties.Name="{DynamicResource Projects.NewItem}"
-                                   AutomationProperties.HelpText="{DynamicResource Projects.NewItemHelp}">
-                            <ui:Button.Icon>
-                                <ui:SymbolIcon Symbol="WindowNew24" />
-                            </ui:Button.Icon>
-                        </ui:Button>
-                    </Grid>
-
-                    <!--
-                      The board's search: words from an item's title or notes, or its id, GM-12 or #12. Then who
-                      made the items on show: everyone, the owner, or Claude (docs/projects.md).
-                    -->
-                    <DockPanel Margin="0,0,0,8">
-                        <ui:TextBox DockPanel.Dock="Left" Width="260"
+                        <ui:TextBox x:Name="BoardSearch" Grid.Column="0" MinWidth="220"
                                     PlaceholderText="{DynamicResource Projects.FindItem}"
                                     Icon="{ui:SymbolIcon Search24}"
                                     ToolTip="{DynamicResource Projects.FindItemHelp}"
                                     AutomationProperties.Name="{DynamicResource Projects.FindItem}"
                                     AutomationProperties.HelpText="{DynamicResource Projects.FindItemHelp}"
-                                    Text="{Binding BoardQuery, UpdateSourceTrigger=PropertyChanged}" />
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                            <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
+                                    Text="{Binding BoardQuery, UpdateSourceTrigger=PropertyChanged}"
+                                    PreviewKeyDown="OnBoardSearchKey">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding OpenFirstResultCommand}" />
+                                <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    ToolTip="{DynamicResource Projects.ScopeHelp}">
+                            <ToggleButton Padding="10,5" IsChecked="{Binding SearchesEverywhere}" Content="{DynamicResource Projects.ScopeAll}"
+                                          AutomationProperties.HelpText="{DynamicResource Projects.ScopeHelp}" />
+                            <ToggleButton Margin="4,0,0,0" Padding="10,5" IsChecked="{Binding SearchesHere}" Content="{DynamicResource Projects.ScopeHere}"
+                                          AutomationProperties.HelpText="{DynamicResource Projects.ScopeHelp}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Margin="12,0,8,0" VerticalAlignment="Center" FontSize="12"
                                        Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.MadeBy}" />
                             <ComboBox MinWidth="120" ItemsSource="{Binding MakerFilters}"
                                       DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding MadeByFilter}"
                                       AutomationProperties.Name="{DynamicResource Projects.MadeBy}" />
                         </StackPanel>
-                    </DockPanel>
-
-                    <!--
-                      The open columns share the width when there is room, and a folded one keeps only
-                      its strip. In a narrow window they stop shrinking and the board scrolls sideways,
-                      so a card is never cut off and its menu stays on screen.
-                    -->
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                                  PreviewMouseWheel="OnBoardWheel">
-                        <!-- The board takes the width it is shown in, and what its columns need at the least, so a title still wraps. -->
-                        <Grid MinWidth="{Binding BoardMinWidth}"
-                              Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition DataContext="{Binding Columns[0]}" Style="{StaticResource BoardColumnWidth}" />
-                                <ColumnDefinition DataContext="{Binding Columns[1]}" Style="{StaticResource BoardColumnWidth}" />
-                                <ColumnDefinition DataContext="{Binding Columns[2]}" Style="{StaticResource BoardColumnWidth}" />
-                                <ColumnDefinition DataContext="{Binding Columns[3]}" Style="{StaticResource BoardColumnWidth}" />
-                                <ColumnDefinition DataContext="{Binding Columns[4]}" Style="{StaticResource BoardColumnWidth}" />
-                            </Grid.ColumnDefinitions>
-                            <ContentControl Grid.Column="0" Focusable="False" Content="{Binding Columns[0]}" ContentTemplate="{StaticResource BoardColumn}" />
-                            <ContentControl Grid.Column="1" Focusable="False" Content="{Binding Columns[1]}" ContentTemplate="{StaticResource BoardColumn}" />
-                            <ContentControl Grid.Column="2" Focusable="False" Content="{Binding Columns[2]}" ContentTemplate="{StaticResource BoardColumn}" />
-                            <ContentControl Grid.Column="3" Focusable="False" Content="{Binding Columns[3]}" ContentTemplate="{StaticResource BoardColumn}" />
-                            <ContentControl Grid.Column="4" Focusable="False" Content="{Binding Columns[4]}" ContentTemplate="{StaticResource BoardColumn}" />
-                        </Grid>
-                    </ScrollViewer>
+                    </Grid>
+                    <WrapPanel Margin="0,6,0,0">
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding TypeChips}" SelectedValue="{Binding TypeChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipType}" />
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding PriorityChips}" SelectedValue="{Binding PriorityChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipPriority}" />
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding StatusChips}" SelectedValue="{Binding StatusChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipStatus}" />
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding MilestoneChips}" SelectedValue="{Binding MilestoneChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipMilestone}" />
+                        <ContentControl Margin="0,0,6,6" Focusable="False" Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                        Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Margin="0,0,0,6" Padding="8,4" Appearance="Transparent" FontSize="12" Command="{Binding ClearFiltersCommand}"
+                                   Content="{DynamicResource Projects.ClearFilters}"
+                                   Visibility="{Binding CanClearFilters, Converter={StaticResource BoolToVisibility}}" />
+                    </WrapPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsRecent, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="2,0,8,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Text="{DynamicResource Projects.Recent}" />
+                        <ItemsControl ItemsSource="{Binding RecentSearches}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ui:Button Margin="0,0,4,0" Padding="8,2" FontSize="12" Content="{Binding}"
+                                               Command="{Binding DataContext.UseRecentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
-        </ScrollViewer>
+
+            <!--
+              The open columns share the width when there is room, and a folded one keeps only its strip.
+              In a narrow window they stop shrinking and the board scrolls sideways, so a card is never
+              cut off and its menu stays on screen. Each column scrolls up and down on its own.
+            -->
+            <!-- The results of a search over every project take the board's place. -->
+            <DockPanel Grid.Row="2">
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Setter Property="Visibility" Value="{Binding ShowsResults, Converter={StaticResource BoolToVisibility}}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNoResults}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DockPanel.Style>
+                <TextBlock DockPanel.Dock="Top" Margin="2,0,0,4" Style="{StaticResource SectionLabel}" Text="{Binding ResultsText}" />
+                <TextBlock DockPanel.Dock="Bottom" Margin="2,4,0,0" FontSize="11" Style="{StaticResource WhenSaid}"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding MoreFoundText}" />
+                <ListBox x:Name="ResultList" ItemsSource="{Binding Results}" Style="{StaticResource ResultList}"
+                         AutomationProperties.Name="{Binding ResultsText}" PreviewKeyDown="OnResultsKey" />
+            </DockPanel>
+
+            <!-- A search or a filter that finds nothing: say so, with the ways out. -->
+            <Border Grid.Row="2" VerticalAlignment="Top" Padding="16" CornerRadius="{DynamicResource GM.CardCorner}" BorderThickness="1"
+                    BorderBrush="{DynamicResource GM.OutlineBrush}"
+                    Visibility="{Binding IsNoResults, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock FontSize="15" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding NoResultsText}" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <ui:Button Margin="0,0,8,0" Appearance="Primary" Command="{Binding WidenSearchCommand}" Content="{DynamicResource Projects.Widen}"
+                                   Visibility="{Binding SearchesHere, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Margin="0,0,8,0" Command="{Binding ClearFiltersCommand}" Content="{DynamicResource Projects.ClearFilters}"
+                                   Visibility="{Binding CanClearFilters, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Appearance="Transparent" Command="{Binding ClearSearchCommand}" Content="{DynamicResource Projects.ClearSearch}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <ScrollViewer x:Name="BoardScroller" Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
+                        <Setter Property="Visibility" Value="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowsResults}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsNoResults}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
+                <!-- The board takes the width it is shown in, and what its columns need at the least, so a title still wraps. -->
+                <Grid x:Name="Board" MinWidth="{Binding BoardMinWidth}"
+                      Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition DataContext="{Binding Columns[0]}" Style="{StaticResource BoardColumnWidth}" />
+                        <ColumnDefinition DataContext="{Binding Columns[1]}" Style="{StaticResource BoardColumnWidth}" />
+                        <ColumnDefinition DataContext="{Binding Columns[2]}" Style="{StaticResource BoardColumnWidth}" />
+                        <ColumnDefinition DataContext="{Binding Columns[3]}" Style="{StaticResource BoardColumnWidth}" />
+                        <ColumnDefinition DataContext="{Binding Columns[4]}" Style="{StaticResource BoardColumnWidth}" />
+                    </Grid.ColumnDefinitions>
+                    <ContentControl Grid.Column="0" Focusable="False" Content="{Binding Columns[0]}" ContentTemplate="{StaticResource BoardColumn}" />
+                    <ContentControl Grid.Column="1" Focusable="False" Content="{Binding Columns[1]}" ContentTemplate="{StaticResource BoardColumn}" />
+                    <ContentControl Grid.Column="2" Focusable="False" Content="{Binding Columns[2]}" ContentTemplate="{StaticResource BoardColumn}" />
+                    <ContentControl Grid.Column="3" Focusable="False" Content="{Binding Columns[3]}" ContentTemplate="{StaticResource BoardColumn}" />
+                    <ContentControl Grid.Column="4" Focusable="False" Content="{Binding Columns[4]}" ContentTemplate="{StaticResource BoardColumn}" />
+                </Grid>
+            </ScrollViewer>
+        </Grid>
 
         <!-- Undo for the last item finished or taken out, for five seconds, as on the lists. -->
         <Border Grid.Row="1" Grid.Column="1"

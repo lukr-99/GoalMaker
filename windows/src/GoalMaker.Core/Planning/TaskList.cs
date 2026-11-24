@@ -33,6 +33,14 @@ public sealed class TaskList
     private readonly Action requestSync;
     private readonly Func<DateOnly> today;
 
+    // Every page that shows tasks reads them all after a change, so the first read is kept until the
+    // next change (GM-121). The version stops a read that raced a change from keeping old rows: a change
+    // bumps it, and a read is kept only if it is still the version the read began at. Both happen under
+    // the gate, so a change can't fall between that check and the keeping.
+    private readonly Lock everyGate = new();
+    private IReadOnlyList<TaskItem>? every;
+    private long version;
+
     public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, ProjectList projects, Action requestSync, Func<DateOnly> today)
     {
         this.today = today;
@@ -46,6 +54,13 @@ public sealed class TaskList
         {
             if (changed == Table)
             {
+                // The copy of every task is stale now; the next All() reads them again.
+                lock (everyGate)
+                {
+                    version++;
+                    every = null;
+                }
+
                 Changed?.Invoke(this, EventArgs.Empty);
             }
         };
@@ -61,8 +76,31 @@ public sealed class TaskList
             .OrderBy(item => item.CreatedAt, StringComparer.Ordinal)];
 
     /// <summary>Every task that isn't deleted, whatever its status: what the list rules work from.</summary>
-    public IReadOnlyList<TaskItem> All() =>
-        [.. replica.All(Table).Where(row => row[SyncedTable.DeletedAt] is null).Select(ToItem)];
+    public IReadOnlyList<TaskItem> All()
+    {
+        long before;
+        lock (everyGate)
+        {
+            if (every is { } kept)
+            {
+                return kept;
+            }
+
+            before = version;
+        }
+
+        // Read outside the gate, so a change waits for nothing but the bookkeeping.
+        TaskItem[] read = [.. replica.All(Table).Where(row => row[SyncedTable.DeletedAt] is null).Select(ToItem)];
+        lock (everyGate)
+        {
+            if (version == before)
+            {
+                every = read;
+            }
+        }
+
+        return read;
+    }
 
     /// <summary>Brings a deleted task back (undo).</summary>
     public void Restore(string id) => Change(id, row => row[SyncedTable.DeletedAt] = null);

@@ -149,6 +149,78 @@ items goes in without reopening it; the next window opens the same way. The wind
 its accent, fonts and light or dark, like the main window. Each project's status carries a mark of its own, in the list or picker and on the card:
 active plays on in the accent, paused and done step back in the muted colour.
 
+### The Windows project list and finding items
+
+The list beside the board (GM-122) shows pinned projects first, then the active ones grouped by their
+area in the areas' order, then those without an area, and paused and done projects last, folded away
+under a heading that opens them. Headings show only when there is more than one group. Each row has
+its area's dot, its status mark, its name, how many items are open (Backlog, To do and Doing) and, in
+the accent, how many are in Doing. A row's menu (right click or the menu key) pins it to the top or
+edits it. Pins and the projects last opened are kept on this PC in the settings file, not synced; the
+page opens on the project opened last.
+
+The **quick search** at the top of the list (Ctrl+P) finds a project by name or key; Enter opens the
+first one found, Down goes into the list, and typing on a row types into the box.
+
+### Searching items
+
+One search box sits over the board (Ctrl+F, which reaches it even when no project is on show, say
+when the area filter hides them all). It looks in **every project** by default; the
+**All projects | This project** switch beside it narrows it to the board on show. Esc empties the box
+and the next search looks in every project again.
+
+- Matching is forgiving: case and accents are ignored, and every word must be in the item's title or
+  notes, in any order. An item id finds that item: GM-12, KLN-5, or #12 for the project on show.
+- The search looks once typing pauses for 150 ms; emptying the box shows everything at once.
+- The results take the board's place, grouped by project (the one on show first, then the latest
+  opened) and by column in the board's order, then the items off the board, each heading with its
+  count. The matched words light up in each title. A project's heading opens its board.
+- A click or Enter on a result takes the board to its card, as above, with the search narrowed to that
+  project so the card shows among the others found. An item off the board opens on its own page.
+- Down from the box goes into the results, or to the first card when the search narrows one board.
+- The **chips** beside the box narrow it without a panel: type, priority, status (open, done or
+  dropped; any by default, so done items are found too), milestone (by name), and the area and tag
+  filter. Who made the items applies too. Clear the filters lets go of all of them.
+- **Filter words** typed in the box do the same, and combine with the chips:
+
+  | Word | Keeps |
+  |---|---|
+  | `#tag` | items with that tag (`#12`, digits only, is an id) |
+  | `is:open`, `is:done`, `is:dropped` | items in that state |
+  | `is:task`, `is:idea`, `is:bug`, or `type:bug` | items of that type |
+  | `p:high` or `priority:high` | urgent, high, normal or low items |
+  | `m:M3` or `milestone:M3` | items of a milestone with that name |
+
+  A filter word that names nothing it knows, like `is:soon`, is searched as a plain word.
+
+  How they combine: values of one kind are alternatives, so `type:bug type:idea`, or the Bug chip
+  with `type:idea` typed, finds bugs and ideas. Tags must all be there: `#release #ui` finds items
+  with both. Different kinds must all hold: `is:open p:high` finds open, high items. Words and an id
+  must all match too.
+
+  Any whitespace parts words, and double quotes keep a phrase together: `"board sync"` finds that
+  phrase, and a milestone or a tag with a space in its name is `m:"Q4 launch"` or `#"to read"`. The
+  milestone chip offers every name too.
+- **Recent searches** show under the box while it is empty and has the keyboard; a click runs one
+  again. A search is remembered when Enter is pressed or a result is opened; the last eight are kept
+  on this PC.
+- When nothing is found, the page says so and offers **Search every project** (when it looked in one),
+  **Clear the filters** (when a filter is on) and **Clear the search**.
+
+**One click on a card opens the item** on its own page, as a tap does on the phone; the dots and a
+right click show the card's menu. On the board, Up and Down walk a column's cards, Left and Right go to
+the next column, Enter opens the picked card and the menu key shows its menu. Esc on the item's page
+goes back, and the board shows the same card picked, where it was. Esc on the board empties the search.
+
+Below 900 pixels the list folds to a strip with a button to bring it out and one for the quick
+search; it then comes out over the board and goes away once a project is picked. In a wide window the
+button beside New project folds it the same way.
+
+The page stays quick on boards of thousands of items: it reads the projects and items once per change,
+off the UI thread, keeps each item's folded text for search, redraws only the rows and cards that
+changed, and each column draws only the cards in view and scrolls on its own. `ProjectsSpeedReport`
+measures it on `LargeBoard` (40 projects, 3,000 items).
+
 ## Through the connector
 
 Claude reads the projects and one project's board (all of it, or only the owner's items or only

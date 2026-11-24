@@ -11,4 +11,7 @@ public sealed record ArchivedItemViewModel(string Title, string DoneText, string
 {
     /// <summary>The id and a space, written before the title in the same line of text; empty without an id.</summary>
     public string IdLead => ItemId is { Length: > 0 } id ? id + " " : string.Empty;
+
+    /// <summary>The item it was drawn from, and whether its way back puts it back, so a redraw can keep it (GM-121).</summary>
+    internal (Core.Planning.TaskItem Item, bool PutsBack)? Source { get; init; }
 }

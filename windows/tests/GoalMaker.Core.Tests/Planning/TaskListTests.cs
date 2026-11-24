@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Sync;
 using GoalMaker.Core.Tests.Sync;
 using Microsoft.Extensions.Time.Testing;
 
@@ -23,6 +24,52 @@ public sealed class TaskListTests : IDisposable
     private static ComposerDraft Draft(string line) => ComposerParser.Parse(line, new DateTime(2026, 9, 18, 14, 5, 0));
 
     public void Dispose() => test.Dispose();
+
+    // Every page reads every task after a change, so the first read is kept until the next one (GM-121).
+    [Fact]
+    public void EveryTaskIsReadOncePerChange()
+    {
+        var tasks = Tasks();
+        var first = tasks.Add("Call the dentist")!;
+
+        var read = tasks.All();
+        Assert.Same(read, tasks.All());
+
+        tasks.Add("Buy milk");
+        var again = tasks.All();
+        Assert.NotSame(read, again);
+        Assert.Equal(["Call the dentist", "Buy milk"], again.Select(task => task.Title).Order().Reverse());
+
+        // A row the server sends counts as a change too.
+        var row = test.Replica.Get("tasks", first.Id)!;
+        row["title"] = "Call the dentist at nine";
+        test.Replica.Put("tasks", row);
+        Assert.Contains(tasks.All(), task => task.Title == "Call the dentist at nine");
+    }
+
+    // A change that lands while every task is being read (sync writing on its thread) must not leave the
+    // older read kept: the next All() reads again and sees the change (GM-121 review).
+    [Fact]
+    public void ARaceWithAChangeDuringTheReadKeepsNothingOld()
+    {
+        var racing = new RacingReplica(test.Replica);
+        var rows = new NewRows(test.Catalog, () => TestReplica.Owner, time);
+        var areas = new AreaList(racing, rows, ["violet"], () => { });
+        var tasks = new TaskList(racing, rows, areas, new TagList(racing, rows, () => { }), new ProjectList(racing, rows, () => { }), () => { }, () => new DateOnly(2026, 9, 18));
+        var first = tasks.Add("Call the dentist")!;
+
+        // The read takes its rows, then the title changes before the read is kept.
+        racing.DuringNextRead = () =>
+        {
+            var row = test.Replica.Get("tasks", first.Id)!;
+            row["title"] = "Call the dentist at nine";
+            test.Replica.Put("tasks", row);
+        };
+        Assert.Equal("Call the dentist", tasks.All().Single().Title);
+
+        Assert.Equal("Call the dentist at nine", tasks.All().Single().Title);
+        Assert.Same(tasks.All(), tasks.All());
+    }
 
     [Fact]
     public void AddingQueuesACompleteRowAndAsksForASync()

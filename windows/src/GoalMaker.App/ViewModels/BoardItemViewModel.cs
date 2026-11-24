@@ -52,6 +52,9 @@ public sealed class BoardItemViewModel
 
     public string Id { get; }
 
+    /// <summary>The item the card was drawn from; a redraw keeps the card while the item is the same (GM-121).</summary>
+    internal Core.Planning.TaskItem? Source { get; init; }
+
     public string Title { get; }
 
     /// <summary>GM-12, or #12 in a project without a key; empty until the server has numbered it.</summary>
@@ -84,6 +87,9 @@ public sealed class BoardItemViewModel
     public string Day { get; }
 
     public bool HasDay => Day.Length > 0;
+
+    /// <summary>What follows the priority on the card's second line: the day and "by Claude", each after a dot.</summary>
+    public string Extra { get; init; } = string.Empty;
 
     /// <summary>Claude made it through the connector, which the card says in small print.</summary>
     public bool MadeByClaude { get; }

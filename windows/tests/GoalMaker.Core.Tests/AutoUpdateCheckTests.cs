@@ -271,6 +271,12 @@ public sealed class AutoUpdateCheckTests : IDisposable
 
         public IReadOnlyList<string> FoldedBoardColumns { get; set; } = [];
 
+        public IReadOnlyList<string> PinnedProjects { get; set; } = [];
+
+        public IReadOnlyList<string> RecentProjects { get; set; } = [];
+
+        public IReadOnlyList<string> RecentSearches { get; set; } = [];
+
         public GoalsView GoalsView { get; set; }
 
         public WantsTab WantsTab { get; set; }

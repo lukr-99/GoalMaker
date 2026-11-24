@@ -6,7 +6,9 @@ namespace GoalMaker.App.Views;
 
 /// <summary>
 /// One task's details. Behavior is in <see cref="TaskDetailViewModel"/>; this swaps the notes between
-/// reading and editing, and saves them when the box loses focus or the page closes.
+/// reading and editing, and saves them when the box loses focus or the page closes. Esc goes back to the
+/// page the task was opened from, unless the keyboard is in a box, a picker, a popup or a menu, where Esc
+/// is that control's own (GM-122, <see cref="Controls.EscapeKey"/>).
 /// </summary>
 public partial class TaskPage
 {
@@ -22,6 +24,16 @@ public partial class TaskPage
         {
             viewModel.SaveNotes();
             viewModel.PropertyChanged -= OnChanged;
+        };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key == System.Windows.Input.Key.Escape
+                && !Controls.EscapeKey.BelongsTo(System.Windows.Input.Keyboard.FocusedElement as DependencyObject)
+                && viewModel.BackCommand.CanExecute(null))
+            {
+                viewModel.BackCommand.Execute(null);
+                e.Handled = true;
+            }
         };
         Show();
     }

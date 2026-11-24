@@ -314,7 +314,8 @@ theme's picture under every name. Build the content again after each `ThemeAppli
 with many projects the rows ran off the bottom with no scroll bar. Keep the title and buttons fixed and
 put only the rows in their own `ScrollViewer` (`ProjectListScroller`). Also, the board's inner sideways
 `ScrollViewer` (vertical disabled) still marks the mouse wheel handled, so the wheel did nothing over the
-board; `ProjectsPage.OnBoardWheel` hands it on to the page. `ProjectsPageScrollTests` covers both.
+board; `ProjectsPage.OnBoardWheel` handed it on to the page. Since GM-121 each column scrolls on its
+own, so the wheel goes to the column under it. `ProjectsPageScrollTests` covers both.
 
 ## A problem reported on every run brings the Settings mark straight back
 
@@ -351,3 +352,39 @@ the tag being released, so the lookup must skip the tag on HEAD and take the nex
 ancestor (`Get-PreviousReleaseTag`, tested on a throwaway repository in `tools/test-release-backend.ps1`).
 The checkout now also asks for tags (`fetch-tags: true`), and when no tag is found the output says how
 many `v*` tags the clone has. With no tag at all, deploying every function stays the safe fallback.
+
+## A hidden form still pays for its boxes
+
+2026-11-24, GM-121. Switching projects on a big board spent about 100 ms in bindings while the view
+model alone took under 1 ms. The project editor sat in the page collapsed, and every switch filled its
+WPF UI text boxes with the next project's name, description and folder: about 45 ms for the name alone.
+Collapsed elements are still made and still take their bindings. Put a form that shows only sometimes in
+a `ContentControl` whose `Content` and `ContentTemplate` are set by a trigger while it shows. Find such
+costs by timing the view model alone against the same change with the page bound (`ProjectsSpeedReport`).
+
+## Every item's template is paid once per row drawn
+
+2026-11-24, GM-121. A Projects card cost about 10 ms to draw on a busy PC: a `ui:Button` for its dots,
+two `ui:SymbolIcon`s and its own `ContextMenu` with ten items. Draw marks as glyphs of
+`Segoe Fluent Icons` in a `Run`, give the dots a plain `Button` template, share one menu and set its
+`DataContext` when it opens, put hover and selection on the list item's template, and make the list
+virtualize (`ListBox` with a `VirtualizingStackPanel`, a height it cannot grow past, `CanContentScroll`).
+
+## MouseLeftButtonUp does not bubble
+
+2026-11-24, GM-122. A test raised `MouseLeftButtonUpEvent` on a card's text and the `ListBoxItem` around
+it never heard it: it is a direct event, which WPF raises on each element as the bubbling `MouseUp`
+passes. Raise `UIElement.MouseUpEvent` with `MouseButton.Left` to stand in for a click.
+
+## Taking a page out and putting it back in one pass fires no Loaded
+
+2026-11-24, GM-122. A test set `RootVisual` to null and back to the page, and the page's `Loaded` never
+ran. WPF posts Unloaded and Loaded and drops both when the element is back before they run. Let the
+dispatcher run in between (`TabOrder.Settle()`).
+
+## A pack URI fails with "Invalid port specified" before WPF starts
+
+2026-11-24. `SettingsViewModelTests` failed when run on their own, or when the order of the test classes
+changed: `ThemeApplier.Face` built `new Uri("pack://application:,,,/...")` before anything had
+registered the pack scheme, which an `Application` does. Name the scheme through
+`System.IO.Packaging.PackUriHelper.UriSchemePack`; reading it registers the scheme.
