@@ -59,7 +59,7 @@ public sealed partial class BoardColumnViewModel : ObservableObject
     /// <summary>What the column's plus says to a screen reader and in its tooltip.</summary>
     public string AddText => add?.Text ?? string.Empty;
 
-    public ObservableCollection<BoardItemViewModel> Items { get; } = [];
+    public ShownCollection<BoardItemViewModel> Items { get; } = [];
 
     public bool IsEmpty => Items.Count == 0;
 
@@ -69,7 +69,7 @@ public sealed partial class BoardColumnViewModel : ObservableObject
     public bool IsUnfolded => !IsFolded;
 
     /// <summary>The done items that left the board, most recently finished first; empty in the other columns.</summary>
-    public ObservableCollection<ArchivedItemViewModel> Archived { get; } = [];
+    public ShownCollection<ArchivedItemViewModel> Archived { get; } = [];
 
     public bool HasArchived => Archived.Count > 0;
 
