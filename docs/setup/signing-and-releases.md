@@ -151,6 +151,32 @@ and a later job failed, the cloud is ahead of the apps, which is safe (see above
 and run the release again, and the backend job finds nothing left to do. If a bad release went out,
 see [SECURITY.md](../../SECURITY.md) → Recovery.
 
+## 4b. Local release in Kiln (this PC only)
+
+The real release is the GitHub one above. To also have the Windows installer in Kiln (local CI), so
+Kiln's "Install on this PC" offers it, run from the repository root in a normal terminal:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\release-local.ps1
+```
+
+It reads the version from `version.properties`, needs a clean tree, runs the gate (repository
+validation, format check, Windows tests), builds the production installer with
+`windows/installer/build-installer.ps1` and records `GoalMaker-X.Y.Z-setup.exe` with
+`kiln release add --project goalmaker`. The release notes are the commit subjects since the previous
+`v*` tag. Nothing is tagged, pushed or published, and the backend is not touched.
+
+- `-SkipChecks` skips the gate, `-AllowDirty` allows uncommitted changes (a trial).
+- `-DataDir <folder>` records into another folder instead of `%LOCALAPPDATA%\Kiln`, so a trial run does
+  not touch the real Kiln data or offer an install.
+- The release build needs the cloud project (`GOALMAKER_SUPABASE_URL` and `GOALMAKER_SUPABASE_KEY`, or
+  `windows/GoalMaker.local.props`).
+- The release folder holds only the production installer. A `-Dev` installer (`...-dev-setup.exe`) would
+  match Kiln's pattern `GoalMaker-*-setup.exe`, so the script stages the one production file and records only that.
+- A version that is already recorded in Kiln is refused. Kiln only offers a release made on this PC;
+  click **Install on this PC** on its Releases page. Run the script from a normal terminal, not from the
+  Claude desktop app's shell (it sees a virtualised AppData).
+
 ## 5. First install and the manual path
 
 - **Phone:** download `GoalMaker-X.Y.Z.apk` from the latest GitHub Release, allow installing from

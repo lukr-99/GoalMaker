@@ -6,7 +6,8 @@ Three workflows run in `.github/workflows/`:
 - `codeprint.yml` (Repository baseline): the `validate` job, the repository-wide Python and
   PowerShell checks, on pull requests and pushes to `main`.
 - `release.yml` (Release): the signed APK, the installer and the GitHub Release, on `v*` tags
-  ([signing and releases](signing-and-releases.md)).
+  ([signing and releases](signing-and-releases.md)). A local copy for Kiln's "Install on this PC" is
+  made by `tools/release-local.ps1` on the PC (section 4b there); Kiln cannot build the installer.
 
 ## Required checks
 

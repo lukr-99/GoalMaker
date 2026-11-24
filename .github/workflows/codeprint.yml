@@ -59,7 +59,13 @@ jobs:
       # The self-test builds a throwaway git repository; the PowerShell image has no git.
       - name: Install git
         shell: bash
-        run: apt-get update -qq && apt-get install -y -qq git
+        run: |
+          # The GitHub runner has git and a non-root user; Kiln's container runs as root and may lack git.
+          if ! command -v git > /dev/null; then
+            SUDO=""
+            if [ "$(id -u)" -ne 0 ]; then SUDO=sudo; fi
+            $SUDO apt-get update -qq && $SUDO apt-get install -y -qq git
+          fi
 
       - name: The release backend script's checks pass
         shell: pwsh
