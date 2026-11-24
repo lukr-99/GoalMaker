@@ -180,6 +180,26 @@ public sealed class ProjectSearchTests : IDisposable
         Assert.False(page.ShowsRecent);
     }
 
+    [Fact]
+    public void TheSearchIsThereWithNoProjectOnShow()
+    {
+        var page = TwoProjects();
+        var home = planner.Areas.FindOrCreate("Home")!;
+        page.Filters.SelectedArea = page.Filters.AreaChoices.Single(area => area.Id == home.Id);
+
+        Assert.True(page.IsFilteredAway);
+        Assert.False(page.ShowsProject);
+        Assert.True(page.CanSearch);
+
+        page.ClearFiltersCommand.Execute(null);
+        Search(page, "board");
+        Assert.True(page.ShowsResults);
+        Assert.Equal(3, page.Results.OfType<ItemResultViewModel>().Count());
+
+        page.EditCommand.Execute(null);
+        Assert.False(page.CanSearch);
+    }
+
     private List<string> Found(ProjectsViewModel page, string query)
     {
         Search(page, query);

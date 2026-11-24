@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using GoalMaker.App.ViewModels;
 using GoalMaker.Core.Planning;
 
@@ -134,43 +133,60 @@ public sealed class ProjectPaneTests : IDisposable
         Assert.Equal("Projects.Urgent", Cards(page).Single(card => card.Title == "Ship the board").Priority);
     }
 
-    // The board as big as the owner's are getting (LargeBoard): every change the owner makes by hand
-    // is quick in the view model. The budget is loose, for a busy CI machine; ProjectsSpeedReport
-    // measures the page as drawn.
+    // The board as big as the owner's are getting (LargeBoard): what the owner does by hand (typing,
+    // filters, the who-made-it switch, switching projects, the quick search) never reads the replica
+    // again; only a change does, once per burst. Timings live in the explicit ProjectsSpeedReport.
+    // The search over every project stops drawing at its cap and says how many more there are.
     [Fact]
-    public void OnALargeBoardSearchingFilteringAndSwitchingStayQuick()
+    public void OnALargeBoardOnlyAChangeReadsTheReplicaAndTheResultsStopAtTheirCap()
     {
         LargeBoard.Fill(planner);
         var page = Page();
         var big = LargeBoard.Big(planner);
         page.Select(big.Id);
-        var times = new List<double>();
-        void Timed(Action change)
+        var reads = page.ReplicaReads;
+        void Change(Action change)
         {
-            var watch = Stopwatch.StartNew();
             change();
             planner.Time.Advance(TimeSpan.FromMilliseconds(150));
-            times.Add(watch.Elapsed.TotalMilliseconds);
         }
 
         foreach (var length in Enumerable.Range(1, 11))
         {
-            Timed(() => page.BoardQuery = "sync widget"[..length]);
+            Change(() => page.BoardQuery = "sync widget"[..length]);
         }
 
-        Timed(() => page.BoardQuery = string.Empty);
-        Timed(() => page.Filters.SelectedArea = page.Filters.AreaChoices[1]);
-        Timed(() => page.Filters.SelectedArea = page.Filters.AreaChoices[0]);
-        Timed(() => page.MadeByFilter = ProjectRules.Claude);
-        Timed(() => page.MadeByFilter = ProjectRules.Everyone);
+        Change(() => page.SearchesEverywhere = false);
+        Change(() => page.BoardQuery = string.Empty);
+        Change(() => page.Filters.SelectedArea = page.Filters.AreaChoices[1]);
+        Change(() => page.Filters.SelectedArea = page.Filters.AreaChoices[0]);
+        Change(() => page.MadeByFilter = ProjectRules.Claude);
+        Change(() => page.MadeByFilter = ProjectRules.Everyone);
+        Change(() => page.TypeChip = ProjectRules.Bug);
+        Change(() => page.TypeChip = null);
         foreach (var project in planner.Projects.All().Take(5))
         {
-            Timed(() => page.Select(project.Id));
+            Change(() => page.Select(project.Id));
         }
 
-        Timed(() => page.PaneQuery = "sync");
-        var median = times.Order().ElementAt(times.Count / 2);
-        Assert.True(median < 50, $"The median change took {median} ms: {string.Join(", ", times.Select(time => time.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)))}.");
+        Change(() => page.PaneQuery = "project");
+        Assert.Equal(reads, page.ReplicaReads);
+
+        // A burst of changes in one transaction is one read.
+        planner.Replica.InTransaction(() =>
+        {
+            foreach (var item in planner.Tasks.All().Where(task => task.ProjectId == big.Id).Take(20))
+            {
+                planner.Tasks.SetPriority(item.Id, ProjectRules.Low);
+            }
+        });
+        Assert.Equal(reads + 1, page.ReplicaReads);
+
+        Change(() => page.SearchesEverywhere = true);
+        Change(() => page.BoardQuery = "sync");
+        Assert.Equal(200, page.Results.OfType<ItemResultViewModel>().Count());
+        Assert.IsType<ItemResultViewModel>(page.Results[^1]);
+        Assert.NotEqual(string.Empty, page.MoreFoundText);
     }
 
     private void Search(ProjectsViewModel page, string query)

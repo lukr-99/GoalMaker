@@ -99,6 +99,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private bool suggesting;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSearch))]
     private bool isEmpty;
 
     [ObservableProperty]
@@ -135,6 +136,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsProject))]
+    [NotifyPropertyChangedFor(nameof(CanSearch))]
     private bool isEditing;
 
     [ObservableProperty]
@@ -350,6 +352,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The recent searches show under the box while it has the keyboard and is empty.</summary>
     public bool ShowsRecent => IsSearchFocused && BoardQuery.Length == 0 && RecentSearches.Count > 0;
 
+    /// <summary>Whether the search box shows: there are projects, and none is being written. Ctrl+F reaches it even with no project on show.</summary>
+    public bool CanSearch => !IsEmpty && !IsEditing;
+
     /// <summary>Whether the project list lies over the board (a narrow window), so picking a project puts it away.</summary>
     public bool PaneOverlay { get; set; }
 
@@ -403,12 +408,14 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The card of the project on show: there is one, and the editor is not in its place.</summary>
     public bool ShowsProject => HasProject && !IsEditing;
 
-    /// <summary>Reads the projects and their items again and redraws the page.</summary>
-    public void Refresh()
-    {
-        stale = true;
-        Rebuild();
-    }
+    /// <summary>
+    /// Reads the projects and their items again, off the UI thread, and redraws the page once read. The
+    /// page draws what it last read until then.
+    /// </summary>
+    public void Refresh() => DataChanged();
+
+    /// <summary>How many times the page has read the replica: once per change, never per keystroke (GM-121).</summary>
+    internal int ReplicaReads { get; private set; }
 
     /// <summary>Shows a project's board, and remembers it as the latest one opened.</summary>
     public void Select(string id)
@@ -484,12 +491,18 @@ public sealed partial class ProjectsViewModel : ObservableObject
     }
 
     // A table changed. Changes come in bursts (an item added writes four times, a sync pull many), so
-    // they are gathered and read once, as soon as the burst is over. The read happens off the UI thread,
-    // where the timer calls back; the UI thread only draws what changed (GM-121).
+    // they are gathered and read once, as soon as the burst is over. Every read happens off the UI
+    // thread, where the timer calls back; the UI thread only draws what changed (GM-121). A read that a
+    // newer change overtook is dropped, and another read follows it.
     private void DataChanged()
     {
         stale = true;
         changes++;
+        ReadSoon();
+    }
+
+    private void ReadSoon()
+    {
         if (reloadPending)
         {
             return;
@@ -505,7 +518,6 @@ public sealed partial class ProjectsViewModel : ObservableObject
                 var read = Read(previous);
                 runOnUi(() =>
                 {
-                    // A change that came in meanwhile left the page stale, and the redraw reads it.
                     reloadPending = false;
                     if (changes == seen)
                     {
@@ -513,6 +525,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
                     }
 
                     Rebuild();
+
+                    // Overtaken by a change: read again. A read that failed (the app is closing) waits
+                    // for the next change instead of trying again at once.
+                    if (stale && read is not null)
+                    {
+                        ReadSoon();
+                    }
                 });
             },
             null,
@@ -521,11 +540,12 @@ public sealed partial class ProjectsViewModel : ObservableObject
     }
 
     // Everything the page shows, read from the replica. Null when the read failed (the app is closing,
-    // say); the UI thread then reads again itself.
+    // say); the page keeps what it had.
     private (ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas, IReadOnlyList<ProjectMilestone> Milestones)? Read(ProjectBoardIndex previous)
     {
         try
         {
+            ReplicaReads++;
             var milestones = projects.Milestones();
             var tagNames = tags.All().ToDictionary(tag => tag.Id, tag => tag.Name, StringComparer.Ordinal);
             var index = ProjectBoardIndex.Build(
@@ -558,12 +578,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
     {
         searchTimer?.Dispose();
         searchTimer = null;
-        var reloaded = stale || freshRead;
+        // The replica is never read here: a stale page draws what it has until the read in ReadSoon lands.
+        var reloaded = freshRead;
         freshRead = false;
-        if (stale)
-        {
-            Take(Read(index));
-        }
 
         var narrowed = filter.Current;
         var links = index.TagLinks;
@@ -703,7 +720,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var entries = new List<object>();
         if (PaneQuery.Trim().Length > 0)
         {
-            var words = PaneQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(ArchiveRules.Fold).ToList();
+            var words = PaneQuery.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Select(ArchiveRules.Fold).ToList();
             var recent = settings.RecentProjects;
             var found = listed
                 .Where(project => words.TrueForAll(word => ArchiveRules.Fold(project.Name).Contains(word, StringComparison.Ordinal))
@@ -916,7 +933,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private void ClearFilters()
     {
         ClearChips();
-        BoardQuery = string.Join(' ', BoardQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(word => !ProjectSearch.Of(word).HasFilters));
+        BoardQuery = string.Join(' ', ProjectSearch.Tokens(BoardQuery).Where(token => !ProjectSearch.Of(token.Text).HasFilters).Select(token => token.Text));
         MadeByFilter = ProjectRules.Everyone;
         filter.Clear();
         Rebuild();
@@ -1022,6 +1039,12 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var kept = new HashSet<string>(StringComparer.Ordinal);
         foreach (var group in byProject)
         {
+            // At the cap, nothing more is drawn: no heading without its items. The count says how many more.
+            if (shown >= MostResults)
+            {
+                break;
+            }
+
             var project = index.Project(group.Key);
             var projectId = group.Key;
             entries.Add(Heading(projectId, project?.Name ?? string.Empty, group.Count(), isProject: true, () => Select(projectId)));

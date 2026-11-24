@@ -164,7 +164,8 @@ first one found, Down goes into the list, and typing on a row types into the box
 
 ### Searching items
 
-One search box sits over the board (Ctrl+F). It looks in **every project** by default; the
+One search box sits over the board (Ctrl+F, which reaches it even when no project is on show, say
+when the area filter hides them all). It looks in **every project** by default; the
 **All projects | This project** switch beside it narrows it to the board on show. Esc empties the box
 and the next search looks in every project again.
 
@@ -191,6 +192,15 @@ and the next search looks in every project again.
   | `m:M3` or `milestone:M3` | items of a milestone with that name |
 
   A filter word that names nothing it knows, like `is:soon`, is searched as a plain word.
+
+  How they combine: values of one kind are alternatives, so `type:bug type:idea`, or the Bug chip
+  with `type:idea` typed, finds bugs and ideas. Tags must all be there: `#release #ui` finds items
+  with both. Different kinds must all hold: `is:open p:high` finds open, high items. Words and an id
+  must all match too.
+
+  Any whitespace parts words, and double quotes keep a phrase together: `"board sync"` finds that
+  phrase, and a milestone or a tag with a space in its name is `m:"Q4 launch"` or `#"to read"`. The
+  milestone chip offers every name too.
 - **Recent searches** show under the box while it is empty and has the keyboard; a click runs one
   again. A search is remembered when Enter is pressed or a result is opened; the last eight are kept
   on this PC.

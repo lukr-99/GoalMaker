@@ -68,7 +68,7 @@ public partial class ProjectsPage
             FindProject();
             e.Handled = true;
         }
-        else if (Keyboard.Modifiers == ModifierKeys.Control && key == Key.F && viewModel.ShowsProject)
+        else if (Keyboard.Modifiers == ModifierKeys.Control && key == Key.F && viewModel.CanSearch)
         {
             BoardSearch.Focus();
             BoardSearch.SelectAll();
