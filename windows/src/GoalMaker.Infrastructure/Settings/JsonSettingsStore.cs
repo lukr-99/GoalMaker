@@ -154,6 +154,20 @@ public sealed class JsonSettingsStore : ISettingsStore
         set => Save(document with { FoldedBoardColumns = [.. Known(value)] });
     }
 
+    /// <summary>Each id once, in the order given.</summary>
+    public IReadOnlyList<string> PinnedProjects
+    {
+        get => document.PinnedProjects ?? [];
+        set => Save(document with { PinnedProjects = [.. value.Distinct(StringComparer.Ordinal)] });
+    }
+
+    /// <summary>Each id once, at most twenty, the latest first.</summary>
+    public IReadOnlyList<string> RecentProjects
+    {
+        get => document.RecentProjects ?? [];
+        set => Save(document with { RecentProjects = [.. value.Distinct(StringComparer.Ordinal).Take(20)] });
+    }
+
     /// <summary>A value the file doesn't know reads as the ladder.</summary>
     public GoalsView GoalsView
     {

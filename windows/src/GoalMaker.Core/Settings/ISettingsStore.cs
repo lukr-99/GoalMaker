@@ -58,6 +58,12 @@ public interface ISettingsStore
     /// <summary>The board columns folded to a narrow strip, the same on every project's board (docs/projects.md).</summary>
     IReadOnlyList<string> FoldedBoardColumns { get; set; }
 
+    /// <summary>The projects pinned to the top of the Projects page's list on this PC, by id, in order (docs/projects.md).</summary>
+    IReadOnlyList<string> PinnedProjects { get; set; }
+
+    /// <summary>The projects last opened on this PC, by id, the latest first, which a quick search offers first.</summary>
+    IReadOnlyList<string> RecentProjects { get; set; }
+
     /// <summary>How the Goals page shows the goals on this PC (docs/goals.md); the ladder unless changed.</summary>
     GoalsView GoalsView { get; set; }
 

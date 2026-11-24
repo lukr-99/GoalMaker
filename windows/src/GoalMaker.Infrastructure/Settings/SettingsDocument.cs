@@ -64,6 +64,10 @@ public sealed record SettingsDocument
 
     public List<string>? FoldedBoardColumns { get; init; }
 
+    public List<string>? PinnedProjects { get; init; }
+
+    public List<string>? RecentProjects { get; init; }
+
     /// <summary>The ladder or the list; missing from older files reads as the ladder.</summary>
     public GoalsView GoalsView { get; init; } = GoalsView.Ladder;
 
