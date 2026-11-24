@@ -34,8 +34,11 @@ public sealed class TaskList
     private readonly Func<DateOnly> today;
 
     // Every page that shows tasks reads them all after a change, so the first read is kept until the
-    // next change (GM-121). The version stops a read that raced a change from keeping old rows.
-    private volatile IReadOnlyList<TaskItem>? every;
+    // next change (GM-121). The version stops a read that raced a change from keeping old rows: a change
+    // bumps it, and a read is kept only if it is still the version the read began at. Both happen under
+    // the gate, so a change can't fall between that check and the keeping.
+    private readonly Lock everyGate = new();
+    private IReadOnlyList<TaskItem>? every;
     private long version;
 
     public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, ProjectList projects, Action requestSync, Func<DateOnly> today)
@@ -52,8 +55,12 @@ public sealed class TaskList
             if (changed == Table)
             {
                 // The copy of every task is stale now; the next All() reads them again.
-                Interlocked.Increment(ref version);
-                every = null;
+                lock (everyGate)
+                {
+                    version++;
+                    every = null;
+                }
+
                 Changed?.Invoke(this, EventArgs.Empty);
             }
         };
@@ -71,16 +78,25 @@ public sealed class TaskList
     /// <summary>Every task that isn't deleted, whatever its status: what the list rules work from.</summary>
     public IReadOnlyList<TaskItem> All()
     {
-        if (every is { } kept)
+        long before;
+        lock (everyGate)
         {
-            return kept;
+            if (every is { } kept)
+            {
+                return kept;
+            }
+
+            before = version;
         }
 
-        var before = Interlocked.Read(ref version);
+        // Read outside the gate, so a change waits for nothing but the bookkeeping.
         TaskItem[] read = [.. replica.All(Table).Where(row => row[SyncedTable.DeletedAt] is null).Select(ToItem)];
-        if (Interlocked.Read(ref version) == before)
+        lock (everyGate)
         {
-            every = read;
+            if (version == before)
+            {
+                every = read;
+            }
         }
 
         return read;

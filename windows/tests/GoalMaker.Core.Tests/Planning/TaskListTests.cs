@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using GoalMaker.Core.Composer;
 using GoalMaker.Core.Planning;
+using GoalMaker.Core.Sync;
 using GoalMaker.Core.Tests.Sync;
 using Microsoft.Extensions.Time.Testing;
 
@@ -44,6 +45,30 @@ public sealed class TaskListTests : IDisposable
         row["title"] = "Call the dentist at nine";
         test.Replica.Put("tasks", row);
         Assert.Contains(tasks.All(), task => task.Title == "Call the dentist at nine");
+    }
+
+    // A change that lands while every task is being read (sync writing on its thread) must not leave the
+    // older read kept: the next All() reads again and sees the change (GM-121 review).
+    [Fact]
+    public void ARaceWithAChangeDuringTheReadKeepsNothingOld()
+    {
+        var racing = new RacingReplica(test.Replica);
+        var rows = new NewRows(test.Catalog, () => TestReplica.Owner, time);
+        var areas = new AreaList(racing, rows, ["violet"], () => { });
+        var tasks = new TaskList(racing, rows, areas, new TagList(racing, rows, () => { }), new ProjectList(racing, rows, () => { }), () => { }, () => new DateOnly(2026, 9, 18));
+        var first = tasks.Add("Call the dentist")!;
+
+        // The read takes its rows, then the title changes before the read is kept.
+        racing.DuringNextRead = () =>
+        {
+            var row = test.Replica.Get("tasks", first.Id)!;
+            row["title"] = "Call the dentist at nine";
+            test.Replica.Put("tasks", row);
+        };
+        Assert.Equal("Call the dentist", tasks.All().Single().Title);
+
+        Assert.Equal("Call the dentist at nine", tasks.All().Single().Title);
+        Assert.Same(tasks.All(), tasks.All());
     }
 
     [Fact]
