@@ -242,11 +242,12 @@
                                                        Foreground="{DynamicResource GM.AccentBrush}" />
                                             <CheckBox x:Name="Done" Grid.Column="1" TabIndex="0" VerticalAlignment="Center"
                                                       Foreground="{DynamicResource GM.TextBrush}"
+                                                      IsChecked="{Binding IsDone}"
                                                       Command="{Binding DataContext.CompleteCommand, ElementName=BoardRows}"
                                                       CommandParameter="{Binding}"
                                                       ToolTip="{DynamicResource Focus.Complete}"
                                                       AutomationProperties.Name="{Binding Title}"
-                                                      AutomationProperties.HelpText="{Binding Subtitle}">
+                                                      AutomationProperties.HelpText="{Binding HelpText}">
                                                 <StackPanel>
                                                     <TextBlock Text="{Binding Title}" FontSize="14" TextWrapping="Wrap" />
                                                     <ContentControl Focusable="False" Content="{Binding}" ContentTemplate="{StaticResource FocusDetails}" />
@@ -379,7 +380,7 @@
                                                    CommandParameter="{Binding}"
                                                    ToolTip="{DynamicResource Focus.AddToBoard}"
                                                    AutomationProperties.Name="{Binding Title}"
-                                                   AutomationProperties.HelpText="{DynamicResource Focus.AddToBoard}">
+                                                   AutomationProperties.HelpText="{Binding HelpText}">
                                             <DockPanel>
                                                 <ui:SymbolIcon DockPanel.Dock="Right" Margin="8,0,0,0" VerticalAlignment="Center"
                                                                Symbol="Add24" Foreground="{DynamicResource GM.AccentBrush}" />
