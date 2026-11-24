@@ -115,6 +115,32 @@ try {
     Assert-Equal 'function list time' 1795389077416 $parsedFunctions['assistant']
     Assert-Equal 'empty function list' 0 (ConvertFrom-FunctionListOutput 'nothing').Count
 
+    # The previous release tag in the checkout of a tag push: a detached HEAD on the tag being
+    # released, with the older tags next to it (the v1.17.1 run found none, GM-115).
+    $git = { param($dir, [string[]]$gitArguments) & git -C $dir -c user.name=t -c user.email=t@example.com @gitArguments 2>&1 | Out-Null }
+    $repo = Join-Path $work 'repo'
+    New-Item -ItemType Directory -Path $repo | Out-Null
+    & $git $repo @('init', '-q', '-b', 'main')
+    $n = 0
+    foreach ($step in 'a', 'b') { $n++; Set-Content -LiteralPath (Join-Path $repo "f$n.txt") -Value $step; & $git $repo @('add', '-A'); & $git $repo @('commit', '-q', '-m', "c$n") }
+    & $git $repo @('tag', '-a', '-m', 'one', 'v1.9.0')
+    $n++; Set-Content -LiteralPath (Join-Path $repo "f$n.txt") -Value 'c'; & $git $repo @('add', '-A'); & $git $repo @('commit', '-q', '-m', 'c3')
+    & $git $repo @('tag', 'v1.17.0')
+    Assert-Equal 'the tag on HEAD is skipped, the older one is found' 'v1.9.0' (Get-PreviousReleaseTag $repo)
+    $n++; Set-Content -LiteralPath (Join-Path $repo "f$n.txt") -Value 'd'; & $git $repo @('add', '-A'); & $git $repo @('commit', '-q', '-m', 'c4')
+    & $git $repo @('tag', 'v1.17.1')
+    & $git $repo @('tag', 'not-a-release')
+    $clone = Join-Path $work 'clone'
+    & git clone -q --no-tags $repo $clone 2>&1 | Out-Null
+    & git -C $clone fetch -q --no-tags origin '+refs/tags/*:refs/tags/*' 2>&1 | Out-Null
+    & git -C $clone checkout -q --detach refs/tags/v1.17.1 2>&1 | Out-Null
+    Assert-Equal 'previous tag in a tag-push checkout (detached HEAD on the new tag)' 'v1.17.0' (Get-PreviousReleaseTag $clone)
+    & git -C $clone checkout -q --detach HEAD~1 2>&1 | Out-Null
+    Assert-Equal 'previous tag skips a tag that points at HEAD' 'v1.9.0' (Get-PreviousReleaseTag $clone)
+    & git -C $clone tag -d v1.17.0 v1.9.0 v1.17.1 2>&1 | Out-Null
+    Assert-Equal 'no release tag at all gives null (deploy all)' $null (Get-PreviousReleaseTag $clone)
+    Assert-Equal 'not a repository gives null' $null (Get-PreviousReleaseTag (Join-Path $work 'migrations'))
+
     # Secrets never get printed.
     Assert-Equal 'token hidden' 'token sbp_***' (Hide-Secrets 'token sbp_0123456789abcdef')
     Assert-Equal 'password hidden' 'postgresql://postgres:***@db.x.supabase.co/postgres' (Hide-Secrets 'postgresql://postgres:hunter2@db.x.supabase.co/postgres')

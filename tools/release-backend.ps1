@@ -128,13 +128,7 @@ function Confirm-ProductionLink {
 
 function Get-ReleaseBaseline {
     if ($Since) { return $Since }
-    $head = (Invoke-Git @('rev-parse', 'HEAD')).Lines | Select-Object -First 1
-    $tags = (Invoke-Git @('tag', '--merged', 'HEAD', '--sort=-v:refname', '--list', 'v*')).Lines
-    foreach ($tag in $tags) {
-        $commit = (Invoke-Git @('rev-parse', "$tag^{commit}")).Lines | Select-Object -First 1
-        if ($commit -and $commit -ne $head) { return $tag }
-    }
-    return $null
+    return Get-PreviousReleaseTag -RepositoryRoot $repositoryRoot
 }
 
 # Reads the cloud and the repository and returns what is behind. Prints nothing.
@@ -223,7 +217,8 @@ function Show-BackendState {
         $changed = if ($State.ChangedSince.Count) { $State.ChangedSince -join ', ' } else { 'none' }
         Write-Line "Functions changed since $($State.Baseline): $changed"
     } else {
-        Write-Line 'Functions changed since the last release tag: no release tag found.'
+        $tagCount = @((Invoke-Git @('tag', '--list', 'v*')).Lines).Count
+        Write-Line "Functions changed since the last release tag: no release tag found ($tagCount v* tags in this clone, so every function is deployed)." 'Yellow'
     }
     if ($State.FunctionsBehind.Count) {
         $ok = $false

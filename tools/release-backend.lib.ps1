@@ -1,5 +1,6 @@
-# Pure helpers for tools/release-backend.ps1. Nothing here runs a command or touches the network, so
-# tools/test-release-backend.ps1 can test every function on fixtures. Works in Windows PowerShell 5.1
+# Helpers for tools/release-backend.ps1. Nothing here touches the network or changes anything; only
+# Get-PreviousReleaseTag reads git, so tools/test-release-backend.ps1 can test every function on
+# fixtures and on a throwaway repository. Works in Windows PowerShell 5.1
 # and in PowerShell 7.
 
 Set-StrictMode -Version Latest
@@ -173,4 +174,28 @@ function Hide-Secrets {
     $text = [regex]::Replace($text, '(postgres(?:ql)?://[^:/\s]+:)[^@\s]+@', '$1***@')
     $text = [regex]::Replace($text, 'eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+', 'eyJ***')
     return $text
+}
+
+# The newest release tag (v*) before the commit being released: a tag that is an ancestor of HEAD
+# and does not point at HEAD itself. A release run starts on the tag it is releasing, so HEAD's own
+# tag must be skipped. Returns $null when there is none. Reads the repository with `git -C`; it
+# changes nothing. GitHub's checkout of a tag push is a detached HEAD, so nothing here may need a branch.
+function Get-PreviousReleaseTag {
+    param([Parameter(Mandatory)][string]$RepositoryRoot)
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $head = & git -C $RepositoryRoot rev-parse HEAD 2>$null | Select-Object -First 1
+        if (-not $head) { return $null }
+        $tags = @(& git -C $RepositoryRoot tag --list 'v*' --sort=-v:refname 2>$null | ForEach-Object { "$_" } | Where-Object { $_ -ne '' })
+        foreach ($tag in $tags) {
+            $commit = & git -C $RepositoryRoot rev-list -n 1 "refs/tags/$tag" 2>$null | Select-Object -First 1
+            if (-not $commit -or $commit -eq $head) { continue }
+            & git -C $RepositoryRoot merge-base --is-ancestor $commit $head 2>$null
+            if ($LASTEXITCODE -eq 0) { return $tag }
+        }
+        return $null
+    } finally {
+        $ErrorActionPreference = $previous
+    }
 }

@@ -151,10 +151,17 @@ jobs:
     timeout-minutes: 20
     environment: production
     steps:
-      # The whole history, so the script knows what changed since the last release tag.
+      # The whole history and every tag, so the script knows what changed since the last release tag.
+      # The checkout of a tag push is a detached HEAD, so it needs the older tags next to it.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          fetch-tags: true
+
+      - name: The previous release tag is in this clone
+        run: |
+          git fetch --force --tags origin
+          git tag --list 'v*' --sort=-v:refname | head -3
 
       - name: The two backend secrets are set
         env:
