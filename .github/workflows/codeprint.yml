@@ -56,6 +56,11 @@ jobs:
         shell: pwsh
         run: ./tools/test-powershell-syntax.ps1
 
+      # The self-test builds a throwaway git repository; the PowerShell image has no git.
+      - name: Install git
+        shell: bash
+        run: apt-get update -qq && apt-get install -y -qq git
+
       - name: The release backend script's checks pass
         shell: pwsh
         run: ./tools/test-release-backend.ps1
