@@ -102,7 +102,13 @@ try {
     if (-not $SkipChecks) {
         Invoke-Step 'Repository validation' { & python (Join-Path $root 'tools/validate_repository.py') --root $root }
         Invoke-Step 'Windows format check' { & dotnet format whitespace (Join-Path $root 'windows/GoalMaker.slnx') --verify-no-changes --no-restore }
-        Invoke-Step 'Windows tests' { & dotnet test --solution (Join-Path $root 'windows/GoalMaker.slnx') }
+        # Run from windows/ so its global.json applies: it selects Microsoft.Testing.Platform, which
+        # `--solution` needs. From the repo root, dotnet test falls back to VSTest and rejects the switch.
+        Invoke-Step 'Windows tests' {
+            Push-Location (Join-Path $root 'windows')
+            try { & dotnet test --solution GoalMaker.slnx }
+            finally { Pop-Location }
+        }
     }
 
     $buildArguments = @()
