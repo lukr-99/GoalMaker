@@ -24,6 +24,28 @@ public sealed class TaskListTests : IDisposable
 
     public void Dispose() => test.Dispose();
 
+    // Every page reads every task after a change, so the first read is kept until the next one (GM-121).
+    [Fact]
+    public void EveryTaskIsReadOncePerChange()
+    {
+        var tasks = Tasks();
+        var first = tasks.Add("Call the dentist")!;
+
+        var read = tasks.All();
+        Assert.Same(read, tasks.All());
+
+        tasks.Add("Buy milk");
+        var again = tasks.All();
+        Assert.NotSame(read, again);
+        Assert.Equal(["Call the dentist", "Buy milk"], again.Select(task => task.Title).Order().Reverse());
+
+        // A row the server sends counts as a change too.
+        var row = test.Replica.Get("tasks", first.Id)!;
+        row["title"] = "Call the dentist at nine";
+        test.Replica.Put("tasks", row);
+        Assert.Contains(tasks.All(), task => task.Title == "Call the dentist at nine");
+    }
+
     [Fact]
     public void AddingQueuesACompleteRowAndAsksForASync()
     {

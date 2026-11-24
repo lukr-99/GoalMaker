@@ -28,6 +28,12 @@ public static class ArchiveRules
     /// <summary>Text as the search compares it: without accents, in lower case.</summary>
     public static string Fold(string text)
     {
+        // Plain ASCII has no accents to drop, and most titles are plain ASCII.
+        if (System.Text.Ascii.IsValid(text))
+        {
+            return text.ToLowerInvariant();
+        }
+
         var decomposed = text.Normalize(NormalizationForm.FormD);
         var kept = new StringBuilder(decomposed.Length);
         foreach (var character in decomposed)

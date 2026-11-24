@@ -33,6 +33,11 @@ public sealed class TaskList
     private readonly Action requestSync;
     private readonly Func<DateOnly> today;
 
+    // Every page that shows tasks reads them all after a change, so the first read is kept until the
+    // next change (GM-121). The version stops a read that raced a change from keeping old rows.
+    private volatile IReadOnlyList<TaskItem>? every;
+    private long version;
+
     public TaskList(IReplica replica, NewRows rows, AreaList areas, TagList tags, ProjectList projects, Action requestSync, Func<DateOnly> today)
     {
         this.today = today;
@@ -46,6 +51,9 @@ public sealed class TaskList
         {
             if (changed == Table)
             {
+                // The copy of every task is stale now; the next All() reads them again.
+                Interlocked.Increment(ref version);
+                every = null;
                 Changed?.Invoke(this, EventArgs.Empty);
             }
         };
@@ -61,8 +69,22 @@ public sealed class TaskList
             .OrderBy(item => item.CreatedAt, StringComparer.Ordinal)];
 
     /// <summary>Every task that isn't deleted, whatever its status: what the list rules work from.</summary>
-    public IReadOnlyList<TaskItem> All() =>
-        [.. replica.All(Table).Where(row => row[SyncedTable.DeletedAt] is null).Select(ToItem)];
+    public IReadOnlyList<TaskItem> All()
+    {
+        if (every is { } kept)
+        {
+            return kept;
+        }
+
+        var before = Interlocked.Read(ref version);
+        TaskItem[] read = [.. replica.All(Table).Where(row => row[SyncedTable.DeletedAt] is null).Select(ToItem)];
+        if (Interlocked.Read(ref version) == before)
+        {
+            every = read;
+        }
+
+        return read;
+    }
 
     /// <summary>Brings a deleted task back (undo).</summary>
     public void Restore(string id) => Change(id, row => row[SyncedTable.DeletedAt] = null);
