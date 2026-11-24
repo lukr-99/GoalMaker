@@ -23,7 +23,7 @@ position and leaves the task itself alone: its day, area and list stay as they w
 
 - **Quick add.** The field on the board makes a new task straight onto it, at the end. It reads the
   composer's shortcuts ([composer](composer.md)), so "Hand in the form @School #forms friday" sets the
-  area, a tag and the day. On Android it sits at the top of the board, on Windows under it.
+  area, a tag and the day. It sits at the top of the board in both apps.
 - **The add panel** (the add button) finds a task that already exists. Its search box keeps the open
   tasks off the board that have every typed word in their title or notes, ignoring case and accents,
   so "studijni zrusit" finds "Studijní: zrušit dipl. práci". They come by their date (the deadline,
@@ -39,8 +39,11 @@ position and leaves the task itself alone: its day, area and list stay as they w
 
 - **Android:** long-press the handle and drag to reorder, swipe a task off the board, tick it to
   complete it, and the add button for the add panel.
-- **Windows:** Up and Down to reorder, Complete, the pin to take a task off, and Add for the add panel;
-  Enter in its search box makes the typed task.
+- **Windows:** each row shows its place, a box to complete it, Up and Down to reorder (Alt+Up and
+  Alt+Down on the row you are on) and the pin to take it off. Where the window is wide, the add panel
+  sits beside the board; where it is narrow, "Add existing task" opens it in the board's place and
+  "Back to the board" (or Esc) closes it. Ctrl+N goes to the quick add field, Ctrl+F to the search box,
+  and Enter there makes the typed task. A late date is in the danger color with a clock.
 
 ## Through Claude
 
