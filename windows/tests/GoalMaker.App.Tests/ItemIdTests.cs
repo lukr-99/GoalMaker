@@ -179,7 +179,8 @@ public sealed class ItemIdTests : IDisposable
         page.AddItemCommand.Execute(null);
         Number(planner.Task("Write the docs").Id, 13);
 
-        // The search looks once typing pauses (GM-121).
+        // The search narrows this project's board, and looks once typing pauses (GM-121).
+        page.SearchesEverywhere = false;
         void Search(string query)
         {
             page.BoardQuery = query;

@@ -40,12 +40,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     // How long the searches wait after a key before they look, so typing a word looks once (GM-121).
     private static readonly TimeSpan SearchPause = TimeSpan.FromMilliseconds(150);
-    private const int MostResults = 30;
+    // The most search results drawn at once; the headings still count them all.
+    private const int MostResults = 200;
     private const string PinnedGroup = "pinned";
     private const string NoAreaGroup = "none";
     private const string RestingGroup = "resting";
     private const string ProjectsGroup = "projects";
-    private const string ItemsGroup = "items";
+    private const string OffBoard = "off";
     private static readonly int[] ArchiveDays = [7, 14, 30, 90];
     private static readonly IReadOnlySet<string> NoTags = new HashSet<string>();
     private readonly ProjectList projects;
@@ -64,12 +65,14 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private readonly Dictionary<string, ProjectRowViewModel> rowsById = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ProjectGroupViewModel> groupsByKey = new(StringComparer.Ordinal);
     private readonly Dictionary<string, ItemResultViewModel> resultsById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ResultHeadingViewModel> headings = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Brush?> brushes = new(StringComparer.Ordinal);
     private readonly HashSet<string> foldedGroups = new(StringComparer.Ordinal) { RestingGroup };
 
     // What the page shows, read from the replica once per change rather than once per keystroke (GM-121).
     private ProjectBoardIndex index = ProjectBoardIndex.Empty;
     private IReadOnlyList<AreaItem> areaList = [];
+    private IReadOnlyList<ProjectMilestone> milestoneList = [];
     private IReadOnlyList<ProjectItem> listed = [];
     private bool stale = true;
     private bool reloadPending;
@@ -170,8 +173,59 @@ public sealed partial class ProjectsViewModel : ObservableObject
     [ObservableProperty]
     private string moreFoundText = string.Empty;
 
+    /// <summary>The project list's quick search found no project.</summary>
     [ObservableProperty]
     private bool isNothingFound;
+
+    /// <summary>
+    /// Whether the search box looks in every project (the default) or narrows the board of the project on
+    /// show (docs/projects.md, "Searching items").
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SearchesHere))]
+    private bool searchesEverywhere = true;
+
+    /// <summary>The type chip beside the search box: task, idea, bug, or null for any.</summary>
+    [ObservableProperty]
+    private string? typeChip;
+
+    [ObservableProperty]
+    private string? priorityChip;
+
+    /// <summary>open, done, dropped, or null for any.</summary>
+    [ObservableProperty]
+    private string? statusChip;
+
+    /// <summary>A milestone's name, or null for any.</summary>
+    [ObservableProperty]
+    private string? milestoneChip;
+
+    [ObservableProperty]
+    private IReadOnlyList<ChoiceViewModel> milestoneChips = [];
+
+    /// <summary>Whether the search results take the board's place: a search over every project.</summary>
+    [ObservableProperty]
+    private bool showsResults;
+
+    /// <summary>"12 items in 3 projects".</summary>
+    [ObservableProperty]
+    private string resultsText = string.Empty;
+
+    /// <summary>A search or a filter is on and finds nothing, so the page says so with ways out.</summary>
+    [ObservableProperty]
+    private bool isNoResults;
+
+    [ObservableProperty]
+    private string noResultsText = string.Empty;
+
+    /// <summary>A filter narrows the search: a chip, a filter word, the area and tag filter or the who-made-it switch.</summary>
+    [ObservableProperty]
+    private bool canClearFilters;
+
+    /// <summary>Whether the search box has the keyboard, so its recent searches show while it is empty.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsRecent))]
+    private bool isSearchFocused;
 
     /// <param name="openItemWindow">Shows the new item window over the main window for the form given.</param>
     /// <param name="copyText">Puts text on the clipboard, for a card's Copy id.</param>
@@ -240,6 +294,20 @@ public sealed partial class ProjectsViewModel : ObservableObject
                 .Select(status => new ChoiceViewModel(status, strings.Get(StatusKey(status)))),
         ];
         MakerFilters = [.. ProjectRules.MakerFilters.Select(filter => new ChoiceViewModel(filter, strings.Get(MakerKey(filter))))];
+        TypeChips = [new ChoiceViewModel(null, strings.Get("Projects.AnyType")), .. ItemTypes];
+        PriorityChips = [new ChoiceViewModel(null, strings.Get("Projects.AnyPriority")), .. Priorities];
+        StatusChips =
+        [
+            new ChoiceViewModel(null, strings.Get("Projects.AnyStatus")),
+            new ChoiceViewModel("open", strings.Get("Projects.StatusOpen")),
+            new ChoiceViewModel("done", strings.Get("Projects.StatusDone")),
+            new ChoiceViewModel("dropped", strings.Get("Projects.StatusDropped")),
+        ];
+        foreach (var search in settings.RecentSearches)
+        {
+            RecentSearches.Add(search);
+        }
+
         Refresh();
     }
 
@@ -255,6 +323,32 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// the quick search has text, the projects it finds and then the items (<see cref="ItemResultViewModel"/>).
     /// </summary>
     public ShownCollection<object> PaneEntries { get; } = [];
+
+    /// <summary>
+    /// The search results, project by project and column by column: headings
+    /// (<see cref="ResultHeadingViewModel"/>) and items (<see cref="ItemResultViewModel"/>).
+    /// </summary>
+    public ShownCollection<object> Results { get; } = [];
+
+    /// <summary>The searches run last on this PC, the latest first; a click runs one again.</summary>
+    public ObservableCollection<string> RecentSearches { get; } = [];
+
+    /// <summary>The chips beside the search box: any or one type, priority and state.</summary>
+    public IReadOnlyList<ChoiceViewModel> TypeChips { get; private set; } = [];
+
+    public IReadOnlyList<ChoiceViewModel> PriorityChips { get; private set; } = [];
+
+    public IReadOnlyList<ChoiceViewModel> StatusChips { get; private set; } = [];
+
+    /// <summary>The search narrows the board of the project on show.</summary>
+    public bool SearchesHere
+    {
+        get => !SearchesEverywhere;
+        set => SearchesEverywhere = !value;
+    }
+
+    /// <summary>The recent searches show under the box while it has the keyboard and is empty.</summary>
+    public bool ShowsRecent => IsSearchFocused && BoardQuery.Length == 0 && RecentSearches.Count > 0;
 
     /// <summary>Whether the project list lies over the board (a narrow window), so picking a project puts it away.</summary>
     public bool PaneOverlay { get; set; }
@@ -350,10 +444,16 @@ public sealed partial class ProjectsViewModel : ObservableObject
             MadeByFilter = ProjectRules.Everyone;
         }
 
-        if (!index.Finds(ProjectSearch.Of(BoardQuery), item, inProject: true))
+        // From the results over every project, the board keeps the search, narrowed to this project, so
+        // the card shows among the others found; a search that would hide it lets go.
+        RememberSearch();
+        if (!index.Finds(Search(), item, inProject: true))
         {
+            ClearChips();
             BoardQuery = string.Empty;
         }
+
+        SearchesEverywhere = false;
 
         if (PaneOverlay)
         {
@@ -422,11 +522,15 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     // Everything the page shows, read from the replica. Null when the read failed (the app is closing,
     // say); the UI thread then reads again itself.
-    private (ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas)? Read(ProjectBoardIndex previous)
+    private (ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas, IReadOnlyList<ProjectMilestone> Milestones)? Read(ProjectBoardIndex previous)
     {
         try
         {
-            return (ProjectBoardIndex.Build(projects.All(), tasks.All(), tags.TagLinks(), previous), areas.All());
+            var milestones = projects.Milestones();
+            var tagNames = tags.All().ToDictionary(tag => tag.Id, tag => tag.Name, StringComparer.Ordinal);
+            var index = ProjectBoardIndex.Build(
+                projects.All(), tasks.All(), tags.TagLinks(), previous, tagNames, milestones.ToDictionary(milestone => milestone.Id, milestone => milestone.Name, StringComparer.Ordinal));
+            return (index, areas.All(), milestones);
         }
         catch (Exception error) when (error is InvalidOperationException or ObjectDisposedException or System.Data.Common.DbException)
         {
@@ -434,12 +538,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
         }
     }
 
-    private void Take((ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas)? read)
+    private void Take((ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas, IReadOnlyList<ProjectMilestone> Milestones)? read)
     {
         if (read is { } fresh)
         {
             index = fresh.Index;
             areaList = fresh.Areas;
+            milestoneList = fresh.Milestones;
             brushes.Clear();
             stale = false;
             freshRead = true;
@@ -477,12 +582,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
         var shown = index.Project(chosen);
         var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
         var days = shown?.ArchiveAfterDays;
-        var search = ProjectSearch.Of(BoardQuery);
+        var search = Search();
+        var boardSearch = SearchesEverywhere ? ProjectSearch.Everything : search;
         var items = chosen is null
             ? []
             : index.ItemsOf(chosen)
                 .Where(task => ProjectRules.Shows(MadeByFilter, task.MadeBy) && narrowed.Matches(task, index.TagsOf(task.Id), shown?.AreaId))
-                .Where(task => index.Finds(search, task, inProject: true))
+                .Where(task => index.Finds(boardSearch, task, inProject: true))
                 .ToList();
         var onBoard = items
             .Where(task => ProjectRules.OnBoard(task.State, CompletedOn(task), days, task.BoardArchivedAt is not null, today))
@@ -510,6 +616,8 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
         IsEmpty = index.Projects.Count == 0;
         IsFilteredAway = index.Projects.Count > 0 && listed.Count == 0;
+        UpdateMilestoneChips();
+        UpdateResults(search, items.Count);
         UpdatePane();
         NotifyProjectShown();
     }
@@ -588,13 +696,11 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     // The project list. Without a quick search: pinned projects, then active ones by area in the areas'
     // order, those without an area, and paused and done ones last, folded away. Headings show only when
-    // there is more than one group. With a search: the projects whose name or key it finds, the latest
-    // opened first, then the items it finds in any project.
+    // there is more than one group. With a quick search: the projects whose name or key it finds, the
+    // latest opened first. Items are found by the search box over the board.
     private void UpdatePane()
     {
         var entries = new List<object>();
-        var resultsShown = 0;
-        var total = 0;
         if (PaneQuery.Trim().Length > 0)
         {
             var words = PaneQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(ArchiveRules.Fold).ToList();
@@ -611,24 +717,11 @@ public sealed partial class ProjectsViewModel : ObservableObject
                 entries.AddRange(found);
             }
 
-            var results = index.Search(ProjectSearch.Of(PaneQuery), MostResults, out total);
-            if (results.Count > 0)
-            {
-                entries.Add(Group(ItemsGroup, strings.Get("Projects.ItemsFound"), total, foldable: false));
-                entries.AddRange(results.Select(Result));
-            }
-
-            resultsShown = results.Count;
-            IsNothingFound = found.Count == 0 && results.Count == 0;
-            foreach (var gone in resultsById.Keys.Except(results.Select(item => item.Id)).ToList())
-            {
-                resultsById.Remove(gone);
-            }
+            IsNothingFound = found.Count == 0;
         }
         else
         {
             IsNothingFound = false;
-            resultsById.Clear();
             var pinned = settings.PinnedProjects;
             var groups = new List<(string Key, string Title, List<ProjectRowViewModel> Rows)>
             {
@@ -661,7 +754,6 @@ public sealed partial class ProjectsViewModel : ObservableObject
             }
         }
 
-        MoreFoundText = total > resultsShown ? strings.Get("Projects.MoreFound", total - resultsShown) : string.Empty;
         PaneEntries.SyncTo(entries);
     }
 
@@ -680,7 +772,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
     }
 
     // A found item with where it is: the project and its column, or that it left the board.
-    private ItemResultViewModel Result(TaskItem item)
+    private ItemResultViewModel Result(TaskItem item, IReadOnlyList<string> words)
     {
         var project = index.Project(item.ProjectId);
         var itemId = ProjectRules.ItemIdOf(item, project);
@@ -690,14 +782,16 @@ public sealed partial class ProjectsViewModel : ObservableObject
             ? strings.Get("Projects.OffBoard")
             : strings.Get(ColumnKey(column));
         var place = strings.Get("Projects.ResultPlace", project?.Name ?? string.Empty, where);
-        if (resultsById.TryGetValue(item.Id, out var kept) && kept.Source == item && kept.Place == place && kept.ItemId == (itemId ?? string.Empty))
+        var parts = ItemResultViewModel.Split(item.Title, words);
+        if (resultsById.TryGetValue(item.Id, out var kept) && kept.Source == item && kept.Place == place && kept.ItemId == (itemId ?? string.Empty)
+            && kept.TitleParts.SequenceEqual(parts))
         {
             return kept;
         }
 
         var id = item.Id;
         var title = itemId is null ? item.Title : strings.Get("Projects.ItemWithId", itemId, item.Title);
-        var result = new ItemResultViewModel(item, itemId, place, strings.Get("Projects.ResultName", title, place), () => JumpTo(id));
+        var result = new ItemResultViewModel(item, itemId, place, strings.Get("Projects.ResultName", title, place), parts, () => JumpTo(id));
         resultsById[id] = result;
         return result;
     }
@@ -771,7 +865,7 @@ public sealed partial class ProjectsViewModel : ObservableObject
         searchTimer = time.CreateTimer(_ => runOnUi(Rebuild), null, SearchPause, Timeout.InfiniteTimeSpan);
     }
 
-    /// <summary>Enter in the quick search: the first project it found, or else the first item.</summary>
+    /// <summary>Enter in the project list's quick search: the first project it found.</summary>
     [RelayCommand]
     private void PickFirst()
     {
@@ -780,16 +874,214 @@ public sealed partial class ProjectsViewModel : ObservableObject
             Rebuild();
         }
 
-        switch (PaneEntries.FirstOrDefault(entry => entry is ProjectRowViewModel or ItemResultViewModel))
+        if (PaneEntries.OfType<ProjectRowViewModel>().FirstOrDefault() is { } row)
         {
-            case ProjectRowViewModel row:
-                PaneQuery = string.Empty;
-                row.OpenCommand.Execute(null);
-                break;
-            case ItemResultViewModel result:
-                result.JumpCommand.Execute(null);
-                break;
+            PaneQuery = string.Empty;
+            row.OpenCommand.Execute(null);
         }
+    }
+
+    /// <summary>
+    /// Enter in the search box: the search is remembered, and the first item found is jumped to; on the
+    /// board of one project, the first card is picked.
+    /// </summary>
+    [RelayCommand]
+    private void OpenFirstResult()
+    {
+        if (searchTimer is not null)
+        {
+            Rebuild();
+        }
+
+        RememberSearch();
+        if (ShowsResults)
+        {
+            Results.OfType<ItemResultViewModel>().FirstOrDefault()?.JumpCommand.Execute(null);
+        }
+        else if (Columns.SelectMany(column => column.Items).FirstOrDefault() is { } card)
+        {
+            CardShown?.Invoke(this, card);
+        }
+    }
+
+    /// <summary>Looks in every project again, from a search that found nothing in one.</summary>
+    [RelayCommand]
+    private void WidenSearch() => SearchesEverywhere = true;
+
+    /// <summary>
+    /// Lets go of every filter on the search: the chips, the filter words in the box, the area and tag
+    /// filter and the who-made-it switch. The words and the id stay.
+    /// </summary>
+    [RelayCommand]
+    private void ClearFilters()
+    {
+        ClearChips();
+        BoardQuery = string.Join(' ', BoardQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(word => !ProjectSearch.Of(word).HasFilters));
+        MadeByFilter = ProjectRules.Everyone;
+        filter.Clear();
+        Rebuild();
+    }
+
+    /// <summary>Esc in the search box: empties it, and the next search looks in every project again.</summary>
+    [RelayCommand]
+    private void ClearSearch()
+    {
+        BoardQuery = string.Empty;
+        SearchesEverywhere = true;
+    }
+
+    /// <summary>Runs a recent search again.</summary>
+    [RelayCommand]
+    private void UseRecent(string? search)
+    {
+        if (search is not null)
+        {
+            BoardQuery = search;
+            Rebuild();
+        }
+    }
+
+    // What the search box and its chips look for.
+    private ProjectSearch Search() => ProjectSearch.Of(BoardQuery).With(TypeChip, PriorityChip, StatusChip, null, MilestoneChip);
+
+    private void ClearChips()
+    {
+        TypeChip = null;
+        PriorityChip = null;
+        StatusChip = null;
+        MilestoneChip = null;
+    }
+
+    // A search worth keeping: one that led somewhere. The latest comes first, each once.
+    private void RememberSearch()
+    {
+        var search = BoardQuery.Trim();
+        if (search.Length == 0)
+        {
+            return;
+        }
+
+        settings.RecentSearches = [search, .. settings.RecentSearches.Where(other => !string.Equals(other, search, StringComparison.OrdinalIgnoreCase))];
+        RecentSearches.SyncTo([.. settings.RecentSearches]);
+        OnPropertyChanged(nameof(ShowsRecent));
+    }
+
+    // The milestone chip offers the names of the milestones: every project's, or the project's on show
+    // when the search narrows its board. The list is only replaced when it changes, so a picked name stays.
+    private void UpdateMilestoneChips()
+    {
+        var names = milestoneList
+            .Where(milestone => SearchesEverywhere || milestone.ProjectId == chosen)
+            .Select(milestone => milestone.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.CurrentCultureIgnoreCase)
+            .Select(name => new ChoiceViewModel(name, name));
+        IReadOnlyList<ChoiceViewModel> chips = [new ChoiceViewModel(null, strings.Get("Projects.AnyMilestone")), .. names];
+        if (!chips.SequenceEqual(MilestoneChips))
+        {
+            MilestoneChips = chips;
+        }
+    }
+
+    // The search results over every project: the project on show first, then the latest opened, then
+    // the list's order; inside a project, its columns in the board's order and the items off the board
+    // last, each heading with its count. The area and tag filter and the who-made-it switch apply too.
+    // On one project's board, only whether anything was found.
+    private void UpdateResults(ProjectSearch search, int foundHere)
+    {
+        var active = !search.IsEmpty;
+        ShowsResults = active && SearchesEverywhere && index.Projects.Count > 0;
+        var filtered = active && (search.HasFilters || !filter.Current.IsEmpty || MadeByFilter != ProjectRules.Everyone);
+        CanClearFilters = filtered;
+        if (!ShowsResults)
+        {
+            Results.SyncTo([]);
+            resultsById.Clear();
+            ResultsText = string.Empty;
+            MoreFoundText = string.Empty;
+            IsNoResults = active && !SearchesEverywhere && foundHere == 0;
+            NoResultsText = strings.Get("Projects.NoResultsIn", ProjectName);
+            return;
+        }
+
+        var narrowed = filter.Current;
+        var found = index.FindAll(search)
+            .Where(item => ProjectRules.Shows(MadeByFilter, item.MadeBy)
+                && narrowed.Matches(item, index.TagsOf(item.Id), index.Project(item.ProjectId)?.AreaId))
+            .ToList();
+        var recent = settings.RecentProjects;
+        var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
+        var byProject = found
+            .GroupBy(item => item.ProjectId!, StringComparer.Ordinal)
+            .OrderBy(group => group.Key == chosen ? -1 : recent.Contains(group.Key) ? IndexOf(recent, group.Key) : int.MaxValue)
+            .ThenBy(group => IndexOfProject(group.Key))
+            .ToList();
+        string[] order = [ProjectRules.Backlog, ProjectRules.Todo, ProjectRules.Doing, ProjectRules.Done, ProjectRules.Dropped, OffBoard];
+        var entries = new List<object>();
+        var shown = 0;
+        var kept = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var group in byProject)
+        {
+            var project = index.Project(group.Key);
+            var projectId = group.Key;
+            entries.Add(Heading(projectId, project?.Name ?? string.Empty, group.Count(), isProject: true, () => Select(projectId)));
+            foreach (var column in group
+                .GroupBy(item => item.State == TaskState.Done && !ProjectRules.OnBoard(item.State, CompletedOn(item), project?.ArchiveAfterDays, item.BoardArchivedAt is not null, today)
+                    ? OffBoard
+                    : ProjectRules.ShownIn(item.State, item.BoardColumn) ?? ProjectRules.Backlog)
+                .OrderBy(column => Array.IndexOf(order, column.Key)))
+            {
+                if (shown >= MostResults)
+                {
+                    break;
+                }
+
+                entries.Add(Heading(projectId + "/" + column.Key, column.Key == OffBoard ? strings.Get("Projects.OffBoard") : strings.Get(ColumnKey(column.Key)), column.Count(), isProject: false, null));
+                foreach (var item in ProjectRules.Order(column).Take(MostResults - shown))
+                {
+                    entries.Add(Result(item, search.Words));
+                    kept.Add(item.Id);
+                    shown++;
+                }
+            }
+        }
+
+        foreach (var gone in resultsById.Keys.Where(id => !kept.Contains(id)).ToList())
+        {
+            resultsById.Remove(gone);
+        }
+
+        Results.SyncTo(entries);
+        ResultsText = strings.Get("Projects.ResultsCount", found.Count, byProject.Count);
+        MoreFoundText = found.Count > shown ? strings.Get("Projects.MoreFound", found.Count - shown) : string.Empty;
+        IsNoResults = found.Count == 0;
+        NoResultsText = strings.Get("Projects.NoResultsAnywhere");
+    }
+
+    // A heading kept from the last redraw while it says the same.
+    private ResultHeadingViewModel Heading(string key, string title, int count, bool isProject, Action? open)
+    {
+        if (headings.TryGetValue(key, out var kept) && kept.Title == title && kept.Count == count)
+        {
+            return kept;
+        }
+
+        var heading = new ResultHeadingViewModel(key, title, count, isProject, open);
+        headings[key] = heading;
+        return heading;
+    }
+
+    private int IndexOfProject(string id)
+    {
+        for (var i = 0; i < index.Projects.Count; i++)
+        {
+            if (index.Projects[i].Id == id)
+            {
+                return i;
+            }
+        }
+
+        return int.MaxValue;
     }
 
     /// <summary>Esc in the quick search: empties it.</summary>
@@ -1143,7 +1435,21 @@ public sealed partial class ProjectsViewModel : ObservableObject
 
     partial void OnMadeByFilterChanged(string value) => Rebuild();
 
-    partial void OnBoardQueryChanged(string value) => SearchSoon(value);
+    partial void OnBoardQueryChanged(string value)
+    {
+        OnPropertyChanged(nameof(ShowsRecent));
+        SearchSoon(value);
+    }
+
+    partial void OnSearchesEverywhereChanged(bool value) => Rebuild();
+
+    partial void OnTypeChipChanged(string? value) => Rebuild();
+
+    partial void OnPriorityChipChanged(string? value) => Rebuild();
+
+    partial void OnStatusChipChanged(string? value) => Rebuild();
+
+    partial void OnMilestoneChipChanged(string? value) => Rebuild();
 
     partial void OnPaneQueryChanged(string value) => SearchSoon(value);
 

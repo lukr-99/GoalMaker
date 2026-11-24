@@ -174,19 +174,101 @@
             </DataTemplate.Triggers>
         </DataTemplate>
 
-        <!-- An item the quick search found: its id and title, and the project and column it is in. -->
+        <!-- An item the search found: its id and title with the matched words lit up, then where it is. -->
         <DataTemplate DataType="{x:Type vm:ItemResultViewModel}">
-            <Button Style="{StaticResource PaneRow}" Command="{Binding JumpCommand}" AutomationProperties.Name="{Binding Name}">
-                <StackPanel>
-                    <TextBlock FontSize="13" TextTrimming="CharacterEllipsis">
-                        <Run Text="{Binding IdLead, Mode=OneWay}" FontFamily="Cascadia Mono, Consolas, Courier New" FontSize="11"
-                             Foreground="{DynamicResource GM.TextMutedBrush}" /><Run Text="{Binding Title, Mode=OneWay}" />
-                    </TextBlock>
-                    <TextBlock FontSize="11" Text="{Binding Place}" TextTrimming="CharacterEllipsis"
-                               Foreground="{DynamicResource GM.TextMutedBrush}" />
-                </StackPanel>
-            </Button>
+            <StackPanel Margin="12,0,0,0">
+                <controls:HighlightedText FontSize="14" TextTrimming="CharacterEllipsis" Lead="{Binding IdLead}" Parts="{Binding TitleParts}" />
+                <TextBlock FontSize="11" Text="{Binding Place}" TextTrimming="CharacterEllipsis"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
         </DataTemplate>
+
+        <!-- A project in the search results, with how many of its items were found; a column under it, smaller. -->
+        <DataTemplate DataType="{x:Type vm:ResultHeadingViewModel}">
+            <StackPanel x:Name="Line" Orientation="Horizontal" Margin="0,10,0,2">
+                <TextBlock x:Name="Name" FontSize="15" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding Title}" />
+                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Text="{Binding Count}"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" />
+            </StackPanel>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsColumn}" Value="True">
+                    <Setter TargetName="Line" Property="Margin" Value="12,4,0,2" />
+                    <Setter TargetName="Name" Property="FontSize" Value="11" />
+                    <Setter TargetName="Name" Property="Foreground" Value="{DynamicResource GM.AccentBrush}" />
+                </DataTrigger>
+            </DataTemplate.Triggers>
+        </DataTemplate>
+
+        <!--
+          The search results: a list that draws only what is in view, walked with Up and Down; a click or
+          Enter on an item takes the board there, on a project's heading opens its board.
+        -->
+        <Style x:Key="ResultList" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource GM.TextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="VirtualizingPanel.ScrollUnit" Value="Pixel" />
+            <Setter Property="KeyboardNavigation.TabNavigation" Value="Once" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <ScrollViewer Focusable="False" CanContentScroll="True" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                            <ItemsPresenter Margin="0,0,8,0" />
+                        </ScrollViewer>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemsPanel">
+                <Setter.Value>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+                        <EventSetter Event="MouseLeftButtonUp" Handler="OnResultClick" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="Face" Padding="8,4" BorderThickness="1" BorderBrush="Transparent" Background="Transparent"
+                                            Cursor="Hand" CornerRadius="{DynamicResource GM.RowCorner}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Face" Property="Background" Value="{DynamicResource GM.SurfaceBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsKeyboardFocused" Value="True">
+                                            <Setter TargetName="Face" Property="BorderBrush" Value="{DynamicResource GM.AccentBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- A chip beside the search box: a small picker that says what it holds. -->
+        <Style x:Key="Chip" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Margin" Value="0,0,6,6" />
+            <Setter Property="MinWidth" Value="118" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="DisplayMemberPath" Value="Label" />
+            <Setter Property="SelectedValuePath" Value="Id" />
+        </Style>
 
         <!--
           A card's type, as a mark and a word in its second line of text: a plain task stays quiet, an
@@ -626,7 +708,6 @@
                     <TextBlock Style="{StaticResource Hint}" Margin="4,8,0,8" Text="{DynamicResource Projects.NothingFound}"
                                Visibility="{Binding IsNothingFound, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
-                <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Hint}" Margin="4,4,0,0" FontSize="11" Text="{Binding MoreFoundText}" />
                 <ItemsControl x:Name="ProjectList" ItemsSource="{Binding PaneEntries}" Focusable="False"
                               VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel"
                               ScrollViewer.CanContentScroll="True"
@@ -662,9 +743,20 @@
                   The area and tag filter (docs/projects.md) narrows the project list and the board, so
                   it sits over both, and stays when it filters every project away.
                 -->
+                <!-- With a project on show, the filter sits with the search's chips; without one, it stays here. -->
                 <ContentControl Margin="0,0,0,12" Focusable="False" HorizontalAlignment="Left"
-                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
-                                Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                                Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
+                            <Setter Property="Visibility" Value="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding ShowsProject}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentControl.Style>
+                </ContentControl>
                 <!-- The project on show. -->
                 <Border Padding="12,10" CornerRadius="{DynamicResource GM.RowCorner}" Background="{DynamicResource GM.SurfaceBrush}"
                         Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
@@ -751,25 +843,75 @@
                 </Grid>
 
                 <!--
-                  The board's search: words from an item's title or notes, or its id, GM-12 or #12. Then who
-                  made the items on show: everyone, the owner, or Claude (docs/projects.md).
+                  The search (docs/projects.md, "Searching items"): one box, Ctrl+F, over every project
+                  unless narrowed to this one; words in any order, an id, or filter words. Then the chips,
+                  the area and tag filter and who made the items, and the recent searches while the box
+                  is empty and has the keyboard.
                 -->
-                <DockPanel Margin="0,0,0,8">
-                    <ui:TextBox x:Name="BoardSearch" DockPanel.Dock="Left" Width="260"
-                                PlaceholderText="{DynamicResource Projects.FindItem}"
-                                Icon="{ui:SymbolIcon Search24}"
-                                ToolTip="{DynamicResource Projects.FindItemHelp}"
-                                AutomationProperties.Name="{DynamicResource Projects.FindItem}"
-                                AutomationProperties.HelpText="{DynamicResource Projects.FindItemHelp}"
-                                Text="{Binding BoardQuery, UpdateSourceTrigger=PropertyChanged}" />
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" FontSize="12"
-                                   Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.MadeBy}" />
-                        <ComboBox MinWidth="120" ItemsSource="{Binding MakerFilters}"
-                                  DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding MadeByFilter}"
-                                  AutomationProperties.Name="{DynamicResource Projects.MadeBy}" />
+                <StackPanel x:Name="SearchArea" Margin="0,0,0,8" IsKeyboardFocusWithinChanged="OnSearchFocus">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Margin="12,0,8,0" VerticalAlignment="Center" FontSize="12"
+                                       Foreground="{DynamicResource GM.TextMutedBrush}" Text="{DynamicResource Projects.MadeBy}" />
+                            <ComboBox MinWidth="120" ItemsSource="{Binding MakerFilters}"
+                                      DisplayMemberPath="Label" SelectedValuePath="Id" SelectedValue="{Binding MadeByFilter}"
+                                      AutomationProperties.Name="{DynamicResource Projects.MadeBy}" />
+                        </StackPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    ToolTip="{DynamicResource Projects.ScopeHelp}">
+                            <ToggleButton Padding="10,5" IsChecked="{Binding SearchesEverywhere}" Content="{DynamicResource Projects.ScopeAll}"
+                                          AutomationProperties.HelpText="{DynamicResource Projects.ScopeHelp}" />
+                            <ToggleButton Margin="4,0,0,0" Padding="10,5" IsChecked="{Binding SearchesHere}" Content="{DynamicResource Projects.ScopeHere}"
+                                          AutomationProperties.HelpText="{DynamicResource Projects.ScopeHelp}" />
+                        </StackPanel>
+                        <ui:TextBox x:Name="BoardSearch" MinWidth="220"
+                                    PlaceholderText="{DynamicResource Projects.FindItem}"
+                                    Icon="{ui:SymbolIcon Search24}"
+                                    ToolTip="{DynamicResource Projects.FindItemHelp}"
+                                    AutomationProperties.Name="{DynamicResource Projects.FindItem}"
+                                    AutomationProperties.HelpText="{DynamicResource Projects.FindItemHelp}"
+                                    Text="{Binding BoardQuery, UpdateSourceTrigger=PropertyChanged}"
+                                    PreviewKeyDown="OnBoardSearchKey">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding OpenFirstResultCommand}" />
+                                <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}" />
+                            </ui:TextBox.InputBindings>
+                        </ui:TextBox>
+                    </DockPanel>
+                    <WrapPanel Margin="0,6,0,0">
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding TypeChips}" SelectedValue="{Binding TypeChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipType}" />
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding PriorityChips}" SelectedValue="{Binding PriorityChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipPriority}" />
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding StatusChips}" SelectedValue="{Binding StatusChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipStatus}" />
+                        <ComboBox Style="{StaticResource Chip}" ItemsSource="{Binding MilestoneChips}" SelectedValue="{Binding MilestoneChip}"
+                                  AutomationProperties.Name="{DynamicResource Projects.ChipMilestone}" />
+                        <ContentControl Margin="0,0,6,6" Focusable="False" Content="{Binding Filters}" ContentTemplate="{StaticResource ListFilters}"
+                                        Visibility="{Binding Filters.HasAny, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Margin="0,0,0,6" Padding="8,4" Appearance="Transparent" FontSize="12" Command="{Binding ClearFiltersCommand}"
+                                   Content="{DynamicResource Projects.ClearFilters}"
+                                   Visibility="{Binding CanClearFilters, Converter={StaticResource BoolToVisibility}}" />
+                    </WrapPanel>
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsRecent, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Margin="2,0,8,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource GM.TextMutedBrush}"
+                                   Text="{DynamicResource Projects.Recent}" />
+                        <ItemsControl ItemsSource="{Binding RecentSearches}" Focusable="False">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <ui:Button Margin="0,0,4,0" Padding="8,2" FontSize="12" Content="{Binding}"
+                                               Command="{Binding DataContext.UseRecentCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                               CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
-                </DockPanel>
+                </StackPanel>
             </StackPanel>
 
             <!--
@@ -777,8 +919,55 @@
               In a narrow window they stop shrinking and the board scrolls sideways, so a card is never
               cut off and its menu stays on screen. Each column scrolls up and down on its own.
             -->
-            <ScrollViewer x:Name="BoardScroller" Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
-                          Visibility="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}">
+            <!-- The results of a search over every project take the board's place. -->
+            <DockPanel Grid.Row="2">
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Setter Property="Visibility" Value="{Binding ShowsResults, Converter={StaticResource BoolToVisibility}}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNoResults}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DockPanel.Style>
+                <TextBlock DockPanel.Dock="Top" Margin="2,0,0,4" Style="{StaticResource SectionLabel}" Text="{Binding ResultsText}" />
+                <TextBlock DockPanel.Dock="Bottom" Margin="2,4,0,0" FontSize="11" Style="{StaticResource WhenSaid}"
+                           Foreground="{DynamicResource GM.TextMutedBrush}" Text="{Binding MoreFoundText}" />
+                <ListBox x:Name="ResultList" ItemsSource="{Binding Results}" Style="{StaticResource ResultList}"
+                         AutomationProperties.Name="{Binding ResultsText}" PreviewKeyDown="OnResultsKey" />
+            </DockPanel>
+
+            <!-- A search or a filter that finds nothing: say so, with the ways out. -->
+            <Border Grid.Row="2" VerticalAlignment="Top" Padding="16" CornerRadius="{DynamicResource GM.CardCorner}" BorderThickness="1"
+                    BorderBrush="{DynamicResource GM.OutlineBrush}"
+                    Visibility="{Binding IsNoResults, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock FontSize="15" FontFamily="{DynamicResource GM.BodyStrongFont}" Text="{Binding NoResultsText}" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <ui:Button Margin="0,0,8,0" Appearance="Primary" Command="{Binding WidenSearchCommand}" Content="{DynamicResource Projects.Widen}"
+                                   Visibility="{Binding SearchesHere, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Margin="0,0,8,0" Command="{Binding ClearFiltersCommand}" Content="{DynamicResource Projects.ClearFilters}"
+                                   Visibility="{Binding CanClearFilters, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Appearance="Transparent" Command="{Binding ClearSearchCommand}" Content="{DynamicResource Projects.ClearSearch}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <ScrollViewer x:Name="BoardScroller" Grid.Row="2" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ScrollViewer.Style>
+                    <Style TargetType="ScrollViewer" BasedOn="{StaticResource {x:Type ScrollViewer}}">
+                        <Setter Property="Visibility" Value="{Binding ShowsProject, Converter={StaticResource BoolToVisibility}}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowsResults}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsNoResults}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ScrollViewer.Style>
                 <!-- The board takes the width it is shown in, and what its columns need at the least, so a title still wraps. -->
                 <Grid x:Name="Board" MinWidth="{Binding BoardMinWidth}"
                       Width="{Binding ViewportWidth, RelativeSource={RelativeSource AncestorType=ScrollViewer}}">

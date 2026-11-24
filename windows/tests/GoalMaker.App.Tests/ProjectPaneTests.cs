@@ -68,62 +68,20 @@ public sealed class ProjectPaneTests : IDisposable
     }
 
     [Fact]
-    public void TheQuickSearchFindsProjectsAndItemsInAnyProjectWithWhereTheyAre()
+    public void TheQuickSearchInTheListFindsProjectsByNameOrKey()
     {
         var page = WithItems();
-        var thesis = planner.Projects.Add(new ProjectDraft("Board games"))!;
-        planner.Tasks.SetProject(planner.Tasks.Add("Paint the board")!.Id, thesis.Id);
+        var games = planner.Projects.Add(new ProjectDraft("Board games"))!;
+        planner.Projects.SetItemKey(games.Id, "BG");
 
         Search(page, "board");
-
-        Assert.Equal(["[Projects.Title 1]", "Board games", "[Projects.ItemsFound 2]", "Paint the board", "Ship the board"], Entries(page));
-        var found = page.PaneEntries.OfType<ItemResultViewModel>().Single(result => result.Title == "Ship the board");
-        Assert.Equal("Projects.ResultPlace(GoalMaker,Projects.Todo)", found.Place);
-        Assert.Equal(string.Empty, page.MoreFoundText);
+        Assert.Equal(["[Projects.Title 1]", "Board games"], Entries(page));
+        Search(page, "bg");
+        Assert.Equal(["[Projects.Title 1]", "Board games"], Entries(page));
 
         Search(page, "nothing like it");
         Assert.True(page.IsNothingFound);
         Assert.Empty(page.PaneEntries);
-    }
-
-    [Fact]
-    public void AFoundItemTakesTheBoardToItsCardLettingGoOfWhatHidItAndUnfoldingItsColumn()
-    {
-        var page = WithItems();
-        var other = planner.Projects.Add(new ProjectDraft("Thesis"))!;
-        page.Select(other.Id);
-        page.MadeByFilter = ProjectRules.Claude;
-        page.BoardQuery = "nothing";
-        Column(page, ProjectRules.Doing).FoldCommand.Execute(null);
-        BoardItemViewModel? shown = null;
-        page.CardShown += (_, card) => shown = card;
-
-        Search(page, "sync");
-        page.PaneEntries.OfType<ItemResultViewModel>().Single().JumpCommand.Execute(null);
-
-        Assert.Equal("GoalMaker", page.ProjectName);
-        Assert.Equal(ProjectRules.Everyone, page.MadeByFilter);
-        Assert.Equal(string.Empty, page.BoardQuery);
-        Assert.False(Column(page, ProjectRules.Doing).IsFolded);
-        Assert.Equal("Fix sync", shown?.Title);
-        Assert.Empty(opened);
-    }
-
-    [Fact]
-    public void AFoundItemOffTheBoardOpensOnItsOwnPage()
-    {
-        var page = WithItems();
-        var done = planner.Task("Widgets");
-        planner.Tasks.SetBoardColumn(done.Id, ProjectRules.Done);
-        planner.Tasks.SetBoardArchived(done.Id, true);
-
-        Search(page, "widgets");
-        var result = page.PaneEntries.OfType<ItemResultViewModel>().Single();
-        Assert.Equal("Projects.ResultPlace(GoalMaker,Projects.OffBoard)", result.Place);
-        result.JumpCommand.Execute(null);
-
-        Assert.Equal([done.Id], opened);
-        Assert.Equal(done.Id, page.LastOpenedItem);
     }
 
     [Fact]
@@ -145,6 +103,7 @@ public sealed class ProjectPaneTests : IDisposable
     public void TheBoardsSearchWaitsForAPauseInTypingAndAnEmptyBoxShowsEverythingAtOnce()
     {
         var page = WithItems();
+        page.SearchesEverywhere = false;
 
         page.BoardQuery = "sync";
         Assert.Equal(3, Cards(page).Count);

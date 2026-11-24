@@ -12,7 +12,8 @@ namespace GoalMaker.App.Views;
 /// The Projects page. Behavior is in <see cref="ProjectsViewModel"/>; the page only shows it and moves
 /// the keyboard (GM-122): a click or Enter on a card opens the item, the menu key or the dots show its
 /// menu, Left and Right go to the next column, Ctrl+P goes to the quick search over the project list and
-/// Ctrl+F to the board's search, Esc empties the board's search or puts the list away. When the page
+/// Ctrl+F to the search box, Esc empties the search or puts the list away. Down from the search box goes
+/// into the results, and Enter or a click on one takes the board there. When the page
 /// shows again after an item was opened, the keyboard goes back to that card. In a narrow window the
 /// project list folds to a strip and comes out over the board.
 /// </summary>
@@ -77,7 +78,7 @@ public partial class ProjectsPage
         {
             if (viewModel.BoardQuery.Length > 0)
             {
-                viewModel.BoardQuery = string.Empty;
+                viewModel.ClearSearchCommand.Execute(null);
                 e.Handled = true;
             }
             else if (IsNarrow && viewModel.IsPaneOpen)
@@ -89,6 +90,73 @@ public partial class ProjectsPage
     }
 
     private void OnFindProject(object sender, RoutedEventArgs e) => FindProject();
+
+    // The recent searches show while the keyboard is in the search area: the box, its chips or the
+    // recent searches themselves, so a click on one doesn't hide them first.
+    private void OnSearchFocus(object sender, DependencyPropertyChangedEventArgs e) =>
+        viewModel.IsSearchFocused = SearchArea.IsKeyboardFocusWithin;
+
+    // Down from the search box goes to the first result, or to the first card of the board.
+    private void OnBoardSearchKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Down)
+        {
+            return;
+        }
+
+        if (viewModel.ShowsResults && viewModel.Results.OfType<ItemResultViewModel>().FirstOrDefault() is { } first)
+        {
+            ResultList.SelectedItem = first;
+            ResultList.ScrollIntoView(first);
+            ResultList.UpdateLayout();
+            (ResultList.ItemContainerGenerator.ContainerFromItem(first) as ListBoxItem)?.Focus();
+            e.Handled = true;
+        }
+        else if (CardLists().FirstOrDefault(list => list.Items.Count > 0) is { } cards)
+        {
+            Pick(cards, cards.SelectedItem as BoardItemViewModel ?? (BoardItemViewModel)cards.Items[0]);
+            e.Handled = true;
+        }
+    }
+
+    // A click on a result takes the board there; on a project's heading, opens its board.
+    private void OnResultClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is ListBoxItem { DataContext: { } entry })
+        {
+            Activate(entry);
+            e.Handled = true;
+        }
+    }
+
+    // Enter on a result is a click; Up from the first one goes back to the search box.
+    private void OnResultsKey(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && ResultList.SelectedItem is { } entry)
+        {
+            Activate(entry);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Up && ResultList.SelectedIndex >= 0
+                 && !viewModel.Results.Take(ResultList.SelectedIndex).OfType<ItemResultViewModel>().Any())
+        {
+            BoardSearch.Focus();
+            e.Handled = true;
+        }
+    }
+
+    private static void Activate(object entry)
+    {
+        switch (entry)
+        {
+            case ItemResultViewModel result:
+                result.JumpCommand.Execute(null);
+                break;
+            case ResultHeadingViewModel { IsProject: true } heading:
+                heading.OpenCommand.Execute(null);
+                break;
+        }
+    }
 
     private void FindProject()
     {

@@ -974,9 +974,27 @@ public sealed class PageSnapshots
             Save(new ProjectsPage(Board()), folder, $"projects-large-narrow-{name}", new Size(820, 760));
 
             var searching = Board();
-            searching.PaneQuery = "sync crash";
+            searching.BoardQuery = "sync crash is:open";
             planner.Time.Advance(TimeSpan.FromSeconds(1));
             Save(new ProjectsPage(searching), folder, $"projects-large-search-{name}", new Size(1100, 760));
+
+            var chips = Board();
+            chips.BoardQuery = "toast";
+            chips.TypeChip = ProjectRules.Bug;
+            chips.PriorityChip = ProjectRules.Urgent;
+            planner.Time.Advance(TimeSpan.FromSeconds(1));
+            Save(new ProjectsPage(chips), folder, $"projects-large-search-chips-{name}", new Size(1500, 860));
+
+            var nothing = Board();
+            nothing.SearchesEverywhere = false;
+            nothing.BoardQuery = "nothing like this #release";
+            planner.Time.Advance(TimeSpan.FromSeconds(1));
+            Save(new ProjectsPage(nothing), folder, $"projects-large-nothing-found-{name}", new Size(1100, 760));
+
+            var list = Board();
+            list.PaneQuery = "project 1";
+            planner.Time.Advance(TimeSpan.FromSeconds(1));
+            Save(new ProjectsPage(list), folder, $"projects-large-find-project-{name}", new Size(1100, 760));
 
             var narrow = Board();
             var page = new ProjectsPage(narrow);
