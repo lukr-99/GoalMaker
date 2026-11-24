@@ -10,7 +10,10 @@ namespace GoalMaker.Core.Planning;
 /// <item><c>type:</c> task, idea or bug; <c>p:</c> or <c>priority:</c> urgent, high, normal or low;</item>
 /// <item><c>m:</c> or <c>milestone:</c> a milestone's name, like m:M3.</item>
 /// </list>
-/// A filter word that names nothing it knows is searched as a plain word. The words are folded once,
+/// A filter word that names nothing it knows is searched as a plain word. Any whitespace parts words, and
+/// double quotes keep a phrase together: "board sync" is one phrase, m:"Q4 launch" and #"to read" a
+/// milestone and a tag with spaces. Within one kind the values are alternatives (type:bug type:idea, or
+/// a chip and a typed word, finds either); tags must all be there; different kinds must all hold. The words are folded once,
 /// when the query is read, and an item's text once per change of it (<see cref="ProjectBoardIndex"/>),
 /// so a keystroke only compares strings.
 /// </summary>
@@ -71,7 +74,7 @@ public sealed class ProjectSearch
         ItemId? id = null;
         var words = new List<string>();
         HashSet<string> tags = Set(), types = Set(), priorities = Set(), states = Set(), milestones = Set();
-        foreach (var token in (query ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var (_, token) in Tokens(query))
         {
             var folded = ArchiveRules.Fold(token);
             if (id is null && ProjectRules.ParseItemId(token) is { } named)
@@ -95,6 +98,50 @@ public sealed class ProjectSearch
         return id is null && words.Count + tags.Count + types.Count + priorities.Count + states.Count + milestones.Count == 0
             ? Everything
             : new ProjectSearch(id, words, tags, types, priorities, states, milestones);
+    }
+
+    /// <summary>
+    /// The query's parts: split at any whitespace outside double quotes. Text is the part as typed,
+    /// quotes and all; Value is without the quotes.
+    /// </summary>
+    public static IReadOnlyList<(string Text, string Value)> Tokens(string? query)
+    {
+        var tokens = new List<(string, string)>();
+        var text = new System.Text.StringBuilder();
+        var value = new System.Text.StringBuilder();
+        var quoted = false;
+        foreach (var character in query ?? string.Empty)
+        {
+            if (char.IsWhiteSpace(character) && !quoted)
+            {
+                Flush();
+                continue;
+            }
+
+            text.Append(character);
+            if (character == '"')
+            {
+                quoted = !quoted;
+            }
+            else
+            {
+                value.Append(character);
+            }
+        }
+
+        Flush();
+        return tokens;
+
+        void Flush()
+        {
+            if (value.Length > 0)
+            {
+                tokens.Add((text.ToString(), value.ToString()));
+            }
+
+            text.Clear();
+            value.Clear();
+        }
     }
 
     /// <summary>

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.Core.Tests.Planning;
@@ -161,11 +160,11 @@ public sealed class ProjectBoardIndexTests
         }
     }
 
-    // 3,000 items in 40 projects: building the index and a search over every project are quick enough
-    // to run on every change and every pause in typing. The budget is loose, for a busy CI machine;
-    // on this PC a build takes about 15 ms and a search about 1 ms.
+    // 3,000 items in 40 projects: the index finds exactly what reading every item one by one finds, and
+    // the next index folds only the items whose text changed. Timings live in the explicit
+    // ProjectsSpeedReport, not in tests that run on busy machines.
     [Fact]
-    public void ALargeBoardIsIndexedAndSearchedQuickly()
+    public void OnALargeBoardTheIndexFindsWhatAPlainScanFinds()
     {
         var projects = Enumerable.Range(0, 40).Select(i => new ProjectItem($"p{i}", $"Project {i}")).ToList();
         var random = new Random(121);
@@ -175,20 +174,32 @@ public sealed class ProjectBoardIndexTests
                 with
             { Notes = string.Join(' ', Enumerable.Range(0, 20).Select(_ => words[random.Next(words.Length)])) })
             .ToList();
-
-        var watch = Stopwatch.StartNew();
         var index = ProjectBoardIndex.Build(projects, tasks, NoLinks);
-        var built = watch.Elapsed;
-        watch.Restart();
-        for (var i = 0; i < 20; i++)
+
+        foreach (var query in new[] { "sync kun", "PŘÍLIŠ board", "habit widget filter", "nothing" })
         {
-            index.Search(ProjectSearch.Of("sync kun"), 30, out _);
+            var wanted = ProjectSearch.Of(query).Words;
+            var scanned = tasks
+                .Where(task => wanted.All(word => (ArchiveRules.Fold(task.Title) + "\n" + ArchiveRules.Fold(task.Notes)).Contains(word, StringComparison.Ordinal)))
+                .Select(task => task.Id)
+                .Order(StringComparer.Ordinal);
+            Assert.Equal(scanned, index.FindAll(ProjectSearch.Of(query)).Select(task => task.Id).Order(StringComparer.Ordinal));
         }
 
-        var searched = watch.Elapsed / 20;
+        var changed = tasks[7] with { Title = "renamed only here" };
+        var next = ProjectBoardIndex.Build(projects, [.. tasks.Take(7), changed, .. tasks.Skip(8)], NoLinks, index);
+        Assert.Equal(["t7"], next.FindAll(ProjectSearch.Of("renamed")).Select(task => task.Id));
+    }
 
-        Assert.True(built < TimeSpan.FromMilliseconds(500), $"Building took {built.TotalMilliseconds} ms.");
-        Assert.True(searched < TimeSpan.FromMilliseconds(50), $"A search took {searched.TotalMilliseconds} ms.");
+    [Fact]
+    public void AnyWhitespacePartsWordsAndQuotesKeepAPhraseTogether()
+    {
+        var search = ProjectSearch.Of("board\tsync\n  m:\"Q4 launch\" #\"to read\" \"exact phrase\"");
+
+        Assert.Equal(["board", "sync", "exact phrase"], search.Words);
+        Assert.Equal(["q4 launch"], search.Milestones);
+        Assert.Equal(["to read"], search.Tags);
+        Assert.Equal([("m:\"Q4 launch\"", "m:Q4 launch"), ("x", "x")], ProjectSearch.Tokens("  m:\"Q4 launch\"\u00a0x "));
     }
 
     private static TaskItem Item(string id, string title, ProjectItem project, string column) =>
