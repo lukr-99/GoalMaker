@@ -36,7 +36,7 @@ jobs:
           npx deno test --allow-read --allow-env --allow-net _shared connector
 
   android:
-    name: Android build, unit tests and lint
+    name: Android build and unit tests
     runs-on: ubuntu-latest
     container: ghcr.io/cirruslabs/android-sdk:36
     timeout-minutes: 45
@@ -54,7 +54,7 @@ jobs:
         # AGP downloads the compile SDK (37) and the build tools it needs.
         run: |
           chmod +x gradlew
-          ./gradlew testDebugUnitTest assembleDebug lintDebug --stacktrace
+          ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
       - name: Upload reports
         if: always()
@@ -64,6 +64,28 @@ jobs:
           path: |
             android/app/build/reports/
             android/app/build/test-results/
+          if-no-files-found: warn
+
+  android-lint:
+    name: Android lint
+    runs-on: ubuntu-latest
+    container: ghcr.io/cirruslabs/android-sdk:36
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lint
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew lintDebug --stacktrace
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-lint-report
+          path: android/app/build/reports/
           if-no-files-found: warn
 
   windows-core:
