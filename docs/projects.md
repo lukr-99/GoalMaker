@@ -159,20 +159,48 @@ the accent, how many are in Doing. A row's menu (right click or the menu key) pi
 edits it. Pins and the projects last opened are kept on this PC in the settings file, not synced; the
 page opens on the project opened last.
 
-The **quick search** at the top of the list (Ctrl+P) finds projects by name or key and items in every
-project by the words of their title or notes, or by their id (GM-12), ignoring case and accents. An
-item found shows its project and column ("Kiln · To do", or "Done, off the board"). A click or Enter
-on it takes the board there: its project, the card picked and scrolled into view, its column unfolded,
-and the who-made-it switch and the board's search let go if they hid it. An item that is not on the
-board opens on its own page. Enter in the box opens the first project it found, or else the first
-item; Down goes into the list; typing on a row types into the box. The board's own search (Ctrl+F)
-narrows the project on show. Both searches look once typing pauses for 150 ms; emptying a box shows
-everything at once.
+The **quick search** at the top of the list (Ctrl+P) finds a project by name or key; Enter opens the
+first one found, Down goes into the list, and typing on a row types into the box.
+
+### Searching items
+
+One search box sits over the board (Ctrl+F). It looks in **every project** by default; the
+**All projects | This project** switch beside it narrows it to the board on show. Esc empties the box
+and the next search looks in every project again.
+
+- Matching is forgiving: case and accents are ignored, and every word must be in the item's title or
+  notes, in any order. An item id finds that item: GM-12, KLN-5, or #12 for the project on show.
+- The search looks once typing pauses for 150 ms; emptying the box shows everything at once.
+- The results take the board's place, grouped by project (the one on show first, then the latest
+  opened) and by column in the board's order, then the items off the board, each heading with its
+  count. The matched words light up in each title. A project's heading opens its board.
+- A click or Enter on a result takes the board to its card, as above, with the search narrowed to that
+  project so the card shows among the others found. An item off the board opens on its own page.
+- Down from the box goes into the results, or to the first card when the search narrows one board.
+- The **chips** beside the box narrow it without a panel: type, priority, status (open, done or
+  dropped; any by default, so done items are found too), milestone (by name), and the area and tag
+  filter. Who made the items applies too. Clear the filters lets go of all of them.
+- **Filter words** typed in the box do the same, and combine with the chips:
+
+  | Word | Keeps |
+  |---|---|
+  | `#tag` | items with that tag (`#12`, digits only, is an id) |
+  | `is:open`, `is:done`, `is:dropped` | items in that state |
+  | `is:task`, `is:idea`, `is:bug`, or `type:bug` | items of that type |
+  | `p:high` or `priority:high` | urgent, high, normal or low items |
+  | `m:M3` or `milestone:M3` | items of a milestone with that name |
+
+  A filter word that names nothing it knows, like `is:soon`, is searched as a plain word.
+- **Recent searches** show under the box while it is empty and has the keyboard; a click runs one
+  again. A search is remembered when Enter is pressed or a result is opened; the last eight are kept
+  on this PC.
+- When nothing is found, the page says so and offers **Search every project** (when it looked in one),
+  **Clear the filters** (when a filter is on) and **Clear the search**.
 
 **One click on a card opens the item** on its own page, as a tap does on the phone; the dots and a
 right click show the card's menu. On the board, Up and Down walk a column's cards, Left and Right go to
 the next column, Enter opens the picked card and the menu key shows its menu. Esc on the item's page
-goes back, and the board shows the same card picked, where it was. Esc on the board empties its search.
+goes back, and the board shows the same card picked, where it was. Esc on the board empties the search.
 
 Below 900 pixels the list folds to a strip with a button to bring it out and one for the quick
 search; it then comes out over the board and goes away once a project is picked. In a wide window the
