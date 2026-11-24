@@ -29,6 +29,16 @@ app does. A habit measured by an amount fills the rest of the day's target in th
 button does ([habits](habits.md), "One tap"); once the target is reached, or for a limit, its row
 opens the app instead of guessing a value.
 
+## Focus Board
+
+The Focus Board's items in the board's own order (`FocusBoardRules`), each with its deadline or
+planned date when it has one. The widget shows everything that fits its real size
+(`SizeMode.Exact`), and the list scrolls inside it when the board is longer (up to 60 items). When
+items are out of sight, a "+N more" line under the list says how many (`WidgetContent.focusFit`), and
+a tap on it, a row or the background opens the app. The widget used to cut the board at 8 rows in a
+plain column, so a tall widget still showed only the top few ("the focus board widget doesnt seem to
+display everything it can", GM-118).
+
 ## Goals
 
 The Goals screen's four rings, this year, month, week and today, each with how much of its goals is

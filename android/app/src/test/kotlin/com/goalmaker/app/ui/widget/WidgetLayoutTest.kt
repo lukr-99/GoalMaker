@@ -131,6 +131,26 @@ class WidgetLayoutTest {
         assertTrue("one scrolling list", views<ListView>(root).single().height > root.height / 2)
     }
 
+    @Test
+    fun `the Focus widget scrolls its board and says how many are out of sight`() = runTest {
+        val tasks = (1..20).map { WidgetTask("$it", "Item $it") }
+        val root = layOut(DpSize(250.dp, 200.dp)) { FocusWidget().Content(context, skin, tasks) }
+
+        val list = views<ListView>(root).single()
+        assertTrue("the list takes the room above the line (height ${list.height})", list.height > root.height / 3)
+        val hidden = WidgetContent.focusFit(tasks.size, 200f).hidden
+        assertTrue("some are hidden at this size", hidden > 0)
+        assertVisible(root, context.getString(com.goalmaker.app.R.string.widget_focus_more, hidden))
+    }
+
+    @Test
+    fun `a tall Focus widget with a short board has no more line`() = runTest {
+        val tasks = (1..5).map { WidgetTask("$it", "Item $it") }
+        val root = layOut(DpSize(250.dp, 400.dp)) { FocusWidget().Content(context, skin, tasks) }
+
+        assertTrue("nothing is hidden", texts(root).none { it.text.contains("more") })
+    }
+
     /** Composes [content] at [size] (the Today widget's default 3 by 3) and lays it out like a launcher. */
     private suspend fun layOut(size: DpSize = DpSize(250.dp, 250.dp), content: @Composable () -> Unit): ViewGroup {
         val widget = object : GlanceAppWidget() {

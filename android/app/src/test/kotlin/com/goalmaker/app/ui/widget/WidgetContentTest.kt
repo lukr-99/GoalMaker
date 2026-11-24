@@ -226,4 +226,22 @@ class WidgetContentTest {
 
         assertEquals(WidgetContent.ROWS + 4, WidgetContent.habits(habits.read(), today).size)
     }
+
+    @Test
+    fun `the Focus widget shows every item that fits and counts the rest`() {
+        // 300 dp tall: 248 dp of rows is ten 24 dp rows, so ten items need no "+N more" line.
+        assertEquals(WidgetContent.FocusFit(shown = 10, hidden = 0), WidgetContent.focusFit(10, 300f))
+        assertEquals(WidgetContent.FocusFit(shown = 3, hidden = 0), WidgetContent.focusFit(3, 300f))
+        // Eleven do not fit, so the line takes one row's room and nine are shown.
+        assertEquals(WidgetContent.FocusFit(shown = 9, hidden = 2), WidgetContent.focusFit(11, 300f))
+        // A small widget (110 dp) holds two rows, or one with the line.
+        assertEquals(WidgetContent.FocusFit(shown = 2, hidden = 0), WidgetContent.focusFit(2, 110f))
+        assertEquals(WidgetContent.FocusFit(shown = 1, hidden = 5), WidgetContent.focusFit(6, 110f))
+    }
+
+    @Test
+    fun `the Focus widget always shows at least its top item`() {
+        assertEquals(WidgetContent.FocusFit(shown = 1, hidden = 4), WidgetContent.focusFit(5, 40f))
+        assertEquals(WidgetContent.FocusFit(shown = 0, hidden = 0), WidgetContent.focusFit(0, 40f))
+    }
 }

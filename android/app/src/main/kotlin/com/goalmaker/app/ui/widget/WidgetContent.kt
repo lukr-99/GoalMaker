@@ -34,6 +34,16 @@ object WidgetContent {
      */
     const val HABIT_ROWS = 60
 
+    /**
+     * The Focus Board widget scrolls too, so it takes the board up to this many items: a cap only so
+     * a launcher is never handed an endless list.
+     */
+    const val FOCUS_ROWS = 60
+
+    /** The room the Focus widget's padding, header and gap take (dp), and the height of one row. */
+    const val FOCUS_CHROME = 52f
+    const val FOCUS_ROW = 24f
+
     /** Below this width (dp) two compact habit tiles side by side would cut their names too short. */
     const val HABIT_GRID_MIN_WIDTH = 220f
 
@@ -168,8 +178,27 @@ object WidgetContent {
         return slides[Math.floorMod(slot, slides.size.toLong()).toInt()]
     }
 
-    /** The Focus Board widget's rows: board items in priority order, up to [ROWS]. */
-    fun focusBoard(tasks: List<TaskItem>, rows: Int = ROWS): List<WidgetTask> =
+    /**
+     * How the Focus Board widget fills a widget [height] dp tall with [total] board items: [shown]
+     * rows fit without scrolling, and [hidden] are left for the "+N more" line (and the scroll).
+     */
+    data class FocusFit(val shown: Int, val hidden: Int)
+
+    /**
+     * Everything that fits is shown. When all [total] items fit, there is no "+N more" line. When
+     * they do not, the line takes one row's room and the rest of the height holds items (at least
+     * one, so a small widget still shows its top item).
+     */
+    fun focusFit(total: Int, height: Float): FocusFit {
+        val room = height - FOCUS_CHROME
+        val all = maxOf(0, (room / FOCUS_ROW).toInt())
+        if (total <= all) return FocusFit(total, 0)
+        val shown = minOf(total, maxOf(1, ((room - FOCUS_ROW) / FOCUS_ROW).toInt()))
+        return FocusFit(shown, total - shown)
+    }
+
+    /** The Focus Board widget's rows: board items in priority order, up to [FOCUS_ROWS]. */
+    fun focusBoard(tasks: List<TaskItem>, rows: Int = FOCUS_ROWS): List<WidgetTask> =
         FocusBoardRules.board(tasks).take(rows).map { task ->
             WidgetTask(
                 id = task.id,
