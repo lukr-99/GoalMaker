@@ -1,4 +1,5 @@
 using System.Windows.Media;
+using CommunityToolkit.Mvvm.ComponentModel;
 using GoalMaker.Core.Planning;
 
 namespace GoalMaker.App.ViewModels;
@@ -7,7 +8,7 @@ namespace GoalMaker.App.ViewModels;
 /// One row on the Focus Board: its place as shown (1 at the top), the title, and a line with the date
 /// (the deadline, else the planned day; late ones in the danger color) and the area with its color.
 /// </summary>
-public sealed class FocusRowViewModel
+public sealed partial class FocusRowViewModel : ObservableObject
 {
     public string Id { get; }
     public string Title { get; }
@@ -39,7 +40,17 @@ public sealed class FocusRowViewModel
 
     public bool HasSubtitle => Subtitle.Length > 0;
 
-    public FocusRowViewModel(TaskItem task, AreaItem? area, DateOnly today, int place = 1, int count = 1, Brush? areaBrush = null)
+    /// <summary>What Narrator reads after the title: "Late" first for a late task, then the date and area.</summary>
+    public string HelpText { get; }
+
+    /// <summary>
+    /// The done box. Ticking it completes the task, which leaves the board; when the task stays open (a
+    /// repeating one moving on, a change that did nothing) the view model unticks it again.
+    /// </summary>
+    [ObservableProperty]
+    private bool isDone;
+
+    public FocusRowViewModel(TaskItem task, AreaItem? area, DateOnly today, int place, int count, string lateLabel, Brush? areaBrush = null)
     {
         Id = task.Id;
         Title = task.Title;
@@ -50,5 +61,6 @@ public sealed class FocusRowViewModel
         (DateText, IsLate) = FocusDate.For(task, today);
         AreaName = area?.Name;
         AreaBrush = areaBrush;
+        HelpText = FocusDate.HelpText(Subtitle, IsLate, lateLabel);
     }
 }

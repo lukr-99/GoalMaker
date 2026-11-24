@@ -1417,7 +1417,7 @@
     <sys:String x:Key="Focus.MoveUp">Move up (Alt+Up)</sys:String>
     <sys:String x:Key="Focus.MoveDown">Move down (Alt+Down)</sys:String>
     <sys:String x:Key="Focus.Late">Late</sys:String>
-    <sys:String x:Key="Focus.QuickAddPlaceholder">Add a task to the board, like "Hand in the form @School friday"</sys:String>
+    <sys:String x:Key="Focus.QuickAddPlaceholder">New task, like "Hand in the form @School friday"</sys:String>
     <sys:String x:Key="Focus.Search">Search open tasks</sys:String>
     <sys:String x:Key="Focus.NoMatch">No open task matches.</sys:String>
     <sys:String x:Key="Focus.FilteredEmpty">Nothing on the board matches the filter.</sys:String>
