@@ -95,11 +95,14 @@ public sealed class PageSnapshots
             Save(new FocusPage(Board()), folder, $"focus-narrow-{name}", new Size(520, 760));
         }
 
-        theme.Apply(planner.Settings.Appearance with { Mode = GoalMaker.Core.Settings.ThemeMode.Light });
-        var searching = Board();
-        searching.ShowAddDialogCommand.Execute(null);
-        searching.Query = "bi";
-        Save(new FocusPage(searching), folder, "focus-narrow-add-panel", new Size(520, 760));
+        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Light, GoalMaker.Core.Settings.ThemeMode.Dark })
+        {
+            theme.Apply(planner.Settings.Appearance with { Mode = mode });
+            var searching = Board();
+            searching.ShowAddDialogCommand.Execute(null);
+            searching.Query = "bi";
+            Save(new FocusPage(searching), folder, $"focus-narrow-add-panel-{mode}".ToLowerInvariant(), new Size(520, 760));
+        }
     });
 
     [Fact(Explicit = true)]
