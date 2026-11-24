@@ -179,15 +179,22 @@ public sealed class ItemIdTests : IDisposable
         page.AddItemCommand.Execute(null);
         Number(planner.Task("Write the docs").Id, 13);
 
-        foreach (var query in new[] { "GM-12", "gm-12", " #12 " })
+        // The search looks once typing pauses (GM-121).
+        void Search(string query)
         {
             page.BoardQuery = query;
+            planner.Time.Advance(TimeSpan.FromMilliseconds(150));
+        }
+
+        foreach (var query in new[] { "GM-12", "gm-12", " #12 " })
+        {
+            Search(query);
             Assert.Equal(["Ship the board"], Titles(page));
         }
 
-        page.BoardQuery = "JNT-12";
+        Search("JNT-12");
         Assert.Empty(Titles(page));
-        page.BoardQuery = "docs";
+        Search("docs");
         Assert.Equal(["Write the docs"], Titles(page));
         page.BoardQuery = string.Empty;
         Assert.Equal(2, Titles(page).Count);

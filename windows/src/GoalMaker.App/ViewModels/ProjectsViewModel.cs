@@ -37,6 +37,15 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private const double ColumnWidth = 210;
     private const double StripWidth = 48;
     private static readonly TimeSpan UndoFor = TimeSpan.FromSeconds(5);
+
+    // How long the searches wait after a key before they look, so typing a word looks once (GM-121).
+    private static readonly TimeSpan SearchPause = TimeSpan.FromMilliseconds(150);
+    private const int MostResults = 30;
+    private const string PinnedGroup = "pinned";
+    private const string NoAreaGroup = "none";
+    private const string RestingGroup = "resting";
+    private const string ProjectsGroup = "projects";
+    private const string ItemsGroup = "items";
     private static readonly int[] ArchiveDays = [7, 14, 30, 90];
     private static readonly IReadOnlySet<string> NoTags = new HashSet<string>();
     private readonly ProjectList projects;
@@ -51,6 +60,30 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private readonly Action<Action> runOnUi;
     private readonly TimeProvider time;
     private readonly Action<string>? copyText;
+    private readonly Func<string, Brush?> areaBrush;
+    private readonly Dictionary<string, ProjectRowViewModel> rowsById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ProjectGroupViewModel> groupsByKey = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ItemResultViewModel> resultsById = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Brush?> brushes = new(StringComparer.Ordinal);
+    private readonly HashSet<string> foldedGroups = new(StringComparer.Ordinal) { RestingGroup };
+
+    // What the page shows, read from the replica once per change rather than once per keystroke (GM-121).
+    private ProjectBoardIndex index = ProjectBoardIndex.Empty;
+    private IReadOnlyList<AreaItem> areaList = [];
+    private IReadOnlyList<ProjectItem> listed = [];
+    private bool stale = true;
+    private bool reloadPending;
+
+    // How many changes came in, so a read that a newer change overtook is not taken.
+    private long changes;
+
+    // A read was taken since the last redraw, so the redraw brings the editor's boxes up to date too.
+    private bool freshRead;
+    private ITimer? reloadTimer;
+    private ITimer? searchTimer;
+
+    // The project whose fields the editor holds, so a redraw that keeps the project leaves the boxes alone.
+    private string? editorHolds;
     private string? chosen;
     private Action? undo;
     private ITimer? undoTimer;
@@ -72,9 +105,11 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private string projectDescription = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProjectPlace))]
     private string projectRepository = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProjectPlace))]
     private string projectFolder = string.Empty;
 
     [ObservableProperty]
@@ -124,6 +159,20 @@ public sealed partial class ProjectsViewModel : ObservableObject
     [ObservableProperty]
     private ChoiceViewModel? projectArea;
 
+    /// <summary>The quick search over the project list: a project's name or key, an item's words or its id.</summary>
+    [ObservableProperty]
+    private string paneQuery = string.Empty;
+
+    /// <summary>Whether the project list is out: beside the board in a wide window, over it in a narrow one.</summary>
+    [ObservableProperty]
+    private bool isPaneOpen = true;
+
+    [ObservableProperty]
+    private string moreFoundText = string.Empty;
+
+    [ObservableProperty]
+    private bool isNothingFound;
+
     /// <param name="openItemWindow">Shows the new item window over the main window for the form given.</param>
     /// <param name="copyText">Puts text on the clipboard, for a card's Copy id.</param>
     public ProjectsViewModel(
@@ -151,11 +200,12 @@ public sealed partial class ProjectsViewModel : ObservableObject
         this.openItemWindow = openItemWindow;
         this.runOnUi = runOnUi;
         this.time = time;
-        projects.Changed += (_, _) => runOnUi(Refresh);
-        tasks.Changed += (_, _) => runOnUi(Refresh);
-        areas.Changed += (_, _) => runOnUi(Refresh);
-        tags.Changed += (_, _) => runOnUi(Refresh);
-        filter.Changed += (_, _) => runOnUi(Refresh);
+        this.areaBrush = areaBrush;
+        projects.Changed += (_, _) => runOnUi(DataChanged);
+        tasks.Changed += (_, _) => runOnUi(DataChanged);
+        areas.Changed += (_, _) => runOnUi(DataChanged);
+        tags.Changed += (_, _) => runOnUi(DataChanged);
+        filter.Changed += (_, _) => runOnUi(Rebuild);
         Filters = new ListFiltersViewModel(areas, tags, filter, strings, areaBrush, runOnUi, projects);
         var folded = settings.FoldedBoardColumns;
         Columns =
@@ -199,6 +249,22 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The owner's projects the filter keeps, active ones first.</summary>
     public ObservableCollection<ProjectRowViewModel> Projects { get; } = [];
 
+    /// <summary>
+    /// What the project list shows, top to bottom (GM-122): headings (<see cref="ProjectGroupViewModel"/>)
+    /// and projects (<see cref="ProjectRowViewModel"/>), pinned ones first and the rest by area; while
+    /// the quick search has text, the projects it finds and then the items (<see cref="ItemResultViewModel"/>).
+    /// </summary>
+    public ShownCollection<object> PaneEntries { get; } = [];
+
+    /// <summary>Whether the project list lies over the board (a narrow window), so picking a project puts it away.</summary>
+    public bool PaneOverlay { get; set; }
+
+    /// <summary>The card last opened from the board, which the keyboard goes back to when the page shows again.</summary>
+    public string? LastOpenedItem { get; private set; }
+
+    /// <summary>Raised when the board should bring a card into view and give it the keyboard: a found item jumped to.</summary>
+    public event EventHandler<BoardItemViewModel>? CardShown;
+
     /// <summary>The columns of the project on show: the four an item is stored in, then Dropped.</summary>
     public IReadOnlyList<BoardColumnViewModel> Columns { get; }
 
@@ -220,6 +286,9 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The narrowest the board gets before it scrolls sideways: a card's width per open column, a strip per folded one.</summary>
     public double BoardMinWidth => Columns.Sum(column => column.IsFolded ? StripWidth : ColumnWidth);
 
+    /// <summary>Where the project on show lives: its repository and its folder, whichever it has.</summary>
+    public string ProjectPlace => string.Join("   ", new[] { ProjectRepository, ProjectFolder }.Where(part => part.Trim().Length > 0));
+
     /// <summary>The status of the project on show, in the owner's words.</summary>
     public string ProjectStatusText => strings.Get(StatusKey(ProjectStatus));
 
@@ -240,79 +309,195 @@ public sealed partial class ProjectsViewModel : ObservableObject
     /// <summary>The card of the project on show: there is one, and the editor is not in its place.</summary>
     public bool ShowsProject => HasProject && !IsEditing;
 
+    /// <summary>Reads the projects and their items again and redraws the page.</summary>
     public void Refresh()
     {
-        var all = projects.All();
-        var everyItem = tasks.All();
-        var narrowed = filter.Current;
-        var links = tags.TagLinks();
-        var byProject = everyItem.Where(task => task.ProjectId is not null).ToLookup(task => task.ProjectId!, StringComparer.Ordinal);
-        var listed = all.Where(project => narrowed.KeepsProject(project.AreaId, byProject[project.Id], links)).ToList();
-        chosen = listed.Any(project => project.Id == chosen) ? chosen : listed.FirstOrDefault()?.Id;
+        stale = true;
+        Rebuild();
+    }
 
-        Projects.Clear();
-        foreach (var project in listed)
+    /// <summary>Shows a project's board, and remembers it as the latest one opened.</summary>
+    public void Select(string id)
+    {
+        chosen = id;
+        IsEditing = false;
+        Remember(id);
+        if (PaneOverlay)
         {
-            var id = project.Id;
-            var own = everyItem.Where(task => task.ProjectId == id).ToList();
-            int Waiting(string column) => own.Count(task => ProjectRules.ShownIn(task.State, task.BoardColumn) == column);
-            Projects.Add(new ProjectRowViewModel(
-                id,
-                project.Name,
-                strings.Get(StatusKey(project.Status)),
-                project.Status,
-                id == chosen,
-                Waiting(ProjectRules.Backlog),
-                Waiting(ProjectRules.Todo),
-                Waiting(ProjectRules.Doing),
-                () => Select(id)));
+            IsPaneOpen = false;
         }
 
-        var shown = chosen is null ? null : projects.Get(chosen);
+        Rebuild();
+    }
+
+    /// <summary>
+    /// Takes the board to a found item: its project, with the card picked and in view. The who-made-it
+    /// switch and the board's search let go when they hide it, and its column opens when folded. An
+    /// item that is not on the board (it left Done, or the area or tag filter hides it) opens on its own page.
+    /// </summary>
+    public void JumpTo(string itemId)
+    {
+        if (tasks.All().FirstOrDefault(task => task.Id == itemId) is not { ProjectId: { } projectId } item)
+        {
+            return;
+        }
+
+        chosen = projectId;
+        IsEditing = false;
+        Remember(projectId);
+        if (!ProjectRules.Shows(MadeByFilter, item.MadeBy))
+        {
+            MadeByFilter = ProjectRules.Everyone;
+        }
+
+        if (!index.Finds(ProjectSearch.Of(BoardQuery), item, inProject: true))
+        {
+            BoardQuery = string.Empty;
+        }
+
+        if (PaneOverlay)
+        {
+            IsPaneOpen = false;
+        }
+
+        Rebuild();
+        var column = Columns.FirstOrDefault(candidate => candidate.Items.Any(card => card.Id == itemId));
+        if (column?.Items.First(card => card.Id == itemId) is not { } found)
+        {
+            OpenItem(itemId);
+            return;
+        }
+
+        if (column.IsFolded)
+        {
+            column.FoldCommand.Execute(null);
+        }
+
+        CardShown?.Invoke(this, found);
+    }
+
+    /// <summary>Opens an item on its own page; Back returns to the board with the card where it was.</summary>
+    public void OpenItem(string id)
+    {
+        LastOpenedItem = id;
+        openTask(id);
+    }
+
+    // A table changed. Changes come in bursts (an item added writes four times, a sync pull many), so
+    // they are gathered and read once, as soon as the burst is over. The read happens off the UI thread,
+    // where the timer calls back; the UI thread only draws what changed (GM-121).
+    private void DataChanged()
+    {
+        stale = true;
+        changes++;
+        if (reloadPending)
+        {
+            return;
+        }
+
+        reloadPending = true;
+        var seen = changes;
+        var previous = index;
+        reloadTimer?.Dispose();
+        reloadTimer = time.CreateTimer(
+            _ =>
+            {
+                var read = Read(previous);
+                runOnUi(() =>
+                {
+                    // A change that came in meanwhile left the page stale, and the redraw reads it.
+                    reloadPending = false;
+                    if (changes == seen)
+                    {
+                        Take(read);
+                    }
+
+                    Rebuild();
+                });
+            },
+            null,
+            TimeSpan.Zero,
+            Timeout.InfiniteTimeSpan);
+    }
+
+    // Everything the page shows, read from the replica. Null when the read failed (the app is closing,
+    // say); the UI thread then reads again itself.
+    private (ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas)? Read(ProjectBoardIndex previous)
+    {
+        try
+        {
+            return (ProjectBoardIndex.Build(projects.All(), tasks.All(), tags.TagLinks(), previous), areas.All());
+        }
+        catch (Exception error) when (error is InvalidOperationException or ObjectDisposedException or System.Data.Common.DbException)
+        {
+            return null;
+        }
+    }
+
+    private void Take((ProjectBoardIndex Index, IReadOnlyList<AreaItem> Areas)? read)
+    {
+        if (read is { } fresh)
+        {
+            index = fresh.Index;
+            areaList = fresh.Areas;
+            brushes.Clear();
+            stale = false;
+            freshRead = true;
+        }
+    }
+
+    // Redraws the page from what was last read, after reading again when something changed: the project
+    // list, the board of the project on show and the quick search. Rows and cards that did not change
+    // stay as they are (GM-121).
+    private void Rebuild()
+    {
+        searchTimer?.Dispose();
+        searchTimer = null;
+        var reloaded = stale || freshRead;
+        freshRead = false;
+        if (stale)
+        {
+            Take(Read(index));
+        }
+
+        var narrowed = filter.Current;
+        var links = index.TagLinks;
+        listed = [.. index.Projects.Where(project => narrowed.KeepsProject(project.AreaId, index.ItemsOf(project.Id), links))];
+
+        // A new project being written has no project on show; otherwise the one picked, the latest one
+        // opened, or the first.
+        if (!(IsEditing && chosen is null) && !listed.Any(project => project.Id == chosen))
+        {
+            var recent = settings.RecentProjects;
+            chosen = listed.Where(project => recent.Contains(project.Id)).MinBy(project => IndexOf(recent, project.Id))?.Id ?? listed.FirstOrDefault()?.Id;
+        }
+
+        UpdateRows();
+
+        var shown = index.Project(chosen);
         var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
         var days = shown?.ArchiveAfterDays;
-        var found = Finder(shown);
+        var search = ProjectSearch.Of(BoardQuery);
         var items = chosen is null
             ? []
-            : byProject[chosen]
-                .Where(task => ProjectRules.Shows(MadeByFilter, task.MadeBy) && narrowed.Matches(task, links.GetValueOrDefault(task.Id) ?? NoTags, shown?.AreaId))
-                .Where(found)
+            : index.ItemsOf(chosen)
+                .Where(task => ProjectRules.Shows(MadeByFilter, task.MadeBy) && narrowed.Matches(task, index.TagsOf(task.Id), shown?.AreaId))
+                .Where(task => index.Finds(search, task, inProject: true))
                 .ToList();
         var onBoard = items
             .Where(task => ProjectRules.OnBoard(task.State, CompletedOn(task), days, task.BoardArchivedAt is not null, today))
             .ToList();
+        var cards = Columns.SelectMany(column => column.Items).ToDictionary(card => card.Id, StringComparer.Ordinal);
         foreach (var column in Columns)
         {
-            column.Items.Clear();
-            foreach (var item in ProjectRules.Order(onBoard.Where(task => ProjectRules.ShownIn(task.State, task.BoardColumn) == column.Column)))
-            {
-                var id = item.Id;
-                var card = item;
-                var itemId = ProjectRules.ItemIdOf(item, shown);
-                column.Items.Add(new BoardItemViewModel(
-                    id,
-                    item.Title,
-                    strings.Get(TypeKey(item.ItemType)),
-                    item.ItemType,
-                    strings.Get(PriorityKey(item.Priority)),
-                    item.State == TaskState.Dropped,
-                    item.PlannedDate?.ToString("d MMM", CultureInfo.CurrentCulture),
-                    item.MadeBy == ProjectRules.Claude,
-                    column => Move(card, column),
-                    () => openTask(id),
-                    () => RemoveFromProject(card),
-                    item.State == TaskState.Done,
-                    () => Archive(card),
-                    itemId,
-                    itemId is null ? item.Title : strings.Get("Projects.ItemWithId", itemId, item.Title),
-                    copyText));
-            }
+            column.Items.SyncTo([.. ProjectRules.Order(onBoard.Where(task => ProjectRules.ShownIn(task.State, task.BoardColumn) == column.Column)).Select(item => Card(item, shown, cards))]);
         }
 
         RefreshArchived(items.Except(onBoard), days, today, shown);
 
-        if (!IsEditing)
+        if (!IsEditing && (reloaded || editorHolds != chosen))
         {
+            editorHolds = chosen;
             ProjectName = shown?.Name ?? string.Empty;
             ProjectDescription = shown?.Description ?? string.Empty;
             ProjectRepository = shown?.RepositoryUrl ?? string.Empty;
@@ -323,18 +508,297 @@ public sealed partial class ProjectsViewModel : ObservableObject
             ShowAreaChoices(shown?.AreaId);
         }
 
-        IsEmpty = all.Count == 0;
-        IsFilteredAway = all.Count > 0 && listed.Count == 0;
+        IsEmpty = index.Projects.Count == 0;
+        IsFilteredAway = index.Projects.Count > 0 && listed.Count == 0;
+        UpdatePane();
         NotifyProjectShown();
     }
 
-    /// <summary>Shows a project's board.</summary>
-    public void Select(string id)
+    // The card for an item: the one already drawn while the item and its id are the same, else a new one.
+    private BoardItemViewModel Card(TaskItem item, ProjectItem? shown, Dictionary<string, BoardItemViewModel> drawn)
     {
-        chosen = id;
-        IsEditing = false;
-        Refresh();
+        var itemId = ProjectRules.ItemIdOf(item, shown);
+        if (drawn.TryGetValue(item.Id, out var card) && card.Source == item && card.ItemId == (itemId ?? string.Empty))
+        {
+            return card;
+        }
+
+        var id = item.Id;
+        var day = item.PlannedDate?.ToString("d MMM", CultureInfo.CurrentCulture);
+        var extra = string.Concat(day is null ? string.Empty : " · " + day, item.MadeBy == ProjectRules.Claude ? " · " + strings.Get("Projects.ByClaude") : string.Empty);
+        return new BoardItemViewModel(
+            id,
+            item.Title,
+            strings.Get(TypeKey(item.ItemType)),
+            item.ItemType,
+            strings.Get(PriorityKey(item.Priority)),
+            item.State == TaskState.Dropped,
+            day,
+            item.MadeBy == ProjectRules.Claude,
+            column => Move(item, column),
+            () => OpenItem(id),
+            () => RemoveFromProject(item),
+            item.State == TaskState.Done,
+            () => Archive(item),
+            itemId,
+            itemId is null ? item.Title : strings.Get("Projects.ItemWithId", itemId, item.Title),
+            copyText)
+        {
+            Source = item,
+            Extra = extra,
+        };
     }
+
+    // One row per project the filter keeps, kept from redraw to redraw and brought up to date.
+    private void UpdateRows()
+    {
+        var pinned = settings.PinnedProjects;
+        var rows = new List<ProjectRowViewModel>(listed.Count);
+        foreach (var project in listed)
+        {
+            var id = project.Id;
+            if (!rowsById.TryGetValue(id, out var row))
+            {
+                row = new ProjectRowViewModel(id, strings.Get("Projects.Pin"), strings.Get("Projects.Unpin"), () => Select(id), () => TogglePin(id), () => EditProject(id));
+                rowsById[id] = row;
+            }
+
+            var load = index.LoadOf(id);
+            row.Name = project.Name;
+            row.Status = strings.Get(StatusKey(project.Status));
+            row.StatusId = project.Status;
+            row.IsSelected = id == chosen;
+            row.IsPinned = pinned.Contains(id);
+            row.Backlog = load.Backlog;
+            row.Todo = load.Todo;
+            row.Doing = load.Doing;
+            row.Open = load.Open;
+            row.LoadText = strings.Get("Projects.Load", load.Open, load.Doing);
+            row.AreaBrush = BrushOf(project.AreaId);
+            rows.Add(row);
+        }
+
+        foreach (var gone in rowsById.Keys.Except(listed.Select(project => project.Id)).ToList())
+        {
+            rowsById.Remove(gone);
+        }
+
+        Projects.SyncTo(rows);
+    }
+
+    // The project list. Without a quick search: pinned projects, then active ones by area in the areas'
+    // order, those without an area, and paused and done ones last, folded away. Headings show only when
+    // there is more than one group. With a search: the projects whose name or key it finds, the latest
+    // opened first, then the items it finds in any project.
+    private void UpdatePane()
+    {
+        var entries = new List<object>();
+        var resultsShown = 0;
+        var total = 0;
+        if (PaneQuery.Trim().Length > 0)
+        {
+            var words = PaneQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(ArchiveRules.Fold).ToList();
+            var recent = settings.RecentProjects;
+            var found = listed
+                .Where(project => words.TrueForAll(word => ArchiveRules.Fold(project.Name).Contains(word, StringComparison.Ordinal))
+                    || string.Equals(project.ItemKey, PaneQuery.Trim(), StringComparison.OrdinalIgnoreCase))
+                .OrderBy(project => recent.Contains(project.Id) ? IndexOf(recent, project.Id) : int.MaxValue)
+                .Select(project => rowsById[project.Id])
+                .ToList();
+            if (found.Count > 0)
+            {
+                entries.Add(Group(ProjectsGroup, strings.Get("Projects.Title"), found.Count, foldable: false));
+                entries.AddRange(found);
+            }
+
+            var results = index.Search(ProjectSearch.Of(PaneQuery), MostResults, out total);
+            if (results.Count > 0)
+            {
+                entries.Add(Group(ItemsGroup, strings.Get("Projects.ItemsFound"), total, foldable: false));
+                entries.AddRange(results.Select(Result));
+            }
+
+            resultsShown = results.Count;
+            IsNothingFound = found.Count == 0 && results.Count == 0;
+            foreach (var gone in resultsById.Keys.Except(results.Select(item => item.Id)).ToList())
+            {
+                resultsById.Remove(gone);
+            }
+        }
+        else
+        {
+            IsNothingFound = false;
+            resultsById.Clear();
+            var pinned = settings.PinnedProjects;
+            var groups = new List<(string Key, string Title, List<ProjectRowViewModel> Rows)>
+            {
+                (PinnedGroup, strings.Get("Projects.Pinned"), [.. pinned.Where(rowsById.ContainsKey).Select(id => rowsById[id])]),
+            };
+            var rest = listed.Where(project => !pinned.Contains(project.Id)).ToList();
+            static bool Resting(ProjectItem project) => project.Status is ProjectRules.Paused or ProjectRules.Finished;
+            foreach (var area in areaList)
+            {
+                groups.Add((area.Id, area.Emoji is { } emoji ? $"{emoji} {area.Name}" : area.Name, [.. rest.Where(project => !Resting(project) && project.AreaId == area.Id).Select(project => rowsById[project.Id])]));
+            }
+
+            var known = areaList.Select(area => area.Id).ToHashSet(StringComparer.Ordinal);
+            groups.Add((NoAreaGroup, strings.Get("Projects.NoArea"), [.. rest.Where(project => !Resting(project) && (project.AreaId is null || !known.Contains(project.AreaId))).Select(project => rowsById[project.Id])]));
+            groups.Add((RestingGroup, strings.Get("Projects.Resting"), [.. rest.Where(Resting).Select(project => rowsById[project.Id])]));
+            var filled = groups.Where(group => group.Rows.Count > 0).ToList();
+            foreach (var (key, title, rows) in filled)
+            {
+                // A lone group needs no heading, unless it is the folded one.
+                var heading = filled.Count > 1 || key == RestingGroup;
+                if (heading)
+                {
+                    entries.Add(Group(key, title, rows.Count, foldable: key == RestingGroup));
+                }
+
+                if (!heading || !foldedGroups.Contains(key))
+                {
+                    entries.AddRange(rows);
+                }
+            }
+        }
+
+        MoreFoundText = total > resultsShown ? strings.Get("Projects.MoreFound", total - resultsShown) : string.Empty;
+        PaneEntries.SyncTo(entries);
+    }
+
+    private ProjectGroupViewModel Group(string key, string title, int count, bool foldable)
+    {
+        if (!groupsByKey.TryGetValue(key, out var group))
+        {
+            group = new ProjectGroupViewModel(key, foldable ? FoldGroup : null);
+            groupsByKey[key] = group;
+        }
+
+        group.Title = title;
+        group.Count = count;
+        group.IsFolded = foldedGroups.Contains(key);
+        return group;
+    }
+
+    // A found item with where it is: the project and its column, or that it left the board.
+    private ItemResultViewModel Result(TaskItem item)
+    {
+        var project = index.Project(item.ProjectId);
+        var itemId = ProjectRules.ItemIdOf(item, project);
+        var today = PlanningDay.Of(time.GetLocalNow().DateTime, settings.DayStartHour);
+        var column = ProjectRules.ShownIn(item.State, item.BoardColumn) ?? ProjectRules.Backlog;
+        var where = item.State == TaskState.Done && !ProjectRules.OnBoard(item.State, CompletedOn(item), project?.ArchiveAfterDays, item.BoardArchivedAt is not null, today)
+            ? strings.Get("Projects.OffBoard")
+            : strings.Get(ColumnKey(column));
+        var place = strings.Get("Projects.ResultPlace", project?.Name ?? string.Empty, where);
+        if (resultsById.TryGetValue(item.Id, out var kept) && kept.Source == item && kept.Place == place && kept.ItemId == (itemId ?? string.Empty))
+        {
+            return kept;
+        }
+
+        var id = item.Id;
+        var title = itemId is null ? item.Title : strings.Get("Projects.ItemWithId", itemId, item.Title);
+        var result = new ItemResultViewModel(item, itemId, place, strings.Get("Projects.ResultName", title, place), () => JumpTo(id));
+        resultsById[id] = result;
+        return result;
+    }
+
+    private void FoldGroup(ProjectGroupViewModel group)
+    {
+        if (!foldedGroups.Remove(group.Key))
+        {
+            foldedGroups.Add(group.Key);
+        }
+
+        UpdatePane();
+    }
+
+    private Brush? BrushOf(string? areaId)
+    {
+        if (areaId is null)
+        {
+            return null;
+        }
+
+        if (!brushes.TryGetValue(areaId, out var brush))
+        {
+            brush = areaList.FirstOrDefault(area => area.Id == areaId) is { } area ? areaBrush(area.ColorId) : null;
+            brushes[areaId] = brush;
+        }
+
+        return brush;
+    }
+
+    // Pins a project to the top of the list on this PC, or lets it go.
+    private void TogglePin(string id)
+    {
+        var pinned = settings.PinnedProjects;
+        settings.PinnedProjects = pinned.Contains(id) ? [.. pinned.Where(other => other != id)] : [.. pinned, id];
+        Rebuild();
+    }
+
+    private void EditProject(string id)
+    {
+        Select(id);
+        Edit();
+    }
+
+    private void Remember(string id) => settings.RecentProjects = [id, .. settings.RecentProjects.Where(other => other != id)];
+
+    private static int IndexOf(IReadOnlyList<string> ids, string id)
+    {
+        for (var i = 0; i < ids.Count; i++)
+        {
+            if (ids[i] == id)
+            {
+                return i;
+            }
+        }
+
+        return int.MaxValue;
+    }
+
+    // A key in a search box: look a moment later, unless the box was emptied, which shows everything now.
+    private void SearchSoon(string query)
+    {
+        searchTimer?.Dispose();
+        searchTimer = null;
+        if (query.Trim().Length == 0)
+        {
+            Rebuild();
+            return;
+        }
+
+        searchTimer = time.CreateTimer(_ => runOnUi(Rebuild), null, SearchPause, Timeout.InfiniteTimeSpan);
+    }
+
+    /// <summary>Enter in the quick search: the first project it found, or else the first item.</summary>
+    [RelayCommand]
+    private void PickFirst()
+    {
+        if (searchTimer is not null)
+        {
+            Rebuild();
+        }
+
+        switch (PaneEntries.FirstOrDefault(entry => entry is ProjectRowViewModel or ItemResultViewModel))
+        {
+            case ProjectRowViewModel row:
+                PaneQuery = string.Empty;
+                row.OpenCommand.Execute(null);
+                break;
+            case ItemResultViewModel result:
+                result.JumpCommand.Execute(null);
+                break;
+        }
+    }
+
+    /// <summary>Esc in the quick search: empties it.</summary>
+    [RelayCommand]
+    private void ClearPaneQuery() => PaneQuery = string.Empty;
+
+    /// <summary>Puts the project list away, or brings it out.</summary>
+    [RelayCommand]
+    private void TogglePane() => IsPaneOpen = !IsPaneOpen;
 
     /// <summary>Starts a new project; the editor's boxes are cleared for it.</summary>
     [RelayCommand]
@@ -569,13 +1033,21 @@ public sealed partial class ProjectsViewModel : ObservableObject
     private void RefreshArchived(IEnumerable<TaskItem> archived, int? days, DateOnly today, ProjectItem? project)
     {
         var done = Columns.Single(column => column.Column == ProjectRules.Done);
-        done.Archived.Clear();
+        var drawn = done.Archived.Where(row => row.Source is not null).ToDictionary(row => row.Source!.Value.Item.Id, StringComparer.Ordinal);
+        var rows = new List<ArchivedItemViewModel>();
         foreach (var item in archived.OrderByDescending(task => task.CompletedAt, StringComparer.Ordinal).ThenBy(task => task.Id, StringComparer.Ordinal))
         {
             var id = item.Id;
             var completedOn = CompletedOn(item);
             var unarchive = item.BoardArchivedAt is not null && ProjectRules.OnBoard(item.State, completedOn, days, false, today);
-            done.Archived.Add(new ArchivedItemViewModel(
+            var itemId = ProjectRules.ItemIdOf(item, project);
+            if (drawn.TryGetValue(id, out var kept) && kept.Source == (item, unarchive) && kept.ItemId == itemId)
+            {
+                rows.Add(kept);
+                continue;
+            }
+
+            rows.Add(new ArchivedItemViewModel(
                 item.Title,
                 completedOn is { } day ? strings.Get("Archive.DoneOn", day.ToString("d MMM", CultureInfo.CurrentCulture)) : string.Empty,
                 strings.Get(unarchive ? "Projects.PutBack" : "Projects.Reopen"),
@@ -590,9 +1062,13 @@ public sealed partial class ProjectsViewModel : ObservableObject
                         tasks.SetBoardColumn(id, ProjectRules.Todo);
                     }
                 }),
-                ProjectRules.ItemIdOf(item, project)));
+                itemId)
+            {
+                Source = (item, unarchive),
+            });
         }
 
+        done.Archived.SyncTo(rows);
         done.ArchivedText = strings.Get("Projects.ArchivedCount", done.Archived.Count);
         done.ShowsArchived &= done.HasArchived;
     }
@@ -665,9 +1141,11 @@ public sealed partial class ProjectsViewModel : ObservableObject
         HasUndo = false;
     }
 
-    partial void OnMadeByFilterChanged(string value) => Refresh();
+    partial void OnMadeByFilterChanged(string value) => Rebuild();
 
-    partial void OnBoardQueryChanged(string value) => Refresh();
+    partial void OnBoardQueryChanged(string value) => SearchSoon(value);
+
+    partial void OnPaneQueryChanged(string value) => SearchSoon(value);
 
     // A new project's name suggests its key until the owner types one of their own.
     partial void OnProjectNameChanged(string value)
@@ -692,23 +1170,6 @@ public sealed partial class ProjectsViewModel : ObservableObject
         ProjectKey = key;
         suggesting = false;
         KeyProblem = string.Empty;
-    }
-
-    // What the board's search keeps: an item by its id (GM-12, or #12 for the project on show), or by
-    // every word of the query in its title or notes, ignoring case and accents.
-    private Func<TaskItem, bool> Finder(ProjectItem? shown)
-    {
-        if (ProjectRules.ParseItemId(BoardQuery) is { } wanted)
-        {
-            return task => ProjectRules.IsItem(wanted, shown?.ItemKey, task.ItemNumber, inProject: true);
-        }
-
-        var words = BoardQuery.Split(' ').Select(ArchiveRules.Fold).Where(word => word.Length > 0).ToList();
-        return task =>
-        {
-            var text = ArchiveRules.Fold(task.Title) + "\n" + ArchiveRules.Fold(task.Notes);
-            return words.TrueForAll(word => text.Contains(word, StringComparison.Ordinal));
-        };
     }
 
     private static string ColumnKey(string column) => column switch

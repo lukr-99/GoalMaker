@@ -945,6 +945,47 @@ public sealed class PageSnapshots
         Save(new CalendarPage(calendar), folder, "calendar-picking-tasks", new Size(1100, 820));
     });
 
+    // The Projects page on a board the size the owner's are heading for (LargeBoard, GM-121 and GM-122):
+    // wide, normal and narrow, light and dark; the quick search finding items in every project; and the
+    // list out over the board in a narrow window. A new page per look (docs/pitfalls.md).
+    [Fact(Explicit = true)]
+    public void ProjectsLargeBoard() => OnUiThread(folder =>
+    {
+        using var planner = new TestPlanner();
+        LargeBoard.Fill(planner);
+        var strings = new ResourceStrings(Application.Current);
+        using var theme = Theme(planner);
+        var big = LargeBoard.Big(planner);
+        planner.Settings.PinnedProjects = [.. planner.Projects.All().Where(project => project.Name is "Project 04" or "Project 07").Select(project => project.Id)];
+        ProjectsViewModel Board()
+        {
+            var board = new ProjectsViewModel(
+                planner.Projects, planner.Tasks, planner.Areas, planner.Tags, planner.Settings, strings, theme.AreaBrush, _ => { }, action => action(), planner.Time, _ => { });
+            board.Select(big.Id);
+            return board;
+        }
+
+        foreach (var mode in new[] { GoalMaker.Core.Settings.ThemeMode.Light, GoalMaker.Core.Settings.ThemeMode.Dark })
+        {
+            theme.Apply(planner.Settings.Appearance with { Mode = mode });
+            var name = mode.ToString().ToLowerInvariant();
+            Save(new ProjectsPage(Board()), folder, $"projects-large-wide-{name}", new Size(1500, 860));
+            Save(new ProjectsPage(Board()), folder, $"projects-large-normal-{name}", new Size(1100, 760));
+            Save(new ProjectsPage(Board()), folder, $"projects-large-narrow-{name}", new Size(820, 760));
+
+            var searching = Board();
+            searching.PaneQuery = "sync crash";
+            planner.Time.Advance(TimeSpan.FromSeconds(1));
+            Save(new ProjectsPage(searching), folder, $"projects-large-search-{name}", new Size(1100, 760));
+
+            var narrow = Board();
+            var page = new ProjectsPage(narrow);
+            Save(page, folder, $"projects-large-narrow-list-{name}-folded", new Size(820, 760));
+            narrow.IsPaneOpen = true;
+            Save(page, folder, $"projects-large-narrow-list-{name}", new Size(820, 760));
+        }
+    });
+
     [Fact(Explicit = true)]
     public void ProjectsPage_() => OnUiThread(folder =>
     {
