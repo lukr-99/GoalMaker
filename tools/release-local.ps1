@@ -36,6 +36,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+. (Join-Path $PSScriptRoot 'release-backend.lib.ps1')
+# A relative -DataDir is relative to where the script was started, not to the staging folder used later.
+if ($DataDir) { $DataDir = [System.IO.Path]::GetFullPath($DataDir) }
 
 function Invoke-Step {
     param([string]$Name, [scriptblock]$Command)
@@ -67,16 +70,27 @@ try {
 
     # A release made from a commit that is not on main is only offered by Kiln, and the real release on GitHub
     # needs main anyway, so say so early.
-    & git fetch --quiet origin main 2>$null
-    & git merge-base --is-ancestor $commit origin/main 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning 'HEAD is not on origin/main. Kiln will only offer this release, and the GitHub release must be made from main.'
+    # The fetch is best effort: a failure (offline, no credentials) must not stop the release, and it must not prompt.
+    $savedPreference = $ErrorActionPreference
+    $savedPrompt = $env:GIT_TERMINAL_PROMPT
+    $ErrorActionPreference = 'Continue'
+    $env:GIT_TERMINAL_PROMPT = '0'
+    try {
+        & git fetch --quiet origin main 2>$null
+        & git merge-base --is-ancestor $commit origin/main 2>$null
+        $onMain = ($LASTEXITCODE -eq 0)
+    }
+    finally {
+        $ErrorActionPreference = $savedPreference
+        $env:GIT_TERMINAL_PROMPT = $savedPrompt
     }
     $global:LASTEXITCODE = 0
+    if (-not $onMain) {
+        Write-Warning 'HEAD is not on origin/main (or origin could not be read). Kiln will only offer this release, and the GitHub release must be made from main.'
+    }
 
-    # Notes: the commit subjects since the latest earlier release tag, newest first.
-    $previous = & git tag --list 'v*' --sort=-v:refname |
-        Where-Object { $_ -ne "v$version" } | Select-Object -First 1
+    # Notes: the commit subjects since the newest earlier release tag that is an ancestor of HEAD.
+    $previous = Get-PreviousReleaseTag -RepositoryRoot $root
     $range = if ($previous) { "$previous..$commit" } else { $commit }
     $subjects = @(& git log --no-merges --format='- %s' $range)
     $notes = "GoalMaker $version (built on this PC)`n`n" + ($subjects -join "`n")
@@ -84,7 +98,7 @@ try {
 
     if (-not $SkipChecks) {
         Invoke-Step 'Repository validation' { & python (Join-Path $root 'tools/validate_repository.py') --root $root }
-        Invoke-Step 'Windows format check' { & dotnet format (Join-Path $root 'windows/GoalMaker.slnx') --verify-no-changes }
+        Invoke-Step 'Windows format check' { & dotnet format whitespace (Join-Path $root 'windows/GoalMaker.slnx') --verify-no-changes --no-restore }
         Invoke-Step 'Windows tests' { & dotnet test --solution (Join-Path $root 'windows/GoalMaker.slnx') }
     }
 
