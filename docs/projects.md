@@ -149,6 +149,40 @@ items goes in without reopening it; the next window opens the same way. The wind
 its accent, fonts and light or dark, like the main window. Each project's status carries a mark of its own, in the list or picker and on the card:
 active plays on in the accent, paused and done step back in the muted colour.
 
+### The Windows project list and finding items
+
+The list beside the board (GM-122) shows pinned projects first, then the active ones grouped by their
+area in the areas' order, then those without an area, and paused and done projects last, folded away
+under a heading that opens them. Headings show only when there is more than one group. Each row has
+its area's dot, its status mark, its name, how many items are open (Backlog, To do and Doing) and, in
+the accent, how many are in Doing. A row's menu (right click or the menu key) pins it to the top or
+edits it. Pins and the projects last opened are kept on this PC in the settings file, not synced; the
+page opens on the project opened last.
+
+The **quick search** at the top of the list (Ctrl+P) finds projects by name or key and items in every
+project by the words of their title or notes, or by their id (GM-12), ignoring case and accents. An
+item found shows its project and column ("Kiln · To do", or "Done, off the board"). A click or Enter
+on it takes the board there: its project, the card picked and scrolled into view, its column unfolded,
+and the who-made-it switch and the board's search let go if they hid it. An item that is not on the
+board opens on its own page. Enter in the box opens the first project it found, or else the first
+item; Down goes into the list; typing on a row types into the box. The board's own search (Ctrl+F)
+narrows the project on show. Both searches look once typing pauses for 150 ms; emptying a box shows
+everything at once.
+
+**One click on a card opens the item** on its own page, as a tap does on the phone; the dots and a
+right click show the card's menu. On the board, Up and Down walk a column's cards, Left and Right go to
+the next column, Enter opens the picked card and the menu key shows its menu. Esc on the item's page
+goes back, and the board shows the same card picked, where it was. Esc on the board empties its search.
+
+Below 900 pixels the list folds to a strip with a button to bring it out and one for the quick
+search; it then comes out over the board and goes away once a project is picked. In a wide window the
+button beside New project folds it the same way.
+
+The page stays quick on boards of thousands of items: it reads the projects and items once per change,
+off the UI thread, keeps each item's folded text for search, redraws only the rows and cards that
+changed, and each column draws only the cards in view and scrolls on its own. `ProjectsSpeedReport`
+measures it on `LargeBoard` (40 projects, 3,000 items).
+
 ## Through the connector
 
 Claude reads the projects and one project's board (all of it, or only the owner's items or only
