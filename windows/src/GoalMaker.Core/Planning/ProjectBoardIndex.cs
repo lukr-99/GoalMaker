@@ -9,17 +9,29 @@ namespace GoalMaker.Core.Planning;
 public sealed class ProjectBoardIndex
 {
     private static readonly IReadOnlySet<string> NoTags = new HashSet<string>();
+    private static readonly IReadOnlyDictionary<string, string> NoNames = new Dictionary<string, string>();
     private readonly Dictionary<string, ProjectItem> byId;
     private readonly Dictionary<string, List<TaskItem>> items;
     private readonly Dictionary<string, ProjectLoad> loads;
     private readonly Dictionary<string, Folded> folded;
+    private readonly Dictionary<string, IReadOnlySet<string>> foldedTags = new(StringComparer.Ordinal);
+    private readonly IReadOnlyDictionary<string, string> milestoneNames;
 
     private ProjectBoardIndex(
         IReadOnlyList<ProjectItem> projects,
         Dictionary<string, List<TaskItem>> items,
         IReadOnlyDictionary<string, IReadOnlySet<string>> tagLinks,
-        Dictionary<string, Folded> folded)
+        Dictionary<string, Folded> folded,
+        IReadOnlyDictionary<string, string> tagNames,
+        IReadOnlyDictionary<string, string> milestoneNames)
     {
+        this.milestoneNames = milestoneNames.ToDictionary(pair => pair.Key, pair => ArchiveRules.Fold(pair.Value), StringComparer.Ordinal);
+        var foldedTagNames = tagNames.ToDictionary(pair => pair.Key, pair => ArchiveRules.Fold(pair.Value), StringComparer.Ordinal);
+        foreach (var (taskId, ids) in tagLinks)
+        {
+            foldedTags[taskId] = ids.Select(id => foldedTagNames.GetValueOrDefault(id)).OfType<string>().ToHashSet(StringComparer.Ordinal);
+        }
+
         Projects = projects;
         byId = projects.ToDictionary(project => project.Id, StringComparer.Ordinal);
         this.items = items;
@@ -54,12 +66,16 @@ public sealed class ProjectBoardIndex
     /// <summary>
     /// Reads <paramref name="tasks"/> into an index; <paramref name="previous"/>, the index before the
     /// change, lends the folded text of every item whose title and notes are the same.
+    /// <paramref name="tagNames"/> and <paramref name="milestoneNames"/> name the tags and milestones by
+    /// id, for the #tag and m: filters.
     /// </summary>
     public static ProjectBoardIndex Build(
         IReadOnlyList<ProjectItem> projects,
         IReadOnlyList<TaskItem> tasks,
         IReadOnlyDictionary<string, IReadOnlySet<string>> tagLinks,
-        ProjectBoardIndex? previous = null)
+        ProjectBoardIndex? previous = null,
+        IReadOnlyDictionary<string, string>? tagNames = null,
+        IReadOnlyDictionary<string, string>? milestoneNames = null)
     {
         var items = new Dictionary<string, List<TaskItem>>(StringComparer.Ordinal);
         var folded = new Dictionary<string, Folded>(StringComparer.Ordinal);
@@ -82,7 +98,7 @@ public sealed class ProjectBoardIndex
                 : new Folded(task.Title, task.Notes, ArchiveRules.Fold(task.Title) + "\n" + ArchiveRules.Fold(task.Notes));
         }
 
-        return new ProjectBoardIndex(projects, items, tagLinks, folded);
+        return new ProjectBoardIndex(projects, items, tagLinks, folded, tagNames ?? NoNames, milestoneNames ?? NoNames);
     }
 
     public ProjectItem? Project(string? id) => id is not null ? byId.GetValueOrDefault(id) : null;
@@ -98,7 +114,17 @@ public sealed class ProjectBoardIndex
     /// <summary>Whether <paramref name="search"/> finds <paramref name="item"/>; <paramref name="inProject"/> as in <see cref="ProjectSearch.Finds"/>.</summary>
     public bool Finds(ProjectSearch search, TaskItem item, bool inProject) =>
         search.IsEmpty
-        || search.Finds(item, folded.GetValueOrDefault(item.Id)?.Text ?? string.Empty, Project(item.ProjectId)?.ItemKey, inProject);
+        || search.Finds(
+            item,
+            folded.GetValueOrDefault(item.Id)?.Text ?? string.Empty,
+            Project(item.ProjectId)?.ItemKey,
+            inProject,
+            foldedTags.GetValueOrDefault(item.Id),
+            item.MilestoneId is { } milestone ? milestoneNames.GetValueOrDefault(milestone) : null);
+
+    /// <summary>Every item of every project the search finds, project by project in list order; nothing for an empty search.</summary>
+    public IReadOnlyList<TaskItem> FindAll(ProjectSearch search) =>
+        search.IsEmpty ? [] : [.. Projects.SelectMany(project => ItemsOf(project.Id)).Where(item => Finds(search, item, inProject: false))];
 
     /// <summary>
     /// The items of every project the search finds, open ones first and newest first, at most

@@ -87,6 +87,55 @@ public sealed class ProjectBoardIndexTests
     }
 
     [Fact]
+    public void FilterWordsNarrowTheSearchAndUnknownOnesAreSearchedAsWords()
+    {
+        var search = ProjectSearch.Of("Board #Release is:done TYPE:bug p:high m:M3 gm-12 is:nothing");
+
+        Assert.Equal(["board", "is:nothing"], search.Words);
+        Assert.Equal(["release"], search.Tags);
+        Assert.Equal(["done"], search.States);
+        Assert.Equal(["bug"], search.ItemTypes);
+        Assert.Equal(["high"], search.Priorities);
+        Assert.Equal(["m3"], search.Milestones);
+        Assert.Equal(new ItemId("GM", 12), search.Id);
+        Assert.True(search.HasFilters);
+        Assert.False(ProjectSearch.Of("board #12").HasFilters);
+        Assert.Equal(new ItemId(null, 12), ProjectSearch.Of("board #12").Id);
+        Assert.Equal(["idea"], ProjectSearch.Of("is:idea").ItemTypes);
+        Assert.True(ProjectSearch.Everything.With().IsEmpty);
+        Assert.Equal(["urgent"], ProjectSearch.Everything.With(priority: "urgent").Priorities);
+    }
+
+    [Fact]
+    public void TagsMilestonesAndStatesAreMatchedByTheirNames()
+    {
+        var item = Item("a", "Ship the board", Goal, ProjectRules.Todo) with { MilestoneId = "m3", Priority = ProjectRules.High, ItemType = ProjectRules.Bug };
+        var index = ProjectBoardIndex.Build(
+            [Goal],
+            [item],
+            new Dictionary<string, IReadOnlySet<string>> { ["a"] = new HashSet<string> { "t1" } },
+            null,
+            new Dictionary<string, string> { ["t1"] = "Release" },
+            new Dictionary<string, string> { ["m3"] = "M3" });
+
+        Assert.True(index.Finds(ProjectSearch.Of("#release m:m3 is:open type:bug p:high board"), item, inProject: true));
+        Assert.False(index.Finds(ProjectSearch.Of("#other"), item, inProject: true));
+        Assert.False(index.Finds(ProjectSearch.Of("is:done"), item, inProject: true));
+        Assert.False(index.Finds(ProjectSearch.Of("m:m4"), item, inProject: true));
+        Assert.False(index.Finds(ProjectSearch.Everything.With(itemType: ProjectRules.Idea), item, inProject: true));
+        Assert.Equal(["a"], index.FindAll(ProjectSearch.Of("#release")).Select(found => found.Id));
+    }
+
+    [Fact]
+    public void TheMatchedPartsAreFoundIgnoringCaseAndAccents()
+    {
+        Assert.Equal([(0, 6), (7, 3)], SearchHighlight.Ranges("Zrušit kůň", ["zrusit", "kun"]));
+        Assert.Equal([(5, 5)], SearchHighlight.Ranges("Ship BOARD", ["board"]));
+        Assert.Empty(SearchHighlight.Ranges("Ship", ["nothing"]));
+        Assert.Equal([(3, 4)], SearchHighlight.Ranges("🚀 sync", ["sync"]));
+    }
+
+    [Fact]
     public void ANewIndexFoldsOnlyTheItemsWhoseTextChanged()
     {
         var kept = Item("a", "Příliš žluťoučký kůň", Goal, ProjectRules.Todo);
