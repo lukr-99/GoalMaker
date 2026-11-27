@@ -221,7 +221,7 @@ opens its own page: the hero, the author card, your data, this build and the cre
 splits off its Appearance: Appearance, Planning day and reminders, and Your data and updates (Your
 data and Updates together). On the main page each is a card with one row that opens its page, and
 the page shows the same cards in full, with the same kit and hints; a page of one or two cards has no
-chip row. The update notification and the mark on the gear open Your data and updates, with the main
+chip row. Updates also has a card of its own on the main page (GM-123), a link that opens Your data and updates, so it is easy to find. The update notification and the mark on the gear open Your data and updates, with the main
 page under it for Back, and land on Updates. Areas and tags already opens its own manager. On the
 PC each page is a kit page of its own in Settings' place, with Back to Settings at its top; a banner
 button or the update mark that points at one of their sections opens that page and jumps there.
