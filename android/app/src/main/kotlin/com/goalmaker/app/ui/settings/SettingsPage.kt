@@ -10,7 +10,7 @@ import com.goalmaker.app.R
  */
 enum class SettingsPage(val id: String, @StringRes val title: Int, val sections: List<SettingsSection>) {
     /** Everything else, and a link card for each page below. */
-    MAIN("main", R.string.settings_title, SettingsSection.entries.filterNot { it == SettingsSection.UPDATES }),
+    MAIN("main", R.string.settings_title, SettingsSection.entries),
     APPEARANCE("appearance", R.string.settings_appearance, listOf(SettingsSection.APPEARANCE)),
     PLANNING("planning", R.string.settings_planning, listOf(SettingsSection.PLANNING)),
     DATA("data", R.string.settings_data_page, listOf(SettingsSection.DATA, SettingsSection.UPDATES)),
@@ -21,7 +21,7 @@ enum class SettingsPage(val id: String, @StringRes val title: Int, val sections:
         fun opens(section: SettingsSection): SettingsPage? = when (section) {
             SettingsSection.APPEARANCE -> APPEARANCE
             SettingsSection.PLANNING -> PLANNING
-            SettingsSection.DATA -> DATA
+            SettingsSection.DATA, SettingsSection.UPDATES -> DATA
             else -> null
         }
 

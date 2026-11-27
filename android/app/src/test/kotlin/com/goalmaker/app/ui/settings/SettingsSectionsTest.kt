@@ -20,8 +20,8 @@ class SettingsSectionsTest {
         SettingsSection.ABOUT,
     )
 
-    // The main page: Updates sits on the Your data and updates page (SettingsPage.DATA).
-    private val main = everyday - SettingsSection.UPDATES
+    // The main page lists Updates as a link card to the Your data and updates page (GM-123).
+    private val main = everyday
 
     // Cards 500 px apart, and the 80 dp line at 200 px (2.5x).
     private val tops = everyday.mapIndexed { index, section -> section to index * 500 }.toMap()

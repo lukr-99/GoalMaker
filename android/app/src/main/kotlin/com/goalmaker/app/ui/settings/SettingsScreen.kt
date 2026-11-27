@@ -190,7 +190,8 @@ fun SettingsScreen(
 
     LaunchedEffect(updateRequest) {
         // Only the page that holds Updates answers the update notification.
-        val target = SettingsSections.target(updateRequest)?.takeIf { it in sections } ?: return@LaunchedEffect
+        val target = SettingsSections.target(updateRequest)?.takeIf { page == SettingsSections.UPDATE_PAGE && it in sections }
+            ?: return@LaunchedEffect
         jump(target)
         if (updateRequest == UpdateRequest.INSTALL) viewModel.installRequested()
         onUpdateRequestHandled()
@@ -251,7 +252,7 @@ fun SettingsScreen(
                         SettingsCard(section, hint, titleFocus.getValue(section), Modifier.section(section)) {
                             val opens = SettingsPage.opens(section).takeIf { page == SettingsPage.MAIN }
                             if (opens != null) {
-                                PageLink(opens, onOpenPage)
+                                PageLink(opens, section, onOpenPage)
                             } else when (section) {
                                 SettingsSection.PROBLEMS -> problems.forEachIndexed { index, problem ->
                                     if (index > 0) RowDivider()
@@ -302,11 +303,15 @@ fun SettingsScreen(
 
 /** The one row a main-page card holds for a group that has a page of its own. */
 @Composable
-private fun PageLink(page: SettingsPage, onOpenPage: (SettingsPage) -> Unit) {
+private fun PageLink(page: SettingsPage, section: SettingsSection, onOpenPage: (SettingsPage) -> Unit) {
     val (title, hint) = when (page) {
         SettingsPage.APPEARANCE -> R.string.settings_appearance_open to R.string.settings_appearance_open_hint
         SettingsPage.PLANNING -> R.string.settings_planning_open to R.string.settings_planning_open_hint
-        SettingsPage.DATA -> R.string.settings_data_open to R.string.settings_data_open_hint
+        SettingsPage.DATA -> if (section == SettingsSection.UPDATES) {
+            R.string.settings_updates_open to R.string.settings_updates_open_hint
+        } else {
+            R.string.settings_data_open to R.string.settings_data_open_hint
+        }
         SettingsPage.MAIN -> return
     }
     LinkRow(stringResource(title), stringResource(hint), external = false, onClick = { onOpenPage(page) })

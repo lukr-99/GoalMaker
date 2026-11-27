@@ -25,15 +25,24 @@ class SettingsPageTest {
     fun `the main page links to the crowded groups and keeps the rest`() {
         val main = SettingsSections.visible(hasProblems = false, devBuild = false)
         assertEquals(
-            listOf("account", "appearance", "planning", "areas", "claude", "data", "about"),
+            listOf("account", "appearance", "planning", "areas", "claude", "data", "updates", "about"),
             main.map(SettingsSection::id),
         )
         assertEquals(SettingsPage.APPEARANCE, SettingsPage.opens(SettingsSection.APPEARANCE))
         assertEquals(SettingsPage.PLANNING, SettingsPage.opens(SettingsSection.PLANNING))
         assertEquals(SettingsPage.DATA, SettingsPage.opens(SettingsSection.DATA))
+        assertEquals(SettingsPage.DATA, SettingsPage.opens(SettingsSection.UPDATES))
         assertNull(SettingsPage.opens(SettingsSection.ACCOUNT))
         assertNull(SettingsPage.opens(SettingsSection.AREAS))
         assertTrue(SettingsSections.showChips(main))
+    }
+
+    @Test
+    fun `the main page has an Updates card of its own that opens the page with the update rows (GM-123)`() {
+        val main = SettingsSections.visible(hasProblems = false, devBuild = false)
+        assertTrue(SettingsSection.UPDATES in main)
+        assertEquals(SettingsPage.DATA, SettingsPage.opens(SettingsSection.UPDATES))
+        assertTrue(SettingsSection.UPDATES in SettingsPage.DATA.sections)
     }
 
     @Test
